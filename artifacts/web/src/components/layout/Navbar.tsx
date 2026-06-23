@@ -12,9 +12,18 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   LogOut, User, LayoutDashboard, Calendar,
-  ShoppingBag, Bell, ChevronDown, Scissors,
+  ShoppingBag, Bell, ChevronDown, Scissors, Sparkles,
 } from "lucide-react";
 import { useLogout } from "@workspace/api-client-react";
+
+const TICKER_ITEMS = [
+  "✦ Rezervo terminin tënd online",
+  "✦ 340+ berberë në Kosovë",
+  "✦ Konfirmim OTP i menjëhershëm",
+  "✦ Produktet më të mira të grooming",
+  "✦ Shërbim 24/7",
+  "✦ Regjistro dyqanin tënd falas",
+];
 
 export function Navbar() {
   const { user, logout } = useAuth();
@@ -24,7 +33,7 @@ export function Navbar() {
   const logoutMutation = useLogout();
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
+    const onScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
@@ -44,20 +53,29 @@ export function Navbar() {
 
   return (
     <>
-      <header
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-          scrolled ? "py-2" : "py-4"
-        }`}
-      >
-        <div className={`mx-auto transition-all duration-500 ${
-          scrolled ? "max-w-5xl px-4" : "max-w-7xl px-6"
-        }`}>
-          <div className={`flex items-center justify-between rounded-2xl transition-all duration-500 px-5 ${
-            scrolled
-              ? "glass-strong shadow-lg shadow-black/5 py-3"
-              : "bg-transparent py-1"
-          }`}>
+      {/* ── Announcement bar ── */}
+      <div className="fixed top-0 left-0 right-0 z-50 h-8 bg-primary overflow-hidden">
+        <div className="flex items-center h-full">
+          <div className="flex whitespace-nowrap animate-ticker will-change-transform">
+            {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
+              <span key={i} className="inline-flex items-center px-8 text-[11px] font-semibold text-primary-foreground/90 tracking-wide">
+                {item}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
 
+      {/* ── Main header ── */}
+      <header className={`fixed top-8 left-0 right-0 z-40 transition-all duration-500 ${scrolled ? "py-1.5" : "py-3"}`}>
+        <div className={`mx-auto transition-all duration-500 ${scrolled ? "max-w-5xl px-4" : "max-w-7xl px-6"}`}>
+          <div
+            className={`flex items-center justify-between rounded-2xl px-5 transition-all duration-500 ${
+              scrolled
+                ? "glass-strong shadow-lg shadow-black/8 py-2.5"
+                : "bg-background/80 backdrop-blur-xl border border-border/40 shadow-sm py-3"
+            }`}
+          >
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 group">
               <div className="w-8 h-8 bg-primary rounded-xl flex items-center justify-center shadow-md shadow-primary/25 group-hover:shadow-primary/40 transition-shadow duration-300">
@@ -76,11 +94,14 @@ export function Navbar() {
                   href={link.href}
                   className={`relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                     location === link.href
-                      ? "text-foreground bg-black/6"
+                      ? "text-foreground bg-primary/8 font-semibold"
                       : "text-muted-foreground hover:text-foreground hover:bg-black/4"
                   }`}
                 >
                   {link.label}
+                  {location === link.href && (
+                    <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />
+                  )}
                 </Link>
               ))}
             </nav>
@@ -94,7 +115,7 @@ export function Navbar() {
                     className="relative w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-black/5 transition-all duration-200"
                   >
                     <Bell className="w-4 h-4" />
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full ring-2 ring-background" />
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full ring-2 ring-background animate-pulse" />
                   </Link>
 
                   <DropdownMenu>
@@ -134,7 +155,6 @@ export function Navbar() {
                           </Link>
                         </DropdownMenuItem>
                       )}
-
                       {user.role === "owner" && (
                         <DropdownMenuItem asChild className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5">
                           <Link href="/dashboard" className="flex items-center w-full gap-2.5">
@@ -143,7 +163,6 @@ export function Navbar() {
                           </Link>
                         </DropdownMenuItem>
                       )}
-
                       <DropdownMenuItem asChild className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5">
                         <Link href="/appointments" className="flex items-center w-full gap-2.5">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -184,8 +203,9 @@ export function Navbar() {
                   </Link>
                   <Link
                     href="/register"
-                    className="btn-pill px-5 py-2.5 bg-primary text-white text-sm font-semibold shadow-md shadow-primary/20 hover:shadow-primary/30"
+                    className="btn-pill inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-semibold shadow-md shadow-primary/25 hover:shadow-primary/35"
                   >
+                    <Sparkles className="w-3.5 h-3.5" />
                     Fillo
                   </Link>
                 </div>
@@ -195,23 +215,28 @@ export function Navbar() {
               <button
                 className="md:hidden w-9 h-9 flex flex-col items-center justify-center gap-1.5 rounded-full hover:bg-black/5 transition-all"
                 onClick={() => setMobileOpen(p => !p)}
+                aria-label="Menu"
               >
-                <span className={`block w-4.5 h-0.5 bg-foreground rounded-full transition-all duration-300 ${mobileOpen ? "rotate-45 translate-y-2" : ""}`} />
+                <span className={`block h-0.5 bg-foreground rounded-full transition-all duration-300 origin-center ${mobileOpen ? "w-5 rotate-45 translate-y-2" : "w-4.5"}`} />
                 <span className={`block w-4.5 h-0.5 bg-foreground rounded-full transition-all duration-300 ${mobileOpen ? "opacity-0 scale-x-0" : ""}`} />
-                <span className={`block w-4.5 h-0.5 bg-foreground rounded-full transition-all duration-300 ${mobileOpen ? "-rotate-45 -translate-y-2" : ""}`} />
+                <span className={`block h-0.5 bg-foreground rounded-full transition-all duration-300 origin-center ${mobileOpen ? "w-5 -rotate-45 -translate-y-2" : "w-4.5"}`} />
               </button>
             </div>
           </div>
         </div>
 
         {/* Mobile menu */}
-        <div className={`md:hidden mx-4 mt-2 glass-strong rounded-2xl overflow-hidden transition-all duration-300 ${mobileOpen ? "max-h-80 opacity-100" : "max-h-0 opacity-0"}`}>
+        <div className={`md:hidden mx-4 mt-2 glass-strong rounded-2xl overflow-hidden transition-all duration-300 ${mobileOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>
           <div className="p-4 flex flex-col gap-1">
             {navLinks.map(link => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="px-4 py-3 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-black/5 transition-all"
+                className={`px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                  location === link.href
+                    ? "text-foreground bg-primary/8 font-semibold"
+                    : "text-muted-foreground hover:text-foreground hover:bg-black/5"
+                }`}
               >
                 {link.label}
               </Link>
@@ -230,7 +255,8 @@ export function Navbar() {
         </div>
       </header>
 
-      <div className="h-20" />
+      {/* Spacer: 32px ticker + ~64px nav */}
+      <div className="h-24" />
     </>
   );
 }

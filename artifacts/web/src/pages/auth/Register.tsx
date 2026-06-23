@@ -738,66 +738,111 @@ function OwnerForm() {
   );
 }
 
+const OWNER_PHOTO = "https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=1200&q=80";
+const USER_PHOTO  = "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=1200&q=80";
+
 export default function Register() {
   const [role, setRole] = useState<"user" | "owner">("user");
   const isOwner = role === "owner";
+  const photo = isOwner ? OWNER_PHOTO : USER_PHOTO;
 
   return (
-    <div className="min-h-screen grid md:grid-cols-2 bg-background">
-      <div className="hidden md:flex flex-col justify-between bg-card p-12 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-background/50 z-0" />
-        <div className="relative z-10">
-          <Link href="/" className="inline-block">
-            <span className="text-3xl font-bold tracking-tighter text-primary">TRIM.</span>
+    <div className="min-h-screen flex bg-background">
+      {/* ── Left photo panel ── */}
+      <div className="hidden lg:flex lg:w-[48%] relative overflow-hidden">
+        <img
+          src={photo}
+          alt="Barbershop"
+          key={photo}
+          className="absolute inset-0 w-full h-full object-cover animate-bg-zoom"
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/55 to-black/30" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+
+        {/* Floating decorative particles */}
+        <div className="absolute top-1/4 left-1/3 w-2 h-2 rounded-full bg-primary/60 animate-particle-1" />
+        <div className="absolute top-1/2 right-1/4 w-1.5 h-1.5 rounded-full bg-white/30 animate-particle-2" />
+        <div className="absolute bottom-1/3 left-1/4 w-2.5 h-2.5 rounded-full bg-primary/40 animate-particle-3" />
+
+        <div className="relative z-10 flex flex-col justify-between p-12 w-full">
+          <Link href="/" className="inline-flex items-center gap-2 animate-fade-in">
+            <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/40">
+              <Scissors className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-2xl font-bold tracking-tight text-white">
+              TRIM<span className="text-primary">.</span>
+            </span>
           </Link>
-        </div>
-        <div className="relative z-10 max-w-lg">
-          {isOwner ? (
-            <>
-              <h2 className="text-4xl font-bold mb-6 tracking-tight">Rrit biznesin tuaj me TRIM.</h2>
-              <ul className="space-y-4 text-lg text-muted-foreground">
-                <li className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0">✓</div>
-                  Menaxhoni terminet me lehtësi
+
+          <div className="space-y-7 animate-fade-up delay-100">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary mb-3">
+                — {isOwner ? "Për pronarë biznesi" : "Platforma #1 në Kosovë"}
+              </p>
+              <h2 className="text-4xl font-bold text-white leading-tight mb-3">
+                {isOwner ? (
+                  <>Rrit biznesin<br /><span className="text-shimmer">me TRIM.</span></>
+                ) : (
+                  <>Prerje precize,<br /><span className="text-shimmer">pa asnjë pritje.</span></>
+                )}
+              </h2>
+              <p className="text-white/55 text-base leading-relaxed">
+                {isOwner
+                  ? "Menaxho terminet, shes produkte dhe monitoro statistikat — gjithçka nga një vend."
+                  : "Rezervo berberët kryesorë të qytetit tënd me vetëm disa klikime."}
+              </p>
+            </div>
+
+            <ul className="space-y-3">
+              {(isOwner
+                ? ["Menaxhoni terminet me lehtësi", "Shesni produkte drejtpërdrejt online", "Statistika & raporte në kohë reale"]
+                : ["Rezervo barberat kryesorë", "Konfirmim me OTP — menjëherë", "Zbulo produkte ekskluzive grooming"]
+              ).map((item, i) => (
+                <li key={i} className="flex items-center gap-3">
+                  <div className="h-6 w-6 rounded-full bg-primary/25 flex items-center justify-center shrink-0 border border-primary/30">
+                    <span className="text-primary text-xs font-bold">✓</span>
+                  </div>
+                  <span className="text-white/75 text-sm">{item}</span>
                 </li>
-                <li className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0">✓</div>
-                  Shesni produkte drejtpërdrejt online
-                </li>
-                <li className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0">✓</div>
-                  Statistika dhe raporte në kohë reale
-                </li>
-              </ul>
-            </>
-          ) : (
-            <>
-              <h2 className="text-4xl font-bold mb-6 tracking-tight">Prerje precize, pa pritje.</h2>
-              <ul className="space-y-4 text-lg text-muted-foreground">
-                <li className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0">✓</div>
-                  Rezervo barberat kryesorë në qytetin tënd
-                </li>
-                <li className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0">✓</div>
-                  Konfirmim me OTP — pa pritje
-                </li>
-                <li className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0">✓</div>
-                  Zbulo produkte ekskluzive grooming
-                </li>
-              </ul>
-            </>
-          )}
+              ))}
+            </ul>
+
+            <div className="glass rounded-2xl p-4 border-white/10 bg-white/6 backdrop-blur-md animate-fade-up delay-300">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold shrink-0 ring-2 ring-primary/25">
+                  {isOwner ? "A" : "B"}
+                </div>
+                <div>
+                  <p className="text-white/80 text-xs italic leading-relaxed">
+                    {isOwner
+                      ? '"TRIM e bëri menaxhimin e dyqanit tim shumë më të lehtë."'
+                      : '"Rezervoj terminin brenda 30 sekondash. Fantastike!"'}
+                  </p>
+                  <p className="text-white/40 text-xs mt-1">
+                    {isOwner ? "Artan B. — Pronar, Prishtinë" : "Besim G. — Klient i rregullt"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="flex items-start justify-center p-8 overflow-y-auto">
-        <div className="w-full max-w-md py-8 space-y-6">
-          <div className="space-y-2 text-center md:text-left">
-            <Link href="/" className="inline-block mb-4 md:hidden">
-              <span className="text-2xl font-bold tracking-tighter text-primary">TRIM.</span>
+      {/* ── Right: Form ── */}
+      <div className="flex-1 flex items-start justify-center p-8 overflow-y-auto relative">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-1/3 right-1/4 w-72 h-72 bg-primary/4 rounded-full blur-3xl animate-glow-pulse" />
+        </div>
+
+        <div className="w-full max-w-md py-8 space-y-6 relative z-10">
+          <div className="space-y-1 animate-fade-up">
+            <Link href="/" className="inline-flex items-center gap-2 mb-5 lg:hidden">
+              <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center">
+                <Scissors className="w-3.5 h-3.5 text-white" />
+              </div>
+              <span className="text-xl font-bold tracking-tight">TRIM<span className="text-primary">.</span></span>
             </Link>
+            <p className="text-xs font-bold uppercase tracking-[0.15em] text-primary">— Regjistrim</p>
             <h1 className="text-3xl font-bold tracking-tight">Krijo llogarinë</h1>
             <p className="text-muted-foreground">Bashkohuni me rrjetin kryesor të berbernave në Kosovë</p>
           </div>

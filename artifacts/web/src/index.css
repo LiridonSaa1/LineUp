@@ -422,3 +422,30 @@
     linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px);
   background-size: 60px 60px;
 }
+
+/* Shimmer line for footer accent */
+@keyframes shimmer-line {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.animate-shimmer-line {
+  animation: shimmer-line 3s ease-in-out infinite;
+}
+
+/* Auth background subtle zoom */
+@keyframes bg-zoom {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.04); }
+}
+.animate-bg-zoom {
+  animation: bg-zoom 20s ease-in-out infinite;
+}
+
+/* Particle float for decorative dots */
+@keyframes particle {
+  0%, 100% { transform: translateY(0) translateX(0) scale(1); opacity: 0.6; }
+  50%       { transform: translateY(-30px) translateX(15px) scale(1.1); opacity: 1; }
+}
+.animate-particle-1 { animation: particle 7s ease-in-out infinite; }
+.animate-particle-2 { animation: particle 9s ease-in-out infinite reverse; }
+.animate-particle-3 { animation: particle 11s ease-in-out infinite 2s; }
