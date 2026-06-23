@@ -5,6 +5,130 @@ import { MapPin, Star, Scissors, ArrowRight, Search, Shield, Zap, Sparkles, Chev
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
+/* ── SVG Barber Tool icons ───────────────────────────────── */
+const ScissorsSVG = ({ size = 64, opacity = 0.08, rotate = 0, className = "" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="hsl(38 78% 50%)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"
+    style={{ opacity, transform: `rotate(${rotate}deg)` }} className={className}>
+    <circle cx="6" cy="6" r="3" />
+    <circle cx="6" cy="18" r="3" />
+    <line x1="20" y1="4" x2="8.12" y2="15.88" />
+    <line x1="14.47" y1="14.48" x2="20" y2="20" />
+    <line x1="8.12" y1="8.12" x2="12" y2="12" />
+  </svg>
+);
+
+const CombSVG = ({ size = 56, opacity = 0.07, rotate = 0, className = "" }) => (
+  <svg width={size} height={size * 0.45} viewBox="0 0 80 36" fill="none"
+    style={{ opacity, transform: `rotate(${rotate}deg)` }} className={className}>
+    <rect x="2" y="2" width="76" height="14" rx="4" stroke="hsl(38 78% 50%)" strokeWidth="2.5" fill="none"/>
+    {[0,1,2,3,4,5,6,7,8].map(i => (
+      <rect key={i} x={8 + i * 8} y="16" width="4" height="18" rx="2" fill="hsl(38 78% 50%)" />
+    ))}
+  </svg>
+);
+
+const RazorSVG = ({ size = 60, opacity = 0.08, rotate = 0, className = "" }) => (
+  <svg width={size} height={size * 1.3} viewBox="0 0 40 52" fill="none"
+    style={{ opacity, transform: `rotate(${rotate}deg)` }} className={className}>
+    <rect x="14" y="2" width="12" height="40" rx="4" stroke="hsl(38 78% 50%)" strokeWidth="2" fill="hsl(38 78% 50%)" fillOpacity="0.15"/>
+    <path d="M10 42 C10 46 14 50 20 50 C26 50 30 46 30 42 L14 42 Z" stroke="hsl(38 78% 50%)" strokeWidth="2" fill="hsl(38 78% 50%)" fillOpacity="0.12"/>
+    <line x1="20" y1="6" x2="20" y2="36" stroke="hsl(38 78% 50%)" strokeWidth="1" opacity="0.5"/>
+  </svg>
+);
+
+const ClipperSVG = ({ size = 72, opacity = 0.07, rotate = 0, className = "" }) => (
+  <svg width={size} height={size * 0.6} viewBox="0 0 80 48" fill="none"
+    style={{ opacity, transform: `rotate(${rotate}deg)` }} className={className}>
+    <rect x="4" y="4" width="56" height="28" rx="8" stroke="hsl(38 78% 50%)" strokeWidth="2.2" fill="hsl(38 78% 50%)" fillOpacity="0.1"/>
+    <rect x="4" y="32" width="56" height="10" rx="4" stroke="hsl(38 78% 50%)" strokeWidth="2" fill="hsl(38 78% 50%)" fillOpacity="0.12"/>
+    {[0,1,2,3,4,5,6,7].map(i => (
+      <line key={i} x1={8 + i * 7} y1="42" x2={8 + i * 7} y2="44" stroke="hsl(38 78% 50%)" strokeWidth="2" strokeLinecap="round"/>
+    ))}
+    <circle cx="68" cy="18" r="8" stroke="hsl(38 78% 50%)" strokeWidth="2" fill="hsl(38 78% 50%)" fillOpacity="0.08"/>
+    <path d="M65 18 L71 18 M68 15 L68 21" stroke="hsl(38 78% 50%)" strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
+
+const BarberPoleSVG = ({ size = 36, opacity = 0.09, className = "" }) => (
+  <svg width={size} height={size * 3.2} viewBox="0 0 36 115" fill="none"
+    style={{ opacity }} className={className}>
+    <rect x="8" y="8" width="20" height="100" rx="10" stroke="hsl(38 78% 50%)" strokeWidth="2.5" fill="hsl(38 78% 50%)" fillOpacity="0.08"/>
+    {[0,1,2,3,4].map(i => (
+      <path key={i} d={`M8 ${16 + i * 18} Q18 ${22 + i * 18} 28 ${16 + i * 18}`}
+        stroke="hsl(38 78% 50%)" strokeWidth="4" strokeLinecap="round" fill="none" opacity="0.5"/>
+    ))}
+    <circle cx="18" cy="8" r="8" stroke="hsl(38 78% 50%)" strokeWidth="2" fill="hsl(38 78% 50%)" fillOpacity="0.12"/>
+    <circle cx="18" cy="108" r="8" stroke="hsl(38 78% 50%)" strokeWidth="2" fill="hsl(38 78% 50%)" fillOpacity="0.12"/>
+  </svg>
+);
+
+const StraightRazorSVG = ({ size = 68, opacity = 0.07, rotate = 0, className = "" }) => (
+  <svg width={size} height={size * 0.38} viewBox="0 0 80 30" fill="none"
+    style={{ opacity, transform: `rotate(${rotate}deg)` }} className={className}>
+    <path d="M4 6 C4 4 6 2 8 2 L58 2 L76 14 L58 26 L8 26 C6 26 4 24 4 22 Z"
+      stroke="hsl(38 78% 50%)" strokeWidth="2" fill="hsl(38 78% 50%)" fillOpacity="0.1"/>
+    <path d="M58 2 L76 14 L58 26" stroke="hsl(38 78% 50%)" strokeWidth="2" fill="hsl(38 78% 50%)" fillOpacity="0.15"/>
+    <line x1="4" y1="14" x2="58" y2="14" stroke="hsl(38 78% 50%)" strokeWidth="1" opacity="0.3"/>
+    <circle cx="16" cy="14" r="5" stroke="hsl(38 78% 50%)" strokeWidth="1.5" fill="none"/>
+  </svg>
+);
+
+/* ── Floating background tools ───────────────────────────── */
+function BarberBackground() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0" aria-hidden="true">
+      {/* Top-right cluster */}
+      <div className="absolute top-[6%] right-[8%] animate-drift-1" style={{ animationDelay: '0s' }}>
+        <ScissorsSVG size={90} opacity={0.1} rotate={-25} />
+      </div>
+      <div className="absolute top-[18%] right-[22%] animate-drift-2" style={{ animationDelay: '1.2s' }}>
+        <CombSVG size={70} opacity={0.08} rotate={15} />
+      </div>
+      <div className="absolute top-[3%] right-[38%] animate-drift-5" style={{ animationDelay: '2s' }}>
+        <RazorSVG size={52} opacity={0.07} rotate={40} />
+      </div>
+
+      {/* Left side */}
+      <div className="absolute top-[30%] left-[2%] animate-drift-3" style={{ animationDelay: '0.5s' }}>
+        <CombSVG size={60} opacity={0.07} rotate={-10} />
+      </div>
+      <div className="absolute bottom-[30%] left-[6%] animate-drift-4" style={{ animationDelay: '3s' }}>
+        <ScissorsSVG size={70} opacity={0.08} rotate={45} />
+      </div>
+      <div className="absolute top-[12%] left-[14%] animate-drift-2" style={{ animationDelay: '1.8s' }}>
+        <StraightRazorSVG size={64} opacity={0.06} rotate={-20} />
+      </div>
+
+      {/* Center / scattered */}
+      <div className="absolute top-[55%] right-[10%] animate-drift-1" style={{ animationDelay: '0.8s' }}>
+        <ClipperSVG size={78} opacity={0.09} rotate={-12} />
+      </div>
+      <div className="absolute bottom-[12%] right-[28%] animate-drift-3" style={{ animationDelay: '2.5s' }}>
+        <ScissorsSVG size={60} opacity={0.07} rotate={60} />
+      </div>
+      <div className="absolute top-[45%] left-[20%] animate-drift-5" style={{ animationDelay: '4s' }}>
+        <RazorSVG size={44} opacity={0.06} rotate={-35} />
+      </div>
+
+      {/* Barber poles — vertical accents */}
+      <div className="absolute top-[5%] left-[32%] animate-float-slow" style={{ animationDelay: '1s' }}>
+        <BarberPoleSVG size={28} opacity={0.08} />
+      </div>
+      <div className="absolute bottom-[5%] right-[15%] animate-float-slow" style={{ animationDelay: '3.5s' }}>
+        <BarberPoleSVG size={22} opacity={0.07} />
+      </div>
+
+      {/* Bottom row */}
+      <div className="absolute bottom-[8%] left-[18%] animate-drift-2" style={{ animationDelay: '2.2s' }}>
+        <StraightRazorSVG size={72} opacity={0.07} rotate={10} />
+      </div>
+      <div className="absolute bottom-[20%] right-[4%] animate-drift-4" style={{ animationDelay: '1.5s' }}>
+        <CombSVG size={56} opacity={0.07} rotate={-30} />
+      </div>
+    </div>
+  );
+}
+
 /* ── Animated counter hook ───────────────────────────────── */
 function useCountUp(target: number, duration = 1800, start = false) {
   const [count, setCount] = useState(0);
@@ -198,6 +322,9 @@ export default function Home() {
 
         {/* Grid overlay */}
         <div className="absolute inset-0 hero-grid pointer-events-none" />
+
+        {/* Floating barber tools */}
+        <BarberBackground />
 
         <div className="container px-6 max-w-7xl mx-auto relative z-10 py-16">
           <div className="max-w-4xl">
