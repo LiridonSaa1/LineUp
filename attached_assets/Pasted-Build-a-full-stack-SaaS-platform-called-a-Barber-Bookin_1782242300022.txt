@@ -1,0 +1,148 @@
+Build a full-stack SaaS platform called a Barber Booking System for Kosovo with Uber-like UI.
+
+The system must include both Web (React) and Mobile App (React Native with Expo) sharing the same backend.
+
+---
+
+## 🎯 MAIN GOAL
+Users must be able to:
+- Find barbers on a map
+- View top barbershops
+- Book haircuts in real-time
+- Pay subscriptions (for barbershops)
+- Receive OTP confirmation for appointments
+- Order barber products online
+
+---
+
+## 👥 ROLES
+
+### 1. Admin
+- Can create barbershops manually
+- Approves or rejects barbershop registrations
+- Views all users, shops, appointments
+- Manages platform settings
+
+### 2. Barbershop Owner
+- Can register their own barbershop
+- After approval, gets an active account
+- Manages workers (barbers)
+- Manages calendar and appointments
+- Sets pricing per service
+- Pays subscription (10€/month) via Stripe
+- Pays 0.50€ per appointment
+
+### 3. User (Customer)
+- Registers and logs in
+- Views barbershops on map
+- Books appointments with barber selection
+- Orders products
+- Receives OTP confirmation via email
+
+---
+
+## 🧠 CORE FEATURES
+
+### 📍 Map System (Uber-like UI)
+- Show barbershops in Kosovo cities (Prishtina, Prizren, Peja, Gjilan, Ferizaj)
+- Use Google Maps API
+- Filter by city and rating
+
+---
+
+### 💇 Booking System
+- Select barbershop → barber → available time slot
+- Disable already booked time slots
+- OTP confirmation required
+- Prevent spam bookings
+
+---
+
+### 🛒 Products Marketplace
+- Each barbershop can sell products
+- Users can order products online
+- Stripe checkout integration
+
+---
+
+### 💳 Payments (Stripe)
+- Subscription: 10€/month per barbershop
+- 0.50€ fee per appointment
+- Webhooks for payment tracking
+
+---
+
+### 📧 Email System (Brevo)
+- Send OTP for appointment confirmation
+- Send booking confirmation emails
+- Auto-generated login credentials for barbershops
+
+---
+
+### 🏪 Subdomain System
+- Each barbershop has its own URL:
+  example: barbershopname.platform.com
+
+---
+
+### 🔔 Notifications
+- Email + in-app notifications
+- Booking confirmations
+- Reminders before appointment
+
+---
+
+## 🗄️ DATABASE (Supabase PostgreSQL)
+
+Tables:
+- users (id, name, email, password, role)
+- barbershops (id, owner_id, name, city, address, status, subdomain)
+- barbers (id, shop_id, name)
+- appointments (id, user_id, shop_id, barber_id, time, status, otp_code)
+- products (id, shop_id, name, price)
+- payments (id, shop_id, amount, type)
+
+---
+
+## 🔐 AUTH
+- JWT authentication
+- Role-based access control (admin, owner, user)
+
+---
+
+## 🎨 UI/UX
+- Uber-like design
+- Minimal and modern UI
+- Fast booking flow (max 3 steps)
+- Mobile-first design
+
+---
+
+## ⚙️ TECHNOLOGIES
+Frontend:
+- React (web)
+- React Native + Expo (mobile)
+
+Backend:
+- Node.js + Express
+
+Database:
+- Supabase (PostgreSQL)
+
+Payments:
+- Stripe
+
+Email:
+- Brevo
+
+Maps:
+- Google Maps API
+
+---
+
+## 📦 REQUIREMENTS
+- Clean modular architecture
+- REST API
+- Responsive design
+- Production-ready structure
+- Separate frontend and backend folders
