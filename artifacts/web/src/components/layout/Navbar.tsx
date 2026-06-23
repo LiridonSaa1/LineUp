@@ -38,42 +38,37 @@ export function Navbar() {
   };
 
   const navLinks = [
-    { href: "/barbershops", label: "Discover" },
-    { href: "/marketplace", label: "Marketplace" },
+    { href: "/barbershops", label: "Zbulo" },
+    { href: "/marketplace", label: "Dyqani" },
   ];
 
   return (
     <>
       <header
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-          scrolled
-            ? "py-2"
-            : "py-4"
+          scrolled ? "py-2" : "py-4"
         }`}
       >
-        {/* Glass pill container */}
         <div className={`mx-auto transition-all duration-500 ${
-          scrolled
-            ? "max-w-5xl px-4"
-            : "max-w-7xl px-6"
+          scrolled ? "max-w-5xl px-4" : "max-w-7xl px-6"
         }`}>
           <div className={`flex items-center justify-between rounded-2xl transition-all duration-500 px-5 ${
             scrolled
-              ? "glass-strong shadow-2xl shadow-black/40 py-3"
+              ? "glass-strong shadow-lg shadow-black/5 py-3"
               : "bg-transparent py-1"
           }`}>
 
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 group">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-lg shadow-primary/30 group-hover:shadow-primary/50 transition-shadow duration-300">
-                <Scissors className="w-4 h-4 text-primary-foreground" />
+              <div className="w-8 h-8 bg-primary rounded-xl flex items-center justify-center shadow-md shadow-primary/25 group-hover:shadow-primary/40 transition-shadow duration-300">
+                <Scissors className="w-4 h-4 text-white" />
               </div>
               <span className="text-xl font-bold tracking-tight text-foreground">
                 TRIM<span className="text-primary">.</span>
               </span>
             </Link>
 
-            {/* Desktop nav — centered pill links */}
+            {/* Desktop nav */}
             <nav className="hidden md:flex items-center gap-1">
               {navLinks.map(link => (
                 <Link
@@ -81,8 +76,8 @@ export function Navbar() {
                   href={link.href}
                   className={`relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                     location === link.href
-                      ? "text-foreground bg-white/8"
-                      : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                      ? "text-foreground bg-black/6"
+                      : "text-muted-foreground hover:text-foreground hover:bg-black/4"
                   }`}
                 >
                   {link.label}
@@ -94,22 +89,20 @@ export function Navbar() {
             <div className="flex items-center gap-2">
               {user ? (
                 <>
-                  {/* Notifications */}
                   <Link
                     href="/notifications"
-                    className="relative w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-white/8 transition-all duration-200"
+                    className="relative w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-black/5 transition-all duration-200"
                   >
                     <Bell className="w-4 h-4" />
                     <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full ring-2 ring-background" />
                   </Link>
 
-                  {/* User menu */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button className="flex items-center gap-2.5 pl-1 pr-3 py-1 rounded-full hover:bg-white/8 transition-all duration-200 group">
-                        <Avatar className="h-8 w-8 ring-2 ring-primary/30 group-hover:ring-primary/60 transition-all duration-200">
+                      <button className="flex items-center gap-2.5 pl-1 pr-3 py-1 rounded-full hover:bg-black/5 transition-all duration-200 group">
+                        <Avatar className="h-8 w-8 ring-2 ring-primary/20 group-hover:ring-primary/50 transition-all duration-200">
                           <AvatarImage src={user.avatarUrl || undefined} alt={user.name} />
-                          <AvatarFallback className="bg-primary/15 text-primary text-xs font-bold">
+                          <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
                             {user.name.charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
@@ -120,63 +113,63 @@ export function Navbar() {
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
-                      className="w-60 glass-strong border-white/10 rounded-2xl p-2 shadow-2xl shadow-black/50 mt-2"
+                      className="w-60 glass-strong border-black/8 rounded-2xl p-2 shadow-xl shadow-black/10 mt-2"
                       align="end"
                       sideOffset={8}
                     >
                       <div className="px-3 py-2.5 mb-1">
                         <p className="text-sm font-semibold">{user.name}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">{user.email}</p>
-                        <span className="inline-flex items-center mt-2 px-2 py-0.5 rounded-full bg-primary/15 text-primary text-[10px] font-semibold uppercase tracking-wider">
+                        <span className="inline-flex items-center mt-2 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-semibold uppercase tracking-wider">
                           {user.role}
                         </span>
                       </div>
-                      <DropdownMenuSeparator className="bg-white/8 my-1" />
+                      <DropdownMenuSeparator className="bg-black/6 my-1" />
 
                       {user.role === "admin" && (
-                        <DropdownMenuItem asChild className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-white/8 focus:bg-white/8">
+                        <DropdownMenuItem asChild className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5">
                           <Link href="/admin" className="flex items-center w-full gap-2.5">
                             <LayoutDashboard className="h-4 w-4 text-primary" />
-                            <span>Admin Dashboard</span>
+                            <span>Paneli Admin</span>
                           </Link>
                         </DropdownMenuItem>
                       )}
 
                       {user.role === "owner" && (
-                        <DropdownMenuItem asChild className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-white/8 focus:bg-white/8">
+                        <DropdownMenuItem asChild className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5">
                           <Link href="/dashboard" className="flex items-center w-full gap-2.5">
                             <LayoutDashboard className="h-4 w-4 text-primary" />
-                            <span>Shop Dashboard</span>
+                            <span>Paneli i Dyqanit</span>
                           </Link>
                         </DropdownMenuItem>
                       )}
 
-                      <DropdownMenuItem asChild className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-white/8 focus:bg-white/8">
+                      <DropdownMenuItem asChild className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5">
                         <Link href="/appointments" className="flex items-center w-full gap-2.5">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <span>My Appointments</span>
+                          <span>Takimet e Mia</span>
                         </Link>
                       </DropdownMenuItem>
-                      <DropdownMenuItem asChild className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-white/8 focus:bg-white/8">
+                      <DropdownMenuItem asChild className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5">
                         <Link href="/orders" className="flex items-center w-full gap-2.5">
                           <ShoppingBag className="h-4 w-4 text-muted-foreground" />
-                          <span>My Orders</span>
+                          <span>Porositë e Mia</span>
                         </Link>
                       </DropdownMenuItem>
-                      <DropdownMenuItem asChild className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-white/8 focus:bg-white/8">
+                      <DropdownMenuItem asChild className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5">
                         <Link href="/profile" className="flex items-center w-full gap-2.5">
                           <User className="h-4 w-4 text-muted-foreground" />
-                          <span>Profile Settings</span>
+                          <span>Cilësimet e Profilit</span>
                         </Link>
                       </DropdownMenuItem>
 
-                      <DropdownMenuSeparator className="bg-white/8 my-1" />
+                      <DropdownMenuSeparator className="bg-black/6 my-1" />
                       <DropdownMenuItem
                         onClick={handleLogout}
-                        className="rounded-xl px-3 py-2.5 cursor-pointer text-red-400 hover:text-red-300 hover:bg-red-500/10 focus:bg-red-500/10 focus:text-red-300"
+                        className="rounded-xl px-3 py-2.5 cursor-pointer text-red-500 hover:text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-600"
                       >
                         <LogOut className="mr-2.5 h-4 w-4" />
-                        <span>Log out</span>
+                        <span>Dil</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -185,22 +178,22 @@ export function Navbar() {
                 <div className="flex items-center gap-2">
                   <Link
                     href="/login"
-                    className="hidden md:block px-4 py-2 rounded-full text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/8 transition-all duration-200"
+                    className="hidden md:block px-4 py-2 rounded-full text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-black/5 transition-all duration-200"
                   >
-                    Log in
+                    Hyr
                   </Link>
                   <Link
                     href="/register"
-                    className="btn-pill px-5 py-2.5 bg-primary text-primary-foreground text-sm font-semibold shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:bg-primary/90 transition-all duration-200"
+                    className="btn-pill px-5 py-2.5 bg-primary text-white text-sm font-semibold shadow-md shadow-primary/20 hover:shadow-primary/30"
                   >
-                    Get started
+                    Fillo
                   </Link>
                 </div>
               )}
 
               {/* Mobile hamburger */}
               <button
-                className="md:hidden w-9 h-9 flex flex-col items-center justify-center gap-1.5 rounded-full hover:bg-white/8 transition-all"
+                className="md:hidden w-9 h-9 flex flex-col items-center justify-center gap-1.5 rounded-full hover:bg-black/5 transition-all"
                 onClick={() => setMobileOpen(p => !p)}
               >
                 <span className={`block w-4.5 h-0.5 bg-foreground rounded-full transition-all duration-300 ${mobileOpen ? "rotate-45 translate-y-2" : ""}`} />
@@ -218,18 +211,18 @@ export function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="px-4 py-3 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/8 transition-all"
+                className="px-4 py-3 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-black/5 transition-all"
               >
                 {link.label}
               </Link>
             ))}
             {!user && (
-              <div className="flex gap-2 mt-2 pt-2 border-t border-white/8">
-                <Link href="/login" className="flex-1 py-3 text-center text-sm font-medium text-muted-foreground hover:text-foreground rounded-xl hover:bg-white/8 transition-all">
-                  Log in
+              <div className="flex gap-2 mt-2 pt-2 border-t border-black/6">
+                <Link href="/login" className="flex-1 py-3 text-center text-sm font-medium text-muted-foreground hover:text-foreground rounded-xl hover:bg-black/5 transition-all">
+                  Hyr
                 </Link>
-                <Link href="/register" className="btn-pill flex-1 py-3 text-center text-sm font-semibold bg-primary text-primary-foreground">
-                  Sign up
+                <Link href="/register" className="btn-pill flex-1 py-3 text-center text-sm font-semibold bg-primary text-white">
+                  Regjistrohu
                 </Link>
               </div>
             )}
@@ -237,7 +230,6 @@ export function Navbar() {
         </div>
       </header>
 
-      {/* Spacer so content isn't hidden behind fixed navbar */}
       <div className="h-20" />
     </>
   );

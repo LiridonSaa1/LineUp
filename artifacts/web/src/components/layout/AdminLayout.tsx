@@ -28,9 +28,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   };
 
   const navItems = [
-    { href: "/admin", label: "Overview", icon: LayoutDashboard },
-    { href: "/admin/barbershops", label: "Shops & Approvals", icon: Store },
-    { href: "/admin/users", label: "Users", icon: Users },
+    { href: "/admin", label: "Pasqyra", icon: LayoutDashboard },
+    { href: "/admin/barbershops", label: "Dyqanet & Aprovimi", icon: Store },
+    { href: "/admin/users", label: "Përdoruesit", icon: Users },
   ];
 
   return (
@@ -48,8 +48,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             const isActive = location === item.href || (item.href !== "/admin" && location.startsWith(item.href));
             return (
               <Link key={item.href} href={item.href}>
-                <div className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium cursor-pointer transition-colors ${
-                  isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                <div className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium cursor-pointer transition-colors ${
+                  isActive ? "bg-primary text-white" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                 }`}>
                   <Icon className="w-5 h-5" />
                   {item.label}
@@ -59,8 +59,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           })}
         </nav>
         <div className="p-4 mt-auto border-t border-border">
-          <Button variant="ghost" className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleLogout}>
-            <LogOut className="w-4 h-4 mr-2" /> Log out
+          <Button variant="ghost" className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl" onClick={handleLogout}>
+            <LogOut className="w-4 h-4 mr-2" /> Dil
           </Button>
         </div>
       </aside>
