@@ -172,6 +172,11 @@ export const ListBarbershopsResponse = zod.object({
   "longitude": zod.number().nullish(),
   "openTime": zod.string().nullish(),
   "closeTime": zod.string().nullish(),
+  "businessNumber": zod.string().nullish(),
+  "gender": zod.union([zod.literal('male'),zod.literal('female'),zod.literal('both'),zod.literal(null)]).nullish(),
+  "stripeConnectAccountId": zod.string().nullish(),
+  "iban": zod.string().nullish(),
+  "photos": zod.array(zod.string()).optional(),
   "createdAt": zod.coerce.date()
 })),
   "total": zod.number()
@@ -195,7 +200,12 @@ export const CreateBarbershopBody = zod.object({
   "latitude": zod.number().nullish(),
   "longitude": zod.number().nullish(),
   "openTime": zod.string().nullish(),
-  "closeTime": zod.string().nullish()
+  "closeTime": zod.string().nullish(),
+  "businessNumber": zod.string().nullish(),
+  "gender": zod.union([zod.literal('male'),zod.literal('female'),zod.literal('both'),zod.literal(null)]).nullish(),
+  "stripeConnectAccountId": zod.string().nullish(),
+  "iban": zod.string().nullish(),
+  "photos": zod.array(zod.string()).optional()
 })
 
 
@@ -224,6 +234,11 @@ export const ListTopBarbershopsResponseItem = zod.object({
   "longitude": zod.number().nullish(),
   "openTime": zod.string().nullish(),
   "closeTime": zod.string().nullish(),
+  "businessNumber": zod.string().nullish(),
+  "gender": zod.union([zod.literal('male'),zod.literal('female'),zod.literal('both'),zod.literal(null)]).nullish(),
+  "stripeConnectAccountId": zod.string().nullish(),
+  "iban": zod.string().nullish(),
+  "photos": zod.array(zod.string()).optional(),
   "createdAt": zod.coerce.date()
 })
 export const ListTopBarbershopsResponse = zod.array(ListTopBarbershopsResponseItem)
@@ -253,6 +268,11 @@ export const GetBarbershopResponse = zod.object({
   "longitude": zod.number().nullish(),
   "openTime": zod.string().nullish(),
   "closeTime": zod.string().nullish(),
+  "businessNumber": zod.string().nullish(),
+  "gender": zod.union([zod.literal('male'),zod.literal('female'),zod.literal('both'),zod.literal(null)]).nullish(),
+  "stripeConnectAccountId": zod.string().nullish(),
+  "iban": zod.string().nullish(),
+  "photos": zod.array(zod.string()).optional(),
   "createdAt": zod.coerce.date()
 })
 
@@ -275,7 +295,12 @@ export const UpdateBarbershopBody = zod.object({
   "longitude": zod.number().nullish(),
   "openTime": zod.string().nullish(),
   "closeTime": zod.string().nullish(),
-  "status": zod.string().optional()
+  "status": zod.string().optional(),
+  "businessNumber": zod.string().nullish(),
+  "gender": zod.union([zod.literal('male'),zod.literal('female'),zod.literal('both'),zod.literal(null)]).nullish(),
+  "stripeConnectAccountId": zod.string().nullish(),
+  "iban": zod.string().nullish(),
+  "photos": zod.array(zod.string()).optional()
 })
 
 export const UpdateBarbershopResponse = zod.object({
@@ -295,6 +320,11 @@ export const UpdateBarbershopResponse = zod.object({
   "longitude": zod.number().nullish(),
   "openTime": zod.string().nullish(),
   "closeTime": zod.string().nullish(),
+  "businessNumber": zod.string().nullish(),
+  "gender": zod.union([zod.literal('male'),zod.literal('female'),zod.literal('both'),zod.literal(null)]).nullish(),
+  "stripeConnectAccountId": zod.string().nullish(),
+  "iban": zod.string().nullish(),
+  "photos": zod.array(zod.string()).optional(),
   "createdAt": zod.coerce.date()
 })
 
@@ -331,6 +361,11 @@ export const ApproveBarbershopResponse = zod.object({
   "longitude": zod.number().nullish(),
   "openTime": zod.string().nullish(),
   "closeTime": zod.string().nullish(),
+  "businessNumber": zod.string().nullish(),
+  "gender": zod.union([zod.literal('male'),zod.literal('female'),zod.literal('both'),zod.literal(null)]).nullish(),
+  "stripeConnectAccountId": zod.string().nullish(),
+  "iban": zod.string().nullish(),
+  "photos": zod.array(zod.string()).optional(),
   "createdAt": zod.coerce.date()
 })
 
@@ -359,6 +394,11 @@ export const RejectBarbershopResponse = zod.object({
   "longitude": zod.number().nullish(),
   "openTime": zod.string().nullish(),
   "closeTime": zod.string().nullish(),
+  "businessNumber": zod.string().nullish(),
+  "gender": zod.union([zod.literal('male'),zod.literal('female'),zod.literal('both'),zod.literal(null)]).nullish(),
+  "stripeConnectAccountId": zod.string().nullish(),
+  "iban": zod.string().nullish(),
+  "photos": zod.array(zod.string()).optional(),
   "createdAt": zod.coerce.date()
 })
 
@@ -589,6 +629,11 @@ export const ListAppointmentsResponse = zod.object({
   "longitude": zod.number().nullish(),
   "openTime": zod.string().nullish(),
   "closeTime": zod.string().nullish(),
+  "businessNumber": zod.string().nullish(),
+  "gender": zod.union([zod.literal('male'),zod.literal('female'),zod.literal('both'),zod.literal(null)]).nullish(),
+  "stripeConnectAccountId": zod.string().nullish(),
+  "iban": zod.string().nullish(),
+  "photos": zod.array(zod.string()).optional(),
   "createdAt": zod.coerce.date()
 }).optional(),
   "barber": zod.object({
@@ -672,6 +717,11 @@ export const GetAppointmentResponse = zod.object({
   "longitude": zod.number().nullish(),
   "openTime": zod.string().nullish(),
   "closeTime": zod.string().nullish(),
+  "businessNumber": zod.string().nullish(),
+  "gender": zod.union([zod.literal('male'),zod.literal('female'),zod.literal('both'),zod.literal(null)]).nullish(),
+  "stripeConnectAccountId": zod.string().nullish(),
+  "iban": zod.string().nullish(),
+  "photos": zod.array(zod.string()).optional(),
   "createdAt": zod.coerce.date()
 }).optional(),
   "barber": zod.object({
@@ -746,6 +796,11 @@ export const UpdateAppointmentResponse = zod.object({
   "longitude": zod.number().nullish(),
   "openTime": zod.string().nullish(),
   "closeTime": zod.string().nullish(),
+  "businessNumber": zod.string().nullish(),
+  "gender": zod.union([zod.literal('male'),zod.literal('female'),zod.literal('both'),zod.literal(null)]).nullish(),
+  "stripeConnectAccountId": zod.string().nullish(),
+  "iban": zod.string().nullish(),
+  "photos": zod.array(zod.string()).optional(),
   "createdAt": zod.coerce.date()
 }).optional(),
   "barber": zod.object({
@@ -832,6 +887,11 @@ export const ConfirmAppointmentOtpResponse = zod.object({
   "longitude": zod.number().nullish(),
   "openTime": zod.string().nullish(),
   "closeTime": zod.string().nullish(),
+  "businessNumber": zod.string().nullish(),
+  "gender": zod.union([zod.literal('male'),zod.literal('female'),zod.literal('both'),zod.literal(null)]).nullish(),
+  "stripeConnectAccountId": zod.string().nullish(),
+  "iban": zod.string().nullish(),
+  "photos": zod.array(zod.string()).optional(),
   "createdAt": zod.coerce.date()
 }).optional(),
   "barber": zod.object({

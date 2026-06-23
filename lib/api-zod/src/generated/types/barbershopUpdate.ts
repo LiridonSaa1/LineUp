@@ -5,6 +5,7 @@
  * Barber Booking System API for Kosovo
  * OpenAPI spec version: 0.1.0
  */
+import type { BarbershopUpdateGender } from './barbershopUpdateGender';
 
 export interface BarbershopUpdate {
   name?: string;
@@ -25,4 +26,13 @@ export interface BarbershopUpdate {
   /** @nullable */
   closeTime?: string | null;
   status?: string;
+  /** @nullable */
+  businessNumber?: string | null;
+  /** @nullable */
+  gender?: BarbershopUpdateGender;
+  /** @nullable */
+  stripeConnectAccountId?: string | null;
+  /** @nullable */
+  iban?: string | null;
+  photos?: string[];
 }

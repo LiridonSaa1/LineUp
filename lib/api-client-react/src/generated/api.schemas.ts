@@ -82,6 +82,18 @@ export const BarbershopStatus = {
   suspended: 'suspended',
 } as const;
 
+/**
+ * @nullable
+ */
+export type BarbershopGender = typeof BarbershopGender[keyof typeof BarbershopGender] | null;
+
+
+export const BarbershopGender = {
+  male: 'male',
+  female: 'female',
+  both: 'both',
+} as const;
+
 export interface Barbershop {
   id: number;
   ownerId: number;
@@ -108,8 +120,29 @@ export interface Barbershop {
   openTime?: string | null;
   /** @nullable */
   closeTime?: string | null;
+  /** @nullable */
+  businessNumber?: string | null;
+  /** @nullable */
+  gender?: BarbershopGender;
+  /** @nullable */
+  stripeConnectAccountId?: string | null;
+  /** @nullable */
+  iban?: string | null;
+  photos?: string[];
   createdAt: string;
 }
+
+/**
+ * @nullable
+ */
+export type BarbershopInputGender = typeof BarbershopInputGender[keyof typeof BarbershopInputGender] | null;
+
+
+export const BarbershopInputGender = {
+  male: 'male',
+  female: 'female',
+  both: 'both',
+} as const;
 
 export interface BarbershopInput {
   /** @minLength 2 */
@@ -130,7 +163,28 @@ export interface BarbershopInput {
   openTime?: string | null;
   /** @nullable */
   closeTime?: string | null;
+  /** @nullable */
+  businessNumber?: string | null;
+  /** @nullable */
+  gender?: BarbershopInputGender;
+  /** @nullable */
+  stripeConnectAccountId?: string | null;
+  /** @nullable */
+  iban?: string | null;
+  photos?: string[];
 }
+
+/**
+ * @nullable
+ */
+export type BarbershopUpdateGender = typeof BarbershopUpdateGender[keyof typeof BarbershopUpdateGender] | null;
+
+
+export const BarbershopUpdateGender = {
+  male: 'male',
+  female: 'female',
+  both: 'both',
+} as const;
 
 export interface BarbershopUpdate {
   name?: string;
@@ -151,6 +205,15 @@ export interface BarbershopUpdate {
   /** @nullable */
   closeTime?: string | null;
   status?: string;
+  /** @nullable */
+  businessNumber?: string | null;
+  /** @nullable */
+  gender?: BarbershopUpdateGender;
+  /** @nullable */
+  stripeConnectAccountId?: string | null;
+  /** @nullable */
+  iban?: string | null;
+  photos?: string[];
 }
 
 export interface BarbershopList {

@@ -55,7 +55,7 @@ router.get("/barbershops/top", async (req, res): Promise<void> => {
 });
 
 router.post("/barbershops", requireAuth, async (req: AuthRequest, res): Promise<void> => {
-  const { name, city, address, description, phone, imageUrl, latitude, longitude, openTime, closeTime } = req.body;
+  const { name, city, address, description, phone, imageUrl, latitude, longitude, openTime, closeTime, businessNumber, gender, stripeConnectAccountId, iban, photos } = req.body;
   if (!name || !city || !address) {
     res.status(400).json({ error: "name, city, and address are required" }); return;
   }
@@ -72,6 +72,11 @@ router.post("/barbershops", requireAuth, async (req: AuthRequest, res): Promise<
     closeTime: closeTime ?? null,
     subdomain,
     status: "pending",
+    businessNumber: businessNumber ?? null,
+    gender: gender ?? null,
+    stripeConnectAccountId: stripeConnectAccountId ?? null,
+    iban: iban ?? null,
+    photos: Array.isArray(photos) ? photos : null,
   }).returning();
   res.status(201).json(formatShop(shop));
 });

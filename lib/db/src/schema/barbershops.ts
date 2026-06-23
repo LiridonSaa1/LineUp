@@ -4,6 +4,7 @@ import { z } from "zod/v4";
 import { usersTable } from "./users";
 
 export const shopStatusEnum = pgEnum("shop_status", ["pending", "active", "rejected", "suspended"]);
+export const shopGenderEnum = pgEnum("shop_gender", ["male", "female", "both"]);
 
 export const barbershopsTable = pgTable("barbershops", {
   id: serial("id").primaryKey(),
@@ -24,6 +25,11 @@ export const barbershopsTable = pgTable("barbershops", {
   closeTime: text("close_time"),
   stripeSubscriptionId: text("stripe_subscription_id"),
   subscriptionStatus: text("subscription_status").default("inactive"),
+  businessNumber: text("business_number"),
+  gender: shopGenderEnum("gender"),
+  stripeConnectAccountId: text("stripe_connect_account_id"),
+  iban: text("iban"),
+  photos: text("photos").array(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

@@ -1358,6 +1358,19 @@ components:
           type: ["string", "null"]
         closeTime:
           type: ["string", "null"]
+        businessNumber:
+          type: ["string", "null"]
+        gender:
+          type: ["string", "null"]
+          enum: ["male", "female", "both", null]
+        stripeConnectAccountId:
+          type: ["string", "null"]
+        iban:
+          type: ["string", "null"]
+        photos:
+          type: array
+          items:
+            type: string
         createdAt:
           type: string
           format: date-time
@@ -1387,6 +1400,19 @@ components:
           type: ["string", "null"]
         closeTime:
           type: ["string", "null"]
+        businessNumber:
+          type: ["string", "null"]
+        gender:
+          type: ["string", "null"]
+          enum: ["male", "female", "both", null]
+        stripeConnectAccountId:
+          type: ["string", "null"]
+        iban:
+          type: ["string", "null"]
+        photos:
+          type: array
+          items:
+            type: string
 
     BarbershopUpdate:
       type: object
@@ -1413,6 +1439,19 @@ components:
           type: ["string", "null"]
         status:
           type: string
+        businessNumber:
+          type: ["string", "null"]
+        gender:
+          type: ["string", "null"]
+          enum: ["male", "female", "both", null]
+        stripeConnectAccountId:
+          type: ["string", "null"]
+        iban:
+          type: ["string", "null"]
+        photos:
+          type: array
+          items:
+            type: string
 
     BarbershopList:
       type: object
