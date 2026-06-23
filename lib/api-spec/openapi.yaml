@@ -3,20 +3,38 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Barber Booking System API for Kosovo
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: users
+    description: User management
+  - name: barbershops
+    description: Barbershop operations
+  - name: barbers
+    description: Barber management
+  - name: appointments
+    description: Appointment booking
+  - name: products
+    description: Product marketplace
+  - name: payments
+    description: Payment operations
+  - name: notifications
+    description: Notifications
+  - name: dashboard
+    description: Dashboard summary endpoints
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +42,1913 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # AUTH
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Bad request
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Unauthorized
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+
+  # USERS
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List all users (admin)
+      parameters:
+        - name: role
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Users list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserList"
+
+  /users/{id}:
+    get:
+      operationId: getUser
+      tags: [users]
+      summary: Get user by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: Not found
+
+    patch:
+      operationId: updateUser
+      tags: [users]
+      summary: Update user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      summary: Delete user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # BARBERSHOPS
+  /barbershops:
+    get:
+      operationId: listBarbershops
+      tags: [barbershops]
+      summary: List barbershops
+      parameters:
+        - name: city
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Barbershops list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BarbershopList"
+
+    post:
+      operationId: createBarbershop
+      tags: [barbershops]
+      summary: Register barbershop
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BarbershopInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Barbershop"
+
+  /barbershops/top:
+    get:
+      operationId: listTopBarbershops
+      tags: [barbershops]
+      summary: Get top-rated barbershops
+      parameters:
+        - name: city
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Top barbershops
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Barbershop"
+
+  /barbershops/{id}:
+    get:
+      operationId: getBarbershop
+      tags: [barbershops]
+      summary: Get barbershop
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Barbershop
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Barbershop"
+        "404":
+          description: Not found
+
+    patch:
+      operationId: updateBarbershop
+      tags: [barbershops]
+      summary: Update barbershop
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BarbershopUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Barbershop"
+
+    delete:
+      operationId: deleteBarbershop
+      tags: [barbershops]
+      summary: Delete barbershop
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /barbershops/{id}/approve:
+    patch:
+      operationId: approveBarbershop
+      tags: [barbershops]
+      summary: Approve barbershop (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Barbershop"
+
+  /barbershops/{id}/reject:
+    patch:
+      operationId: rejectBarbershop
+      tags: [barbershops]
+      summary: Reject barbershop (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Barbershop"
+
+  # BARBERS
+  /barbershops/{shopId}/barbers:
+    get:
+      operationId: listBarbers
+      tags: [barbers]
+      summary: List barbers in a shop
+      parameters:
+        - name: shopId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Barbers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Barber"
+
+    post:
+      operationId: createBarber
+      tags: [barbers]
+      summary: Add barber to shop
+      parameters:
+        - name: shopId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BarberInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Barber"
+
+  /barbershops/{shopId}/barbers/{barberId}:
+    get:
+      operationId: getBarber
+      tags: [barbers]
+      summary: Get barber
+      parameters:
+        - name: shopId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: barberId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Barber
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Barber"
+
+    patch:
+      operationId: updateBarber
+      tags: [barbers]
+      summary: Update barber
+      parameters:
+        - name: shopId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: barberId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BarberUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Barber"
+
+    delete:
+      operationId: deleteBarber
+      tags: [barbers]
+      summary: Delete barber
+      parameters:
+        - name: shopId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: barberId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # SERVICES
+  /barbershops/{shopId}/services:
+    get:
+      operationId: listServices
+      tags: [barbershops]
+      summary: List services for a shop
+      parameters:
+        - name: shopId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Services
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Service"
+
+    post:
+      operationId: createService
+      tags: [barbershops]
+      summary: Add service to shop
+      parameters:
+        - name: shopId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Service"
+
+  /barbershops/{shopId}/services/{serviceId}:
+    patch:
+      operationId: updateService
+      tags: [barbershops]
+      summary: Update service
+      parameters:
+        - name: shopId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: serviceId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Service"
+
+    delete:
+      operationId: deleteService
+      tags: [barbershops]
+      summary: Delete service
+      parameters:
+        - name: shopId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: serviceId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # APPOINTMENTS
+  /appointments:
+    get:
+      operationId: listAppointments
+      tags: [appointments]
+      summary: List appointments
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: integer
+        - name: shopId
+          in: query
+          schema:
+            type: integer
+        - name: barberId
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: date
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Appointments list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentList"
+
+    post:
+      operationId: createAppointment
+      tags: [appointments]
+      summary: Book appointment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppointmentInput"
+      responses:
+        "201":
+          description: Booked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+
+  /appointments/{id}:
+    get:
+      operationId: getAppointment
+      tags: [appointments]
+      summary: Get appointment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Appointment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+
+    patch:
+      operationId: updateAppointment
+      tags: [appointments]
+      summary: Update appointment status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppointmentUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+
+    delete:
+      operationId: cancelAppointment
+      tags: [appointments]
+      summary: Cancel appointment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Cancelled
+
+  /appointments/{id}/confirm-otp:
+    post:
+      operationId: confirmAppointmentOtp
+      tags: [appointments]
+      summary: Confirm appointment with OTP
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OtpConfirmInput"
+      responses:
+        "200":
+          description: Confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+
+  /appointments/{id}/resend-otp:
+    post:
+      operationId: resendAppointmentOtp
+      tags: [appointments]
+      summary: Resend OTP
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OTP sent
+
+  /available-slots:
+    get:
+      operationId: getAvailableSlots
+      tags: [appointments]
+      summary: Get available time slots for a barber
+      parameters:
+        - name: shopId
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: barberId
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Available slots
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvailableSlots"
+
+  # PRODUCTS
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: List all products
+      parameters:
+        - name: shopId
+          in: query
+          schema:
+            type: integer
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Products
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductList"
+
+  /barbershops/{shopId}/products:
+    get:
+      operationId: listShopProducts
+      tags: [products]
+      summary: List products for a shop
+      parameters:
+        - name: shopId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Shop products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+
+    post:
+      operationId: createProduct
+      tags: [products]
+      summary: Create product
+      parameters:
+        - name: shopId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+
+  /barbershops/{shopId}/products/{productId}:
+    patch:
+      operationId: updateProduct
+      tags: [products]
+      summary: Update product
+      parameters:
+        - name: shopId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+
+    delete:
+      operationId: deleteProduct
+      tags: [products]
+      summary: Delete product
+      parameters:
+        - name: shopId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ORDERS
+  /orders:
+    get:
+      operationId: listOrders
+      tags: [products]
+      summary: List orders
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: integer
+        - name: shopId
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Orders list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderList"
+
+    post:
+      operationId: createOrder
+      tags: [products]
+      summary: Place an order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderInput"
+      responses:
+        "201":
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /orders/{id}:
+    get:
+      operationId: getOrder
+      tags: [products]
+      summary: Get order
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+    patch:
+      operationId: updateOrder
+      tags: [products]
+      summary: Update order status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  # PAYMENTS
+  /payments:
+    get:
+      operationId: listPayments
+      tags: [payments]
+      summary: List payments
+      parameters:
+        - name: shopId
+          in: query
+          schema:
+            type: integer
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Payments list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentList"
+
+  /payments/create-subscription:
+    post:
+      operationId: createSubscription
+      tags: [payments]
+      summary: Create Stripe subscription for barbershop
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscriptionInput"
+      responses:
+        "200":
+          description: Subscription created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StripeSession"
+
+  /payments/create-checkout:
+    post:
+      operationId: createCheckout
+      tags: [payments]
+      summary: Create Stripe checkout for product order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckoutInput"
+      responses:
+        "200":
+          description: Checkout session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StripeSession"
+
+  /payments/webhook:
+    post:
+      operationId: stripeWebhook
+      tags: [payments]
+      summary: Stripe webhook handler
+      responses:
+        "200":
+          description: Received
+
+  # NOTIFICATIONS
+  /notifications:
+    get:
+      operationId: listNotifications
+      tags: [notifications]
+      summary: List user notifications
+      parameters:
+        - name: unreadOnly
+          in: query
+          schema:
+            type: boolean
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Notifications
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationList"
+
+  /notifications/{id}/read:
+    patch:
+      operationId: markNotificationRead
+      tags: [notifications]
+      summary: Mark notification as read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Marked read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+
+  /notifications/read-all:
+    patch:
+      operationId: markAllNotificationsRead
+      tags: [notifications]
+      summary: Mark all notifications as read
+      responses:
+        "200":
+          description: All marked read
+
+  # DASHBOARD / WOW ENDPOINTS
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get platform-wide dashboard statistics
+      responses:
+        "200":
+          description: Platform stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/owner-stats:
+    get:
+      operationId: getOwnerStats
+      tags: [dashboard]
+      summary: Get barbershop owner dashboard stats
+      parameters:
+        - name: shopId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Owner stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OwnerStats"
+
+  /dashboard/recent-activity:
+    get:
+      operationId: getRecentActivity
+      tags: [dashboard]
+      summary: Get recent platform activity
+      parameters:
+        - name: shopId
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Recent activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityItem"
+
+  /dashboard/appointments-by-day:
+    get:
+      operationId: getAppointmentsByDay
+      tags: [dashboard]
+      summary: Appointment counts grouped by day
+      parameters:
+        - name: shopId
+          in: query
+          schema:
+            type: integer
+        - name: days
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Appointments by day
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DayCount"
+
+  /dashboard/revenue-by-month:
+    get:
+      operationId: getRevenueByMonth
+      tags: [dashboard]
+      summary: Revenue grouped by month
+      parameters:
+        - name: shopId
+          in: query
+          schema:
+            type: integer
+        - name: months
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Revenue by month
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MonthRevenue"
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    # AUTH
+    RegisterInput:
+      type: object
+      required: [name, email, password, role]
+      properties:
+        name:
+          type: string
+          minLength: 2
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+        role:
+          type: string
+          enum: [user, owner]
+        phone:
+          type: ["string", "null"]
+
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      required: [token, user]
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+
+    # USER
+    User:
+      type: object
+      required: [id, name, email, role, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [admin, owner, user]
+        phone:
+          type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    UserUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+
+    UserList:
+      type: object
+      required: [data, total]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+        total:
+          type: integer
+
+    # BARBERSHOP
+    Barbershop:
+      type: object
+      required: [id, ownerId, name, city, address, status, createdAt]
+      properties:
+        id:
+          type: integer
+        ownerId:
+          type: integer
+        name:
+          type: string
+        city:
+          type: string
+        address:
+          type: string
+        description:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, active, rejected, suspended]
+        subdomain:
+          type: ["string", "null"]
+        rating:
+          type: ["number", "null"]
+        totalReviews:
+          type: integer
+        latitude:
+          type: ["number", "null"]
+        longitude:
+          type: ["number", "null"]
+        openTime:
+          type: ["string", "null"]
+        closeTime:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    BarbershopInput:
+      type: object
+      required: [name, city, address]
+      properties:
+        name:
+          type: string
+          minLength: 2
+        city:
+          type: string
+        address:
+          type: string
+        description:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
+        latitude:
+          type: ["number", "null"]
+        longitude:
+          type: ["number", "null"]
+        openTime:
+          type: ["string", "null"]
+        closeTime:
+          type: ["string", "null"]
+
+    BarbershopUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        city:
+          type: string
+        address:
+          type: string
+        description:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
+        latitude:
+          type: ["number", "null"]
+        longitude:
+          type: ["number", "null"]
+        openTime:
+          type: ["string", "null"]
+        closeTime:
+          type: ["string", "null"]
+        status:
+          type: string
+
+    BarbershopList:
+      type: object
+      required: [data, total]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Barbershop"
+        total:
+          type: integer
+
+    # BARBER
+    Barber:
+      type: object
+      required: [id, shopId, name, createdAt]
+      properties:
+        id:
+          type: integer
+        shopId:
+          type: integer
+        name:
+          type: string
+        bio:
+          type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+        specialties:
+          type: ["string", "null"]
+        rating:
+          type: ["number", "null"]
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    BarberInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 2
+        bio:
+          type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+        specialties:
+          type: ["string", "null"]
+
+    BarberUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        bio:
+          type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+        specialties:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+
+    # SERVICE
+    Service:
+      type: object
+      required: [id, shopId, name, price, durationMinutes, createdAt]
+      properties:
+        id:
+          type: integer
+        shopId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        price:
+          type: number
+        durationMinutes:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    ServiceInput:
+      type: object
+      required: [name, price, durationMinutes]
+      properties:
+        name:
+          type: string
+          minLength: 2
+        description:
+          type: ["string", "null"]
+        price:
+          type: number
+          minimum: 0
+        durationMinutes:
+          type: integer
+          minimum: 15
+
+    ServiceUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        price:
+          type: number
+        durationMinutes:
+          type: integer
+
+    # APPOINTMENT
+    Appointment:
+      type: object
+      required: [id, userId, shopId, barberId, serviceId, scheduledAt, status, createdAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        shopId:
+          type: integer
+        barberId:
+          type: integer
+        serviceId:
+          type: integer
+        scheduledAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [pending_otp, confirmed, completed, cancelled, no_show]
+        notes:
+          type: ["string", "null"]
+        totalPrice:
+          type: ["number", "null"]
+        user:
+          $ref: "#/components/schemas/User"
+        barbershop:
+          $ref: "#/components/schemas/Barbershop"
+        barber:
+          $ref: "#/components/schemas/Barber"
+        service:
+          $ref: "#/components/schemas/Service"
+        createdAt:
+          type: string
+          format: date-time
+
+    AppointmentInput:
+      type: object
+      required: [shopId, barberId, serviceId, scheduledAt]
+      properties:
+        shopId:
+          type: integer
+        barberId:
+          type: integer
+        serviceId:
+          type: integer
+        scheduledAt:
+          type: string
+          format: date-time
+        notes:
+          type: ["string", "null"]
+
+    AppointmentUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [confirmed, completed, cancelled, no_show]
+        notes:
+          type: ["string", "null"]
+
+    AppointmentList:
+      type: object
+      required: [data, total]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Appointment"
+        total:
+          type: integer
+
+    OtpConfirmInput:
+      type: object
+      required: [otpCode]
+      properties:
+        otpCode:
+          type: string
+          minLength: 6
+          maxLength: 6
+
+    AvailableSlots:
+      type: object
+      required: [date, slots]
+      properties:
+        date:
+          type: string
+        slots:
+          type: array
+          items:
+            type: string
+
+    # PRODUCT
+    Product:
+      type: object
+      required: [id, shopId, name, price, createdAt]
+      properties:
+        id:
+          type: integer
+        shopId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        price:
+          type: number
+        imageUrl:
+          type: ["string", "null"]
+        stock:
+          type: integer
+        category:
+          type: ["string", "null"]
+        isAvailable:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    ProductInput:
+      type: object
+      required: [name, price]
+      properties:
+        name:
+          type: string
+          minLength: 2
+        description:
+          type: ["string", "null"]
+        price:
+          type: number
+          minimum: 0
+        imageUrl:
+          type: ["string", "null"]
+        stock:
+          type: integer
+        category:
+          type: ["string", "null"]
+
+    ProductUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        price:
+          type: number
+        imageUrl:
+          type: ["string", "null"]
+        stock:
+          type: integer
+        category:
+          type: ["string", "null"]
+        isAvailable:
+          type: boolean
+
+    ProductList:
+      type: object
+      required: [data, total]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Product"
+        total:
+          type: integer
+
+    # ORDER
+    Order:
+      type: object
+      required: [id, userId, status, totalAmount, createdAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        status:
+          type: string
+          enum: [pending, paid, shipped, delivered, cancelled]
+        totalAmount:
+          type: number
+        stripeSessionId:
+          type: ["string", "null"]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+        user:
+          $ref: "#/components/schemas/User"
+        createdAt:
+          type: string
+          format: date-time
+
+    OrderItem:
+      type: object
+      required: [id, orderId, productId, quantity, unitPrice]
+      properties:
+        id:
+          type: integer
+        orderId:
+          type: integer
+        productId:
+          type: integer
+        quantity:
+          type: integer
+        unitPrice:
+          type: number
+        product:
+          $ref: "#/components/schemas/Product"
+
+    OrderInput:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItemInput"
+
+    OrderItemInput:
+      type: object
+      required: [productId, quantity]
+      properties:
+        productId:
+          type: integer
+        quantity:
+          type: integer
+          minimum: 1
+
+    OrderUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [paid, shipped, delivered, cancelled]
+
+    OrderList:
+      type: object
+      required: [data, total]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Order"
+        total:
+          type: integer
+
+    # PAYMENT
+    Payment:
+      type: object
+      required: [id, shopId, amount, type, status, createdAt]
+      properties:
+        id:
+          type: integer
+        shopId:
+          type: integer
+        amount:
+          type: number
+        type:
+          type: string
+          enum: [subscription, appointment_fee, product_sale]
+        status:
+          type: string
+          enum: [pending, completed, failed, refunded]
+        stripePaymentId:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    PaymentList:
+      type: object
+      required: [data, total]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Payment"
+        total:
+          type: integer
+
+    SubscriptionInput:
+      type: object
+      required: [shopId]
+      properties:
+        shopId:
+          type: integer
+
+    CheckoutInput:
+      type: object
+      required: [orderId]
+      properties:
+        orderId:
+          type: integer
+
+    StripeSession:
+      type: object
+      required: [sessionId, url]
+      properties:
+        sessionId:
+          type: string
+        url:
+          type: string
+
+    # NOTIFICATION
+    Notification:
+      type: object
+      required: [id, userId, title, message, type, isRead, createdAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        title:
+          type: string
+        message:
+          type: string
+        type:
+          type: string
+          enum: [booking_confirmed, booking_cancelled, booking_reminder, order_update, general]
+        isRead:
+          type: boolean
+        relatedId:
+          type: ["integer", "null"]
+        relatedType:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    NotificationList:
+      type: object
+      required: [data, total, unreadCount]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Notification"
+        total:
+          type: integer
+        unreadCount:
+          type: integer
+
+    # DASHBOARD
+    DashboardStats:
+      type: object
+      required: [totalUsers, totalBarbershops, totalAppointments, totalRevenue, pendingApprovals, activeShops]
+      properties:
+        totalUsers:
+          type: integer
+        totalBarbershops:
+          type: integer
+        totalAppointments:
+          type: integer
+        totalRevenue:
+          type: number
+        pendingApprovals:
+          type: integer
+        activeShops:
+          type: integer
+        todayAppointments:
+          type: integer
+        monthRevenue:
+          type: number
+
+    OwnerStats:
+      type: object
+      required: [totalAppointments, confirmedAppointments, totalRevenue, totalBarbers, totalProducts]
+      properties:
+        totalAppointments:
+          type: integer
+        confirmedAppointments:
+          type: integer
+        cancelledAppointments:
+          type: integer
+        totalRevenue:
+          type: number
+        todayAppointments:
+          type: integer
+        totalBarbers:
+          type: integer
+        totalProducts:
+          type: integer
+        rating:
+          type: ["number", "null"]
+        subscriptionActive:
+          type: boolean
+
+    ActivityItem:
+      type: object
+      required: [id, type, description, createdAt]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [appointment_booked, appointment_confirmed, appointment_cancelled, shop_registered, product_ordered]
+        description:
+          type: string
+        userName:
+          type: ["string", "null"]
+        shopName:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    DayCount:
+      type: object
+      required: [date, count]
+      properties:
+        date:
+          type: string
+        count:
+          type: integer
+
+    MonthRevenue:
+      type: object
+      required: [month, revenue]
+      properties:
+        month:
+          type: string
+        revenue:
+          type: number
