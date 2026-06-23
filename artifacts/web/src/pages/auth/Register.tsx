@@ -31,13 +31,6 @@ import {
   Trash2,
 } from "lucide-react";
 
-<<<<<<< HEAD
-const registerSchema = z.object({
-  name: z.string().min(2, "Emri duhet të ketë të paktën 2 karaktere"),
-  email: z.string().email("Ju lutem vendosni një email të vlefshëm"),
-  password: z.string().min(6, "Fjalëkalimi duhet të ketë të paktën 6 karaktere"),
-  role: z.enum(["user", "owner"]),
-=======
 const userSchema = z
   .object({
     firstName: z.string().min(1, "Emri është i detyrueshëm"),
@@ -59,7 +52,6 @@ const ownerStep1Schema = z.object({
   password: z.string().min(6, "Fjalëkalimi duhet të ketë të paktën 6 karaktere"),
   businessName: z.string().min(2, "Emri i biznesit është i detyrueshëm"),
   businessNumber: z.string().optional(),
->>>>>>> b2078f7 (update register and login)
 });
 
 const ownerStep2Schema = z.object({
@@ -75,7 +67,6 @@ const ownerStep2Schema = z.object({
 
 const ownerStep3Schema = z.object({
   imageUrl: z.string().optional(),
-  photos: z.array(z.string()).optional(),
   stripeConnectAccountId: z.string().optional(),
   iban: z.string().optional(),
 });
@@ -84,12 +75,6 @@ type UserFormValues = z.infer<typeof userSchema>;
 type OwnerStep1Values = z.infer<typeof ownerStep1Schema>;
 type OwnerStep2Values = z.infer<typeof ownerStep2Schema>;
 type OwnerStep3Values = z.infer<typeof ownerStep3Schema>;
-
-const STEPS_OWNER = [
-  { label: "Llogaria", icon: Building2 },
-  { label: "Lokacioni", icon: MapPin },
-  { label: "Media & Pagesa", icon: CreditCard },
-];
 
 function StepIndicator({ current, total }: { current: number; total: number }) {
   return (
@@ -138,14 +123,6 @@ function UserForm() {
 
   async function onSubmit(data: UserFormValues) {
     try {
-<<<<<<< HEAD
-      const response = await registerMutation.mutateAsync({ data });
-      login(response.token, response.user);
-
-      toast({
-        title: "Llogaria u krijua!",
-        description: "Mirë se erdhe në TRIM.",
-=======
       const response = await registerMutation.mutateAsync({
         data: {
           name: `${data.firstName} ${data.lastName}`,
@@ -154,7 +131,6 @@ function UserForm() {
           role: "user",
           phone: data.phone,
         },
->>>>>>> b2078f7 (update register and login)
       });
       login(response.token, response.user);
       toast({ title: "Llogaria u krijua!", description: "Mirë se vini në TRIM." });
@@ -169,49 +145,6 @@ function UserForm() {
   }
 
   return (
-<<<<<<< HEAD
-    <div className="min-h-screen grid md:grid-cols-2 bg-background">
-      <div className="hidden md:flex flex-col justify-between bg-card p-12 relative overflow-hidden border-r border-border">
-        <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 to-background/50 z-0"></div>
-        <div className="relative z-10">
-          <Link href="/" className="inline-block">
-            <span className="text-3xl font-bold tracking-tighter text-primary">TRIM.</span>
-          </Link>
-        </div>
-
-        <div className="relative z-10 max-w-lg">
-          <h2 className="text-4xl font-bold mb-6 tracking-tight">Pamje të shkëlqyera, zero pritje.</h2>
-          <ul className="space-y-4 text-lg text-muted-foreground">
-            <li className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-primary/15 flex items-center justify-center text-primary font-bold">✓</div>
-              Rezervo berberët më të mirë në qytetin tënd
-            </li>
-            <li className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-primary/15 flex items-center justify-center text-primary font-bold">✓</div>
-              Pa radhë, pa pritje
-            </li>
-            <li className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-primary/15 flex items-center justify-center text-primary font-bold">✓</div>
-              Zbulo produkte ekskluzive kozmetike
-            </li>
-          </ul>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-center p-8">
-        <div className="w-full max-w-sm space-y-8">
-          <div className="space-y-2 text-center md:text-left">
-            <Link href="/" className="inline-block mb-6 md:hidden">
-              <span className="text-2xl font-bold tracking-tighter text-primary">TRIM.</span>
-            </Link>
-            <h1 className="text-3xl font-bold tracking-tight">Krijo një llogari</h1>
-            <p className="text-muted-foreground">Bashkohu me rrjetin më të mirë të berberive në Kosovë</p>
-          </div>
-
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-
-=======
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
         <div className="grid grid-cols-2 gap-4">
@@ -368,7 +301,6 @@ function OwnerForm() {
 
   async function handleStep3(data: OwnerStep3Values) {
     if (!step1Data || !step2Data) return;
-
     try {
       const response = await registerMutation.mutateAsync({
         data: {
@@ -547,20 +479,15 @@ function OwnerForm() {
             <div className="flex items-center gap-2 mb-4">
               <MapPin className="h-5 w-5 text-primary" />
               <span className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-                Lokacioni & Detajet
+                Lokacioni &amp; Detajet
               </span>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
->>>>>>> b2078f7 (update register and login)
               <FormField
                 control={form2.control}
                 name="city"
                 render={({ field }) => (
-<<<<<<< HEAD
-                  <FormItem className="space-y-3">
-                    <FormLabel>Dëshiroj të...</FormLabel>
-=======
                   <FormItem>
                     <FormLabel>Qyteti</FormLabel>
                     <FormControl>
@@ -576,33 +503,12 @@ function OwnerForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Gjinia</FormLabel>
->>>>>>> b2078f7 (update register and login)
                     <FormControl>
                       <RadioGroup
                         onValueChange={field.onChange}
                         value={field.value}
-                        className="flex gap-2 pt-1"
+                        className="flex gap-1 pt-1"
                       >
-<<<<<<< HEAD
-                        <FormItem>
-                          <FormControl>
-                            <RadioGroupItem value="user" className="peer sr-only" />
-                          </FormControl>
-                          <FormLabel className="flex flex-col items-center justify-between rounded-2xl border-2 border-muted bg-transparent p-4 hover:bg-card peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 cursor-pointer transition-all">
-                            <User className="mb-2 h-6 w-6" />
-                            <span className="font-semibold">Rezervo Prerje</span>
-                          </FormLabel>
-                        </FormItem>
-                        <FormItem>
-                          <FormControl>
-                            <RadioGroupItem value="owner" className="peer sr-only" />
-                          </FormControl>
-                          <FormLabel className="flex flex-col items-center justify-between rounded-2xl border-2 border-muted bg-transparent p-4 hover:bg-card peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 cursor-pointer transition-all">
-                            <Scissors className="mb-2 h-6 w-6" />
-                            <span className="font-semibold">Menaxho Dyqanin</span>
-                          </FormLabel>
-                        </FormItem>
-=======
                         {(
                           [
                             { value: "male", label: "Mashkull" },
@@ -622,7 +528,6 @@ function OwnerForm() {
                             {opt.label}
                           </label>
                         ))}
->>>>>>> b2078f7 (update register and login)
                       </RadioGroup>
                     </FormControl>
                     <FormMessage />
@@ -638,11 +543,7 @@ function OwnerForm() {
                 <FormItem>
                   <FormLabel>Adresa</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="Rruga Garibaldi, Nr. 12"
-                      {...field}
-                      className="h-11 bg-card"
-                    />
+                    <Input placeholder="Rruga Garibaldi, Nr. 12" {...field} className="h-11 bg-card" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -655,24 +556,12 @@ function OwnerForm() {
                 name="latitude"
                 render={({ field }) => (
                   <FormItem>
-<<<<<<< HEAD
-                    <FormLabel>Emri i Plotë</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Artan Berisha" {...field} className="h-12 bg-card rounded-xl" />
-=======
                     <FormLabel>
                       Gjerësia (lat){" "}
                       <span className="text-muted-foreground font-normal">(opsionale)</span>
                     </FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="42.6629"
-                        type="number"
-                        step="any"
-                        {...field}
-                        className="h-11 bg-card"
-                      />
->>>>>>> b2078f7 (update register and login)
+                      <Input placeholder="42.6629" type="number" step="any" {...field} className="h-11 bg-card" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -688,17 +577,7 @@ function OwnerForm() {
                       <span className="text-muted-foreground font-normal">(opsionale)</span>
                     </FormLabel>
                     <FormControl>
-<<<<<<< HEAD
-                      <Input placeholder="ti@shembull.com" type="email" {...field} className="h-12 bg-card rounded-xl" />
-=======
-                      <Input
-                        placeholder="21.1655"
-                        type="number"
-                        step="any"
-                        {...field}
-                        className="h-11 bg-card"
-                      />
->>>>>>> b2078f7 (update register and login)
+                      <Input placeholder="21.1655" type="number" step="any" {...field} className="h-11 bg-card" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -706,28 +585,6 @@ function OwnerForm() {
               />
             </div>
 
-<<<<<<< HEAD
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Fjalëkalimi</FormLabel>
-                    <FormControl>
-                      <Input placeholder="••••••••" type="password" {...field} className="h-12 bg-card rounded-xl" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <Button
-                type="submit"
-                className="w-full h-12 text-base font-semibold rounded-full"
-                disabled={registerMutation.isPending}
-              >
-                {registerMutation.isPending ? "Duke krijuar llogarinë..." : "Regjistrohu"}
-=======
             <FormField
               control={form2.control}
               name="description"
@@ -751,12 +608,7 @@ function OwnerForm() {
             />
 
             <div className="flex gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1 h-11"
-                onClick={() => setStep(0)}
-              >
+              <Button type="button" variant="outline" className="flex-1 h-11" onClick={() => setStep(0)}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Kthehu
               </Button>
@@ -775,7 +627,7 @@ function OwnerForm() {
             <div className="flex items-center gap-2 mb-1">
               <Image className="h-5 w-5 text-primary" />
               <span className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-                Logo & Foto
+                Logo &amp; Foto
               </span>
             </div>
 
@@ -789,11 +641,7 @@ function OwnerForm() {
                     <span className="text-muted-foreground font-normal">(opsionale)</span>
                   </FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="https://shembull.com/logo.png"
-                      {...field}
-                      className="h-11 bg-card"
-                    />
+                    <Input placeholder="https://shembull.com/logo.png" {...field} className="h-11 bg-card" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -826,13 +674,7 @@ function OwnerForm() {
                   )}
                 </div>
               ))}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addPhotoInput}
-                className="mt-1"
-              >
+              <Button type="button" variant="outline" size="sm" onClick={addPhotoInput} className="mt-1">
                 <Plus className="mr-1 h-3 w-3" />
                 Shto foto
               </Button>
@@ -855,11 +697,7 @@ function OwnerForm() {
                     <span className="text-muted-foreground font-normal">(opsionale)</span>
                   </FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="acct_1234567890"
-                      {...field}
-                      className="h-11 bg-card font-mono text-sm"
-                    />
+                    <Input placeholder="acct_1234567890" {...field} className="h-11 bg-card font-mono text-sm" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -876,11 +714,7 @@ function OwnerForm() {
                     <span className="text-muted-foreground font-normal">(opsionale)</span>
                   </FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="XK05 1212 0123 4567 8906"
-                      {...field}
-                      className="h-11 bg-card font-mono text-sm"
-                    />
+                    <Input placeholder="XK05 1212 0123 4567 8906" {...field} className="h-11 bg-card font-mono text-sm" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -888,22 +722,12 @@ function OwnerForm() {
             />
 
             <div className="flex gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1 h-11"
-                onClick={() => setStep(1)}
-              >
+              <Button type="button" variant="outline" className="flex-1 h-11" onClick={() => setStep(1)}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Kthehu
               </Button>
-              <Button
-                type="submit"
-                className="flex-1 h-11 font-semibold"
-                disabled={registerMutation.isPending}
-              >
+              <Button type="submit" className="flex-1 h-11 font-semibold" disabled={registerMutation.isPending}>
                 {registerMutation.isPending ? "Duke regjistruar..." : "Regjistro biznesin"}
->>>>>>> b2078f7 (update register and login)
                 {!registerMutation.isPending && <ArrowRight className="ml-2 h-4 w-4" />}
               </Button>
             </div>
@@ -916,7 +740,6 @@ function OwnerForm() {
 
 export default function Register() {
   const [role, setRole] = useState<"user" | "owner">("user");
-
   const isOwner = role === "owner";
 
   return (
@@ -931,9 +754,7 @@ export default function Register() {
         <div className="relative z-10 max-w-lg">
           {isOwner ? (
             <>
-              <h2 className="text-4xl font-bold mb-6 tracking-tight">
-                Rrit biznesin tuaj me TRIM.
-              </h2>
+              <h2 className="text-4xl font-bold mb-6 tracking-tight">Rrit biznesin tuaj me TRIM.</h2>
               <ul className="space-y-4 text-lg text-muted-foreground">
                 <li className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0">✓</div>
@@ -951,13 +772,11 @@ export default function Register() {
             </>
           ) : (
             <>
-              <h2 className="text-4xl font-bold mb-6 tracking-tight">
-                Prerje precize, pa pritje.
-              </h2>
+              <h2 className="text-4xl font-bold mb-6 tracking-tight">Prerje precize, pa pritje.</h2>
               <ul className="space-y-4 text-lg text-muted-foreground">
                 <li className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0">✓</div>
-                  Rezervo berberat kryesorë në qytetin tënd
+                  Rezervo barberat kryesorë në qytetin tënd
                 </li>
                 <li className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0">✓</div>
@@ -990,14 +809,10 @@ export default function Register() {
                 type="button"
                 onClick={() => setRole("user")}
                 className={`flex flex-col items-center justify-center rounded-xl border-2 p-4 transition-all cursor-pointer ${
-                  role === "user"
-                    ? "border-primary bg-primary/5"
-                    : "border-muted hover:border-primary/40"
+                  role === "user" ? "border-primary bg-primary/5" : "border-muted hover:border-primary/40"
                 }`}
               >
-                <User
-                  className={`mb-2 h-6 w-6 ${role === "user" ? "text-primary" : "text-muted-foreground"}`}
-                />
+                <User className={`mb-2 h-6 w-6 ${role === "user" ? "text-primary" : "text-muted-foreground"}`} />
                 <span className={`font-semibold text-sm ${role === "user" ? "text-primary" : ""}`}>
                   Rezervoj termin
                 </span>
@@ -1006,14 +821,10 @@ export default function Register() {
                 type="button"
                 onClick={() => setRole("owner")}
                 className={`flex flex-col items-center justify-center rounded-xl border-2 p-4 transition-all cursor-pointer ${
-                  role === "owner"
-                    ? "border-primary bg-primary/5"
-                    : "border-muted hover:border-primary/40"
+                  role === "owner" ? "border-primary bg-primary/5" : "border-muted hover:border-primary/40"
                 }`}
               >
-                <Scissors
-                  className={`mb-2 h-6 w-6 ${role === "owner" ? "text-primary" : "text-muted-foreground"}`}
-                />
+                <Scissors className={`mb-2 h-6 w-6 ${role === "owner" ? "text-primary" : "text-muted-foreground"}`} />
                 <span className={`font-semibold text-sm ${role === "owner" ? "text-primary" : ""}`}>
                   Menaxhoj sallon
                 </span>
@@ -1026,11 +837,7 @@ export default function Register() {
           <div className="text-center text-sm text-muted-foreground">
             Keni tashmë një llogari?{" "}
             <Link href="/login" className="text-primary hover:underline font-medium">
-<<<<<<< HEAD
-              Hyr
-=======
               Kyçu
->>>>>>> b2078f7 (update register and login)
             </Link>
           </div>
         </div>
