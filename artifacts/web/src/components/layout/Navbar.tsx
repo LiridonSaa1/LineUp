@@ -45,13 +45,13 @@ export function Navbar() {
   return (
     <>
       {/* ── Main header ── */}
-      <header className={`fixed top-0 left-0 right-0 z-40 transition-all duration-500 ${scrolled ? "py-1.5" : "py-3"}`}>
-        <div className={`mx-auto transition-all duration-500 ${scrolled ? "max-w-5xl px-4" : "max-w-7xl px-6"}`}>
+      <header className={`fixed top-0 left-0 right-0 z-40 transition-all duration-500 ${scrolled ? "py-1.5" : "py-0"}`}>
+        <div className={`mx-auto transition-all duration-500 ${scrolled ? "max-w-5xl px-4" : "w-full px-0"}`}>
           <div
-            className={`flex items-center justify-between rounded-2xl px-5 transition-all duration-500 ${
+            className={`flex items-center justify-between transition-all duration-500 ${
               scrolled
-                ? "glass-strong shadow-lg shadow-black/8 py-2.5"
-                : "bg-background/80 backdrop-blur-xl border border-border/40 shadow-sm py-3"
+                ? "glass-strong shadow-lg shadow-black/8 py-2.5 rounded-2xl px-5"
+                : "bg-background/90 backdrop-blur-xl border-b border-border/30 py-4 px-8"
             }`}
           >
             {/* Logo */}

@@ -367,10 +367,9 @@ export default function Home() {
           <img
             src={barberToolsBg}
             alt=""
-            className="w-full h-full object-cover opacity-[0.07] scale-105"
+            className="w-full h-full object-cover opacity-[0.12] scale-105"
           />
-          {/* colour overlay so readability stays high */}
-          <div className="absolute inset-0 bg-background/85" />
+          <div className="absolute inset-0 bg-background/82" />
         </div>
 
         {/* Background orbs */}
@@ -459,8 +458,8 @@ export default function Home() {
           />
         </div>
 
-        {/* Floating shop preview card */}
-        <div className="absolute right-[4%] top-[20%] hidden xl:block animate-float delay-300" style={{ zIndex: 10 }}>
+        {/* Floating shop preview card — centred between text and barber figure */}
+        <div className="absolute left-[50%] top-[22%] hidden xl:block animate-float delay-300" style={{ zIndex: 10 }}>
           <div className="glass-strong rounded-2xl p-4 w-56 shadow-xl">
             <div className="w-full h-28 rounded-xl overflow-hidden mb-3 bg-muted">
               <img src="https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=400" className="w-full h-full object-cover" alt="dyqan" />
@@ -494,8 +493,13 @@ export default function Home() {
 
       {/* ── STATS ────────────────────────────────────────── */}
       <section className="py-24 relative overflow-hidden">
+        {/* Tools photo background */}
+        <div className="absolute inset-0 pointer-events-none">
+          <img src={barberToolsBg} alt="" className="w-full h-full object-cover opacity-[0.08]" style={{ objectPosition: "center 60%" }} />
+          <div className="absolute inset-0 bg-background/88" />
+        </div>
         {/* Section background */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background via-card/40 to-background pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-transparent to-background/60 pointer-events-none" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[300px] bg-primary/5 rounded-full blur-3xl animate-glow-pulse pointer-events-none" />
 
         <div className="container px-6 max-w-7xl mx-auto relative z-10">
