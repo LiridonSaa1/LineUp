@@ -4,6 +4,8 @@ import { useListTopBarbershops } from "@workspace/api-client-react";
 import { MapPin, Star, Scissors, ArrowRight, Search, Shield, Zap, Sparkles, ChevronRight, Check, Users, Calendar, TrendingUp, Play, ShoppingBag } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import barberToolsBg from "@assets/vintage-equipment-of-barber-shop-on-wood-backgroun-2023-11-27-_1782291490098.jpg";
+import barberCutout from "@assets/bearded-handsome-barber-holding-comb-and-scissors-2023-11-27-_1782291537000.webp";
 
 /* ── SVG Barber Tool icons ───────────────────────────────── */
 const ScissorsSVG = ({ size = 64, opacity = 0.08, rotate = 0, className = "" }) => (
@@ -360,10 +362,20 @@ export default function Home() {
 
       {/* ── HERO ─────────────────────────────────────────── */}
       <section className="relative min-h-[90vh] flex items-center overflow-hidden">
+        {/* Barber tools photo background */}
+        <div className="absolute inset-0 pointer-events-none">
+          <img
+            src={barberToolsBg}
+            alt=""
+            className="w-full h-full object-cover opacity-[0.07] scale-105"
+          />
+          {/* colour overlay so readability stays high */}
+          <div className="absolute inset-0 bg-background/85" />
+        </div>
+
         {/* Background orbs */}
         <div className="absolute top-[-10%] left-[20%] w-[600px] h-[600px] glow-orb bg-primary/10 animate-glow-pulse" />
         <div className="absolute bottom-[10%] right-[-5%] w-[500px] h-[500px] glow-orb bg-primary/6 animate-glow-pulse delay-500" />
-        <div className="absolute top-[30%] right-[15%] w-[300px] h-[300px] glow-orb bg-primary/5 animate-float-slow" />
 
         {/* Grid overlay */}
         <div className="absolute inset-0 hero-grid pointer-events-none" />
@@ -435,8 +447,20 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Barber cutout figure */}
+        <div className="absolute right-0 bottom-0 hidden lg:block w-[420px] xl:w-[500px] pointer-events-none select-none" style={{ zIndex: 8 }}>
+          {/* Shadow under feet */}
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-48 h-8 bg-primary/20 blur-2xl rounded-full" />
+          <img
+            src={barberCutout}
+            alt="Berber profesional"
+            className="w-full h-auto object-contain drop-shadow-2xl animate-float-slow"
+            style={{ filter: "drop-shadow(0 30px 60px rgba(0,0,0,0.35))" }}
+          />
+        </div>
+
         {/* Floating shop preview card */}
-        <div className="absolute right-[4%] top-[20%] hidden xl:block animate-float delay-300">
+        <div className="absolute right-[4%] top-[20%] hidden xl:block animate-float delay-300" style={{ zIndex: 10 }}>
           <div className="glass-strong rounded-2xl p-4 w-56 shadow-xl">
             <div className="w-full h-28 rounded-xl overflow-hidden mb-3 bg-muted">
               <img src="https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=400" className="w-full h-full object-cover" alt="dyqan" />
@@ -452,7 +476,7 @@ export default function Home() {
         </div>
 
         {/* Floating OTP card */}
-        <div className="absolute right-[28%] bottom-[22%] hidden xl:block animate-float-slow delay-200">
+        <div className="absolute right-[28%] bottom-[22%] hidden xl:block animate-float-slow delay-200" style={{ zIndex: 10 }}>
           <div className="glass-strong rounded-2xl px-4 py-3 shadow-md flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center">
               <Shield className="w-4.5 h-4.5 text-primary" />

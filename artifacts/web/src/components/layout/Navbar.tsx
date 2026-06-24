@@ -16,15 +16,6 @@ import {
 } from "lucide-react";
 import { useLogout } from "@workspace/api-client-react";
 
-const TICKER_ITEMS = [
-  "✦ Rezervo terminin tënd online",
-  "✦ 340+ berberë në Kosovë",
-  "✦ Konfirmim OTP i menjëhershëm",
-  "✦ Produktet më të mira të grooming",
-  "✦ Shërbim 24/7",
-  "✦ Regjistro dyqanin tënd falas",
-];
-
 export function Navbar() {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
@@ -53,21 +44,8 @@ export function Navbar() {
 
   return (
     <>
-      {/* ── Announcement bar ── */}
-      <div className="fixed top-0 left-0 right-0 z-50 h-8 bg-primary overflow-hidden">
-        <div className="flex items-center h-full">
-          <div className="flex whitespace-nowrap animate-ticker will-change-transform">
-            {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
-              <span key={i} className="inline-flex items-center px-8 text-[11px] font-semibold text-primary-foreground/90 tracking-wide">
-                {item}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-
       {/* ── Main header ── */}
-      <header className={`fixed top-8 left-0 right-0 z-40 transition-all duration-500 ${scrolled ? "py-1.5" : "py-3"}`}>
+      <header className={`fixed top-0 left-0 right-0 z-40 transition-all duration-500 ${scrolled ? "py-1.5" : "py-3"}`}>
         <div className={`mx-auto transition-all duration-500 ${scrolled ? "max-w-5xl px-4" : "max-w-7xl px-6"}`}>
           <div
             className={`flex items-center justify-between rounded-2xl px-5 transition-all duration-500 ${
@@ -255,8 +233,7 @@ export function Navbar() {
         </div>
       </header>
 
-      {/* Spacer: 32px ticker + ~64px nav */}
-      <div className="h-24" />
+      <div className="h-16" />
     </>
   );
 }
