@@ -162,19 +162,64 @@ function useInView(threshold = 0.15) {
 }
 
 /* ── StatCard ────────────────────────────────────────────── */
-function StatCard({ value, suffix, label, icon: Icon }: { value: number; suffix: string; label: string; icon: any }) {
-  const { ref, inView } = useInView();
-  const count = useCountUp(value, 1800, inView);
+const STAT_DELAYS = ["delay-100", "delay-200", "delay-300", "delay-400"];
+
+function StatCard({
+  value, suffix, label, icon: Icon, index, color,
+}: {
+  value: number; suffix: string; label: string; icon: any; index: number;
+  color: { bg: string; text: string; border: string; glow: string };
+}) {
+  const { ref, inView } = useInView(0.2);
+  const count = useCountUp(value, 2000, inView);
+
   return (
-    <div ref={ref} className="glass rounded-2xl p-6 flex flex-col gap-3 hover-lift group">
-      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-        <Icon className="w-5 h-5 text-primary" />
-      </div>
-      <div>
-        <div className="text-3xl font-bold tracking-tight stat-number text-foreground">
-          {count.toLocaleString()}<span className="text-primary">{suffix}</span>
+    <div
+      ref={ref}
+      className={`relative group transition-all duration-700 ${
+        inView ? `opacity-100 translate-y-0 ${STAT_DELAYS[index]}` : "opacity-0 translate-y-10"
+      }`}
+      style={{ transitionDelay: inView ? `${index * 120}ms` : "0ms" }}
+    >
+      {/* Glow behind card */}
+      <div
+        className={`absolute inset-0 rounded-3xl blur-xl opacity-0 group-hover:opacity-60 transition-opacity duration-500 ${color.glow}`}
+      />
+
+      <div
+        className={`relative rounded-3xl border p-7 overflow-hidden transition-all duration-300 group-hover:-translate-y-1.5 group-hover:shadow-xl bg-card/80 backdrop-blur-sm ${color.border}`}
+      >
+        {/* Animated gradient corner accent */}
+        <div className={`absolute -top-8 -right-8 w-24 h-24 rounded-full blur-2xl opacity-20 group-hover:opacity-40 transition-opacity duration-500 ${color.bg}`} />
+
+        {/* Top row: icon + number */}
+        <div className="flex items-start justify-between mb-5">
+          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110 ${color.bg}`}>
+            <Icon className={`w-6 h-6 ${color.text}`} />
+          </div>
+
+          {/* Subtle animated dot */}
+          <div className={`w-2 h-2 rounded-full mt-1 ${color.text} opacity-60 animate-pulse`} style={{ animationDelay: `${index * 300}ms` }} />
         </div>
-        <p className="text-sm text-muted-foreground mt-1">{label}</p>
+
+        {/* Number */}
+        <div className="mb-1">
+          <span className="text-4xl font-extrabold tracking-tight stat-number text-foreground">
+            {count.toLocaleString()}
+          </span>
+          <span className={`text-3xl font-extrabold ${color.text}`}>{suffix}</span>
+        </div>
+
+        {/* Label */}
+        <p className="text-sm text-muted-foreground font-medium">{label}</p>
+
+        {/* Animated progress bar */}
+        <div className="mt-5 h-1 bg-border/60 rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all duration-[2000ms] ease-out ${color.bg}`}
+            style={{ width: inView ? "100%" : "0%", transitionDelay: `${index * 120 + 400}ms` }}
+          />
+        </div>
       </div>
     </div>
   );
@@ -424,13 +469,38 @@ export default function Home() {
       <Ticker />
 
       {/* ── STATS ────────────────────────────────────────── */}
-      <section className="py-20 bg-background">
-        <div className="container px-6 max-w-7xl mx-auto">
-          <div ref={statsRef} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard value={6}     suffix="+"  label="Qytete në Kosovë"         icon={MapPin} />
-            <StatCard value={500}   suffix="+"  label="Berberë aktivë"            icon={Scissors} />
-            <StatCard value={12000} suffix="+"  label="Klientë të kënaqur"        icon={Users} />
-            <StatCard value={50000} suffix="+"  label="Takime të rezervuara"      icon={Calendar} />
+      <section className="py-24 relative overflow-hidden">
+        {/* Section background */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background via-card/40 to-background pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[300px] bg-primary/5 rounded-full blur-3xl animate-glow-pulse pointer-events-none" />
+
+        <div className="container px-6 max-w-7xl mx-auto relative z-10">
+          {/* Section label */}
+          <div className="flex items-center gap-4 mb-14">
+            <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground/40">// TRIM</span>
+            <div className="flex-1 h-px bg-gradient-to-r from-border via-primary/20 to-transparent" />
+            <span className="text-xs font-bold uppercase tracking-[0.15em] text-primary">Numrat tanë</span>
+            <div className="flex-1 h-px bg-gradient-to-l from-border via-primary/20 to-transparent" />
+            <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground/40">Stats</span>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+            <StatCard
+              value={6}     suffix="+"  label="Qytete në Kosovë"    icon={MapPin}   index={0}
+              color={{ bg: "bg-blue-500/10", text: "text-blue-500", border: "border-blue-500/15 hover:border-blue-500/40", glow: "bg-blue-400/20" }}
+            />
+            <StatCard
+              value={500}   suffix="+"  label="Berberë aktivë"       icon={Scissors} index={1}
+              color={{ bg: "bg-violet-500/10", text: "text-violet-500", border: "border-violet-500/15 hover:border-violet-500/40", glow: "bg-violet-400/20" }}
+            />
+            <StatCard
+              value={12000} suffix="+"  label="Klientë të kënaqur"   icon={Users}    index={2}
+              color={{ bg: "bg-emerald-500/10", text: "text-emerald-500", border: "border-emerald-500/15 hover:border-emerald-500/40", glow: "bg-emerald-400/20" }}
+            />
+            <StatCard
+              value={50000} suffix="+"  label="Takime të rezervuara" icon={Calendar} index={3}
+              color={{ bg: "bg-primary/10", text: "text-primary", border: "border-primary/15 hover:border-primary/40", glow: "bg-primary/20" }}
+            />
           </div>
         </div>
       </section>
