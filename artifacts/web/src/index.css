@@ -90,8 +90,8 @@
   --popover-foreground: 224 71% 4%;
   --popover-border: 220 13% 91%;
 
-  /* Amber / Gold */
-  --primary: 38 78% 50%;
+  /* Blue & Navy */
+  --primary: 220 85% 57%;
   --primary-foreground: 0 0% 100%;
 
   --secondary: 220 14% 96%;
@@ -158,7 +158,7 @@
   --popover-foreground: 210 20% 98%;
   --popover-border: 222 16% 14%;
 
-  --primary: 38 78% 56%;
+  --primary: 217 91% 65%;
   --primary-foreground: 222 16% 7%;
 
   --secondary: 222 16% 14%;
@@ -351,10 +351,10 @@
 .text-shimmer {
   background: linear-gradient(
     90deg,
-    hsl(38 78% 50%) 0%,
-    hsl(45 90% 60%) 40%,
-    hsl(38 78% 50%) 60%,
-    hsl(32 70% 40%) 100%
+    hsl(220 85% 57%) 0%,
+    hsl(210 100% 72%) 40%,
+    hsl(220 85% 57%) 60%,
+    hsl(230 75% 45%) 100%
   );
   background-size: 200% auto;
   -webkit-background-clip: text;
