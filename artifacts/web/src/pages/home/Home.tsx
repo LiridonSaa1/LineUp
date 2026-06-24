@@ -1208,7 +1208,7 @@ export default function Home() {
         <div className="container px-6 max-w-7xl mx-auto">
           <div className="flex items-center gap-3 mb-4">
             <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground/40">
-              // TRIM
+              // STILEON
             </span>
             <div className="flex-1 h-px bg-gradient-to-r from-border via-primary/20 to-transparent" />
             <span className="text-xs font-bold uppercase tracking-[0.15em] text-primary">
@@ -1243,7 +1243,7 @@ export default function Home() {
           {/* Section label */}
           <div className="flex items-center gap-4 mb-14">
             <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground/40">
-              // LINE
+              // STILE
             </span>
             <div className="flex-1 h-px bg-gradient-to-r from-border via-primary/20 to-transparent" />
             <span className="text-xs font-bold uppercase tracking-[0.15em] text-primary">
@@ -1251,7 +1251,7 @@ export default function Home() {
             </span>
             <div className="flex-1 h-px bg-gradient-to-l from-border via-primary/20 to-transparent" />
             <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground/40">
-              UP
+              ON
             </span>
           </div>
 

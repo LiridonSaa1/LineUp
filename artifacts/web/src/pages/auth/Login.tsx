@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowRight, Scissors, Star, Users, Calendar } from "lucide-react";
-import logoImg from "@assets/3_1782304956395.png";
+import logoImg from "@assets/LINE_1782305856031.png";
 
 const loginSchema = z.object({
   email: z.string().email("Ju lutem vendosni një email të vlefshëm"),

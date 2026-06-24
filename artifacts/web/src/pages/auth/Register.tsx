@@ -29,7 +29,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import logoImg from "@assets/3_1782304956395.png";
+import logoImg from "@assets/LINE_1782305856031.png";
 
 const userSchema = z
   .object({

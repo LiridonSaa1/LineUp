@@ -5,7 +5,7 @@ import {
   Mail, Twitter, Instagram, ArrowUpRight,
   Sparkles, Phone,
 } from "lucide-react";
-import logoImg from "@assets/3_1782304956395.png";
+import logoImg from "@assets/LINE_1782305856031.png";
 
 function FooterSection({ label, icon: Icon, children }: {
   label: string;

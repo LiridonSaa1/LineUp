@@ -21,7 +21,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useLogout } from "@workspace/api-client-react";
-import logoImg from "@assets/3_1782304956395.png";
+import logoImg from "@assets/LINE_1782305856031.png";
 
 export function Navbar() {
   const { user, logout } = useAuth();
