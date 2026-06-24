@@ -553,24 +553,48 @@ function StepCard({
   step,
   title,
   desc,
-  delay,
+  index,
 }: {
   step: string;
   title: string;
   desc: string;
+  index: number;
   delay: string;
 }) {
-  const { ref, inView } = useInView();
+  const { ref, inView } = useInView(0.15);
   return (
     <div
       ref={ref}
-      className={`flex gap-5 group transition-all duration-500 ${inView ? `animate-fade-up ${delay}` : "opacity-0"}`}
+      className="flex gap-5 group"
+      style={{
+        opacity: inView ? 1 : 0,
+        transform: inView ? "translateX(0)" : "translateX(-40px)",
+        transition: `opacity 0.6s ease, transform 0.6s ease`,
+        transitionDelay: inView ? `${index * 150}ms` : "0ms",
+      }}
     >
-      <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-primary text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-primary/25 group-hover:shadow-primary/40 group-hover:scale-110 transition-all duration-300">
-        {step}
+      {/* Number badge */}
+      <div className="flex-shrink-0 flex flex-col items-center gap-2">
+        <div className="w-12 h-12 rounded-2xl bg-primary text-white flex items-center justify-center font-black text-sm tracking-wider shadow-lg shadow-primary/30 group-hover:shadow-primary/50 group-hover:scale-105 transition-all duration-300">
+          {step}
+        </div>
+        {index < 2 && (
+          <div
+            className="w-px flex-1 min-h-[40px] bg-gradient-to-b from-primary/30 to-transparent"
+            style={{
+              opacity: inView ? 1 : 0,
+              transition: "opacity 0.8s ease",
+              transitionDelay: inView ? `${index * 150 + 300}ms` : "0ms",
+            }}
+          />
+        )}
       </div>
-      <div>
-        <h3 className="font-semibold text-lg mb-1.5">{title}</h3>
+
+      {/* Text */}
+      <div className="pb-8">
+        <h3 className="font-bold text-lg mb-1.5 text-foreground group-hover:text-primary transition-colors duration-300">
+          {title}
+        </h3>
         <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
       </div>
     </div>
@@ -798,6 +822,197 @@ function BannerAds() {
         ))}
       </div>
     </div>
+  );
+}
+
+/* ── HowItWorks ──────────────────────────────────────────── */
+function HowItWorks() {
+  const { ref: headRef, inView: headInView } = useInView(0.2);
+  const { ref: cardRef, inView: cardInView } = useInView(0.15);
+
+  const steps = [
+    {
+      step: "01",
+      title: "Gjej dyqanin tënd",
+      desc: "Kërko sipas qytetit, shfleto vlerësimet dhe eksploro fotot e berberive më të mira të Kosovës.",
+    },
+    {
+      step: "02",
+      title: "Zgjidhni një vend",
+      desc: "Zgjidhni berberin tuaj dhe orën e preferuar nga disponueshmëria në kohë reale.",
+    },
+    {
+      step: "03",
+      title: "Konfirmo me OTP",
+      desc: "Merrni një kod të njëhershëm. Konfirmuar menjëherë, pa asnjë telefonatë.",
+    },
+  ];
+
+  const [activeSlot, setActiveSlot] = useState(2);
+
+  useEffect(() => {
+    const t = setInterval(() => setActiveSlot((s) => (s + 1) % 6), 1800);
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <section className="py-28 relative overflow-hidden bg-background">
+      {/* Subtle dot-grid background */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.03]"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle, hsl(var(--primary)) 1px, transparent 1px)",
+          backgroundSize: "28px 28px",
+        }}
+      />
+      {/* Soft glow top-right */}
+      <div className="absolute -top-32 right-0 w-[500px] h-[500px] bg-primary/6 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="container px-6 max-w-7xl mx-auto relative z-10">
+        {/* Header */}
+        <div
+          ref={headRef}
+          className="max-w-xl mb-16"
+          style={{
+            opacity: headInView ? 1 : 0,
+            transform: headInView ? "translateY(0)" : "translateY(24px)",
+            transition: "opacity 0.7s ease, transform 0.7s ease",
+          }}
+        >
+          <span className="inline-flex items-center gap-2 text-xs font-bold text-primary tracking-[0.22em] uppercase mb-4">
+            <span className="w-6 h-px bg-primary" />
+            Si Funksionon
+          </span>
+          <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-4 leading-[1.1]">
+            Rezervo në{" "}
+            <span className="relative inline-block">
+              3 hapa
+              <span className="absolute -bottom-1 left-0 right-0 h-[3px] bg-primary rounded-full" />
+            </span>{" "}
+            të thjeshtë
+          </h2>
+          <p className="text-muted-foreground text-lg leading-relaxed">
+            Nga zbulimi deri te takimi — më shpejt se një telefonatë.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-16 items-center">
+          {/* Steps */}
+          <div>
+            {steps.map((s, i) => (
+              <StepCard
+                key={s.step}
+                step={s.step}
+                title={s.title}
+                desc={s.desc}
+                index={i}
+                delay=""
+              />
+            ))}
+          </div>
+
+          {/* Booking card mockup */}
+          <div
+            ref={cardRef}
+            className="relative hidden md:flex items-center justify-center"
+            style={{
+              opacity: cardInView ? 1 : 0,
+              transform: cardInView ? "translateX(0) scale(1)" : "translateX(40px) scale(0.96)",
+              transition: "opacity 0.8s ease, transform 0.8s ease",
+              transitionDelay: cardInView ? "200ms" : "0ms",
+            }}
+          >
+            {/* Soft glow behind card */}
+            <div className="absolute w-80 h-80 bg-primary/8 rounded-full blur-3xl" />
+
+            {/* Main card — clean white/surface look */}
+            <div
+              className="relative rounded-3xl p-6 w-80 shadow-2xl border border-border/60 bg-card animate-float"
+              style={{ animationDuration: "5s" }}
+            >
+              {/* Shop header */}
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/50">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center ring-1 ring-primary/20">
+                  <Scissors className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold">TRIM Prishtina</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Rr. Bill Clinton Nr. 42
+                  </p>
+                </div>
+                <div className="ml-auto flex items-center gap-1">
+                  <Star className="w-3.5 h-3.5 text-primary fill-primary" />
+                  <span className="text-xs font-bold">4.9</span>
+                </div>
+              </div>
+
+              {/* Time slots with animated active state */}
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-3">
+                Zgjidhni orën
+              </p>
+              <div className="grid grid-cols-3 gap-2 mb-5">
+                {["09:00", "09:30", "10:30", "11:00", "14:00", "15:30"].map(
+                  (t, i) => (
+                    <button
+                      key={t}
+                      onClick={() => setActiveSlot(i)}
+                      className={`py-2.5 text-center text-xs font-semibold rounded-xl transition-all duration-300 ${
+                        i === activeSlot
+                          ? "bg-primary text-white shadow-lg shadow-primary/30 scale-105"
+                          : "bg-muted/60 text-muted-foreground hover:bg-primary/10 hover:text-primary"
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ),
+                )}
+              </div>
+
+              {/* Selected barber row */}
+              <div className="rounded-xl p-3.5 flex items-center gap-3 bg-muted/40 border border-border/40">
+                <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center text-sm font-black text-primary shrink-0">
+                  V
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold">Visar Berisha</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    Prerje Flokësh · 30 min · 8€
+                  </p>
+                </div>
+                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <Check className="w-3.5 h-3.5 text-primary" />
+                </div>
+              </div>
+
+              {/* CTA button */}
+              <button className="mt-4 w-full py-3 rounded-xl bg-primary text-white text-sm font-bold shadow-lg shadow-primary/25 hover:bg-primary/90 hover:shadow-primary/40 transition-all duration-200 hover:scale-[1.02]">
+                Konfirmo Rezervimin
+              </button>
+            </div>
+
+            {/* Floating OTP badge */}
+            <div
+              className="absolute -bottom-4 -left-6 bg-card border border-border/60 rounded-2xl px-4 py-3 shadow-xl flex items-center gap-3 animate-float-slow"
+              style={{ animationDelay: "1.5s" }}
+            >
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                <Shield className="w-4 h-4 text-emerald-500" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-emerald-600">
+                  ✓ Takimi konfirmuar
+                </p>
+                <p className="text-[9px] text-muted-foreground mt-0.5">
+                  OTP: 847 391
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -1083,87 +1298,7 @@ export default function Home() {
       </section>
 
       {/* ── HOW IT WORKS ─────────────────────────────────── */}
-      <section className="py-24 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-card/50 to-background pointer-events-none" />
-        <div className="container px-6 max-w-7xl mx-auto relative z-10">
-          <div className="max-w-xl mb-16">
-            <span className="text-xs font-semibold text-primary tracking-widest uppercase mb-3 block">
-              Si funksionon
-            </span>
-            <h2 className="text-4xl font-bold tracking-tight mb-4">
-              Rezervo në 3 hapa të thjeshtë
-            </h2>
-            <p className="text-muted-foreground text-lg">
-              Nga zbulimi deri te takimi — më shpejt se një telefonatë.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-10 items-center">
-            <div className="space-y-10">
-              <StepCard
-                step="01"
-                title="Gjej dyqanin tënd"
-                desc="Kërko sipas qytetit, shfleto vlerësimet dhe eksploro fotot e berberive më të mira të Kosovës."
-                delay="delay-100"
-              />
-              <StepCard
-                step="02"
-                title="Zgjidhni një vend"
-                desc="Zgjidhni berberin tuaj dhe orën e preferuar nga disponueshmëria në kohë reale."
-                delay="delay-200"
-              />
-              <StepCard
-                step="03"
-                title="Konfirmo me OTP"
-                desc="Merrni një kod të njëhershëm. Konfirmuar menjëherë, pa asnjë telefonatë."
-                delay="delay-300"
-              />
-            </div>
-
-            {/* Visual mockup */}
-            <div className="relative hidden md:flex items-center justify-center">
-              <div className="absolute w-72 h-72 glow-orb bg-primary/10 animate-glow-pulse" />
-              <div className="relative glass-strong rounded-3xl p-6 w-72 animate-float shadow-xl">
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center">
-                    <Scissors className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold">TRIM Prishtina</p>
-                    <p className="text-xs text-muted-foreground">
-                      Rr. Bill Clinton Nr. 42
-                    </p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-2 mb-5">
-                  {["09:00", "09:30", "10:30", "11:00", "14:00", "15:30"].map(
-                    (t, i) => (
-                      <div
-                        key={t}
-                        className={`py-2.5 text-center text-xs font-medium rounded-xl transition-all ${i === 2 ? "bg-primary text-white shadow-md shadow-primary/25 scale-105" : "glass hover:bg-primary/10"}`}
-                      >
-                        {t}
-                      </div>
-                    ),
-                  )}
-                </div>
-                <div className="glass rounded-xl p-3 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-xs font-bold text-primary">
-                    V
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold">Visar Berisha</p>
-                    <p className="text-[10px] text-muted-foreground">
-                      Prerje Flokësh · 30 min · 8€
-                    </p>
-                  </div>
-                  <Check className="w-4 h-4 text-primary" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <HowItWorks />
 
       {/* ── TOP SHOPS ────────────────────────────────────── */}
       <section className="py-24 bg-background">

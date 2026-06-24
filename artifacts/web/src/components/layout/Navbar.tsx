@@ -70,7 +70,7 @@ export function Navbar() {
         }`}
       >
         <div
-          className={`mx-auto transition-all duration-500 ${scrolled ? "max-w-5xl px-4" : "max-w-7xl px-6"}`}
+          className={`mx-auto transition-all duration-500 ${scrolled ? "max-w-7xl px-4" : "max-w-7xl px-6"}`}
         >
           <div
             className={`flex items-center justify-between transition-all duration-500 ${
