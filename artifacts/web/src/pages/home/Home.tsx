@@ -376,11 +376,6 @@ export default function Home() {
         <div className="absolute top-[-10%] left-[20%] w-[600px] h-[600px] glow-orb bg-primary/10 animate-glow-pulse" />
         <div className="absolute bottom-[10%] right-[-5%] w-[500px] h-[500px] glow-orb bg-primary/6 animate-glow-pulse delay-500" />
 
-        {/* Grid overlay */}
-        <div className="absolute inset-0 hero-grid pointer-events-none" />
-
-        {/* Floating barber tools */}
-        <BarberBackground />
 
         <div className="container px-6 max-w-7xl mx-auto relative z-10 py-16">
           <div className="max-w-4xl">
