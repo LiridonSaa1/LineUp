@@ -256,20 +256,20 @@ export function Navbar() {
                   </DropdownMenu>
                 </>
               ) : (
-                <div className="flex items-center gap-5">
+                <div className="flex items-center gap-2">
                   <Link
                     href="/login"
-                    className={`hidden md:block text-sm font-medium transition-colors duration-200 ${
+                    className={`hidden md:inline-flex items-center btn-pill liquid-glass text-sm font-medium px-4 py-2 ${
                       isTransparent || scrolled
-                        ? "text-white/80 hover:text-white"
-                        : "text-muted-foreground hover:text-foreground"
+                        ? "text-white"
+                        : "text-foreground"
                     }`}
                   >
                     Hyr
                   </Link>
                   <Link
                     href="/register"
-                    className="btn-pill inline-flex items-center gap-1.5 px-5 py-2.5 bg-primary text-white text-sm font-semibold shadow-md shadow-primary/25 hover:shadow-primary/40"
+                    className="btn-pill inline-flex items-center gap-1.5 px-5 py-2.5 bg-primary text-white text-sm font-semibold shadow-md shadow-primary/30 hover:shadow-lg hover:shadow-primary/40 hover:scale-[1.03] active:scale-95 transition-all duration-200"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
                     Fillo

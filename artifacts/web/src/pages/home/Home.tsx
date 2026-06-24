@@ -1113,10 +1113,10 @@ export default function Home() {
                 </div>
                 <button
                   onClick={handleSearch}
-                  className="btn-pill flex items-center justify-center gap-2 px-7 py-3.5 bg-primary text-white text-sm font-bold shadow-md shadow-primary/40 transition-all duration-300 ease-out hover:px-10 hover:shadow-lg hover:shadow-primary/50 hover:scale-105 active:scale-95"
+                  className="search-expand-btn btn-pill flex items-center justify-center bg-primary text-white font-bold shadow-md shadow-primary/40 transition-all duration-300 ease-out hover:shadow-xl hover:shadow-primary/50 active:scale-95"
                 >
-                  <Search className="w-4 h-4 transition-transform duration-300 group-hover:rotate-12" />
-                  Kërko
+                  <Search className="w-4 h-4 shrink-0 transition-transform duration-300" />
+                  <span className="search-expand-text text-sm whitespace-nowrap overflow-hidden">Kërko</span>
                 </button>
               </div>
             </div>
@@ -1160,7 +1160,7 @@ export default function Home() {
           className="absolute left-[62%] top-[18%] hidden xl:block animate-float delay-300"
           style={{ zIndex: 12 }}
         >
-          <div className="glass-strong rounded-2xl p-4 w-56 shadow-xl">
+          <div className="rounded-2xl p-4 w-56 shadow-xl  border border-white/20 bg-white/10 backdrop-blur-sm text-xs font-medium text-white/80">
             <div className="w-full h-28 rounded-xl overflow-hidden mb-3 bg-muted">
               <img
                 src="https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=400"
@@ -1187,7 +1187,7 @@ export default function Home() {
           className="absolute right-[28%] bottom-[22%] hidden xl:block animate-float-slow delay-200"
           style={{ zIndex: 10 }}
         >
-          <div className="glass-strong rounded-2xl px-4 py-3 shadow-md flex items-center gap-3">
+          <div className="flex items-center gap-1.5 border border-white/20 bg-white/10 backdrop-blur-sm px-4 py-3 rounded-full text-xs font-medium text-white/80">
             <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center">
               <Shield className="w-4.5 h-4.5 text-primary" />
             </div>
