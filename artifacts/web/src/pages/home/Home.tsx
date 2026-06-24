@@ -678,6 +678,146 @@ function Ticker() {
   );
 }
 
+/* ── Ads Slider ──────────────────────────────────────────── */
+const adsData = [
+  {
+    tag: "OFERTË",
+    title: "Fade Premium",
+    desc: "Skin fade + rregullim mjekre",
+    price: "12€",
+    oldPrice: "18€",
+    color: "from-blue-600 to-blue-800",
+    accent: "bg-blue-400",
+    emoji: "✂️",
+  },
+  {
+    tag: "E RE",
+    title: "Paketa VIP",
+    desc: "Prerje + larje + pomadë falas",
+    price: "15€",
+    oldPrice: "22€",
+    color: "from-violet-600 to-violet-900",
+    accent: "bg-violet-400",
+    emoji: "👑",
+  },
+  {
+    tag: "KURSIM 40%",
+    title: "Burst Fade",
+    desc: "Me linjë + formë mjekre",
+    price: "10€",
+    oldPrice: "17€",
+    color: "from-primary to-orange-700",
+    accent: "bg-primary",
+    emoji: "🔥",
+  },
+  {
+    tag: "POPULLAR",
+    title: "Pompadour",
+    desc: "Stilim klasik + produkt stilimi",
+    price: "14€",
+    oldPrice: "20€",
+    color: "from-emerald-600 to-emerald-900",
+    accent: "bg-emerald-400",
+    emoji: "💎",
+  },
+  {
+    tag: "FLASH",
+    title: "Rrojë Brisk",
+    desc: "Rrojë e plotë me peshqir nxehtë",
+    price: "8€",
+    oldPrice: "13€",
+    color: "from-rose-600 to-rose-900",
+    accent: "bg-rose-400",
+    emoji: "⚡",
+  },
+  {
+    tag: "OFERTË",
+    title: "Line Up",
+    desc: "Formë perfekte + pastrimi qafës",
+    price: "6€",
+    oldPrice: "10€",
+    color: "from-amber-600 to-amber-800",
+    accent: "bg-amber-400",
+    emoji: "🎯",
+  },
+  {
+    tag: "VIP",
+    title: "Ngjyrosje",
+    desc: "Ngjyrosje + kondicionim + stilim",
+    price: "25€",
+    oldPrice: "38€",
+    color: "from-cyan-600 to-cyan-900",
+    accent: "bg-cyan-400",
+    emoji: "🎨",
+  },
+  {
+    tag: "KURSIM",
+    title: "Prerje Fëmijësh",
+    desc: "Deri 12 vjeç · Qetësi garantohet",
+    price: "7€",
+    oldPrice: "11€",
+    color: "from-pink-600 to-pink-900",
+    accent: "bg-pink-400",
+    emoji: "⭐",
+  },
+];
+
+function AdsSlider() {
+  const tripled = [...adsData, ...adsData, ...adsData];
+  return (
+    <div className="overflow-hidden relative py-2">
+      <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+      <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+      <div
+        className="flex gap-4 whitespace-nowrap"
+        style={{
+          animation: "ticker 60s linear infinite",
+          width: "max-content",
+        }}
+      >
+        {tripled.map((ad, i) => (
+          <div
+            key={i}
+            className={`relative inline-flex flex-col justify-between shrink-0 rounded-2xl overflow-hidden bg-gradient-to-b ${ad.color} shadow-lg cursor-pointer group hover:-translate-y-1 transition-transform duration-300`}
+            style={{ width: "140px", height: "220px", padding: "16px 14px" }}
+          >
+            {/* Tag */}
+            <span
+              className={`inline-block self-start text-[9px] font-black tracking-widest uppercase px-2 py-0.5 rounded-full text-white/90 ${ad.accent} bg-opacity-30`}
+              style={{ background: "rgba(255,255,255,0.18)" }}
+            >
+              {ad.tag}
+            </span>
+
+            {/* Emoji */}
+            <div className="text-4xl text-center my-1 group-hover:scale-110 transition-transform duration-300">
+              {ad.emoji}
+            </div>
+
+            {/* Info */}
+            <div>
+              <p className="text-white font-bold text-sm leading-tight mb-0.5 whitespace-normal">
+                {ad.title}
+              </p>
+              <p className="text-white/60 text-[10px] leading-snug whitespace-normal mb-2">
+                {ad.desc}
+              </p>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-white font-extrabold text-base">
+                  {ad.price}
+                </span>
+                <span className="text-white/40 text-[10px] line-through">
+                  {ad.oldPrice}
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ── Main component ──────────────────────────────────────── */
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -852,6 +992,26 @@ export default function Home() {
 
       {/* ── TICKER ──────────────────────────────────────── */}
       <Ticker />
+
+      {/* ── ADS SLIDER ───────────────────────────────────── */}
+      <section className="py-10 overflow-hidden bg-background">
+        <div className="container px-6 max-w-7xl mx-auto mb-6">
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground/40">
+              // TRIM
+            </span>
+            <div className="flex-1 h-px bg-gradient-to-r from-border via-primary/20 to-transparent" />
+            <span className="text-xs font-bold uppercase tracking-[0.15em] text-primary">
+              Ofertat e javës
+            </span>
+            <div className="flex-1 h-px bg-gradient-to-l from-border via-primary/20 to-transparent" />
+            <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground/40">
+              Deals
+            </span>
+          </div>
+        </div>
+        <AdsSlider />
+      </section>
 
       {/* ── STATS ────────────────────────────────────────── */}
       <section className="py-24 relative overflow-hidden">
