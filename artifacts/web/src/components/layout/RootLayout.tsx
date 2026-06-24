@@ -1,10 +1,11 @@
 import { Navbar } from "./Navbar";
 import { Link } from "wouter";
 import {
-  Scissors, MapPin, Calendar, ShoppingBag,
+  MapPin, Calendar, ShoppingBag,
   Mail, Twitter, Instagram, ArrowUpRight,
   Sparkles, Phone,
 } from "lucide-react";
+import logoImg from "@assets/3_1782304956395.png";
 
 function FooterSection({ label, icon: Icon, children }: {
   label: string;
@@ -101,7 +102,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
             <div className="md:col-span-1">
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-8 h-8 bg-primary rounded-xl flex items-center justify-center shadow-sm shadow-primary/30">
-                  <Scissors className="w-4 h-4 text-primary-foreground" />
+                  <img src={logoImg} alt="TRIM" className="w-5 h-5 object-contain" style={{ filter: "brightness(0) invert(1)" }} />
                 </div>
                 <span className="text-xl font-bold tracking-tight">TRIM<span className="text-primary">.</span></span>
               </div>

@@ -21,7 +21,6 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowRight,
   ArrowLeft,
-  Scissors,
   User,
   Building2,
   MapPin,
@@ -30,6 +29,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
+import logoImg from "@assets/3_1782304956395.png";
 
 const userSchema = z
   .object({
@@ -767,7 +767,7 @@ export default function Register() {
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           <Link href="/" className="inline-flex items-center gap-2 animate-fade-in">
             <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/40">
-              <Scissors className="w-4 h-4 text-white" />
+              <img src={logoImg} alt="TRIM" className="w-5 h-5 object-contain" style={{ filter: "brightness(0) invert(1)" }} />
             </div>
             <span className="text-2xl font-bold tracking-tight text-white">
               TRIM<span className="text-primary">.</span>
@@ -838,7 +838,7 @@ export default function Register() {
           <div className="space-y-1 animate-fade-up">
             <Link href="/" className="inline-flex items-center gap-2 mb-5 lg:hidden">
               <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center">
-                <Scissors className="w-3.5 h-3.5 text-white" />
+                <img src={logoImg} alt="TRIM" className="w-4 h-4 object-contain" style={{ filter: "brightness(0) invert(1)" }} />
               </div>
               <span className="text-xl font-bold tracking-tight">TRIM<span className="text-primary">.</span></span>
             </Link>

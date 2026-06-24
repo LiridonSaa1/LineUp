@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowRight, Scissors, Star, Users, Calendar } from "lucide-react";
+import logoImg from "@assets/3_1782304956395.png";
 
 const loginSchema = z.object({
   email: z.string().email("Ju lutem vendosni një email të vlefshëm"),
@@ -74,7 +75,7 @@ export default function Login() {
         <div className="relative z-10 flex flex-col justify-between p-14 w-full">
           <Link href="/" className="inline-flex items-center gap-2.5 animate-fade-in">
             <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/40">
-              <Scissors className="w-4.5 h-4.5 text-white" />
+              <img src={logoImg} alt="TRIM" className="w-5 h-5 object-contain" style={{ filter: "brightness(0) invert(1)" }} />
             </div>
             <span className="text-2xl font-bold tracking-tight text-white">
               TRIM<span className="text-primary">.</span>
@@ -135,7 +136,7 @@ export default function Login() {
         <div className="w-full max-w-sm relative z-10">
           <Link href="/" className="inline-flex items-center gap-2 mb-8 lg:hidden animate-fade-in">
             <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center">
-              <Scissors className="w-3.5 h-3.5 text-white" />
+              <img src={logoImg} alt="TRIM" className="w-4 h-4 object-contain" style={{ filter: "brightness(0) invert(1)" }} />
             </div>
             <span className="text-xl font-bold tracking-tight">TRIM<span className="text-primary">.</span></span>
           </Link>

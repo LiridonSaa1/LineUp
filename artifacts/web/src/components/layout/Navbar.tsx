@@ -18,11 +18,10 @@ import {
   ShoppingBag,
   Bell,
   ChevronDown,
-  Scissors,
   Sparkles,
 } from "lucide-react";
 import { useLogout } from "@workspace/api-client-react";
-import logoImg from "@assets/3_1782294327381.png";
+import logoImg from "@assets/3_1782304956395.png";
 
 export function Navbar() {
   const { user, logout } = useAuth();
@@ -82,7 +81,7 @@ export function Navbar() {
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 group">
               <div className="w-8 h-8 bg-primary rounded-xl flex items-center justify-center shadow-md shadow-primary/25 group-hover:shadow-primary/40 transition-shadow duration-300">
-                <Scissors className="w-4 h-4 text-white" />
+                <img src={logoImg} alt="TRIM" className="w-5 h-5 object-contain" style={{ filter: "brightness(0) invert(1)" }} />
               </div>
               <span
                 className={`text-xl font-bold tracking-tight transition-colors duration-300 ${isTransparent || scrolled ? "text-white" : "text-foreground"}`}
