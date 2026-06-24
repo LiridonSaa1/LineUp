@@ -41,9 +41,23 @@ export function Navbar() {
   };
 
   const navLinks = [
-    { href: "/barbershops", label: "Zbulo" },
-    { href: "/marketplace", label: "Dyqani" },
+    { href: "/barbershops", label: "Zbulo", anchor: false },
+    { href: "how-it-works", label: "Si funksionon", anchor: true },
+    { href: "/marketplace", label: "Dyqani", anchor: false },
+    { href: "pricing", label: "Çmimet", anchor: true },
   ];
+
+  const handleAnchorClick = (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    if (location !== "/") {
+      setLocation("/");
+      setTimeout(() => {
+        document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 350);
+    } else {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
 
   return (
     <>

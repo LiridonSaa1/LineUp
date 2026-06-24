@@ -943,7 +943,7 @@ export default function Home() {
       </section>
 
       {/* ── HOW IT WORKS ─────────────────────────────────── */}
-      <section className="py-24 relative overflow-hidden">
+      <section id="how-it-works" className="py-24 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-card/50 to-background pointer-events-none" />
         <div className="container px-6 max-w-7xl mx-auto relative z-10">
           <div className="max-w-xl mb-16">
@@ -1187,7 +1187,7 @@ export default function Home() {
       </section>
 
       {/* ── OWNER CTA ────────────────────────────────────── */}
-      <section className="py-28 relative overflow-hidden">
+      <section id="pricing" className="py-28 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-card via-card to-background" />
         <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] glow-orb bg-primary/8 animate-glow-pulse" />
         <div className="absolute bottom-[-10%] left-[-5%] w-[400px] h-[400px] glow-orb bg-primary/5 animate-float-slow" />
