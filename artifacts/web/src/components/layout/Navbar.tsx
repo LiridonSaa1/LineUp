@@ -61,7 +61,7 @@ export function Navbar() {
           <div
             className={`flex items-center justify-between transition-all duration-500 ${
               scrolled
-                ? "glass-strong shadow-lg shadow-black/8 py-2.5 rounded-2xl px-5"
+                ? "bg-neutral-900/90 backdrop-blur-xl shadow-lg shadow-black/30 border border-white/8 py-2.5 rounded-2xl px-5"
                 : "py-4"
             }`}
           >
@@ -70,7 +70,7 @@ export function Navbar() {
               <div className="w-8 h-8 bg-primary rounded-xl flex items-center justify-center shadow-md shadow-primary/25 group-hover:shadow-primary/40 transition-shadow duration-300">
                 <Scissors className="w-4 h-4 text-white" />
               </div>
-              <span className={`text-xl font-bold tracking-tight transition-colors duration-300 ${isTransparent ? "text-white" : "text-foreground"}`}>
+              <span className={`text-xl font-bold tracking-tight transition-colors duration-300 ${isTransparent || scrolled ? "text-white" : "text-foreground"}`}>
                 TRIM<span className="text-primary">.</span>
               </span>
             </Link>
@@ -82,10 +82,10 @@ export function Navbar() {
                   key={link.href}
                   href={link.href}
                   className={`relative text-sm font-medium transition-colors duration-200 group ${
-                    isTransparent
+                    isTransparent || scrolled
                       ? location === link.href
                         ? "text-white font-semibold"
-                        : "text-white/75 hover:text-white"
+                        : "text-white/70 hover:text-white"
                       : location === link.href
                         ? "text-foreground font-semibold"
                         : "text-muted-foreground hover:text-foreground"
@@ -94,7 +94,7 @@ export function Navbar() {
                   {link.label}
                   <span className={`absolute -bottom-0.5 left-0 h-[1.5px] rounded-full transition-all duration-300 ${
                     location === link.href ? "w-full" : "w-0 group-hover:w-full"
-                  } ${isTransparent ? "bg-white" : "bg-primary"}`} />
+                  } ${isTransparent || scrolled ? "bg-white" : "bg-primary"}`} />
                 </Link>
               ))}
             </nav>
@@ -197,7 +197,7 @@ export function Navbar() {
                   <Link
                     href="/login"
                     className={`hidden md:block text-sm font-medium transition-colors duration-200 ${
-                      isTransparent
+                      isTransparent || scrolled
                         ? "text-white/80 hover:text-white"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
