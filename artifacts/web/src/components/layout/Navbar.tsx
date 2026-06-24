@@ -41,36 +41,30 @@ export function Navbar() {
   };
 
   const navLinks = [
-    { href: "/barbershops", label: "Zbulo", anchor: false },
-    { href: "how-it-works", label: "Si funksionon", anchor: true },
-    { href: "/marketplace", label: "Dyqani", anchor: false },
-    { href: "pricing", label: "Çmimet", anchor: true },
+    { href: "/barbershops", label: "Zbulo" },
+    { href: "/marketplace", label: "Dyqani" },
   ];
-
-  const handleAnchorClick = (e: React.MouseEvent, id: string) => {
-    e.preventDefault();
-    if (location !== "/") {
-      setLocation("/");
-      setTimeout(() => {
-        document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 350);
-    } else {
-      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  };
 
   return (
     <>
       {/* ── Main header ── */}
       <header
         className={`fixed top-0 left-0 right-0 z-40 transition-all duration-500 ${
-          isTransparent
-            ? "py-0 bg-transparent"
-            : "py-0 bg-background/95 backdrop-blur-xl border-b border-border/20 shadow-sm"
+          scrolled
+            ? "py-1.5"
+            : isTransparent
+              ? "py-0"
+              : "py-0 border-b border-border/20 bg-background/90 backdrop-blur-xl"
         }`}
       >
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex items-center justify-between py-4">
+        <div className={`mx-auto transition-all duration-500 ${scrolled ? "max-w-5xl px-4" : "max-w-7xl px-6"}`}>
+          <div
+            className={`flex items-center justify-between transition-all duration-500 ${
+              scrolled
+                ? "glass-strong shadow-lg shadow-black/8 py-2.5 rounded-2xl px-5"
+                : "py-4"
+            }`}
+          >
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 group">
               <div className="w-8 h-8 bg-primary rounded-xl flex items-center justify-center shadow-md shadow-primary/25 group-hover:shadow-primary/40 transition-shadow duration-300">
