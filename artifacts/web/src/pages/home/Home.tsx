@@ -707,7 +707,8 @@ const bannerAds = [
   {
     id: 1,
     bg: "from-[#0f0c29] via-[#302b63] to-[#24243e]",
-    image: "https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=1200&q=80",
+    image:
+      "https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=1200&q=80",
     label: "TRIM PRISHTINA",
     headline: "Skin Fade me çmim special",
     sub: "Vetëm këtë javë · Rezervo tani",
@@ -719,7 +720,8 @@ const bannerAds = [
   {
     id: 2,
     bg: "from-[#1a1a2e] via-[#16213e] to-[#0f3460]",
-    image: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=1200&q=80",
+    image:
+      "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=1200&q=80",
     label: "PAKETA VIP",
     headline: "Prerje + Larje + Pomadë falas",
     sub: "Ofertë e kufizuar · Dyqanet partnere",
@@ -731,7 +733,8 @@ const bannerAds = [
   {
     id: 3,
     bg: "from-[#0d0d0d] via-[#1a0a00] to-[#2d1500]",
-    image: "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=1200&q=80",
+    image:
+      "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=1200&q=80",
     label: "BEARD STUDIO",
     headline: "Rregullim mjekre profesional",
     sub: "Teknikë premium · Me berber të çertifikuar",
@@ -743,7 +746,8 @@ const bannerAds = [
   {
     id: 4,
     bg: "from-[#0a0a0a] via-[#0d1f0d] to-[#0a2a0a]",
-    image: "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1200&q=80",
+    image:
+      "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1200&q=80",
     label: "TRIM PRIZREN",
     headline: "Hapim dyqanin tonë të ri!",
     sub: "Grand Opening · 30 ditë falas për pronarët",
@@ -765,7 +769,10 @@ function BannerAds() {
   }, []);
 
   return (
-    <div className="relative w-full overflow-hidden rounded-2xl shadow-2xl" style={{ height: "110px" }}>
+    <div
+      className="relative w-full overflow-hidden rounded-2xl shadow-2xl"
+      style={{ height: "110px" }}
+    >
       {bannerAds.map((a, i) => (
         <div
           key={a.id}
@@ -779,13 +786,17 @@ function BannerAds() {
             style={{ objectPosition: "center 30%" }}
           />
           {/* Gradient overlay */}
-          <div className={`absolute inset-0 bg-gradient-to-r ${a.bg} opacity-85`} />
+          <div
+            className={`absolute inset-0 bg-gradient-to-r ${a.bg} opacity-85`}
+          />
 
           {/* Content */}
           <div className="relative h-full flex items-center justify-between px-8 gap-6">
             {/* Left: label + text */}
             <div className="flex items-center gap-5 min-w-0">
-              <span className={`shrink-0 text-[10px] font-black tracking-widest uppercase px-2.5 py-1 rounded-md text-white ${a.badgeColor}`}>
+              <span
+                className={`shrink-0 text-[10px] font-black tracking-widest uppercase px-2.5 py-1 rounded-md text-white ${a.badgeColor}`}
+              >
                 {a.badge}
               </span>
               <div className="min-w-0">
@@ -856,7 +867,7 @@ function HowItWorks() {
   }, []);
 
   return (
-    <section className="py-28 relative overflow-hidden bg-background">
+    <section className="py-18 relative overflow-hidden bg-primary/6">
       {/* Subtle dot-grid background */}
       <div
         className="absolute inset-0 pointer-events-none opacity-[0.03]"
@@ -918,7 +929,9 @@ function HowItWorks() {
             className="relative hidden md:flex items-center justify-center"
             style={{
               opacity: cardInView ? 1 : 0,
-              transform: cardInView ? "translateX(0) scale(1)" : "translateX(40px) scale(0.96)",
+              transform: cardInView
+                ? "translateX(0) scale(1)"
+                : "translateX(40px) scale(0.96)",
               transition: "opacity 0.8s ease, transform 0.8s ease",
               transitionDelay: cardInView ? "200ms" : "0ms",
             }}
@@ -1100,9 +1113,9 @@ export default function Home() {
                 </div>
                 <button
                   onClick={handleSearch}
-                  className="btn-pill flex items-center justify-center gap-2 px-7 py-3.5 bg-primary text-white text-sm font-bold shadow-md shadow-primary/40"
+                  className="btn-pill flex items-center justify-center gap-2 px-7 py-3.5 bg-primary text-white text-sm font-bold shadow-md shadow-primary/40 transition-all duration-300 ease-out hover:px-10 hover:shadow-lg hover:shadow-primary/50 hover:scale-105 active:scale-95"
                 >
-                  <Search className="w-4 h-4" />
+                  <Search className="w-4 h-4 transition-transform duration-300 group-hover:rotate-12" />
                   Kërko
                 </button>
               </div>
