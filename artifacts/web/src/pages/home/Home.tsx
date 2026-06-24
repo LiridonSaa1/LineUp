@@ -678,140 +678,123 @@ function Ticker() {
   );
 }
 
-/* ── Ads Slider ──────────────────────────────────────────── */
-const adsData = [
+/* ── Banner Ads ──────────────────────────────────────────── */
+const bannerAds = [
   {
-    tag: "OFERTË",
-    title: "Fade Premium",
-    desc: "Skin fade + rregullim mjekre",
-    price: "12€",
-    oldPrice: "18€",
-    color: "from-blue-600 to-blue-800",
-    accent: "bg-blue-400",
-    emoji: "✂️",
+    id: 1,
+    bg: "from-[#0f0c29] via-[#302b63] to-[#24243e]",
+    image: "https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=1200&q=80",
+    label: "TRIM PRISHTINA",
+    headline: "Skin Fade me çmim special",
+    sub: "Vetëm këtë javë · Rezervo tani",
+    cta: "Rezervo Tani",
+    ctaColor: "bg-primary hover:bg-primary/90",
+    badge: "−40%",
+    badgeColor: "bg-primary",
   },
   {
-    tag: "E RE",
-    title: "Paketa VIP",
-    desc: "Prerje + larje + pomadë falas",
-    price: "15€",
-    oldPrice: "22€",
-    color: "from-violet-600 to-violet-900",
-    accent: "bg-violet-400",
-    emoji: "👑",
+    id: 2,
+    bg: "from-[#1a1a2e] via-[#16213e] to-[#0f3460]",
+    image: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=1200&q=80",
+    label: "PAKETA VIP",
+    headline: "Prerje + Larje + Pomadë falas",
+    sub: "Ofertë e kufizuar · Dyqanet partnere",
+    cta: "Shiko Ofertën",
+    ctaColor: "bg-blue-500 hover:bg-blue-600",
+    badge: "VIP",
+    badgeColor: "bg-blue-500",
   },
   {
-    tag: "KURSIM 40%",
-    title: "Burst Fade",
-    desc: "Me linjë + formë mjekre",
-    price: "10€",
-    oldPrice: "17€",
-    color: "from-primary to-orange-700",
-    accent: "bg-primary",
-    emoji: "🔥",
+    id: 3,
+    bg: "from-[#0d0d0d] via-[#1a0a00] to-[#2d1500]",
+    image: "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=1200&q=80",
+    label: "BEARD STUDIO",
+    headline: "Rregullim mjekre profesional",
+    sub: "Teknikë premium · Me berber të çertifikuar",
+    cta: "Zbulo Tani",
+    ctaColor: "bg-amber-500 hover:bg-amber-600",
+    badge: "E RE",
+    badgeColor: "bg-amber-500",
   },
   {
-    tag: "POPULLAR",
-    title: "Pompadour",
-    desc: "Stilim klasik + produkt stilimi",
-    price: "14€",
-    oldPrice: "20€",
-    color: "from-emerald-600 to-emerald-900",
-    accent: "bg-emerald-400",
-    emoji: "💎",
-  },
-  {
-    tag: "FLASH",
-    title: "Rrojë Brisk",
-    desc: "Rrojë e plotë me peshqir nxehtë",
-    price: "8€",
-    oldPrice: "13€",
-    color: "from-rose-600 to-rose-900",
-    accent: "bg-rose-400",
-    emoji: "⚡",
-  },
-  {
-    tag: "OFERTË",
-    title: "Line Up",
-    desc: "Formë perfekte + pastrimi qafës",
-    price: "6€",
-    oldPrice: "10€",
-    color: "from-amber-600 to-amber-800",
-    accent: "bg-amber-400",
-    emoji: "🎯",
-  },
-  {
-    tag: "VIP",
-    title: "Ngjyrosje",
-    desc: "Ngjyrosje + kondicionim + stilim",
-    price: "25€",
-    oldPrice: "38€",
-    color: "from-cyan-600 to-cyan-900",
-    accent: "bg-cyan-400",
-    emoji: "🎨",
-  },
-  {
-    tag: "KURSIM",
-    title: "Prerje Fëmijësh",
-    desc: "Deri 12 vjeç · Qetësi garantohet",
-    price: "7€",
-    oldPrice: "11€",
-    color: "from-pink-600 to-pink-900",
-    accent: "bg-pink-400",
-    emoji: "⭐",
+    id: 4,
+    bg: "from-[#0a0a0a] via-[#0d1f0d] to-[#0a2a0a]",
+    image: "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1200&q=80",
+    label: "TRIM PRIZREN",
+    headline: "Hapim dyqanin tonë të ri!",
+    sub: "Grand Opening · 30 ditë falas për pronarët",
+    cta: "Partnero me ne",
+    ctaColor: "bg-emerald-500 hover:bg-emerald-600",
+    badge: "GRAND OPENING",
+    badgeColor: "bg-emerald-500",
   },
 ];
 
-function AdsSlider() {
-  const tripled = [...adsData, ...adsData, ...adsData];
+function BannerAds() {
+  const [current, setCurrent] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setCurrent((c) => (c + 1) % bannerAds.length);
+    }, 4500);
+    return () => clearInterval(t);
+  }, []);
+
   return (
-    <div className="overflow-hidden relative py-2">
-      <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
-      <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
-      <div
-        className="flex gap-4 whitespace-nowrap"
-        style={{
-          animation: "ticker 60s linear infinite",
-          width: "max-content",
-        }}
-      >
-        {tripled.map((ad, i) => (
-          <div
-            key={i}
-            className={`relative inline-flex flex-col justify-between shrink-0 rounded-2xl overflow-hidden bg-gradient-to-b ${ad.color} shadow-lg cursor-pointer group hover:-translate-y-1 transition-transform duration-300`}
-            style={{ width: "140px", height: "220px", padding: "16px 14px" }}
-          >
-            {/* Tag */}
-            <span
-              className={`inline-block self-start text-[9px] font-black tracking-widest uppercase px-2 py-0.5 rounded-full text-white/90 ${ad.accent} bg-opacity-30`}
-              style={{ background: "rgba(255,255,255,0.18)" }}
-            >
-              {ad.tag}
-            </span>
+    <div className="relative w-full overflow-hidden rounded-2xl shadow-2xl" style={{ height: "110px" }}>
+      {bannerAds.map((a, i) => (
+        <div
+          key={a.id}
+          className={`absolute inset-0 transition-opacity duration-700 ${i === current ? "opacity-100" : "opacity-0"}`}
+        >
+          {/* Background image */}
+          <img
+            src={a.image}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{ objectPosition: "center 30%" }}
+          />
+          {/* Gradient overlay */}
+          <div className={`absolute inset-0 bg-gradient-to-r ${a.bg} opacity-85`} />
 
-            {/* Emoji */}
-            <div className="text-4xl text-center my-1 group-hover:scale-110 transition-transform duration-300">
-              {ad.emoji}
-            </div>
-
-            {/* Info */}
-            <div>
-              <p className="text-white font-bold text-sm leading-tight mb-0.5 whitespace-normal">
-                {ad.title}
-              </p>
-              <p className="text-white/60 text-[10px] leading-snug whitespace-normal mb-2">
-                {ad.desc}
-              </p>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-white font-extrabold text-base">
-                  {ad.price}
-                </span>
-                <span className="text-white/40 text-[10px] line-through">
-                  {ad.oldPrice}
-                </span>
+          {/* Content */}
+          <div className="relative h-full flex items-center justify-between px-8 gap-6">
+            {/* Left: label + text */}
+            <div className="flex items-center gap-5 min-w-0">
+              <span className={`shrink-0 text-[10px] font-black tracking-widest uppercase px-2.5 py-1 rounded-md text-white ${a.badgeColor}`}>
+                {a.badge}
+              </span>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50 mb-0.5">
+                  {a.label}
+                </p>
+                <p className="text-white font-black text-lg leading-tight truncate">
+                  {a.headline}
+                </p>
+                <p className="text-white/55 text-xs mt-0.5 truncate">{a.sub}</p>
               </div>
             </div>
+
+            {/* Right: CTA */}
+            <button
+              className={`shrink-0 ${a.ctaColor} text-white text-sm font-bold px-6 py-2.5 rounded-full shadow-lg transition-all duration-200 hover:scale-105 whitespace-nowrap`}
+            >
+              {a.cta}
+            </button>
           </div>
+        </div>
+      ))}
+
+      {/* Dot indicators */}
+      <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+        {bannerAds.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setCurrent(i)}
+            className={`rounded-full transition-all duration-300 ${
+              i === current ? "w-5 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/35"
+            }`}
+          />
         ))}
       </div>
     </div>
@@ -990,24 +973,24 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── ADS SLIDER ───────────────────────────────────── */}
-      <section className="py-10 overflow-hidden bg-background">
-        <div className="container px-6 max-w-7xl mx-auto mb-6">
-          <div className="flex items-center gap-3">
+      {/* ── BANNER ADS ───────────────────────────────────── */}
+      <section className="py-8 bg-background">
+        <div className="container px-6 max-w-7xl mx-auto">
+          <div className="flex items-center gap-3 mb-4">
             <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground/40">
               // TRIM
             </span>
             <div className="flex-1 h-px bg-gradient-to-r from-border via-primary/20 to-transparent" />
             <span className="text-xs font-bold uppercase tracking-[0.15em] text-primary">
-              Ofertat e javës
+              Reklama
             </span>
             <div className="flex-1 h-px bg-gradient-to-l from-border via-primary/20 to-transparent" />
             <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground/40">
-              Deals
+              Ads
             </span>
           </div>
+          <BannerAds />
         </div>
-        <AdsSlider />
       </section>
 
       {/* ── STATS ────────────────────────────────────────── */}
