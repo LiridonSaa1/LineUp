@@ -450,7 +450,7 @@
 .animate-particle-2 { animation: particle 9s ease-in-out infinite reverse; }
 .animate-particle-3 { animation: particle 11s ease-in-out infinite 2s; }
 
-/* ─── Search button: icon-only → expand on hover ─── */
+/* ─── Search button: icon-only → expand on hover (desktop only) ─── */
 .search-expand-btn {
   padding: 14px 14px;
   gap: 0;
@@ -473,6 +473,17 @@
 .search-expand-btn:hover .search-expand-text {
   max-width: 64px;
   opacity: 1;
+}
+/* Mobile: always show icon + text, no expand animation */
+@media (max-width: 639px) {
+  .search-expand-btn {
+    padding: 14px 20px;
+    gap: 8px;
+  }
+  .search-expand-btn .search-expand-text {
+    max-width: 64px;
+    opacity: 1;
+  }
 }
 
 /* ─── Liquid Glass (Apple style) ─── */

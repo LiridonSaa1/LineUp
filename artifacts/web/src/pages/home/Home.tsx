@@ -1094,7 +1094,7 @@ export default function Home() {
 
             {/* Search bar */}
             <div className="mt-10 animate-fade-up delay-300">
-              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-2 flex flex-col sm:flex-row gap-2 max-w-xl shadow-lg shadow-black/30">
+              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-2 flex flex-row gap-2 max-w-xl shadow-lg shadow-black/30">
                 <div className="flex-1 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/8">
                   <MapPin className="text-primary w-4 h-4 shrink-0" />
                   <Select value={city} onValueChange={setCity}>
@@ -1113,10 +1113,12 @@ export default function Home() {
                 </div>
                 <button
                   onClick={handleSearch}
-                  className="search-expand-btn btn-pill flex items-center justify-center bg-primary text-white font-bold shadow-md shadow-primary/40 transition-all duration-300 ease-out hover:shadow-xl hover:shadow-primary/50 active:scale-95"
+                  className="search-expand-btn btn-pill flex items-center justify-center liquid-glass text-white font-bold transition-all duration-300 ease-out hover:shadow-xl hover:shadow-primary/50 active:scale-95"
                 >
                   <Search className="w-4 h-4 shrink-0 transition-transform duration-300" />
-                  <span className="search-expand-text text-sm whitespace-nowrap overflow-hidden">Kërko</span>
+                  <span className="search-expand-text  text-sm whitespace-nowrap overflow-hidden">
+                    Kërko
+                  </span>
                 </button>
               </div>
             </div>
