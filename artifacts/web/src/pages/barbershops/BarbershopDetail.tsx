@@ -14,8 +14,8 @@ export default function BarbershopDetail() {
     query: { enabled: !!shopId, queryKey: getGetBarbershopQueryKey(shopId) }
   });
 
-  const { data: barbersRes, isLoading: barbersLoading } = useListBarbers({ shopId });
-  const { data: servicesRes, isLoading: servicesLoading } = useListServices({ shopId });
+  const { data: barbersRes, isLoading: barbersLoading } = useListBarbers(shopId);
+  const { data: servicesRes, isLoading: servicesLoading } = useListServices(shopId);
 
   if (shopLoading) {
     return (

@@ -12,7 +12,7 @@ import { Scissors, Trash2 } from "lucide-react";
 export default function DashboardBarbers() {
   const shopId = 1;
   const { toast } = useToast();
-  const { data: barbersRes, isLoading, refetch } = useListBarbers({ shopId });
+  const { data: barbersRes, isLoading, refetch } = useListBarbers(shopId);
   const createMutation = useCreateBarber();
   const deleteMutation = useDeleteBarber();
 

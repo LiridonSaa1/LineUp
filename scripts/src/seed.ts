@@ -4,7 +4,6 @@ import bcrypt from "bcryptjs";
 async function seed() {
   console.log("Seeding database...");
 
-  // Admin user
   const adminHash = await bcrypt.hash("admin123", 10);
   const [admin] = await db.insert(usersTable).values({
     name: "Admin User",
@@ -15,7 +14,6 @@ async function seed() {
   }).onConflictDoNothing().returning();
   console.log("Admin:", admin?.id ?? "already exists");
 
-  // Owner user
   const ownerHash = await bcrypt.hash("owner123", 10);
   const [owner] = await db.insert(usersTable).values({
     name: "Artan Krasniqi",
@@ -25,7 +23,6 @@ async function seed() {
     phone: "+38344111222",
   }).onConflictDoNothing().returning();
 
-  // Regular user
   const userHash = await bcrypt.hash("user123", 10);
   await db.insert(usersTable).values({
     name: "Besim Gashi",
@@ -35,13 +32,40 @@ async function seed() {
     phone: "+38344333444",
   }).onConflictDoNothing();
 
-  // Barbershops
   const shops = [
+    {
+      name: "The Barber Lab",
+      city: "Prishtina",
+      address: "Rr. Nënë Tereza Nr. 15",
+      description: "High-end grooming studio me teknikat më të fundit dhe produktet premium. Eksperienca #1 në Prishtinë.",
+      phone: "+38344400500",
+      imageUrl: "https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=800",
+      latitude: "42.6680",
+      longitude: "21.1684",
+      openTime: "09:00",
+      closeTime: "21:00",
+      rating: "4.9",
+      totalReviews: 203,
+      status: "active" as const,
+      barbers: [
+        { name: "Visar Berisha", bio: "Master barber me 12 vjet përvojë, specialist në fades dhe prerje moderne", specialties: "Fades, Modern Cuts, Beard Sculpting", avatarUrl: "https://images.unsplash.com/photo-1552058544-f2b08422138a?w=200" },
+        { name: "Liridon Hoxha", bio: "Ekspert në prerje klasike dhe rregullim mjekre, hot towel specialist", specialties: "Classic Cuts, Beard Grooming, Hot Towel Shave", avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200" },
+        { name: "Faton Kelmendi", bio: "Specialist në skin fades dhe hair art designs", specialties: "Skin Fades, Hair Art, Color Treatments", avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200" },
+      ],
+      services: [
+        { name: "Haircut Premium", description: "Prerje flokësh me konsultë stilisti dhe finishim profesional", price: "12.00", durationMinutes: 45 },
+        { name: "Beard Sculpting", description: "Formim dhe skulpturim mjekre me brisk", price: "8.00", durationMinutes: 30 },
+        { name: "Haircut + Beard Combo", description: "Paketa e plotë — prerje + mjekra", price: "18.00", durationMinutes: 60 },
+        { name: "Hot Towel Shave", description: "Rrojë luksoze me peshqir të nxehtë dhe brisk", price: "15.00", durationMinutes: 45 },
+        { name: "Hair Color", description: "Ngjyrosje profesionale e flokëve", price: "30.00", durationMinutes: 90 },
+        { name: "Kid's Cut", description: "Prerje e butë për fëmijë deri në 12 vjeç", price: "6.00", durationMinutes: 25 },
+      ],
+    },
     {
       name: "TRIM Prishtina",
       city: "Prishtina",
       address: "Rr. Bill Clinton Nr. 42",
-      description: "Premium barber experience in the heart of Prishtina. Professional cuts, beard trims, and grooming services.",
+      description: "Premium barber experience në zemër të Prishtinës. Prerje profesionale, rregullim mjekre dhe shërbime grooming.",
       phone: "+38344100200",
       imageUrl: "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=800",
       latitude: "42.6629",
@@ -51,12 +75,49 @@ async function seed() {
       rating: "4.8",
       totalReviews: 142,
       status: "active" as const,
+      barbers: [
+        { name: "Artan Krasniqi", bio: "Pronar dhe master barber, 15 vjet në industri", specialties: "Fades, Classic Cuts, Beard Grooming", avatarUrl: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200" },
+        { name: "Blerim Morina", bio: "Specialist në prerje moderne dhe line-up", specialties: "Modern Cuts, Line Up, Fades", avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200" },
+      ],
+      services: [
+        { name: "Haircut", description: "Prerje klasike ose moderne sipas stilit tuaj", price: "8.00", durationMinutes: 30 },
+        { name: "Beard Trim", description: "Rregullim preciz i mjekres", price: "5.00", durationMinutes: 20 },
+        { name: "Haircut + Beard", description: "Paketa e plotë prerje dhe mjekra", price: "12.00", durationMinutes: 45 },
+        { name: "Hot Towel Shave", description: "Rrojë luksoze me peshqir të nxehtë", price: "10.00", durationMinutes: 40 },
+        { name: "Hair Wash + Cut", description: "Larje, kondicionim dhe prerje", price: "10.00", durationMinutes: 40 },
+        { name: "Kid's Haircut", description: "Prerje e butë për fëmijë", price: "5.00", durationMinutes: 25 },
+      ],
+    },
+    {
+      name: "Gentlemen's Corner",
+      city: "Prishtina",
+      address: "Rr. Agim Ramadani Nr. 22",
+      description: "Eksperienca më e mirë grooming për burrat modernt. Ambiente premium, shërbim 5 yje.",
+      phone: "+38344500600",
+      imageUrl: "https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=800",
+      latitude: "42.4631",
+      longitude: "21.4694",
+      openTime: "09:00",
+      closeTime: "19:00",
+      rating: "4.7",
+      totalReviews: 88,
+      status: "active" as const,
+      barbers: [
+        { name: "Granit Sylaj", bio: "Barber specialist me trajnim ndërkombëtar, ekspert fade", specialties: "Fades, Skin Fades, Beard Design", avatarUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200" },
+        { name: "Mentor Gashi", bio: "Classic barbering enthusiast me passion për hot towel", specialties: "Classic Shave, Beard Grooming, Razor Work", avatarUrl: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=200" },
+      ],
+      services: [
+        { name: "Premium Haircut", description: "Prerje premium me konsultë dhe finishim", price: "10.00", durationMinutes: 35 },
+        { name: "Beard Design", description: "Dizajn dhe skulpturim mjekre", price: "8.00", durationMinutes: 30 },
+        { name: "Full Grooming", description: "Paketa e plotë grooming — prerje + mjekra + lavazh", price: "20.00", durationMinutes: 75 },
+        { name: "Classic Shave", description: "Rrojë klasike me sapun dhe brisk", price: "12.00", durationMinutes: 40 },
+      ],
     },
     {
       name: "Classic Cuts Prizren",
       city: "Prizren",
       address: "Sheshi i Lirisë Nr. 7",
-      description: "Traditional barbershop with modern techniques in historic Prizren.",
+      description: "Berbernicë tradicionale me teknika moderne në Prizrenin historik. Familja dhe tradita e mirëpret.",
       phone: "+38344200300",
       imageUrl: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800",
       latitude: "42.2139",
@@ -66,12 +127,23 @@ async function seed() {
       rating: "4.6",
       totalReviews: 98,
       status: "active" as const,
+      barbers: [
+        { name: "Shkumbin Berisha", bio: "Barber me traditë familjare, 20 vjet përvojë", specialties: "Classic Cuts, Traditional Shave, Beard Grooming", avatarUrl: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200" },
+        { name: "Driton Krasniqi", bio: "Specialist i prerjes moderne dhe fades", specialties: "Fades, Modern Cuts, Line Up", avatarUrl: "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?w=200" },
+      ],
+      services: [
+        { name: "Haircut", description: "Prerje klasike tradicionale", price: "6.00", durationMinutes: 30 },
+        { name: "Beard Trim", description: "Rregullim dhe formim mjekre", price: "4.00", durationMinutes: 20 },
+        { name: "Haircut + Beard", description: "Paketa komplete", price: "9.00", durationMinutes: 45 },
+        { name: "Traditional Shave", description: "Rrojë tradicionale me krem dhe brisk", price: "7.00", durationMinutes: 35 },
+        { name: "Kid's Cut", description: "Prerje për fëmijë", price: "4.00", durationMinutes: 20 },
+      ],
     },
     {
       name: "Sharp Cuts Peja",
       city: "Peja",
       address: "Rr. Mbretëresha Teutë Nr. 12",
-      description: "Modern barbershop offering premium grooming services in Peja.",
+      description: "Berbernicë moderne me shërbime premium grooming në Pejë. Ambienti i rehatshëm dhe stafi profesional.",
       phone: "+38344300400",
       imageUrl: "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=800",
       latitude: "42.6596",
@@ -81,42 +153,23 @@ async function seed() {
       rating: "4.5",
       totalReviews: 67,
       status: "active" as const,
-    },
-    {
-      name: "The Barber Lab",
-      city: "Prishtina",
-      address: "Rr. Nënë Tereza Nr. 15",
-      description: "High-end grooming studio with the latest techniques and premium products.",
-      phone: "+38344400500",
-      imageUrl: "https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=800",
-      latitude: "42.6680",
-      longitude: "21.1684",
-      openTime: "10:00",
-      closeTime: "21:00",
-      rating: "4.9",
-      totalReviews: 203,
-      status: "active" as const,
-    },
-    {
-      name: "Gentlemen's Corner",
-      city: "Gjilan",
-      address: "Bulevardi i Ri Nr. 5",
-      description: "The finest barbershop in Gjilan, offering tailored grooming experiences.",
-      phone: "+38344500600",
-      imageUrl: "https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=800",
-      latitude: "42.4631",
-      longitude: "21.4694",
-      openTime: "09:00",
-      closeTime: "19:00",
-      rating: "4.7",
-      totalReviews: 55,
-      status: "active" as const,
+      barbers: [
+        { name: "Agon Berisha", bio: "Barber kreativ me specializim në modern cuts dhe hair art", specialties: "Modern Cuts, Hair Art, Fades", avatarUrl: "https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=200" },
+        { name: "Hekuran Morina", bio: "Ekspert në beard grooming dhe hot towel shave", specialties: "Beard Grooming, Hot Towel, Classic Shave", avatarUrl: "https://images.unsplash.com/photo-1548142813-c348350df52b?w=200" },
+      ],
+      services: [
+        { name: "Haircut", description: "Prerje profesionale flokësh", price: "7.00", durationMinutes: 30 },
+        { name: "Fade", description: "Fade profesional me finishim të pastër", price: "8.00", durationMinutes: 35 },
+        { name: "Beard Trim", description: "Rregullim mjekre", price: "5.00", durationMinutes: 20 },
+        { name: "Combo Deal", description: "Haircut + Beard combo", price: "11.00", durationMinutes: 45 },
+        { name: "Hot Towel Shave", description: "Rrojë luksoze", price: "9.00", durationMinutes: 35 },
+      ],
     },
     {
       name: "BarberKing Ferizaj",
       city: "Ferizaj",
       address: "Rr. Adem Jashari Nr. 3",
-      description: "Premium barber services with a loyal customer base in Ferizaj.",
+      description: "Shërbime premium me bazë besnikërie klientësh në Ferizaj. Cilësia e lartë me çmime të arsyeshme.",
       phone: "+38344600700",
       imageUrl: "https://images.unsplash.com/photo-1634449571010-02389ed0f9b0?w=800",
       latitude: "42.3703",
@@ -126,62 +179,58 @@ async function seed() {
       rating: "4.4",
       totalReviews: 44,
       status: "active" as const,
+      barbers: [
+        { name: "Kushtrim Aliu", bio: "Barber i ri me energji dhe passion për stilet moderne", specialties: "Modern Cuts, Fades, Beard Styling", avatarUrl: "https://images.unsplash.com/photo-1500048993953-d23a436266cf?w=200" },
+      ],
+      services: [
+        { name: "Haircut", description: "Prerje flokësh cilësore", price: "6.00", durationMinutes: 30 },
+        { name: "Beard Trim", description: "Rregullim mjekre", price: "4.00", durationMinutes: 20 },
+        { name: "Haircut + Beard", description: "Paketa e plotë", price: "9.00", durationMinutes: 45 },
+        { name: "Kid's Cut", description: "Prerje për fëmijë", price: "4.00", durationMinutes: 20 },
+      ],
     },
   ];
 
   const ownerId = owner?.id ?? 1;
-  const insertedShops = [];
-  for (const shop of shops) {
-    const [s] = await db.insert(barbershopsTable).values({
-      ...shop,
+  let totalShops = 0;
+
+  for (const shopData of shops) {
+    const { barbers, services, ...shopFields } = shopData;
+    const [shop] = await db.insert(barbershopsTable).values({
+      ...shopFields,
       ownerId,
-      subdomain: shop.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, ""),
+      subdomain: shopFields.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, ""),
       subscriptionStatus: "active",
     }).onConflictDoNothing().returning();
-    if (s) insertedShops.push(s);
-  }
-  console.log("Shops inserted:", insertedShops.length);
 
-  if (insertedShops.length > 0) {
-    const shop = insertedShops[0];
+    if (!shop) continue;
+    totalShops++;
 
-    // Barbers for first shop
-    const barberData = [
-      { name: "Visar Berisha", bio: "10+ years of experience, specializing in fades and modern cuts", specialties: "Fades, Modern Cuts, Beard Sculpting", avatarUrl: "https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=200" },
-      { name: "Liridon Hoxha", bio: "Expert in classic cuts and beard grooming", specialties: "Classic Cuts, Beard Grooming, Hot Towel Shave", avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200" },
-      { name: "Faton Kelmendi", bio: "Specialist in skin fades and hair art designs", specialties: "Skin Fades, Hair Art, Color Treatments", avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200" },
-    ];
-    for (const b of barberData) {
+    for (const b of barbers) {
       await db.insert(barbersTable).values({ shopId: shop.id, ...b }).onConflictDoNothing();
     }
-
-    // Services
-    const serviceData = [
-      { name: "Haircut", description: "Classic or modern haircut tailored to your style", price: "8.00", durationMinutes: 30 },
-      { name: "Beard Trim", description: "Precision beard shaping and trimming", price: "5.00", durationMinutes: 20 },
-      { name: "Haircut + Beard", description: "Full haircut and beard grooming combo", price: "12.00", durationMinutes: 45 },
-      { name: "Hot Towel Shave", description: "Luxurious hot towel straight razor shave", price: "10.00", durationMinutes: 40 },
-      { name: "Hair Wash + Cut", description: "Shampoo, conditioning, and haircut", price: "10.00", durationMinutes: 40 },
-      { name: "Kid's Haircut", description: "Gentle haircut for kids under 12", price: "5.00", durationMinutes: 25 },
-      { name: "Hair Color", description: "Professional hair coloring service", price: "25.00", durationMinutes: 90 },
-    ];
-    for (const s of serviceData) {
+    for (const s of services) {
       await db.insert(servicesTable).values({ shopId: shop.id, ...s }).onConflictDoNothing();
     }
+  }
 
-    // Products
-    const productData = [
-      { name: "Pomade Strong Hold", description: "Premium strong-hold pomade for all-day style", price: "12.00", stock: 50, category: "Styling", imageUrl: "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=400" },
-      { name: "Beard Oil Cedar", description: "Nourishing beard oil with cedar and argan", price: "9.00", stock: 30, category: "Beard Care", imageUrl: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400" },
-      { name: "Sea Salt Spray", description: "Texturizing spray for a natural beachy look", price: "11.00", stock: 40, category: "Styling", imageUrl: "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=400" },
-      { name: "Matte Clay", description: "Medium hold matte finish clay for textured styles", price: "14.00", stock: 25, category: "Styling", imageUrl: "https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=400" },
-      { name: "Shave Cream", description: "Rich lather shaving cream for a smooth shave", price: "8.00", stock: 60, category: "Shaving", imageUrl: "https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=400" },
-      { name: "After Shave Balm", description: "Soothing post-shave balm with aloe vera", price: "10.00", stock: 45, category: "Shaving", imageUrl: "https://images.unsplash.com/photo-1634449571010-02389ed0f9b0?w=400" },
+  console.log("Shops seeded:", totalShops);
+
+  // Products (from first shop)
+  const firstShop = await db.query.barbershopsTable.findFirst();
+  if (firstShop) {
+    const products = [
+      { name: "Pomade Strong Hold", description: "Premium pomade për stil gjatë gjithë ditës", price: "12.00", stock: 50, category: "Styling", imageUrl: "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=400" },
+      { name: "Beard Oil Cedar", description: "Vaj mjekre me dëllinjë dhe argan", price: "9.00", stock: 30, category: "Beard Care", imageUrl: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400" },
+      { name: "Sea Salt Spray", description: "Spray teksturizues për pamje natyrale", price: "11.00", stock: 40, category: "Styling", imageUrl: "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=400" },
+      { name: "Matte Clay", description: "Argjilë me mbajtje mesatare dhe finish mat", price: "14.00", stock: 25, category: "Styling", imageUrl: "https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=400" },
+      { name: "Shave Cream", description: "Krem rroje i pasur për rrojë të lëmuar", price: "8.00", stock: 60, category: "Shaving", imageUrl: "https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=400" },
+      { name: "After Shave Balm", description: "Balzam qetësues pas-rroje me aloe vera", price: "10.00", stock: 45, category: "Shaving", imageUrl: "https://images.unsplash.com/photo-1634449571010-02389ed0f9b0?w=400" },
     ];
-    for (const p of productData) {
-      await db.insert(productsTable).values({ shopId: shop.id, ...p }).onConflictDoNothing();
+    for (const p of products) {
+      await db.insert(productsTable).values({ shopId: firstShop.id, ...p }).onConflictDoNothing();
     }
-    console.log("Barbers, services, and products seeded for shop:", shop.name);
+    console.log("Products seeded for:", firstShop.name);
   }
 
   console.log("\n=== Seed Complete ===");

@@ -17,6 +17,10 @@ import {
   TrendingUp,
   Play,
   ShoppingBag,
+  Clock,
+  Crown,
+  BadgeCheck,
+  Flame,
 } from "lucide-react";
 import {
   Select,
@@ -604,21 +608,32 @@ function StepCard({
 /* ── ShopCard ────────────────────────────────────────────── */
 function ShopCard({ shop, index }: { shop: any; index: number }) {
   const { ref, inView } = useInView();
-  const delays = [
-    "delay-75",
-    "delay-150",
-    "delay-200",
-    "delay-300",
-    "delay-400",
-    "delay-500",
-  ];
+  const delays = ["delay-75","delay-150","delay-200","delay-300","delay-400","delay-500"];
+  const rating = parseFloat(shop.rating) || 0;
+  const isTop = index === 0;
+  const isHot = rating >= 4.7;
+
   return (
     <Link href={`/barbershops/${shop.id}`}>
       <div
         ref={ref}
-        className={`group cursor-pointer rounded-2xl overflow-hidden glass hover-lift transition-all duration-500 ${inView ? `animate-scale-in ${delays[index] || ""}` : "opacity-0"}`}
+        className={`group cursor-pointer rounded-3xl overflow-hidden relative transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/10 ${
+          inView ? `animate-scale-in ${delays[index] || ""}` : "opacity-0"
+        } ${isTop ? "ring-2 ring-primary/40" : "border border-border/50"} bg-card`}
       >
-        <div className="h-52 relative overflow-hidden bg-muted">
+        {/* Rank badge */}
+        {index < 3 && (
+          <div className={`absolute top-3 left-3 z-20 w-8 h-8 rounded-full flex items-center justify-center text-xs font-black shadow-lg ${
+            index === 0 ? "bg-yellow-500 text-white" :
+            index === 1 ? "bg-slate-400 text-white" :
+            "bg-amber-700 text-white"
+          }`}>
+            {index + 1}
+          </div>
+        )}
+
+        {/* Image area */}
+        <div className="h-56 relative overflow-hidden bg-muted">
           {shop.imageUrl ? (
             <img
               src={shop.imageUrl}
@@ -626,37 +641,66 @@ function ShopCard({ shop, index }: { shop: any; index: number }) {
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <Scissors className="w-12 h-12 text-muted-foreground/20" />
+            <div className="w-full h-full flex items-center justify-center bg-muted">
+              <Scissors className="w-16 h-16 text-muted-foreground/20" />
             </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
 
-          {/* Rating pill */}
-          <div className="absolute top-3 right-3 glass px-2.5 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 animate-badge-pop">
-            <Star className="w-3.5 h-3.5 text-primary fill-primary" />
-            {shop.rating?.toFixed(1) || "E re"}
+          {/* Strong gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+          {/* Top-right badges */}
+          <div className="absolute top-3 right-3 flex flex-col gap-1.5 items-end">
+            <div className="flex items-center gap-1 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full">
+              <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
+              <span className="text-white text-xs font-bold">{rating.toFixed(1)}</span>
+            </div>
+            {isHot && (
+              <div className="flex items-center gap-1 bg-primary/90 backdrop-blur-sm px-2 py-1 rounded-full">
+                <Flame className="w-3 h-3 text-white" />
+                <span className="text-white text-[10px] font-bold">Trending</span>
+              </div>
+            )}
           </div>
 
-          {/* City pill */}
-          <div className="absolute bottom-3 left-3 glass px-2.5 py-1.5 rounded-full text-xs font-medium flex items-center gap-1">
-            <MapPin className="w-3 h-3 text-primary" />
-            {shop.city}
+          {/* Bottom overlay info */}
+          <div className="absolute bottom-0 left-0 right-0 p-4">
+            <h3 className="text-white font-bold text-lg leading-tight mb-1 drop-shadow">
+              {shop.name}
+              {isTop && <Crown className="inline w-4 h-4 text-yellow-400 ml-1.5 -mt-0.5" />}
+            </h3>
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1 text-white/80 text-xs">
+                <MapPin className="w-3 h-3 text-primary" />
+                {shop.city}
+              </span>
+              {shop.openTime && (
+                <span className="flex items-center gap-1 text-white/80 text-xs">
+                  <Clock className="w-3 h-3 text-primary" />
+                  {shop.openTime}–{shop.closeTime}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="p-5">
-          <h3 className="font-bold text-base mb-1 truncate">{shop.name}</h3>
-          <p className="text-xs text-muted-foreground mb-4 truncate">
+        {/* Card body */}
+        <div className="p-4">
+          <p className="text-xs text-muted-foreground mb-3 truncate flex items-center gap-1">
+            <MapPin className="w-3 h-3 shrink-0" />
             {shop.address}
           </p>
+
           <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <Users className="w-3 h-3" />
-              {shop.totalReviews ?? 0} vlerësime
-            </span>
-            <span className="flex items-center gap-1 text-xs font-semibold text-primary group-hover:gap-2 transition-all">
-              Rezervo Tani <ChevronRight className="w-3.5 h-3.5" />
+            <div className="flex items-center gap-1.5">
+              <BadgeCheck className="w-3.5 h-3.5 text-primary" />
+              <span className="text-xs text-muted-foreground">
+                {shop.totalReviews ?? 0} vlerësime
+              </span>
+            </div>
+
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold bg-primary text-primary-foreground px-3 py-1.5 rounded-full group-hover:gap-2.5 transition-all duration-200 shadow-sm shadow-primary/30">
+              Rezervo <ArrowRight className="w-3 h-3" />
             </span>
           </div>
         </div>

@@ -11,7 +11,7 @@ import { Plus, Trash2, Package } from "lucide-react";
 export default function DashboardProducts() {
   const shopId = 1;
   const { toast } = useToast();
-  const { data: productsRes, isLoading, refetch } = useListProducts({ shopId });
+  const { data: productsRes, isLoading, refetch } = useListProducts(shopId);
   const createMutation = useCreateProduct();
   const deleteMutation = useDeleteProduct();
 

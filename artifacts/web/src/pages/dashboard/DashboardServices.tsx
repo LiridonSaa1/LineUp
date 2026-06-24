@@ -11,7 +11,7 @@ import { Plus, Trash2 } from "lucide-react";
 export default function DashboardServices() {
   const shopId = 1;
   const { toast } = useToast();
-  const { data: servicesRes, isLoading, refetch } = useListServices({ shopId });
+  const { data: servicesRes, isLoading, refetch } = useListServices(shopId);
   const createMutation = useCreateService();
   const deleteMutation = useDeleteService();
 
