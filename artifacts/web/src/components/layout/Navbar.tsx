@@ -76,25 +76,25 @@ export function Navbar() {
             </Link>
 
             {/* Desktop nav */}
-            <nav className="hidden md:flex items-center gap-1">
+            <nav className="hidden md:flex items-center gap-6">
               {navLinks.map(link => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  className={`relative text-sm font-medium transition-colors duration-200 group ${
                     isTransparent
                       ? location === link.href
-                        ? "text-white bg-white/15 font-semibold"
-                        : "text-white/80 hover:text-white hover:bg-white/10"
+                        ? "text-white font-semibold"
+                        : "text-white/75 hover:text-white"
                       : location === link.href
-                        ? "text-foreground bg-primary/8 font-semibold"
-                        : "text-muted-foreground hover:text-foreground hover:bg-black/4"
+                        ? "text-foreground font-semibold"
+                        : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   {link.label}
-                  {location === link.href && (
-                    <span className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full ${isTransparent ? "bg-white" : "bg-primary"}`} />
-                  )}
+                  <span className={`absolute -bottom-0.5 left-0 h-[1.5px] rounded-full transition-all duration-300 ${
+                    location === link.href ? "w-full" : "w-0 group-hover:w-full"
+                  } ${isTransparent ? "bg-white" : "bg-primary"}`} />
                 </Link>
               ))}
             </nav>
@@ -193,20 +193,20 @@ export function Navbar() {
                   </DropdownMenu>
                 </>
               ) : (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-5">
                   <Link
                     href="/login"
-                    className={`hidden md:block px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                    className={`hidden md:block text-sm font-medium transition-colors duration-200 ${
                       isTransparent
-                        ? "text-white/90 hover:text-white hover:bg-white/10 border border-white/25 hover:border-white/40"
-                        : "text-muted-foreground hover:text-foreground hover:bg-black/5"
+                        ? "text-white/80 hover:text-white"
+                        : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     Hyr
                   </Link>
                   <Link
                     href="/register"
-                    className="btn-pill inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-semibold shadow-md shadow-primary/25 hover:shadow-primary/35"
+                    className="btn-pill inline-flex items-center gap-1.5 px-5 py-2.5 bg-primary text-white text-sm font-semibold shadow-md shadow-primary/25 hover:shadow-primary/40"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
                     Fillo
