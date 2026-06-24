@@ -458,8 +458,8 @@ export default function Home() {
           />
         </div>
 
-        {/* Floating shop preview card — centred between text and barber figure */}
-        <div className="absolute left-[50%] top-[22%] hidden xl:block animate-float delay-300" style={{ zIndex: 10 }}>
+        {/* Floating shop preview card — positioned right of centre, by barber's shoulder */}
+        <div className="absolute left-[62%] top-[18%] hidden xl:block animate-float delay-300" style={{ zIndex: 12 }}>
           <div className="glass-strong rounded-2xl p-4 w-56 shadow-xl">
             <div className="w-full h-28 rounded-xl overflow-hidden mb-3 bg-muted">
               <img src="https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=400" className="w-full h-full object-cover" alt="dyqan" />
