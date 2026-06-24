@@ -622,14 +622,30 @@ function ShopCard({ shop, index }: { shop: any; index: number }) {
 
   const now = new Date();
   const hhmm = now.getHours() * 100 + now.getMinutes();
-  const openVal  = shop.openTime  ? parseInt(shop.openTime.replace(":", ""))  : 900;
-  const closeVal = shop.closeTime ? parseInt(shop.closeTime.replace(":", "")) : 2000;
+  const openVal = shop.openTime
+    ? parseInt(shop.openTime.replace(":", ""))
+    : 900;
+  const closeVal = shop.closeTime
+    ? parseInt(shop.closeTime.replace(":", ""))
+    : 2000;
   const isOpen = hhmm >= openVal && hhmm < closeVal;
 
   const rankStyles = [
-    { pill: "from-yellow-400 to-amber-500", shadow: "shadow-yellow-500/30", ring: "ring-2 ring-yellow-400/25" },
-    { pill: "from-slate-300 to-slate-500",  shadow: "shadow-slate-400/20",  ring: "ring-1 ring-slate-300/20"  },
-    { pill: "from-amber-500 to-amber-800",  shadow: "shadow-amber-700/20",  ring: "ring-1 ring-amber-600/20"  },
+    {
+      pill: "from-yellow-400 to-amber-500",
+      shadow: "shadow-yellow-500/30",
+      ring: "ring-2 ring-yellow-400/25",
+    },
+    {
+      pill: "from-slate-300 to-slate-500",
+      shadow: "shadow-slate-400/20",
+      ring: "ring-1 ring-slate-300/20",
+    },
+    {
+      pill: "from-amber-500 to-amber-800",
+      shadow: "shadow-amber-700/20",
+      ring: "ring-1 ring-amber-600/20",
+    },
   ];
   const rs = rankStyles[index];
 
@@ -641,9 +657,10 @@ function ShopCard({ shop, index }: { shop: any; index: number }) {
           hover:-translate-y-2 hover:shadow-2xl hover:shadow-black/15
           ${inView ? `animate-scale-in ${delays[index] || ""}` : "opacity-0"}
           rounded-2xl bg-card border
-          ${isTop
-            ? `border-primary/25 shadow-lg shadow-primary/8 ${rs?.ring}`
-            : "border-border/50 hover:border-primary/20"
+          ${
+            isTop
+              ? `border-primary/25 shadow-lg shadow-primary/8 ${rs?.ring}`
+              : "border-border/50 hover:border-primary/20"
           }`}
       >
         {/* Barber-pole accent line */}
@@ -668,23 +685,35 @@ function ShopCard({ shop, index }: { shop: any; index: number }) {
 
           {/* Rank pill — top left */}
           {index < 3 && rs && (
-            <div className={`absolute top-3 left-3 z-20 flex items-center gap-1 bg-gradient-to-r ${rs.pill} px-2.5 py-1 rounded-full shadow-lg ${rs.shadow}`}>
+            <div
+              className={`absolute top-3 left-3 z-20 flex items-center gap-1 bg-gradient-to-r ${rs.pill} px-2.5 py-1 rounded-full shadow-lg ${rs.shadow}`}
+            >
               {index === 0 && <Crown className="w-3 h-3 text-white" />}
-              <span className="text-white text-[10px] font-black tracking-widest">#{index + 1}</span>
+              <span className="text-white text-[10px] font-black tracking-widest">
+                #{index + 1}
+              </span>
             </div>
           )}
 
           {/* Status + rating — top right */}
           <div className="absolute top-3 right-3 z-20 flex flex-col items-end gap-1.5">
-            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold backdrop-blur-sm ${
-              isOpen ? "bg-emerald-500/90 text-white" : "bg-black/60 text-white/60"
-            }`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${isOpen ? "bg-white animate-pulse" : "bg-white/30"}`} />
+            <div
+              className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold backdrop-blur-sm ${
+                isOpen
+                  ? "bg-emerald-500/90 text-white"
+                  : "bg-black/60 text-white/60"
+              }`}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${isOpen ? "bg-white animate-pulse" : "bg-white/30"}`}
+              />
               {isOpen ? "Hapur" : "Mbyllur"}
             </div>
             <div className="flex items-center gap-1 bg-black/60 backdrop-blur-sm px-2 py-1 rounded-full">
               <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-              <span className="text-white text-xs font-bold">{rating.toFixed(1)}</span>
+              <span className="text-white text-xs font-bold">
+                {rating.toFixed(1)}
+              </span>
             </div>
             {isHot && (
               <div className="flex items-center gap-1 bg-primary/90 backdrop-blur-sm px-2 py-0.5 rounded-full">
@@ -735,7 +764,9 @@ function ShopCard({ shop, index }: { shop: any; index: number }) {
             <div className="flex items-center gap-2 min-w-0">
               <div className="flex items-center gap-1">
                 <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400 shrink-0" />
-                <span className="text-xs font-bold text-foreground">{shop.totalReviews ?? 0}</span>
+                <span className="text-xs font-bold text-foreground">
+                  {shop.totalReviews ?? 0}
+                </span>
                 <span className="text-xs text-muted-foreground">vlerësime</span>
               </div>
               {isTop && (
@@ -1203,7 +1234,7 @@ export default function Home() {
                 </div>
                 <button
                   onClick={handleSearch}
-                  className="search-expand-btn btn-pill flex items-center justify-center bg-primary text-white font-bold shadow-md shadow-primary/40 transition-all duration-300 ease-out hover:shadow-xl hover:shadow-primary/50 active:scale-95"
+                  className="search-expand-btn rounded-xl flex items-center justify-center bg-primary text-white font-bold shadow-md shadow-primary/40 transition-all duration-300 ease-out hover:shadow-xl hover:shadow-primary/50 active:scale-95"
                 >
                   <Search className="w-4 h-4 shrink-0 transition-transform duration-300" />
                   <span className="search-expand-text  text-sm whitespace-nowrap overflow-hidden">
@@ -1406,7 +1437,7 @@ export default function Home() {
       <HowItWorks />
 
       {/* ── TOP SHOPS ────────────────────────────────────── */}
-      <section className="py-24 bg-primary/6 relative overflow-hidden">
+      <section className="py-24 relative overflow-hidden">
         {/* Decorative background elements */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
@@ -1471,7 +1502,10 @@ export default function Home() {
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="rounded-2xl overflow-hidden bg-card border border-border/40">
+                <div
+                  key={i}
+                  className="rounded-2xl overflow-hidden bg-card border border-border/40"
+                >
                   <Skeleton className="h-52 w-full rounded-none" />
                   <div className="p-5 space-y-3">
                     <Skeleton className="h-4 w-2/3" />
@@ -1504,8 +1538,8 @@ export default function Home() {
       </section>
 
       {/* ── FEATURES ─────────────────────────────────────── */}
-      <section className="py-24 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-background to-card/30 pointer-events-none" />
+      <section className="py-24 relative overflow-hidden bg-primary/6">
+        <div className="absolute inset-0 bg-gradient-to-b from-background to-card/70 pointer-events-none" />
         <div className="container px-6 max-w-7xl mx-auto relative z-10">
           <div className="text-center max-w-2xl mx-auto mb-16">
             <span className="text-xs font-semibold text-primary tracking-widest uppercase mb-3 block">
