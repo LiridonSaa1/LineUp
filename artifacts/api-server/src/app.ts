@@ -35,10 +35,10 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
 
-if (process.env.NODE_ENV === "production") {
+if (process.env.SERVE_STATIC === "true" || process.env.NODE_ENV === "production") {
   const staticPath = path.resolve(__dirname, "../../web/dist/public");
   app.use(express.static(staticPath));
-  app.get("*", (_req, res) => {
+  app.get("/{*splat}", (_req, res) => {
     res.sendFile(path.join(staticPath, "index.html"));
   });
 }
