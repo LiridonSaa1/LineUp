@@ -11,10 +11,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  LogOut, User, LayoutDashboard, Calendar,
-  ShoppingBag, Bell, ChevronDown, Scissors, Sparkles,
+  LogOut,
+  User,
+  LayoutDashboard,
+  Calendar,
+  ShoppingBag,
+  Bell,
+  ChevronDown,
+  Scissors,
+  Sparkles,
 } from "lucide-react";
 import { useLogout } from "@workspace/api-client-react";
+import logoImg from "@assets/3_1782294327381.png";
 
 export function Navbar() {
   const { user, logout } = useAuth();
@@ -32,10 +40,14 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  useEffect(() => { setMobileOpen(false); }, [location]);
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location]);
 
   const handleLogout = async () => {
-    try { await logoutMutation.mutateAsync(); } catch {}
+    try {
+      await logoutMutation.mutateAsync();
+    } catch {}
     logout();
     setLocation("/");
   };
@@ -57,11 +69,13 @@ export function Navbar() {
               : "py-0 border-b border-border/20 bg-background/90 backdrop-blur-xl"
         }`}
       >
-        <div className={`mx-auto transition-all duration-500 ${scrolled ? "max-w-5xl px-4" : "max-w-7xl px-6"}`}>
+        <div
+          className={`mx-auto transition-all duration-500 ${scrolled ? "max-w-5xl px-4" : "max-w-7xl px-6"}`}
+        >
           <div
             className={`flex items-center justify-between transition-all duration-500 ${
               scrolled
-                ? "bg-neutral-900/90 backdrop-blur-xl shadow-lg shadow-black/30 border border-white/8 py-2.5 rounded-2xl px-5"
+                ? "backdrop-blur-xl shadow-lg shadow-black/30 border border-white/8 py-2.5 rounded-2xl px-5"
                 : "py-4"
             }`}
           >
@@ -70,14 +84,16 @@ export function Navbar() {
               <div className="w-8 h-8 bg-primary rounded-xl flex items-center justify-center shadow-md shadow-primary/25 group-hover:shadow-primary/40 transition-shadow duration-300">
                 <Scissors className="w-4 h-4 text-white" />
               </div>
-              <span className={`text-xl font-bold tracking-tight transition-colors duration-300 ${isTransparent || scrolled ? "text-white" : "text-foreground"}`}>
+              <span
+                className={`text-xl font-bold tracking-tight transition-colors duration-300 ${isTransparent || scrolled ? "text-white" : "text-foreground"}`}
+              >
                 TRIM<span className="text-primary">.</span>
               </span>
             </Link>
 
             {/* Desktop nav */}
             <nav className="hidden md:flex items-center gap-6">
-              {navLinks.map(link => (
+              {navLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
@@ -92,9 +108,13 @@ export function Navbar() {
                   }`}
                 >
                   {link.label}
-                  <span className={`absolute -bottom-0.5 left-0 h-[1.5px] rounded-full transition-all duration-300 ${
-                    location === link.href ? "w-full" : "w-0 group-hover:w-full"
-                  } ${isTransparent || scrolled ? "bg-white" : "bg-primary"}`} />
+                  <span
+                    className={`absolute -bottom-0.5 left-0 h-[1.5px] rounded-full transition-all duration-300 ${
+                      location === link.href
+                        ? "w-full"
+                        : "w-0 group-hover:w-full"
+                    } ${isTransparent || scrolled ? "bg-white" : "bg-primary"}`}
+                  />
                 </Link>
               ))}
             </nav>
@@ -117,19 +137,30 @@ export function Navbar() {
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button className={`flex items-center gap-2.5 pl-1 pr-3 py-1 rounded-full transition-all duration-200 group ${
-                        isTransparent ? "hover:bg-white/10" : "hover:bg-black/5"
-                      }`}>
+                      <button
+                        className={`flex items-center gap-2.5 pl-1 pr-3 py-1 rounded-full transition-all duration-200 group ${
+                          isTransparent
+                            ? "hover:bg-white/10"
+                            : "hover:bg-black/5"
+                        }`}
+                      >
                         <Avatar className="h-8 w-8 ring-2 ring-primary/20 group-hover:ring-primary/50 transition-all duration-200">
-                          <AvatarImage src={user.avatarUrl || undefined} alt={user.name} />
+                          <AvatarImage
+                            src={user.avatarUrl || undefined}
+                            alt={user.name}
+                          />
                           <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
                             {user.name.charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
-                        <span className={`hidden md:block text-sm font-medium max-w-[100px] truncate transition-colors duration-300 ${isTransparent ? "text-white" : "text-foreground"}`}>
+                        <span
+                          className={`hidden md:block text-sm font-medium max-w-[100px] truncate transition-colors duration-300 ${isTransparent ? "text-white" : "text-foreground"}`}
+                        >
                           {user.name.split(" ")[0]}
                         </span>
-                        <ChevronDown className={`hidden md:block w-3.5 h-3.5 transition-colors ${isTransparent ? "text-white/60 group-hover:text-white" : "text-muted-foreground group-hover:text-foreground"}`} />
+                        <ChevronDown
+                          className={`hidden md:block w-3.5 h-3.5 transition-colors ${isTransparent ? "text-white/60 group-hover:text-white" : "text-muted-foreground group-hover:text-foreground"}`}
+                        />
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
@@ -139,7 +170,9 @@ export function Navbar() {
                     >
                       <div className="px-3 py-2.5 mb-1">
                         <p className="text-sm font-semibold">{user.name}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{user.email}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {user.email}
+                        </p>
                         <span className="inline-flex items-center mt-2 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-semibold uppercase tracking-wider">
                           {user.role}
                         </span>
@@ -147,35 +180,65 @@ export function Navbar() {
                       <DropdownMenuSeparator className="bg-black/6 my-1" />
 
                       {user.role === "admin" && (
-                        <DropdownMenuItem asChild className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5">
-                          <Link href="/admin" className="flex items-center w-full gap-2.5">
+                        <DropdownMenuItem
+                          asChild
+                          className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5"
+                        >
+                          <Link
+                            href="/admin"
+                            className="flex items-center w-full gap-2.5"
+                          >
                             <LayoutDashboard className="h-4 w-4 text-primary" />
                             <span>Paneli Admin</span>
                           </Link>
                         </DropdownMenuItem>
                       )}
                       {user.role === "owner" && (
-                        <DropdownMenuItem asChild className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5">
-                          <Link href="/dashboard" className="flex items-center w-full gap-2.5">
+                        <DropdownMenuItem
+                          asChild
+                          className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5"
+                        >
+                          <Link
+                            href="/dashboard"
+                            className="flex items-center w-full gap-2.5"
+                          >
                             <LayoutDashboard className="h-4 w-4 text-primary" />
                             <span>Paneli i Dyqanit</span>
                           </Link>
                         </DropdownMenuItem>
                       )}
-                      <DropdownMenuItem asChild className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5">
-                        <Link href="/appointments" className="flex items-center w-full gap-2.5">
+                      <DropdownMenuItem
+                        asChild
+                        className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5"
+                      >
+                        <Link
+                          href="/appointments"
+                          className="flex items-center w-full gap-2.5"
+                        >
                           <Calendar className="h-4 w-4 text-muted-foreground" />
                           <span>Takimet e Mia</span>
                         </Link>
                       </DropdownMenuItem>
-                      <DropdownMenuItem asChild className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5">
-                        <Link href="/orders" className="flex items-center w-full gap-2.5">
+                      <DropdownMenuItem
+                        asChild
+                        className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5"
+                      >
+                        <Link
+                          href="/orders"
+                          className="flex items-center w-full gap-2.5"
+                        >
                           <ShoppingBag className="h-4 w-4 text-muted-foreground" />
                           <span>Porositë e Mia</span>
                         </Link>
                       </DropdownMenuItem>
-                      <DropdownMenuItem asChild className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5">
-                        <Link href="/profile" className="flex items-center w-full gap-2.5">
+                      <DropdownMenuItem
+                        asChild
+                        className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5"
+                      >
+                        <Link
+                          href="/profile"
+                          className="flex items-center w-full gap-2.5"
+                        >
                           <User className="h-4 w-4 text-muted-foreground" />
                           <span>Cilësimet e Profilit</span>
                         </Link>
@@ -219,21 +282,29 @@ export function Navbar() {
                 className={`md:hidden w-9 h-9 flex flex-col items-center justify-center gap-1.5 rounded-full transition-all ${
                   isTransparent ? "hover:bg-white/10" : "hover:bg-black/5"
                 }`}
-                onClick={() => setMobileOpen(p => !p)}
+                onClick={() => setMobileOpen((p) => !p)}
                 aria-label="Menu"
               >
-                <span className={`block h-0.5 rounded-full transition-all duration-300 origin-center ${isTransparent ? "bg-white" : "bg-foreground"} ${mobileOpen ? "w-5 rotate-45 translate-y-2" : "w-4.5"}`} />
-                <span className={`block w-4.5 h-0.5 rounded-full transition-all duration-300 ${isTransparent ? "bg-white" : "bg-foreground"} ${mobileOpen ? "opacity-0 scale-x-0" : ""}`} />
-                <span className={`block h-0.5 rounded-full transition-all duration-300 origin-center ${isTransparent ? "bg-white" : "bg-foreground"} ${mobileOpen ? "w-5 -rotate-45 -translate-y-2" : "w-4.5"}`} />
+                <span
+                  className={`block h-0.5 rounded-full transition-all duration-300 origin-center ${isTransparent ? "bg-white" : "bg-foreground"} ${mobileOpen ? "w-5 rotate-45 translate-y-2" : "w-4.5"}`}
+                />
+                <span
+                  className={`block w-4.5 h-0.5 rounded-full transition-all duration-300 ${isTransparent ? "bg-white" : "bg-foreground"} ${mobileOpen ? "opacity-0 scale-x-0" : ""}`}
+                />
+                <span
+                  className={`block h-0.5 rounded-full transition-all duration-300 origin-center ${isTransparent ? "bg-white" : "bg-foreground"} ${mobileOpen ? "w-5 -rotate-45 -translate-y-2" : "w-4.5"}`}
+                />
               </button>
             </div>
           </div>
         </div>
 
         {/* Mobile menu */}
-        <div className={`md:hidden mx-4 mt-2 glass-strong rounded-2xl overflow-hidden transition-all duration-300 ${mobileOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>
+        <div
+          className={`md:hidden mx-4 mt-2 glass-strong rounded-2xl overflow-hidden transition-all duration-300 ${mobileOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}
+        >
           <div className="p-4 flex flex-col gap-1">
-            {navLinks.map(link => (
+            {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -248,10 +319,16 @@ export function Navbar() {
             ))}
             {!user && (
               <div className="flex gap-2 mt-2 pt-2 border-t border-black/6">
-                <Link href="/login" className="flex-1 py-3 text-center text-sm font-medium text-muted-foreground hover:text-foreground rounded-xl hover:bg-black/5 transition-all">
+                <Link
+                  href="/login"
+                  className="flex-1 py-3 text-center text-sm font-medium text-muted-foreground hover:text-foreground rounded-xl hover:bg-black/5 transition-all"
+                >
                   Hyr
                 </Link>
-                <Link href="/register" className="btn-pill flex-1 py-3 text-center text-sm font-semibold bg-primary text-white">
+                <Link
+                  href="/register"
+                  className="btn-pill flex-1 py-3 text-center text-sm font-semibold bg-primary text-white"
+                >
                   Regjistrohu
                 </Link>
               </div>
