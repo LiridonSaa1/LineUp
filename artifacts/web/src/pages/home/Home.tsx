@@ -990,9 +990,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── TICKER ──────────────────────────────────────── */}
-      <Ticker />
-
       {/* ── ADS SLIDER ───────────────────────────────────── */}
       <section className="py-10 overflow-hidden bg-background">
         <div className="container px-6 max-w-7xl mx-auto mb-6">
