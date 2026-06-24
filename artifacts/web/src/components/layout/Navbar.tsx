@@ -90,14 +90,17 @@ export function Navbar() {
           >
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 group">
-              <div className="w-8 h-8 bg-primary rounded-xl flex items-center justify-center shadow-md shadow-primary/25 group-hover:shadow-primary/40 transition-shadow duration-300">
-                <img src={logoImg} alt="TRIM" className="w-5 h-5 object-contain" style={{ filter: "brightness(0) invert(1)" }} />
-              </div>
-              <span
-                className={`text-xl font-bold tracking-tight transition-colors duration-300 ${isTransparent || scrolled ? "text-white" : "text-foreground"}`}
-              >
-                TRIM<span className="text-primary">.</span>
-              </span>
+              <img
+                src={logoImg}
+                alt="TRIM"
+                className="h-8 w-auto object-contain transition-opacity duration-300 group-hover:opacity-80"
+                style={{
+                  filter:
+                    isTransparent || scrolled
+                      ? "brightness(0) invert(1)"
+                      : "brightness(0)",
+                }}
+              />
             </Link>
 
             {/* Desktop nav */}
@@ -136,7 +139,9 @@ export function Navbar() {
                 }`}
               >
                 Reklama
-                <span className={`absolute -bottom-0.5 left-0 h-[1.5px] rounded-full transition-all duration-300 w-0 group-hover:w-full ${isTransparent || scrolled ? "bg-white" : "bg-primary"}`} />
+                <span
+                  className={`absolute -bottom-0.5 left-0 h-[1.5px] rounded-full transition-all duration-300 w-0 group-hover:w-full ${isTransparent || scrolled ? "bg-white" : "bg-primary"}`}
+                />
               </a>
             </nav>
 
@@ -340,7 +345,10 @@ export function Navbar() {
             ))}
             <a
               href="/#reklama"
-              onClick={(e) => { setMobileOpen(false); handleReklama(e); }}
+              onClick={(e) => {
+                setMobileOpen(false);
+                handleReklama(e);
+              }}
               className="px-4 py-3 rounded-xl text-sm font-medium transition-all text-muted-foreground hover:text-foreground hover:bg-black/5"
             >
               Reklama

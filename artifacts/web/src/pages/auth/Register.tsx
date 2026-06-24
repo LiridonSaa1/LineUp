@@ -766,9 +766,7 @@ export default function Register() {
 
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           <Link href="/" className="inline-flex items-center gap-2 animate-fade-in">
-            <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/40">
-              <img src={logoImg} alt="TRIM" className="w-5 h-5 object-contain" style={{ filter: "brightness(0) invert(1)" }} />
-            </div>
+            <img src={logoImg} alt="TRIM" className="h-9 w-auto object-contain" style={{ filter: "brightness(0) invert(1)" }} />
             <span className="text-2xl font-bold tracking-tight text-white">
               TRIM<span className="text-primary">.</span>
             </span>
@@ -837,9 +835,7 @@ export default function Register() {
         <div className="w-full max-w-md py-8 space-y-6 relative z-10">
           <div className="space-y-1 animate-fade-up">
             <Link href="/" className="inline-flex items-center gap-2 mb-5 lg:hidden">
-              <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center">
-                <img src={logoImg} alt="TRIM" className="w-4 h-4 object-contain" style={{ filter: "brightness(0) invert(1)" }} />
-              </div>
+              <img src={logoImg} alt="TRIM" className="h-7 w-auto object-contain" style={{ filter: "brightness(0)" }} />
               <span className="text-xl font-bold tracking-tight">TRIM<span className="text-primary">.</span></span>
             </Link>
             <p className="text-xs font-bold uppercase tracking-[0.15em] text-primary">— Regjistrim</p>

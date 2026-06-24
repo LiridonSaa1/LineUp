@@ -101,9 +101,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
             {/* Brand */}
             <div className="md:col-span-1">
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-primary rounded-xl flex items-center justify-center shadow-sm shadow-primary/30">
-                  <img src={logoImg} alt="TRIM" className="w-5 h-5 object-contain" style={{ filter: "brightness(0) invert(1)" }} />
-                </div>
+                <img src={logoImg} alt="TRIM" className="h-8 w-auto object-contain" style={{ filter: "brightness(0)" }} />
                 <span className="text-xl font-bold tracking-tight">TRIM<span className="text-primary">.</span></span>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed mb-5">
