@@ -608,37 +608,54 @@ function StepCard({
 /* ── ShopCard ────────────────────────────────────────────── */
 function ShopCard({ shop, index }: { shop: any; index: number }) {
   const { ref, inView } = useInView();
-  const delays = ["delay-75","delay-150","delay-200","delay-300","delay-400","delay-500"];
+  const delays = [
+    "delay-75",
+    "delay-150",
+    "delay-200",
+    "delay-300",
+    "delay-400",
+    "delay-500",
+  ];
   const rating = parseFloat(shop.rating) || 0;
   const isTop = index === 0;
   const isHot = rating >= 4.7;
+
+  const now = new Date();
+  const hhmm = now.getHours() * 100 + now.getMinutes();
+  const openVal  = shop.openTime  ? parseInt(shop.openTime.replace(":", ""))  : 900;
+  const closeVal = shop.closeTime ? parseInt(shop.closeTime.replace(":", "")) : 2000;
+  const isOpen = hhmm >= openVal && hhmm < closeVal;
+
+  const rankStyles = [
+    { pill: "from-yellow-400 to-amber-500", shadow: "shadow-yellow-500/30", ring: "ring-2 ring-yellow-400/25" },
+    { pill: "from-slate-300 to-slate-500",  shadow: "shadow-slate-400/20",  ring: "ring-1 ring-slate-300/20"  },
+    { pill: "from-amber-500 to-amber-800",  shadow: "shadow-amber-700/20",  ring: "ring-1 ring-amber-600/20"  },
+  ];
+  const rs = rankStyles[index];
 
   return (
     <Link href={`/barbershops/${shop.id}`}>
       <div
         ref={ref}
-        className={`group cursor-pointer rounded-3xl overflow-hidden relative transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/10 ${
-          inView ? `animate-scale-in ${delays[index] || ""}` : "opacity-0"
-        } ${isTop ? "ring-2 ring-primary/40" : "border border-border/50"} bg-card`}
+        className={`group cursor-pointer relative overflow-hidden transition-all duration-500
+          hover:-translate-y-2 hover:shadow-2xl hover:shadow-black/15
+          ${inView ? `animate-scale-in ${delays[index] || ""}` : "opacity-0"}
+          rounded-2xl bg-card border
+          ${isTop
+            ? `border-primary/25 shadow-lg shadow-primary/8 ${rs?.ring}`
+            : "border-border/50 hover:border-primary/20"
+          }`}
       >
-        {/* Rank badge */}
-        {index < 3 && (
-          <div className={`absolute top-3 left-3 z-20 w-8 h-8 rounded-full flex items-center justify-center text-xs font-black shadow-lg ${
-            index === 0 ? "bg-yellow-500 text-white" :
-            index === 1 ? "bg-slate-400 text-white" :
-            "bg-amber-700 text-white"
-          }`}>
-            {index + 1}
-          </div>
-        )}
+        {/* Barber-pole accent line */}
+        <div className="absolute top-0 left-0 right-0 h-[3px] z-20 bg-gradient-to-r from-primary/50 via-primary to-primary/50" />
 
-        {/* Image area */}
-        <div className="h-56 relative overflow-hidden bg-muted">
+        {/* ── IMAGE ── */}
+        <div className="h-52 relative overflow-hidden bg-muted">
           {shop.imageUrl ? (
             <img
               src={shop.imageUrl}
               alt={shop.name}
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-muted">
@@ -646,37 +663,51 @@ function ShopCard({ shop, index }: { shop: any; index: number }) {
             </div>
           )}
 
-          {/* Strong gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+          {/* Cinematic gradient */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-black/5" />
 
-          {/* Top-right badges */}
-          <div className="absolute top-3 right-3 flex flex-col gap-1.5 items-end">
-            <div className="flex items-center gap-1 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full">
-              <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
+          {/* Rank pill — top left */}
+          {index < 3 && rs && (
+            <div className={`absolute top-3 left-3 z-20 flex items-center gap-1 bg-gradient-to-r ${rs.pill} px-2.5 py-1 rounded-full shadow-lg ${rs.shadow}`}>
+              {index === 0 && <Crown className="w-3 h-3 text-white" />}
+              <span className="text-white text-[10px] font-black tracking-widest">#{index + 1}</span>
+            </div>
+          )}
+
+          {/* Status + rating — top right */}
+          <div className="absolute top-3 right-3 z-20 flex flex-col items-end gap-1.5">
+            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold backdrop-blur-sm ${
+              isOpen ? "bg-emerald-500/90 text-white" : "bg-black/60 text-white/60"
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${isOpen ? "bg-white animate-pulse" : "bg-white/30"}`} />
+              {isOpen ? "Hapur" : "Mbyllur"}
+            </div>
+            <div className="flex items-center gap-1 bg-black/60 backdrop-blur-sm px-2 py-1 rounded-full">
+              <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
               <span className="text-white text-xs font-bold">{rating.toFixed(1)}</span>
             </div>
             {isHot && (
-              <div className="flex items-center gap-1 bg-primary/90 backdrop-blur-sm px-2 py-1 rounded-full">
+              <div className="flex items-center gap-1 bg-primary/90 backdrop-blur-sm px-2 py-0.5 rounded-full">
                 <Flame className="w-3 h-3 text-white" />
-                <span className="text-white text-[10px] font-bold">Trending</span>
+                <span className="text-white text-[10px] font-bold">Hot</span>
               </div>
             )}
           </div>
 
-          {/* Bottom overlay info */}
-          <div className="absolute bottom-0 left-0 right-0 p-4">
-            <h3 className="text-white font-bold text-lg leading-tight mb-1 drop-shadow">
+          {/* Bottom overlay: name + meta */}
+          <div className="absolute bottom-0 left-0 right-0 px-4 pb-4 z-10">
+            <h3 className="text-white font-extrabold text-lg leading-tight drop-shadow mb-1.5 flex items-center gap-1.5">
               {shop.name}
-              {isTop && <Crown className="inline w-4 h-4 text-yellow-400 ml-1.5 -mt-0.5" />}
+              {isTop && <Crown className="w-4 h-4 text-yellow-400 shrink-0" />}
             </h3>
-            <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1 text-white/80 text-xs">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="flex items-center gap-1 text-white/85 text-xs font-medium">
                 <MapPin className="w-3 h-3 text-primary" />
                 {shop.city}
               </span>
               {shop.openTime && (
-                <span className="flex items-center gap-1 text-white/80 text-xs">
-                  <Clock className="w-3 h-3 text-primary" />
+                <span className="flex items-center gap-1 text-white/60 text-xs">
+                  <Clock className="w-3 h-3" />
                   {shop.openTime}–{shop.closeTime}
                 </span>
               )}
@@ -684,22 +715,37 @@ function ShopCard({ shop, index }: { shop: any; index: number }) {
           </div>
         </div>
 
-        {/* Card body */}
-        <div className="p-4">
-          <p className="text-xs text-muted-foreground mb-3 truncate flex items-center gap-1">
-            <MapPin className="w-3 h-3 shrink-0" />
+        {/* ── BODY ── */}
+        <div className="px-4 pt-3 pb-4">
+          {/* Address */}
+          <p className="text-xs text-muted-foreground truncate flex items-center gap-1 mb-3">
+            <MapPin className="w-3 h-3 shrink-0 opacity-50" />
             {shop.address}
           </p>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <BadgeCheck className="w-3.5 h-3.5 text-primary" />
-              <span className="text-xs text-muted-foreground">
-                {shop.totalReviews ?? 0} vlerësime
-              </span>
+          {/* Scissors divider */}
+          <div className="flex items-center gap-2 mb-3">
+            <div className="h-px flex-1 bg-border/60" />
+            <Scissors className="w-3 h-3 text-primary/30 rotate-45" />
+            <div className="h-px flex-1 bg-border/60" />
+          </div>
+
+          {/* Stats + CTA */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center gap-1">
+                <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400 shrink-0" />
+                <span className="text-xs font-bold text-foreground">{shop.totalReviews ?? 0}</span>
+                <span className="text-xs text-muted-foreground">vlerësime</span>
+              </div>
+              {isTop && (
+                <span className="hidden sm:flex items-center gap-1 text-[10px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full shrink-0">
+                  <BadgeCheck className="w-3 h-3" /> Premium
+                </span>
+              )}
             </div>
 
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold bg-primary text-primary-foreground px-3 py-1.5 rounded-full group-hover:gap-2.5 transition-all duration-200 shadow-sm shadow-primary/30">
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold bg-primary text-primary-foreground px-3.5 py-1.5 rounded-full group-hover:gap-2.5 transition-all duration-200 shadow-md shadow-primary/30 group-hover:shadow-primary/50 shrink-0">
               Rezervo <ArrowRight className="w-3 h-3" />
             </span>
           </div>
@@ -985,7 +1031,7 @@ function HowItWorks() {
 
             {/* Main card — clean white/surface look */}
             <div
-              className="relative rounded-3xl p-6 w-80 shadow-2xl border border-border/60 bg-card animate-float"
+              className="relative rounded-3xl p-6 w-80 shadow-2xl border border-border/60 bg-card animate-float border-white/20 bg-white/10 backdrop-blur-sm"
               style={{ animationDuration: "5s" }}
             >
               {/* Shop header */}
@@ -1360,20 +1406,39 @@ export default function Home() {
       <HowItWorks />
 
       {/* ── TOP SHOPS ────────────────────────────────────── */}
-      <section className="py-24 bg-background">
-        <div className="container px-6 max-w-7xl mx-auto">
+      <section className="py-24 bg-primary/6 relative overflow-hidden">
+        {/* Decorative background elements */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+          <div className="absolute top-12 right-8 opacity-5">
+            <Scissors className="w-48 h-48 text-primary rotate-12" />
+          </div>
+          <div className="absolute bottom-12 left-8 opacity-5">
+            <Scissors className="w-32 h-32 text-primary -rotate-45" />
+          </div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/4 rounded-full blur-3xl" />
+        </div>
+
+        <div className="container px-6 max-w-7xl mx-auto relative z-10">
+          {/* Header */}
           <div className="flex justify-between items-end mb-12">
             <div>
-              <span className="text-xs font-semibold text-primary tracking-widest uppercase mb-3 block">
-                Më të vlerësuarat
-              </span>
-              <h2 className="text-4xl font-bold tracking-tight">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-5 h-[2px] bg-primary rounded-full" />
+                <span className="text-xs font-bold text-primary tracking-widest uppercase">
+                  Më të vlerësuarat
+                </span>
+                <div className="w-5 h-[2px] bg-primary rounded-full" />
+              </div>
+              <h2 className="text-4xl font-extrabold tracking-tight leading-tight">
                 Dyqanet më të mira në{" "}
                 <span className="text-shimmer">
                   {city !== "all" ? city : "Kosovë"}
                 </span>
               </h2>
-              <p className="text-muted-foreground mt-2">
+              <p className="text-muted-foreground mt-2 flex items-center gap-1.5">
+                <BadgeCheck className="w-4 h-4 text-primary shrink-0" />
                 Verifikuar nga mijëra klientë të vërtetë
               </p>
             </div>
@@ -1395,7 +1460,7 @@ export default function Home() {
                 className={`btn-pill px-4 py-2 text-sm font-medium transition-all duration-200 ${
                   city === c
                     ? "bg-primary text-white shadow-md shadow-primary/20"
-                    : "glass text-muted-foreground hover:text-foreground"
+                    : "bg-background/70 border border-border/60 text-muted-foreground hover:text-foreground hover:border-primary/30"
                 }`}
               >
                 {c === "all" ? "Të gjitha qytetet" : c}
@@ -1406,11 +1471,15 @@ export default function Home() {
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="rounded-2xl overflow-hidden glass">
+                <div key={i} className="rounded-2xl overflow-hidden bg-card border border-border/40">
                   <Skeleton className="h-52 w-full rounded-none" />
-                  <div className="p-5 space-y-2">
+                  <div className="p-5 space-y-3">
                     <Skeleton className="h-4 w-2/3" />
                     <Skeleton className="h-3 w-1/2" />
+                    <div className="flex justify-between pt-1">
+                      <Skeleton className="h-5 w-24" />
+                      <Skeleton className="h-7 w-20 rounded-full" />
+                    </div>
                   </div>
                 </div>
               ))}
@@ -1423,10 +1492,10 @@ export default function Home() {
             </div>
           )}
 
-          <div className="mt-8 text-center md:hidden">
+          <div className="mt-10 text-center md:hidden">
             <Link
               href="/barbershops"
-              className="btn-pill inline-flex items-center gap-2 px-6 py-3 glass text-sm font-semibold hover:bg-black/5 transition-all"
+              className="btn-pill inline-flex items-center gap-2 px-6 py-3 bg-background/80 border border-border/60 text-sm font-semibold hover:border-primary/30 transition-all"
             >
               Shiko të gjitha dyqanet <ArrowRight className="w-4 h-4" />
             </Link>
