@@ -56,6 +56,16 @@ export function Navbar() {
     { href: "/marketplace", label: "Dyqani" },
   ];
 
+  const handleReklama = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (location !== "/") {
+      window.location.href = "/#reklama";
+      return;
+    }
+    const el = document.getElementById("reklama");
+    if (el) el.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
     <>
       {/* ── Main header ── */}
@@ -116,6 +126,18 @@ export function Navbar() {
                   />
                 </Link>
               ))}
+              <a
+                href="/#reklama"
+                onClick={handleReklama}
+                className={`relative text-sm font-medium transition-colors duration-200 group cursor-pointer ${
+                  isTransparent || scrolled
+                    ? "text-white/70 hover:text-white"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Reklama
+                <span className={`absolute -bottom-0.5 left-0 h-[1.5px] rounded-full transition-all duration-300 w-0 group-hover:w-full ${isTransparent || scrolled ? "bg-white" : "bg-primary"}`} />
+              </a>
             </nav>
 
             {/* Right side */}
@@ -316,6 +338,13 @@ export function Navbar() {
                 {link.label}
               </Link>
             ))}
+            <a
+              href="/#reklama"
+              onClick={(e) => { setMobileOpen(false); handleReklama(e); }}
+              className="px-4 py-3 rounded-xl text-sm font-medium transition-all text-muted-foreground hover:text-foreground hover:bg-black/5"
+            >
+              Reklama
+            </a>
             {!user && (
               <div className="flex gap-2 mt-2 pt-2 border-t border-black/6">
                 <Link

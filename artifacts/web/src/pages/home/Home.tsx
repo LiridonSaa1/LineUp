@@ -1113,7 +1113,7 @@ export default function Home() {
                 </div>
                 <button
                   onClick={handleSearch}
-                  className="search-expand-btn btn-pill flex items-center justify-center liquid-glass text-white font-bold transition-all duration-300 ease-out hover:shadow-xl hover:shadow-primary/50 active:scale-95"
+                  className="search-expand-btn btn-pill flex items-center justify-center bg-primary text-white font-bold shadow-md shadow-primary/40 transition-all duration-300 ease-out hover:shadow-xl hover:shadow-primary/50 active:scale-95"
                 >
                   <Search className="w-4 h-4 shrink-0 transition-transform duration-300" />
                   <span className="search-expand-text  text-sm whitespace-nowrap overflow-hidden">
@@ -1243,7 +1243,7 @@ export default function Home() {
           {/* Section label */}
           <div className="flex items-center gap-4 mb-14">
             <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground/40">
-              // TRIM
+              // LINE
             </span>
             <div className="flex-1 h-px bg-gradient-to-r from-border via-primary/20 to-transparent" />
             <span className="text-xs font-bold uppercase tracking-[0.15em] text-primary">
@@ -1251,7 +1251,7 @@ export default function Home() {
             </span>
             <div className="flex-1 h-px bg-gradient-to-l from-border via-primary/20 to-transparent" />
             <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground/40">
-              Stats
+              UP
             </span>
           </div>
 
@@ -1266,7 +1266,7 @@ export default function Home() {
                 bg: "bg-blue-500/10",
                 text: "text-blue-500",
                 border: "border-blue-500/15 hover:border-blue-500/40",
-                glow: "bg-blue-400/20",
+                glow: "bg-blue-400/20 ",
               }}
             />
             <StatCard
