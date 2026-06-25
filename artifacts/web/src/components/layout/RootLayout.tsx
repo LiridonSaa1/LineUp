@@ -15,11 +15,11 @@ function FooterSection({ label, icon: Icon, children }: {
   return (
     <div>
       <div className="flex items-center gap-2 mb-5">
-        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/50">
+        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-600">
           //
         </span>
         <Icon className="w-3.5 h-3.5 text-primary" />
-        <h4 className="text-xs font-bold uppercase tracking-[0.15em] text-foreground/70">{label}</h4>
+        <h4 className="text-xs font-bold uppercase tracking-[0.15em] text-zinc-300">{label}</h4>
       </div>
       {children}
     </div>
@@ -31,7 +31,7 @@ function FooterLink({ href, children }: { href: string; children: React.ReactNod
     <li>
       <Link
         href={href}
-        className="group inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors duration-200"
+        className="group inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-100 transition-colors duration-200"
       >
         <span className="relative">
           {children}
@@ -78,7 +78,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* ── Footer ── */}
-      <footer className="relative overflow-hidden border-t border-border/50 bg-card/50">
+      <footer className="relative overflow-hidden border-t border-white/8 bg-zinc-950">
         {/* Animated top accent line */}
         <div className="absolute top-0 left-0 right-0 h-px overflow-hidden">
           <div className="h-px w-full bg-gradient-to-r from-transparent via-primary/50 to-transparent animate-shimmer-line" />
@@ -86,25 +86,25 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
 
         {/* Background glow */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[500px] h-[200px] bg-primary/4 rounded-full blur-3xl animate-glow-pulse" />
+          <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[600px] h-[220px] bg-primary/5 rounded-full blur-3xl animate-glow-pulse" />
         </div>
 
         <div className="container px-6 max-w-7xl mx-auto pt-14 pb-10 relative z-10">
           {/* Section label */}
           <div className="flex items-center gap-3 mb-12">
-            <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground/40">// TRIM</span>
-            <div className="flex-1 h-px bg-border/50" />
-            <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground/40">Kosovo's Barbershop Network</span>
+            <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-zinc-600">// TRIM</span>
+            <div className="flex-1 h-px bg-white/8" />
+            <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-zinc-600">Kosovo's Barbershop Network</span>
           </div>
 
           <div className="grid md:grid-cols-4 gap-10 mb-12">
             {/* Brand */}
             <div className="md:col-span-1">
               <div className="flex items-center gap-2 mb-4">
-                <img src={logoImg} alt="TRIM" className="h-8 w-auto object-contain" style={{ filter: "brightness(0)" }} />
-                <span className="text-xl font-bold tracking-tight">TRIM<span className="text-primary">.</span></span>
+                <img src={logoImg} alt="TRIM" className="h-8 w-auto object-contain" style={{ filter: "brightness(0) invert(1)" }} />
+                <span className="text-xl font-bold tracking-tight text-white">TRIM<span className="text-primary">.</span></span>
               </div>
-              <p className="text-sm text-muted-foreground leading-relaxed mb-5">
+              <p className="text-sm text-zinc-500 leading-relaxed mb-5">
                 Platforma premium e rezervimit të berberive në Kosovë. Gjej, rezervo, dhe shijo.
               </p>
               <div className="flex gap-2.5">
@@ -117,7 +117,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
                   <button
                     key={label}
                     aria-label={label}
-                    className="w-9 h-9 rounded-xl border border-border/60 flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-all duration-200"
+                    className="w-9 h-9 rounded-xl border border-white/10 flex items-center justify-center text-zinc-500 hover:text-primary hover:border-primary/40 hover:bg-primary/8 transition-all duration-200"
                   >
                     <Icon className="w-3.5 h-3.5" />
                   </button>
@@ -170,9 +170,9 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
                   <FooterLink key={label} href={href}>{label}</FooterLink>
                 ))}
               </ul>
-              <div className="mt-6 p-4 rounded-2xl bg-primary/5 border border-primary/15">
-                <p className="text-xs font-semibold text-foreground mb-1">Bashkohu me ne</p>
-                <p className="text-xs text-muted-foreground leading-relaxed">
+              <div className="mt-6 p-4 rounded-2xl bg-primary/8 border border-primary/15">
+                <p className="text-xs font-semibold text-zinc-200 mb-1">Bashkohu me ne</p>
+                <p className="text-xs text-zinc-500 leading-relaxed">
                   Mbi 340 berberë tashmë e besojnë TRIM-in.
                 </p>
               </div>
@@ -180,13 +180,13 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Bottom bar */}
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4 pt-8 border-t border-border/40">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 pt-8 border-t border-white/8">
             <div className="flex items-center gap-3">
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-zinc-600">
                 © {new Date().getFullYear()} TRIM. Të gjitha të drejtat e rezervuara.
               </p>
-              <span className="text-xs text-muted-foreground">·</span>
-              <span className="text-xs font-medium text-muted-foreground">
+              <span className="text-xs text-zinc-700">·</span>
+              <span className="text-xs font-medium text-zinc-600">
                 Made in Kosovo 🇽🇰
               </span>
             </div>
@@ -194,7 +194,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
               {["Kushtet e Përdorimit", "Privatësia", "Cookies"].map(item => (
                 <span
                   key={item}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  className="text-xs text-zinc-600 hover:text-zinc-300 transition-colors cursor-pointer"
                 >
                   {item}
                 </span>
