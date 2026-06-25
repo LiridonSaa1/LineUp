@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useAuth } from "@/lib/auth";
 import {
   DropdownMenu,
@@ -31,6 +31,8 @@ export function Navbar() {
   const [isOverDark, setIsOverDark] = useState(true);
   const headerRef = useRef<HTMLElement>(null);
   const logoutMutation = useLogout();
+
+  const [activeSection, setActiveSection] = useState<string>("");
 
   const isHome = location === "/";
   const isTransparent = isHome && !scrolled;
@@ -74,6 +76,38 @@ export function Navbar() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, [checkBgBehindNav, isHome]);
+
+  // Scroll-spy: highlight active home section
+  useEffect(() => {
+    if (!isHome) { setActiveSection(""); return; }
+    const sectionIds = [
+      "si-funksionon", "numrat", "vleresuar", "pse-trim",
+      "shop", "disponueshem", "reklama", "kontakt",
+    ];
+    const observers: IntersectionObserver[] = [];
+    const ratios = new Map<string, number>();
+
+    sectionIds.forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const obs = new IntersectionObserver(
+        ([entry]) => {
+          ratios.set(id, entry.intersectionRatio);
+          // Pick the section with the highest intersection ratio
+          let best = "";
+          let bestRatio = 0;
+          ratios.forEach((r, sid) => {
+            if (r > bestRatio) { bestRatio = r; best = sid; }
+          });
+          if (bestRatio > 0.1) setActiveSection(best);
+        },
+        { threshold: [0, 0.1, 0.25, 0.5, 0.75, 1], rootMargin: "-80px 0px 0px 0px" },
+      );
+      obs.observe(el);
+      observers.push(obs);
+    });
+    return () => observers.forEach((o) => o.disconnect());
+  }, [isHome, location]);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -169,19 +203,26 @@ export function Navbar() {
             {/* Desktop nav */}
             <nav className="hidden md:flex items-center gap-0.5">
               {isHome
-                ? homeSections.map((s) => (
-                    <button
-                      key={s.id}
-                      onClick={() => scrollToSection(s.id)}
-                      className={`text-xs font-medium transition-all duration-200 px-2.5 py-1.5 rounded-full cursor-pointer whitespace-nowrap ${
-                        onDark
-                          ? "text-white/75 hover:text-white hover:bg-white/10 active:bg-white/20"
-                          : "text-muted-foreground hover:text-foreground hover:bg-black/6 active:bg-black/10"
-                      }`}
-                    >
-                      {s.label}
-                    </button>
-                  ))
+                ? homeSections.map((s) => {
+                    const isActive = activeSection === s.id;
+                    return (
+                      <button
+                        key={s.id}
+                        onClick={() => scrollToSection(s.id)}
+                        className={`text-xs font-medium transition-all duration-200 px-2.5 py-1.5 rounded-full cursor-pointer whitespace-nowrap ${
+                          isActive
+                            ? onDark
+                              ? "text-white bg-white/20 font-semibold"
+                              : "text-foreground bg-black/10 font-semibold"
+                            : onDark
+                              ? "text-white/70 hover:text-white hover:bg-white/10 active:bg-white/20"
+                              : "text-muted-foreground hover:text-foreground hover:bg-black/6 active:bg-black/10"
+                        }`}
+                      >
+                        {s.label}
+                      </button>
+                    );
+                  })
                 : pageLinks.map((link) => (
                     <Link
                       key={link.href}
