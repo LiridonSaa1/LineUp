@@ -326,8 +326,8 @@ export function Navbar() {
         </div>
       </header>
 
-      {/* Spacer */}
-      <div className="h-16" />
+      {/* Spacer — matches actual navbar height (logo 100px + pill padding + header padding) */}
+      {!isHome && <div className="h-[124px]" />}
     </>
   );
 }
