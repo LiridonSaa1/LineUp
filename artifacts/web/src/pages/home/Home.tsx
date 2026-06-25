@@ -21,6 +21,10 @@ import {
   Crown,
   BadgeCheck,
   Flame,
+  Send,
+  CheckCircle2,
+  Mail,
+  Phone,
 } from "lucide-react";
 import {
   Select,
@@ -1556,8 +1560,6 @@ export default function Home() {
         <div
           className="absolute inset-0 opacity-[0.04] pointer-events-none"
           style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)",
             backgroundSize: "64px 64px",
           }}
         />
@@ -1811,7 +1813,228 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* ── CONTACT FORM ─────────────────────────────────── */}
+      <ContactSection />
     </div>
+  );
+}
+
+/* ── ContactSection ──────────────────────────────────────── */
+function ContactSection() {
+  const [form, setForm] = useState({ name: "", email: "", phone: "", subject: "", message: "" });
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const { ref, inView } = useInView(0.1);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name || !form.email || !form.message) return;
+    setSending(true);
+    await new Promise(r => setTimeout(r, 1300));
+    setSending(false);
+    setSent(true);
+  };
+
+  const contactInfo = [
+    { icon: Mail,  label: "Email",    value: "info@trimkosova.com",     sub: "Brenda 24 orëve" },
+    { icon: Phone, label: "Telefon",  value: "+383 44 123 456",          sub: "E hënë–E premte, 09–18" },
+    { icon: MapPin,label: "Adresa",   value: "Rr. Nëna Terezë, Prishtinë", sub: "Kosovë 10000" },
+  ];
+
+  return (
+    <section className="py-24 bg-primary/6 relative overflow-hidden" ref={ref}>
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/10 to-transparent" />
+
+      <div className="container px-6 max-w-7xl mx-auto">
+        {/* Header */}
+        <div
+          className="text-center mb-14"
+          style={{
+            opacity: inView ? 1 : 0,
+            transform: inView ? "translateY(0)" : "translateY(24px)",
+            transition: "opacity 0.6s ease, transform 0.6s ease",
+          }}
+        >
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <div className="w-5 h-[2px] bg-primary rounded-full" />
+            <span className="text-xs font-bold text-primary tracking-widest uppercase">Na kontaktoni</span>
+            <div className="w-5 h-[2px] bg-primary rounded-full" />
+          </div>
+          <h2 className="text-4xl font-extrabold tracking-tight">Si mund t'ju ndihmojmë?</h2>
+          <p className="text-muted-foreground mt-2 max-w-xl mx-auto">
+            Pyetje rreth platformës, partneriteteve ose mbështetjes teknike — jemi këtu.
+          </p>
+        </div>
+
+        <div className="grid lg:grid-cols-5 gap-10">
+          {/* Left: info cards */}
+          <div
+            className="lg:col-span-2 space-y-4"
+            style={{
+              opacity: inView ? 1 : 0,
+              transform: inView ? "translateX(0)" : "translateX(-30px)",
+              transition: "opacity 0.6s ease 0.15s, transform 0.6s ease 0.15s",
+            }}
+          >
+            {contactInfo.map(({ icon: Icon, label, value, sub }) => (
+              <div
+                key={label}
+                className="flex gap-4 p-5 rounded-2xl bg-card border border-border/50 hover:border-primary/25 transition-colors group"
+              >
+                <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+                  <Icon className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-0.5">{label}</p>
+                  <p className="text-sm font-semibold">{value}</p>
+                  <p className="text-xs text-muted-foreground">{sub}</p>
+                </div>
+              </div>
+            ))}
+
+            {/* CTA box */}
+            <div className="p-5 rounded-2xl bg-primary/8 border border-primary/15">
+              <p className="text-sm font-bold mb-1">Dëshiron të bashkohesh si pronar?</p>
+              <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+                Regjistro dyqanin tënd falas dhe fillo të marrësh klientë të rinj sot.
+              </p>
+              <Link
+                href="/register"
+                className="btn-pill inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-xs font-bold"
+              >
+                <Sparkles className="w-3 h-3" />
+                Fillo Falas
+              </Link>
+            </div>
+          </div>
+
+          {/* Right: form */}
+          <div
+            className="lg:col-span-3"
+            style={{
+              opacity: inView ? 1 : 0,
+              transform: inView ? "translateX(0)" : "translateX(30px)",
+              transition: "opacity 0.6s ease 0.25s, transform 0.6s ease 0.25s",
+            }}
+          >
+            <div className="bg-card border border-border/50 rounded-3xl p-8 shadow-xl shadow-black/5">
+              {sent ? (
+                <div className="text-center py-14">
+                  <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-5">
+                    <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+                  </div>
+                  <h3 className="text-2xl font-bold mb-2">Mesazhi u dërgua!</h3>
+                  <p className="text-muted-foreground max-w-sm mx-auto text-sm leading-relaxed">
+                    Faleminderit! Ekipi ynë do t'ju përgjigjet brenda 24 orëve.
+                  </p>
+                  <button
+                    onClick={() => { setSent(false); setForm({ name: "", email: "", phone: "", subject: "", message: "" }); }}
+                    className="mt-6 text-sm text-primary font-semibold hover:underline"
+                  >
+                    Dërgoni mesazh tjetër
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  <div>
+                    <h3 className="text-xl font-bold mb-1">Dërgoni një mesazh</h3>
+                    <p className="text-sm text-muted-foreground">Plotësoni formularin dhe do t'ju kontaktojmë sa më shpejt.</p>
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">
+                        Emri i plotë <span className="text-primary">*</span>
+                      </label>
+                      <input
+                        name="name" value={form.name} onChange={handleChange}
+                        placeholder="Artan Berisha"
+                        className="w-full px-4 py-3 rounded-xl border border-border/60 bg-background text-sm focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-muted-foreground/40"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">
+                        Email <span className="text-primary">*</span>
+                      </label>
+                      <input
+                        name="email" type="email" value={form.email} onChange={handleChange}
+                        placeholder="artan@email.com"
+                        className="w-full px-4 py-3 rounded-xl border border-border/60 bg-background text-sm focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-muted-foreground/40"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">
+                        Telefoni
+                      </label>
+                      <input
+                        name="phone" value={form.phone} onChange={handleChange}
+                        placeholder="+383 44 000 000"
+                        className="w-full px-4 py-3 rounded-xl border border-border/60 bg-background text-sm focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-muted-foreground/40"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">
+                        Tema
+                      </label>
+                      <select
+                        name="subject" value={form.subject} onChange={handleChange}
+                        className="w-full px-4 py-3 rounded-xl border border-border/60 bg-background text-sm focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all text-muted-foreground"
+                      >
+                        <option value="">Zgjidhni temën</option>
+                        <option value="support">Mbështetje teknike</option>
+                        <option value="partnership">Partneritet / Regjistrim dyqani</option>
+                        <option value="billing">Faturimi &amp; Pagesa</option>
+                        <option value="feedback">Koment / Sugjerim</option>
+                        <option value="other">Tjetër</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">
+                      Mesazhi <span className="text-primary">*</span>
+                    </label>
+                    <textarea
+                      name="message" value={form.message} onChange={handleChange}
+                      rows={4}
+                      placeholder="Shkruani mesazhin tuaj këtu..."
+                      className="w-full px-4 py-3 rounded-xl border border-border/60 bg-background text-sm focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all resize-none placeholder:text-muted-foreground/40"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={sending || !form.name || !form.email || !form.message}
+                    className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl bg-primary text-white font-bold text-base shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {sending ? (
+                      <>
+                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Duke dërguar...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        Dërgo Mesazhin
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
