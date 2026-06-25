@@ -1,10 +1,26 @@
 import { useRoute, Link } from "wouter";
+import { Suspense, lazy } from "react";
 import { useGetBarbershop, getGetBarbershopQueryKey, useListBarbers, useListServices } from "@workspace/api-client-react";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, Star, Clock, Phone, Scissors, ArrowLeft, Check } from "lucide-react";
+import { MapPin, Star, Clock, Phone, Scissors, ArrowLeft, Navigation } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+// Lazy-load Leaflet — same pattern as BarbershopsList
+const KosovoMap = lazy(() => import("@/components/map/KosovoMap"));
+
+// Kosovo city centre fallback coords
+const CITY_COORDS: Record<string, [number, number]> = {
+  Prishtina:  [42.6629, 21.1655],
+  Prizren:    [42.2139, 20.7397],
+  Peja:       [42.6597, 20.2880],
+  Gjakova:    [42.3803, 20.4308],
+  Mitrovica:  [42.8914, 20.8660],
+  Ferizaj:    [42.3703, 21.1553],
+  Gjilan:     [42.4635, 21.4694],
+};
 
 export default function BarbershopDetail() {
   const [, params] = useRoute("/barbershops/:id");
@@ -46,6 +62,14 @@ export default function BarbershopDetail() {
     );
   }
 
+  // Build Google Maps directions URL
+  const lat = shop.latitude != null ? Number(shop.latitude) : null;
+  const lng = shop.longitude != null ? Number(shop.longitude) : null;
+  const cityCoords = CITY_COORDS[shop.city] ?? [42.6629, 21.1655];
+  const mapLat = lat ?? cityCoords[0];
+  const mapLng = lng ?? cityCoords[1];
+  const gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${mapLat},${mapLng}`;
+
   return (
     <div className="bg-background min-h-screen pb-24">
       {/* Hero Image */}
@@ -71,9 +95,9 @@ export default function BarbershopDetail() {
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">{shop.name}</h1>
-                {shop.rating && (
+                {shop.rating != null && (
                   <span className="flex items-center gap-1 bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-bold">
-                    <Star className="w-4 h-4 fill-primary" /> {shop.rating.toFixed(1)}
+                    <Star className="w-4 h-4 fill-primary" /> {Number(shop.rating).toFixed(1)}
                   </span>
                 )}
               </div>
@@ -107,10 +131,10 @@ export default function BarbershopDetail() {
               <div className="grid md:grid-cols-2 gap-4">
                 {servicesLoading ? (
                   [1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24 w-full rounded-2xl" />)
-                ) : servicesRes?.data.length === 0 ? (
+                ) : !Array.isArray(servicesRes) || servicesRes.length === 0 ? (
                   <div className="col-span-2 text-center py-12 text-muted-foreground">Nuk ka shërbime të listuara ende.</div>
                 ) : (
-                  servicesRes?.data.map(service => (
+                  servicesRes.map(service => (
                     <div key={service.id} className="p-5 bg-card border border-border rounded-2xl flex justify-between items-center group hover:border-primary/50 hover:shadow-md transition-all">
                       <div>
                         <h3 className="font-bold text-lg">{service.name}</h3>
@@ -129,10 +153,10 @@ export default function BarbershopDetail() {
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {barbersLoading ? (
                   [1, 2, 3].map(i => <Skeleton key={i} className="h-40 w-full rounded-2xl" />)
-                ) : barbersRes?.data.length === 0 ? (
+                ) : !Array.isArray(barbersRes) || barbersRes.length === 0 ? (
                   <div className="col-span-3 text-center py-12 text-muted-foreground">Nuk ka berberë të listuar ende.</div>
                 ) : (
-                  barbersRes?.data.filter(b => b.isActive).map(barber => (
+                  barbersRes.filter(b => b.isActive).map(barber => (
                     <div key={barber.id} className="p-6 bg-card border border-border rounded-2xl flex flex-col items-center text-center group hover:border-primary/50 hover:shadow-md transition-all">
                       <Avatar className="h-20 w-20 mb-4 border-2 border-primary/20">
                         <AvatarImage src={barber.avatarUrl || undefined} alt={barber.name} />
@@ -151,6 +175,60 @@ export default function BarbershopDetail() {
               </div>
             </TabsContent>
           </Tabs>
+        </div>
+
+        {/* ── Location Map ── */}
+        <div className="mt-8">
+          <div className="bg-card border border-border rounded-3xl overflow-hidden">
+            <div className="flex items-center justify-between p-5 border-b border-border">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <MapPin className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h2 className="font-bold text-lg">Lokacioni</h2>
+                  <p className="text-sm text-muted-foreground">{shop.address}, {shop.city}</p>
+                </div>
+              </div>
+              <a
+                href={gmapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-sm font-semibold text-primary hover:underline"
+              >
+                <Navigation className="w-4 h-4" />
+                Drejtim
+              </a>
+            </div>
+
+            {/* Map */}
+            <div className="h-72 md:h-96 w-full">
+              <ErrorBoundary
+                fallback={
+                  <div className="h-full flex items-center justify-center bg-muted rounded-b-3xl">
+                    <p className="text-sm text-muted-foreground">Harta nuk mund të ngarkohet.</p>
+                  </div>
+                }
+              >
+                <Suspense
+                  fallback={
+                    <div className="h-full flex items-center justify-center bg-muted">
+                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                        <MapPin className="w-8 h-8 animate-bounce" />
+                        <p className="text-sm">Po ngarkohet harta…</p>
+                      </div>
+                    </div>
+                  }
+                >
+                  <KosovoMap
+                    shops={[shop]}
+                    selectedCity="all"
+                    searchQuery=""
+                  />
+                </Suspense>
+              </ErrorBoundary>
+            </div>
+          </div>
         </div>
       </div>
     </div>

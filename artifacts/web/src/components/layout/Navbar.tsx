@@ -79,10 +79,18 @@ export function Navbar() {
 
   // Scroll-spy: highlight active home section
   useEffect(() => {
-    if (!isHome) { setActiveSection(""); return; }
+    if (!isHome) {
+      setActiveSection("");
+      return;
+    }
     const sectionIds = [
-      "si-funksionon", "numrat", "vleresuar", "pse-trim",
-      "shop", "disponueshem", "reklama", "kontakt",
+      "si-funksionon",
+      "vleresuar",
+      "pse-trim",
+      "shop",
+      "disponueshem",
+      "reklama",
+      "kontakt",
     ];
     const observers: IntersectionObserver[] = [];
     const ratios = new Map<string, number>();
@@ -97,11 +105,17 @@ export function Navbar() {
           let best = "";
           let bestRatio = 0;
           ratios.forEach((r, sid) => {
-            if (r > bestRatio) { bestRatio = r; best = sid; }
+            if (r > bestRatio) {
+              bestRatio = r;
+              best = sid;
+            }
           });
           if (bestRatio > 0.1) setActiveSection(best);
         },
-        { threshold: [0, 0.1, 0.25, 0.5, 0.75, 1], rootMargin: "-80px 0px 0px 0px" },
+        {
+          threshold: [0, 0.1, 0.25, 0.5, 0.75, 1],
+          rootMargin: "-80px 0px 0px 0px",
+        },
       );
       obs.observe(el);
       observers.push(obs);
@@ -128,17 +142,24 @@ export function Navbar() {
   ];
 
   const homeSections = [
+    { id: "home", label: "Home" },
     { id: "si-funksionon", label: "Si Funksionon" },
-    { id: "numrat", label: "Numrat tanë" },
     { id: "vleresuar", label: "Më të vlerësuarat" },
-    { id: "pse-trim", label: "Pse TRIM" },
+    { id: "pse-trim", label: "Pse" },
     { id: "shop", label: "Grooming Shop" },
     { id: "disponueshem", label: "I disponueshëm në" },
-    { id: "reklama", label: "Reklama" },
     { id: "kontakt", label: "Na kontaktoni" },
   ];
 
   const scrollToSection = (id: string) => {
+    if (id === "home") {
+      if (location !== "/") {
+        setLocation("/");
+        return;
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: "smooth" });
   };
@@ -180,9 +201,7 @@ export function Navbar() {
         >
           <div
             className={`flex items-center justify-between transition-all duration-500 ${
-              scrolled
-                ? `${scrolledPillBg} py-2.5 rounded-2xl px-5`
-                : "py-4"
+              scrolled ? `${scrolledPillBg} py-2.5 rounded-2xl px-5` : "py-4"
             }`}
           >
             {/* Logo */}
@@ -192,10 +211,7 @@ export function Navbar() {
                 alt="TRIM"
                 className="h-8 w-auto object-contain transition-opacity duration-300 group-hover:opacity-80"
                 style={{
-                  filter:
-                    onDark
-                      ? "brightness(0) invert(1)"
-                      : "brightness(0)",
+                  filter: onDark ? "brightness(0) invert(1)" : "brightness(0)",
                 }}
               />
             </Link>
@@ -204,7 +220,10 @@ export function Navbar() {
             <nav className="hidden md:flex items-center gap-0.5">
               {isHome
                 ? homeSections.map((s) => {
-                    const isActive = activeSection === s.id;
+                    const isActive =
+                      s.id === "home"
+                        ? activeSection === ""
+                        : activeSection === s.id;
                     return (
                       <button
                         key={s.id}
@@ -403,7 +422,9 @@ export function Navbar() {
               {/* Mobile hamburger */}
               <button
                 className={`md:hidden w-9 h-9 flex flex-col items-center justify-center gap-1.5 rounded-full transition-all ${
-                  onDark ? "hover:bg-white/10 active:bg-white/20" : "hover:bg-black/6 active:bg-black/10"
+                  onDark
+                    ? "hover:bg-white/10 active:bg-white/20"
+                    : "hover:bg-black/6 active:bg-black/10"
                 }`}
                 onClick={() => setMobileOpen((p) => !p)}
                 aria-label="Menu"
