@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import {
   DropdownMenu,
@@ -22,60 +22,18 @@ import {
 import { useLogout } from "@workspace/api-client-react";
 import logoImg from "@assets/LINE_(2)_1782421072087.png";
 
+const DARK_PILL = "bg-zinc-900/80 backdrop-blur-xl shadow-lg shadow-black/30 border border-white/8";
+
 export function Navbar() {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
-  const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [isOverDark, setIsOverDark] = useState(true);
-  const headerRef = useRef<HTMLElement>(null);
-  const logoutMutation = useLogout();
   const [activeSection, setActiveSection] = useState<string>("");
+  const logoutMutation = useLogout();
 
   const isHome = location === "/";
-  const isTransparent = isHome && !scrolled;
 
-  // Detect background colour behind navbar
-  const checkBgBehindNav = useCallback(() => {
-    const x = window.innerWidth / 2;
-    const y = 70;
-    const elements = document.elementsFromPoint(x, y);
-    const navEl = headerRef.current;
-    const pageEl = elements.find((el) => !navEl?.contains(el) && el !== navEl);
-    if (!pageEl) return;
-    let node: Element | null = pageEl;
-    while (node && node !== document.documentElement) {
-      const bg = window.getComputedStyle(node).backgroundColor;
-      if (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent") {
-        const nums = bg.match(/[\d.]+/g);
-        if (nums && nums.length >= 3) {
-          const [r, g, b] = nums.map(Number);
-          const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-          setIsOverDark(luminance < 0.55);
-          return;
-        }
-      }
-      node = node.parentElement;
-    }
-    setIsOverDark(true);
-  }, []);
-
-  useEffect(() => {
-    const onScroll = () => {
-      const newScrolled = window.scrollY > 40;
-      setScrolled(newScrolled);
-      if (newScrolled) {
-        checkBgBehindNav();
-      } else {
-        setIsOverDark(true);
-        if (isHome) setActiveSection("");
-      }
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [checkBgBehindNav, isHome]);
-
-  // Scroll-spy
+  // Scroll-spy for home sections
   useEffect(() => {
     if (!isHome) { setActiveSection(""); return; }
     const sectionIds = ["si-funksionon", "vleresuar", "pse-trim", "shop", "disponueshem", "reklama", "kontakt"];
@@ -120,17 +78,9 @@ export function Navbar() {
     scrollToSection("reklama");
   };
 
-  // Colour context
-  const onDark = isTransparent || (scrolled && isOverDark);
-  const onLight = scrolled && !isOverDark;
-
-  // Glass pill background when scrolled (same as original)
-  const scrolledPillBg = onLight
-    ? "bg-white/95 backdrop-blur-xl shadow-lg shadow-black/12 border border-black/8"
-    : "bg-zinc-900/75 backdrop-blur-xl shadow-lg shadow-black/30 border border-white/8";
-
-  // Home nav sections — split left/right around logo
+  // Home nav sections — always 4 left, 3 right (logo in center)
   const leftSections = [
+    { id: "home",          label: "Home" },
     { id: "si-funksionon", label: "Si Funksionon" },
     { id: "vleresuar",     label: "Më të vlerësuarat" },
     { id: "pse-trim",      label: "Pse" },
@@ -148,42 +98,26 @@ export function Navbar() {
     { href: "/#reklama",    label: "Reklama", onClick: handleReklama },
   ];
 
-  // Link class helpers — identical colour logic to original
+  // Link classes — always white (always dark bg)
   const sectionLinkClass = (isActive: boolean) =>
-    `text-xs font-medium px-3 py-1.5 rounded-full cursor-pointer whitespace-nowrap border border-transparent transition-all duration-200 ${
-      onDark
-        ? `nav-link-glass text-white ${isActive ? "is-active font-semibold" : "text-white/70 hover:text-white"}`
-        : isActive
-          ? "text-foreground font-semibold bg-black/10 border-black/10 shadow-sm"
-          : "text-muted-foreground hover:text-foreground hover:bg-black/6 active:bg-black/10"
+    `text-sm font-medium px-3 py-1.5 rounded-full cursor-pointer whitespace-nowrap border border-transparent transition-all duration-200 nav-link-glass text-white ${
+      isActive ? "is-active font-semibold" : "text-white/70 hover:text-white"
     }`;
 
   const pageLinkClass = (isCurrent: boolean) =>
-    `text-sm font-medium transition-all duration-200 px-3.5 py-2 rounded-full ${
-      onDark
-        ? isCurrent ? "text-white bg-white/15 font-semibold" : "text-white/75 hover:text-white hover:bg-white/10 active:bg-white/20"
-        : isCurrent ? "text-foreground bg-black/8 font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-black/6 active:bg-black/10"
+    `text-sm font-medium px-3 py-1.5 rounded-full whitespace-nowrap border border-transparent transition-all duration-200 nav-link-glass text-white ${
+      isCurrent ? "is-active font-semibold" : "text-white/70 hover:text-white"
     }`;
 
   return (
     <>
-      {/* Header is always transparent — the inner pill handles the background */}
-      <header
-        ref={headerRef}
-        className={`fixed top-0 left-0 right-0 z-40 transition-all duration-500 ${scrolled ? "py-2" : isTransparent ? "py-0" : "py-2"}`}
-      >
-        <div className={`mx-auto transition-all duration-500 ${scrolled ? "max-w-7xl px-4" : "max-w-7xl px-6"}`}>
+      {/* Fixed header — always transparent shell, pill carries the bg */}
+      <header className="fixed top-0 left-0 right-0 z-40 py-2">
+        <div className="mx-auto max-w-7xl px-4">
 
-          {/* ── Desktop: pill wrapper with 3-column layout ── */}
-          <div
-            className={`hidden md:grid grid-cols-[1fr_auto_1fr] items-center transition-all duration-500 ${
-              scrolled
-                ? `${scrolledPillBg} rounded-2xl px-5 py-2.5`
-                : isTransparent
-                  ? "py-4"
-                  : "bg-background/90 backdrop-blur-xl border border-border/20 rounded-2xl px-5 py-2.5"
-            }`}
-          >
+          {/* ── Desktop: dark pill, 3-column centered-logo layout ── */}
+          <div className={`hidden md:grid grid-cols-[1fr_auto_1fr] items-center rounded-2xl px-5 py-2.5 ${DARK_PILL}`}>
+
             {/* LEFT nav */}
             <nav className="flex items-center justify-end gap-0.5">
               {isHome
@@ -191,7 +125,9 @@ export function Navbar() {
                     <button
                       key={s.id}
                       onClick={() => scrollToSection(s.id)}
-                      className={sectionLinkClass(activeSection === s.id)}
+                      className={sectionLinkClass(
+                        s.id === "home" ? activeSection === "" : activeSection === s.id
+                      )}
                     >
                       {s.label}
                     </button>
@@ -213,8 +149,8 @@ export function Navbar() {
                 <img
                   src={logoImg}
                   alt="Line UP"
-                  className="h-8 w-auto object-contain transition-opacity duration-300 group-hover:opacity-75"
-                  style={{ filter: onDark ? "brightness(0) invert(1)" : "brightness(0)" }}
+                  className="h-8 w-auto object-contain transition-opacity duration-300 group-hover:opacity-70"
+                  style={{ filter: "brightness(0) invert(1)" }}
                 />
               </button>
             </div>
@@ -248,32 +184,24 @@ export function Navbar() {
                   <>
                     <Link
                       href="/notifications"
-                      className={`relative w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 ${
-                        onDark
-                          ? "text-white/80 hover:text-white hover:bg-white/10 active:bg-white/20"
-                          : "text-muted-foreground hover:text-foreground hover:bg-black/6 active:bg-black/10"
-                      }`}
+                      className="relative w-9 h-9 rounded-full flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 active:bg-white/20 transition-all duration-200"
                     >
                       <Bell className="w-4 h-4" />
-                      <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full ring-2 ring-background animate-pulse" />
+                      <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full ring-2 ring-zinc-900 animate-pulse" />
                     </Link>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <button
-                          className={`flex items-center gap-2.5 pl-1 pr-3 py-1 rounded-full transition-all duration-200 group ${
-                            onDark ? "hover:bg-white/10 active:bg-white/20" : "hover:bg-black/6 active:bg-black/10"
-                          }`}
-                        >
+                        <button className="flex items-center gap-2.5 pl-1 pr-3 py-1 rounded-full hover:bg-white/10 active:bg-white/20 transition-all duration-200 group">
                           <Avatar className="h-8 w-8 ring-2 ring-primary/20 group-hover:ring-primary/50 transition-all duration-200">
                             <AvatarImage src={user.avatarUrl || undefined} alt={user.name} />
                             <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
                               {user.name.charAt(0).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
-                          <span className={`hidden md:block text-sm font-medium max-w-[100px] truncate transition-colors duration-300 ${onDark ? "text-white" : "text-foreground"}`}>
+                          <span className="hidden md:block text-sm font-medium text-white max-w-[100px] truncate">
                             {user.name.split(" ")[0]}
                           </span>
-                          <ChevronDown className={`hidden md:block w-3.5 h-3.5 transition-colors ${onDark ? "text-white/60 group-hover:text-white" : "text-muted-foreground group-hover:text-foreground"}`} />
+                          <ChevronDown className="hidden md:block w-3.5 h-3.5 text-white/60 group-hover:text-white transition-colors" />
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent className="w-60 glass-strong border-black/8 rounded-2xl p-2 shadow-xl shadow-black/10 mt-2" align="end" sideOffset={8}>
@@ -313,15 +241,13 @@ export function Navbar() {
                   <>
                     <Link
                       href="/login"
-                      className={`hidden md:inline-flex items-center btn-pill liquid-glass text-sm font-medium px-4 py-2 transition-all duration-200 hover:scale-[1.03] active:scale-95 ${
-                        onDark ? "text-white hover:bg-white/20" : "text-foreground hover:bg-black/8"
-                      }`}
+                      className="hidden md:inline-flex items-center btn-pill liquid-glass text-sm font-medium px-4 py-2 text-white hover:bg-white/20 transition-all duration-200 hover:scale-[1.03] active:scale-95"
                     >
                       Hyr
                     </Link>
                     <Link
                       href="/register"
-                      className="btn-pill inline-flex items-center gap-1.5 px-5 py-2.5 bg-primary text-white text-sm font-semibold shadow-md shadow-primary/30 hover:shadow-lg hover:shadow-primary/40 hover:scale-[1.03] active:scale-95 transition-all duration-200"
+                      className="btn-pill inline-flex items-center gap-1.5 px-5 py-2 bg-primary text-white text-sm font-semibold shadow-md shadow-primary/30 hover:shadow-lg hover:shadow-primary/40 hover:scale-[1.03] active:scale-95 transition-all duration-200"
                     >
                       <Sparkles className="w-3.5 h-3.5" />
                       Fillo
@@ -332,56 +258,49 @@ export function Navbar() {
             </nav>
           </div>
 
-          {/* ── Mobile layout ── */}
-          <div
-            className={`md:hidden flex items-center justify-between transition-all duration-500 ${
-              scrolled
-                ? `${scrolledPillBg} rounded-2xl px-4 py-2`
-                : isTransparent
-                  ? "py-3"
-                  : "bg-background/90 backdrop-blur-xl border border-border/20 rounded-2xl px-4 py-2"
-            }`}
-          >
-            <button onClick={() => scrollToSection("home")} className="flex items-center">
+          {/* ── Mobile: dark pill ── */}
+          <div className={`md:hidden flex items-center justify-between rounded-2xl px-4 py-2.5 ${DARK_PILL}`}>
+            <button onClick={() => scrollToSection("home")} className="flex items-center group">
               <img
                 src={logoImg}
                 alt="Line UP"
-                className="h-7 w-auto object-contain"
-                style={{ filter: onDark ? "brightness(0) invert(1)" : "brightness(0)" }}
+                className="h-7 w-auto object-contain group-hover:opacity-70 transition-opacity"
+                style={{ filter: "brightness(0) invert(1)" }}
               />
             </button>
             <div className="flex items-center gap-2">
               {user && (
-                <Link
-                  href="/notifications"
-                  className={`relative w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${onDark ? "text-white/80 hover:text-white hover:bg-white/10" : "text-muted-foreground hover:text-foreground hover:bg-black/6"}`}
-                >
+                <Link href="/notifications" className="relative w-8 h-8 rounded-full flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 transition-all">
                   <Bell className="w-4 h-4" />
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full ring-2 ring-background animate-pulse" />
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full ring-2 ring-zinc-900 animate-pulse" />
                 </Link>
               )}
               <button
-                className={`w-9 h-9 flex flex-col items-center justify-center gap-1.5 rounded-full transition-all ${onDark ? "hover:bg-white/10 active:bg-white/20" : "hover:bg-black/6 active:bg-black/10"}`}
+                className="w-9 h-9 flex flex-col items-center justify-center gap-1.5 rounded-full hover:bg-white/10 active:bg-white/20 transition-all"
                 onClick={() => setMobileOpen((p) => !p)}
                 aria-label="Menu"
               >
-                <span className={`block h-0.5 rounded-full transition-all duration-300 origin-center ${onDark ? "bg-white" : "bg-foreground"} ${mobileOpen ? "w-5 rotate-45 translate-y-2" : "w-4.5"}`} />
-                <span className={`block w-4.5 h-0.5 rounded-full transition-all duration-300 ${onDark ? "bg-white" : "bg-foreground"} ${mobileOpen ? "opacity-0 scale-x-0" : ""}`} />
-                <span className={`block h-0.5 rounded-full transition-all duration-300 origin-center ${onDark ? "bg-white" : "bg-foreground"} ${mobileOpen ? "w-5 -rotate-45 -translate-y-2" : "w-4.5"}`} />
+                <span className={`block h-0.5 bg-white rounded-full transition-all duration-300 origin-center ${mobileOpen ? "w-5 rotate-45 translate-y-2" : "w-4.5"}`} />
+                <span className={`block w-4.5 h-0.5 bg-white rounded-full transition-all duration-300 ${mobileOpen ? "opacity-0 scale-x-0" : ""}`} />
+                <span className={`block h-0.5 bg-white rounded-full transition-all duration-300 origin-center ${mobileOpen ? "w-5 -rotate-45 -translate-y-2" : "w-4.5"}`} />
               </button>
             </div>
           </div>
         </div>
 
         {/* Mobile menu dropdown */}
-        <div className={`md:hidden mx-4 mt-2 glass-strong rounded-2xl overflow-hidden transition-all duration-300 ${mobileOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>
+        <div className={`md:hidden mx-4 mt-1 glass-strong rounded-2xl overflow-hidden transition-all duration-300 ${mobileOpen ? "max-h-[480px] opacity-100" : "max-h-0 opacity-0"}`}>
           <div className="p-4 flex flex-col gap-1">
             {isHome
               ? [...leftSections, ...rightSections].map((s) => (
                   <button
                     key={s.id}
                     onClick={() => { setMobileOpen(false); scrollToSection(s.id); }}
-                    className="px-4 py-3 rounded-xl text-sm font-medium transition-all text-left text-muted-foreground hover:text-foreground hover:bg-black/5"
+                    className={`px-4 py-3 rounded-xl text-sm font-medium transition-all text-left ${
+                      (s.id === "home" ? activeSection === "" : activeSection === s.id)
+                        ? "text-foreground bg-primary/8 font-semibold"
+                        : "text-muted-foreground hover:text-foreground hover:bg-black/5"
+                    }`}
                   >
                     {s.label}
                   </button>
@@ -407,8 +326,8 @@ export function Navbar() {
         </div>
       </header>
 
-      {/* Spacer — skip on home so hero starts from top */}
-      {!isHome && <div className="h-16" />}
+      {/* Spacer */}
+      <div className="h-16" />
     </>
   );
 }
