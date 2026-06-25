@@ -69,9 +69,12 @@ export function Navbar() {
     const onScroll = () => {
       const newScrolled = window.scrollY > 40;
       setScrolled(newScrolled);
-      // On home page, always stay dark/glass — no bg detection needed
-      if (newScrolled && !isHome) checkBgBehindNav();
-      else setIsOverDark(true);
+      if (newScrolled) {
+        checkBgBehindNav();
+      } else {
+        setIsOverDark(true);
+        if (isHome) setActiveSection("");
+      }
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
@@ -228,14 +231,12 @@ export function Navbar() {
                       <button
                         key={s.id}
                         onClick={() => scrollToSection(s.id)}
-                        className={`text-xs font-medium transition-all duration-200 px-2.5 py-1.5 rounded-full cursor-pointer whitespace-nowrap ${
-                          isActive
-                            ? onDark
-                              ? "text-white bg-white/20 font-semibold"
-                              : "text-foreground bg-black/10 font-semibold"
-                            : onDark
-                              ? "text-white/70 hover:text-white hover:bg-white/10 active:bg-white/20"
-                              : "text-muted-foreground hover:text-foreground hover:bg-black/6 active:bg-black/10"
+                        className={`text-xs font-medium px-3 py-1.5 rounded-full cursor-pointer whitespace-nowrap border border-transparent ${
+                          onDark
+                            ? `nav-link-glass text-white ${isActive ? "is-active font-semibold" : "text-white/70 hover:text-white"}`
+                            : isActive
+                              ? "text-foreground font-semibold bg-black/10 border-black/10 shadow-sm"
+                              : "text-muted-foreground hover:text-foreground hover:bg-black/6 active:bg-black/10 transition-all duration-200"
                         }`}
                       >
                         {s.label}
