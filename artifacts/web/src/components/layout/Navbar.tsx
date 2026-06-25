@@ -67,12 +67,13 @@ export function Navbar() {
     const onScroll = () => {
       const newScrolled = window.scrollY > 40;
       setScrolled(newScrolled);
-      if (newScrolled) checkBgBehindNav();
-      else setIsOverDark(true); // hero section is always dark
+      // On home page, always stay dark/glass — no bg detection needed
+      if (newScrolled && !isHome) checkBgBehindNav();
+      else setIsOverDark(true);
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, [checkBgBehindNav]);
+  }, [checkBgBehindNav, isHome]);
 
   useEffect(() => {
     setMobileOpen(false);
