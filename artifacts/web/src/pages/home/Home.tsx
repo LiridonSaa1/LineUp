@@ -1682,39 +1682,35 @@ export default function Home() {
       </section>
 
       {/* ── CITIES ───────────────────────────────────────── */}
-      <section className="py-20 bg-primary/6 relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-primary/5 rounded-full blur-3xl" />
-        </div>
+      <section className="py-20 bg-background relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
-        <div className="container px-6 max-w-7xl mx-auto relative z-10">
-          <div className="text-center mb-12">
+        <div className="container px-6 max-w-7xl mx-auto">
+          <div className="text-center mb-10">
             <div className="flex items-center justify-center gap-2 mb-3">
               <div className="w-5 h-[2px] bg-primary rounded-full" />
               <span className="text-xs font-bold text-primary tracking-widest uppercase">I disponueshëm në</span>
               <div className="w-5 h-[2px] bg-primary rounded-full" />
             </div>
             <h2 className="text-4xl font-extrabold tracking-tight">Qyteti juaj është i mbuluar</h2>
-            <p className="text-muted-foreground mt-2">7 qytete, mbi 340 berberë — dhe duke u zgjeruar.</p>
+            <p className="text-muted-foreground mt-2">Zgjedh qytetin tënd dhe rezervo ose porosit online.</p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
             {cities.map((c, i) => (
               <Link
                 key={c}
                 href={`/barbershops?city=${c}`}
-                className="group relative overflow-hidden rounded-2xl p-5 flex flex-col items-center gap-3 text-center
-                  bg-card border border-border/50 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/10
-                  transition-all duration-300 hover:-translate-y-1.5"
-                style={{ transitionDelay: `${i * 40}ms` }}
+                className="flex flex-col items-center gap-2.5 px-3 py-5 rounded-2xl bg-card border border-border/60
+                  hover:border-primary/40 hover:bg-primary/3 transition-all duration-200 text-center group"
               >
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent to-primary/[0.05] opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" />
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary group-hover:scale-110 transition-all duration-300 relative z-10">
-                  <MapPin className="w-5 h-5 text-primary group-hover:text-white transition-colors" />
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                  <MapPin className="w-4 h-4 text-primary" />
                 </div>
-                <span className="text-sm font-bold relative z-10">{c}</span>
+                <span className="text-sm font-semibold leading-tight">{c}</span>
+                <span className="text-[11px] text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity -mt-1">
+                  Zbulo →
+                </span>
               </Link>
             ))}
           </div>
@@ -1722,114 +1718,96 @@ export default function Home() {
       </section>
 
       {/* ── OWNER CTA ────────────────────────────────────── */}
-      <section className="bg-zinc-950 relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-        <div className="grid lg:grid-cols-2" style={{ minHeight: "620px" }}>
+      <section
+        className="py-28 relative overflow-hidden"
+        style={{ background: "linear-gradient(135deg, #0c1445 0%, #1a1060 40%, #0d1b3e 70%, #081229 100%)" }}
+      >
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
 
-          {/* Left: text content */}
-          <div className="relative z-10 py-28 px-8 md:px-16 lg:px-20 flex flex-col justify-center">
-            {/* Subtle grid overlay */}
-            <div
-              className="absolute inset-0 opacity-[0.03] pointer-events-none"
-              style={{
-                backgroundImage:
-                  "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)",
-                backgroundSize: "48px 48px",
-              }}
-            />
-            <div className="relative z-10">
-              <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full text-xs font-semibold text-primary mb-8">
-                <TrendingUp className="w-3.5 h-3.5" />
-                Për pronarët e berberive
-              </div>
-              <h2 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-[1.08] mb-6">
-                Zhvillo dyqanin tënd
-                <br />
-                <span className="text-shimmer">me TRIM.</span>
-              </h2>
-              <p className="text-lg text-white/50 mb-8 max-w-xl leading-relaxed">
-                Bëhuni i dukshëm nga mijëra klientë në të gjithë Kosovën. Menaxhoni
-                rezervimet, ekipin, produktet dhe të ardhurat — të gjitha në një panel.
-              </p>
-              <div className="inline-flex items-center gap-3 bg-white/5 border border-white/10 px-5 py-2.5 rounded-full text-sm font-medium mb-10">
-                <span className="text-primary font-bold">10€/muaj</span>
-                <span className="text-white/25">·</span>
-                <span className="text-white/50">0.50€ për takim</span>
-                <span className="text-white/25">·</span>
-                <span className="text-emerald-400 font-medium">30 ditët e para falas</span>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Link
-                  href="/register"
-                  className="btn-pill inline-flex items-center justify-center gap-2 px-8 py-4 bg-primary text-white font-bold text-base shadow-xl shadow-primary/30 hover:shadow-primary/50 transition-shadow"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  Partnero me ne
-                </Link>
-                <Link
-                  href="/barbershops"
-                  className="btn-pill inline-flex items-center justify-center gap-2 px-8 py-4 border border-white/15 text-white text-base font-semibold hover:bg-white/8 transition-colors"
-                >
-                  <Play className="w-4 h-4" />
-                  Shiko si funksionon
-                </Link>
-              </div>
+        {/* Subtle grid overlay */}
+        <div
+          className="absolute inset-0 opacity-[0.04] pointer-events-none"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)",
+            backgroundSize: "52px 52px",
+          }}
+        />
+
+        {/* Razor — floating left background */}
+        <div
+          className="absolute -left-10 top-1/2 -translate-y-1/2 pointer-events-none select-none opacity-[0.18] animate-float-slow"
+          style={{ animationDuration: "8s" }}
+          aria-hidden="true"
+        >
+          <img
+            src={razorImg}
+            alt=""
+            className="w-[320px] h-[320px] object-contain"
+            style={{ transform: "rotate(-25deg)" }}
+          />
+        </div>
+
+        {/* Brush — floating right background */}
+        <div
+          className="absolute -right-8 bottom-10 pointer-events-none select-none opacity-[0.15] animate-float"
+          style={{ animationDuration: "6.5s", animationDelay: "2s" }}
+          aria-hidden="true"
+        >
+          <img
+            src={brushImg}
+            alt=""
+            className="w-[240px] h-[240px] object-contain"
+            style={{ transform: "rotate(22deg)" }}
+          />
+        </div>
+
+        {/* Center glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="container px-6 max-w-3xl mx-auto relative z-10 text-center">
+          <div className="inline-flex items-center gap-2 bg-white/8 border border-white/12 px-4 py-2 rounded-full text-xs font-semibold text-primary mb-8">
+            <TrendingUp className="w-3.5 h-3.5" />
+            Për pronarët e berberive
+          </div>
+
+          <h2 className="text-5xl md:text-6xl font-extrabold text-white tracking-tight leading-[1.06] mb-6">
+            Zhvillo dyqanin tënd
+            <br />
+            <span className="text-shimmer">me TRIM.</span>
+          </h2>
+
+          <p className="text-xl text-white/55 mb-8 max-w-2xl mx-auto leading-relaxed">
+            Bëhuni i dukshëm nga mijëra klientë në të gjithë Kosovën. Menaxhoni
+            rezervimet, ekipin, produktet dhe të ardhurat — të gjitha në një panel.
+          </p>
+
+          <div className="flex justify-center mb-10">
+            <div className="inline-flex items-center gap-3 bg-white/6 border border-white/12 px-6 py-3 rounded-full text-sm font-medium">
+              <span className="text-primary font-bold">10€/muaj</span>
+              <span className="text-white/25">·</span>
+              <span className="text-white/50">0.50€ për takim</span>
+              <span className="text-white/25">·</span>
+              <span className="text-emerald-400 font-medium">30 ditët e para falas</span>
             </div>
           </div>
 
-          {/* Right: floating barber tools with animations */}
-          <div className="relative hidden lg:flex items-center justify-center overflow-hidden">
-            {/* Left border */}
-            <div className="absolute left-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-white/8 to-transparent" />
-            {/* Ambient glow spheres */}
-            <div className="absolute w-[360px] h-[360px] rounded-full bg-primary/7 blur-[80px]" />
-            <div className="absolute top-16 right-20 w-[140px] h-[140px] rounded-full bg-primary/5 blur-[45px]" />
-            <div className="absolute bottom-12 left-16 w-[120px] h-[120px] rounded-full bg-primary/4 blur-[40px]" />
-
-            {/* Razor — main hero tool */}
-            <div
-              className="absolute animate-float-slow"
-              style={{ top: "14%", left: "6%", animationDuration: "7s" }}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              href="/register"
+              className="btn-pill inline-flex items-center justify-center gap-2 px-9 py-4 bg-primary text-white font-bold text-base shadow-2xl shadow-primary/40 hover:shadow-primary/60 transition-shadow"
             >
-              <img
-                src={razorImg}
-                alt="Straight razor"
-                className="w-[300px] h-[300px] object-contain select-none"
-                style={{
-                  transform: "rotate(-20deg)",
-                  filter:
-                    "drop-shadow(0 28px 64px rgba(59,130,246,0.30)) drop-shadow(0 0 24px rgba(59,130,246,0.14))",
-                }}
-              />
-            </div>
-
-            {/* Brush — secondary tool, lower right */}
-            <div
-              className="absolute animate-float"
-              style={{ bottom: "10%", right: "6%", animationDuration: "5.5s", animationDelay: "1.8s" }}
+              <Sparkles className="w-4 h-4" />
+              Partnero me ne
+            </Link>
+            <Link
+              href="/barbershops"
+              className="btn-pill inline-flex items-center justify-center gap-2 px-9 py-4 bg-white/8 border border-white/15 text-white text-base font-semibold hover:bg-white/14 transition-colors"
             >
-              <img
-                src={brushImg}
-                alt="Shaving brush"
-                className="w-[220px] h-[220px] object-contain select-none"
-                style={{
-                  transform: "rotate(20deg)",
-                  filter:
-                    "drop-shadow(0 18px 44px rgba(59,130,246,0.24)) drop-shadow(0 0 14px rgba(59,130,246,0.10))",
-                }}
-              />
-            </div>
-
-            {/* Floating sparkle dots */}
-            <div className="absolute top-1/3 right-1/3 w-2 h-2 rounded-full bg-primary/50 animate-glow-pulse" />
-            <div
-              className="absolute bottom-2/5 left-2/5 w-1.5 h-1.5 rounded-full bg-primary/35 animate-glow-pulse"
-              style={{ animationDelay: "1.1s" }}
-            />
-            <div
-              className="absolute top-3/5 right-1/4 w-1 h-1 rounded-full bg-primary/25 animate-glow-pulse"
-              style={{ animationDelay: "2.2s" }}
-            />
+              <Play className="w-4 h-4" />
+              Shiko si funksionon
+            </Link>
           </div>
         </div>
       </section>

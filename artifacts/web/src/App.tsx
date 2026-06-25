@@ -9,6 +9,7 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
 
 // User Pages
 import Home from "@/pages/home/Home";
+import Contact from "@/pages/contact/Contact";
 import Login from "@/pages/auth/Login";
 import Register from "@/pages/auth/Register";
 import BarbershopsList from "@/pages/barbershops/BarbershopsList";
@@ -56,6 +57,7 @@ function UserRouter() {
         <Route path="/notifications" component={Notifications} />
         <Route path="/profile" component={Profile} />
         <Route path="/marketplace" component={Marketplace} />
+        <Route path="/contact" component={Contact} />
         <Route component={NotFound} />
       </Switch>
     </RootLayout>

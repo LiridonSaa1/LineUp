@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import {
   MapPin, Calendar, ShoppingBag,
   Mail, Twitter, Instagram, ArrowUpRight,
-  Sparkles, Phone,
+  Sparkles, Phone, Users, Star,
 } from "lucide-react";
 import logoImg from "@assets/LINE_1782305856031.png";
 
@@ -52,25 +52,64 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
       </main>
 
       {/* ── Ad Banner ── */}
-      <div className="border-t border-border/40 bg-gradient-to-r from-card/80 via-card to-card/80">
-        <div className="max-w-7xl mx-auto px-6 py-5">
+      <div className="relative overflow-hidden" style={{ background: "linear-gradient(90deg, #0a0f20 0%, #0d1a4a 25%, #1a2580 50%, #0d1a4a 75%, #0a0f20 100%)" }}>
+        {/* Animated shimmer overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.04] to-transparent animate-shimmer-line pointer-events-none" />
+        {/* Top + bottom accent lines */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+
+        <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between gap-6 flex-wrap">
-            <div className="flex items-center gap-3">
-              <div className="w-1.5 h-10 bg-primary rounded-full shrink-0" />
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50 block mb-0.5">
-                  Reklamë Sponsorizuese
-                </span>
-                <p className="text-sm font-semibold text-foreground">
-                  Regjistro dyqanin tënd në TRIM — Hapi i parë drejt klientëve të rinj
+
+            {/* Left: badge + text */}
+            <div className="flex items-center gap-4 min-w-0">
+              {/* Pulsing dot */}
+              <div className="relative shrink-0">
+                <div className="w-2.5 h-2.5 rounded-full bg-primary animate-glow-pulse" />
+                <div className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-primary/40 animate-ping" />
+              </div>
+
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-white/35">
+                    Reklamë Sponsorizuese
+                  </span>
+                  <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/25 text-[9px] font-bold text-emerald-400 tracking-wide uppercase">
+                    30 ditë Falas
+                  </span>
+                </div>
+                <p className="text-sm font-bold text-white truncate">
+                  Regjistro dyqanin tënd në TRIM{" "}
+                  <span className="hidden md:inline text-white/60 font-normal">
+                    — Hapi i parë drejt klientëve të rinj
+                  </span>
                 </p>
               </div>
+
+              {/* Stats pills — hidden on mobile */}
+              <div className="hidden lg:flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-1.5 bg-white/8 border border-white/10 px-3 py-1.5 rounded-full">
+                  <Users className="w-3 h-3 text-primary" />
+                  <span className="text-[11px] font-semibold text-white/70">340+ berberë</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-white/8 border border-white/10 px-3 py-1.5 rounded-full">
+                  <Star className="w-3 h-3 text-amber-400" />
+                  <span className="text-[11px] font-semibold text-white/70">4.9 vlerësim</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-white/8 border border-white/10 px-3 py-1.5 rounded-full">
+                  <Calendar className="w-3 h-3 text-emerald-400" />
+                  <span className="text-[11px] font-semibold text-white/70">10€/muaj</span>
+                </div>
+              </div>
             </div>
+
+            {/* Right: CTA */}
             <Link
               href="/register"
-              className="btn-pill shrink-0 inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground text-sm font-semibold shadow-sm shadow-primary/20 hover:shadow-primary/30"
+              className="btn-pill shrink-0 inline-flex items-center gap-2 px-5 py-2.5 bg-white text-zinc-900 text-sm font-bold hover:bg-white/90 transition-colors shadow-lg shadow-black/30"
             >
-              <Sparkles className="w-3.5 h-3.5" />
+              <Sparkles className="w-3.5 h-3.5 text-primary" />
               Fillo Falas
             </Link>
           </div>
@@ -164,8 +203,8 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
                   ["Regjistro dyqanin", "/register"],
                   ["Paneli i pronarit", "/dashboard"],
                   ["Çmimet & Planet", "/register"],
-                  ["Qendra e ndihmës", "/"],
-                  ["Na kontakto", "/"],
+                  ["Qendra e ndihmës", "/contact"],
+                  ["Na kontakto", "/contact"],
                 ].map(([label, href]) => (
                   <FooterLink key={label} href={href}>{label}</FooterLink>
                 ))}
