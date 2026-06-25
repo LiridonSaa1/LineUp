@@ -3,6 +3,7 @@ import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { generateToken, hashPassword, comparePassword, requireAuth, type AuthRequest } from "../lib/auth";
 import { logger } from "../lib/logger";
+import { sendWelcomeEmail } from "../lib/email";
 
 const router = Router();
 
@@ -27,6 +28,10 @@ router.post("/auth/register", async (req, res): Promise<void> => {
   }).returning();
   const token = generateToken({ id: user.id, email: user.email, role: user.role });
   req.log.info({ userId: user.id }, "User registered");
+
+  // Send welcome email (fire-and-forget)
+  sendWelcomeEmail({ to: { email: user.email, name: user.name }, role: user.role }).catch(() => {});
+
   res.status(201).json({
     token,
     user: {

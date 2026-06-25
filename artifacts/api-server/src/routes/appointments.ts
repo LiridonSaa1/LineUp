@@ -5,6 +5,7 @@ import {
 } from "@workspace/db";
 import { eq, and, sql, gte, lte, desc } from "drizzle-orm";
 import { requireAuth, generateOtp, type AuthRequest } from "../lib/auth";
+import { sendOtpEmail, sendBookingConfirmedEmail } from "../lib/email";
 
 const router = Router();
 
@@ -95,6 +96,22 @@ router.post("/appointments", requireAuth, async (req: AuthRequest, res): Promise
   });
 
   req.log.info({ appointmentId: appt.id, otp }, "Appointment booked, OTP generated");
+
+  // Send OTP email (fire-and-forget)
+  const [userRow] = await db.select().from(usersTable).where(eq(usersTable.id, req.user!.id));
+  const [shopRow] = await db.select().from(barbershopsTable).where(eq(barbershopsTable.id, shopId));
+  const [barberRow] = await db.select().from(barbersTable).where(eq(barbersTable.id, barberId));
+  if (userRow && shopRow && barberRow) {
+    sendOtpEmail({
+      to: { email: userRow.email, name: userRow.name },
+      otp,
+      shopName: shopRow.name,
+      scheduledAt: appt.scheduledAt,
+      serviceName: service.name,
+      barberName: barberRow.name,
+    }).catch(() => {});
+  }
+
   res.status(201).json(formatAppointment(appt));
 });
 
@@ -157,6 +174,23 @@ router.post("/appointments/:id/confirm-otp", requireAuth, async (req: AuthReques
     .set({ status: "confirmed", otpCode: null, otpExpiresAt: null })
     .where(eq(appointmentsTable.id, id)).returning();
   await db.insert(activityLogTable).values({ type: "appointment_confirmed", description: "Appointment confirmed", userId: appt.userId, shopId: appt.shopId });
+
+  // Send booking confirmed email (fire-and-forget)
+  const [confUser] = await db.select().from(usersTable).where(eq(usersTable.id, appt.userId));
+  const [confShop] = await db.select().from(barbershopsTable).where(eq(barbershopsTable.id, appt.shopId));
+  const [confBarber] = await db.select().from(barbersTable).where(eq(barbersTable.id, appt.barberId));
+  const [confService] = await db.select().from(servicesTable).where(eq(servicesTable.id, appt.serviceId));
+  if (confUser && confShop && confBarber && confService) {
+    sendBookingConfirmedEmail({
+      to: { email: confUser.email, name: confUser.name },
+      shopName: confShop.name,
+      scheduledAt: appt.scheduledAt,
+      serviceName: confService.name,
+      barberName: confBarber.name,
+      totalPrice: appt.totalPrice ? parseFloat(appt.totalPrice as string) : 0,
+    }).catch(() => {});
+  }
+
   res.json(formatAppointment(updated));
 });
 

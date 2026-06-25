@@ -28,6 +28,7 @@ import {
   CreditCard,
   Plus,
   Trash2,
+  Scissors,
 } from "lucide-react";
 import logoImg from "@assets/LINE_(2)_1782421072087.png";
 
