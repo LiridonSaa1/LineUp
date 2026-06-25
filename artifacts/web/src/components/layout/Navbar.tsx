@@ -124,7 +124,12 @@ export function Navbar() {
   const onDark = isTransparent || (scrolled && isOverDark);
   const onLight = scrolled && !isOverDark;
 
-  // Left / right sections (home)
+  // Glass pill background when scrolled (same as original)
+  const scrolledPillBg = onLight
+    ? "bg-white/95 backdrop-blur-xl shadow-lg shadow-black/12 border border-black/8"
+    : "bg-zinc-900/75 backdrop-blur-xl shadow-lg shadow-black/30 border border-white/8";
+
+  // Home nav sections — split left/right around logo
   const leftSections = [
     { id: "si-funksionon", label: "Si Funksionon" },
     { id: "vleresuar",     label: "Më të vlerësuarat" },
@@ -145,12 +150,12 @@ export function Navbar() {
 
   // Link class helpers — identical colour logic to original
   const sectionLinkClass = (isActive: boolean) =>
-    `text-xs font-medium px-3 py-1.5 rounded-full cursor-pointer whitespace-nowrap border border-transparent ${
+    `text-xs font-medium px-3 py-1.5 rounded-full cursor-pointer whitespace-nowrap border border-transparent transition-all duration-200 ${
       onDark
         ? `nav-link-glass text-white ${isActive ? "is-active font-semibold" : "text-white/70 hover:text-white"}`
         : isActive
           ? "text-foreground font-semibold bg-black/10 border-black/10 shadow-sm"
-          : "text-muted-foreground hover:text-foreground hover:bg-black/6 active:bg-black/10 transition-all duration-200"
+          : "text-muted-foreground hover:text-foreground hover:bg-black/6 active:bg-black/10"
     }`;
 
   const pageLinkClass = (isCurrent: boolean) =>
@@ -160,205 +165,215 @@ export function Navbar() {
         : isCurrent ? "text-foreground bg-black/8 font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-black/6 active:bg-black/10"
     }`;
 
-  // Header background based on scroll + colour context
-  const headerCls = scrolled
-    ? onLight
-      ? "bg-white/95 backdrop-blur-xl shadow-sm border-b border-black/8"
-      : "bg-zinc-900/95 backdrop-blur-xl shadow-lg shadow-black/30 border-b border-white/8"
-    : isTransparent
-      ? "" // fully transparent on hero
-      : "bg-background/90 backdrop-blur-xl border-b border-border/20";
-
   return (
     <>
+      {/* Header is always transparent — the inner pill handles the background */}
       <header
         ref={headerRef}
-        className={`fixed top-0 left-0 right-0 z-40 transition-all duration-500 ${headerCls}`}
+        className={`fixed top-0 left-0 right-0 z-40 transition-all duration-500 ${scrolled ? "py-2" : isTransparent ? "py-0" : "py-2"}`}
       >
-        {/* ── Desktop: 3-column centered-logo layout ── */}
-        <div className="hidden md:grid grid-cols-[1fr_auto_1fr] items-center w-full px-6 h-14">
+        <div className={`mx-auto transition-all duration-500 ${scrolled ? "max-w-7xl px-4" : "max-w-7xl px-6"}`}>
 
-          {/* LEFT nav */}
-          <nav className="flex items-center justify-end gap-0.5">
-            {isHome
-              ? leftSections.map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => scrollToSection(s.id)}
-                    className={sectionLinkClass(activeSection === s.id)}
-                  >
-                    {s.label}
-                  </button>
-                ))
-              : leftPageLinks.map((l) => (
-                  <Link key={l.href} href={l.href} className={pageLinkClass(location === l.href)}>
-                    {l.label}
-                  </Link>
-                ))}
-          </nav>
+          {/* ── Desktop: pill wrapper with 3-column layout ── */}
+          <div
+            className={`hidden md:grid grid-cols-[1fr_auto_1fr] items-center transition-all duration-500 ${
+              scrolled
+                ? `${scrolledPillBg} rounded-2xl px-5 py-2.5`
+                : isTransparent
+                  ? "py-4"
+                  : "bg-background/90 backdrop-blur-xl border border-border/20 rounded-2xl px-5 py-2.5"
+            }`}
+          >
+            {/* LEFT nav */}
+            <nav className="flex items-center justify-end gap-0.5">
+              {isHome
+                ? leftSections.map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => scrollToSection(s.id)}
+                      className={sectionLinkClass(activeSection === s.id)}
+                    >
+                      {s.label}
+                    </button>
+                  ))
+                : leftPageLinks.map((l) => (
+                    <Link key={l.href} href={l.href} className={pageLinkClass(location === l.href)}>
+                      {l.label}
+                    </Link>
+                  ))}
+            </nav>
 
-          {/* CENTER: logo only (no triangle) */}
-          <div className="flex items-center justify-center px-8">
-            <button
-              onClick={() => scrollToSection("home")}
-              className="flex items-center justify-center group"
-              aria-label="Line UP — Home"
-            >
+            {/* CENTER: logo */}
+            <div className="flex items-center justify-center px-8">
+              <button
+                onClick={() => scrollToSection("home")}
+                className="flex items-center justify-center group"
+                aria-label="Line UP — Home"
+              >
+                <img
+                  src={logoImg}
+                  alt="Line UP"
+                  className="h-8 w-auto object-contain transition-opacity duration-300 group-hover:opacity-75"
+                  style={{ filter: onDark ? "brightness(0) invert(1)" : "brightness(0)" }}
+                />
+              </button>
+            </div>
+
+            {/* RIGHT nav + auth */}
+            <nav className="flex items-center justify-start gap-0.5">
+              {isHome
+                ? rightSections.map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => scrollToSection(s.id)}
+                      className={sectionLinkClass(activeSection === s.id)}
+                    >
+                      {s.label}
+                    </button>
+                  ))
+                : rightPageLinks.map((l) => (
+                    <Link
+                      key={l.href}
+                      href={l.href}
+                      className={pageLinkClass(location === l.href)}
+                      onClick={l.onClick}
+                    >
+                      {l.label}
+                    </Link>
+                  ))}
+
+              {/* Auth / user */}
+              <div className="flex items-center gap-2 ml-3">
+                {user ? (
+                  <>
+                    <Link
+                      href="/notifications"
+                      className={`relative w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 ${
+                        onDark
+                          ? "text-white/80 hover:text-white hover:bg-white/10 active:bg-white/20"
+                          : "text-muted-foreground hover:text-foreground hover:bg-black/6 active:bg-black/10"
+                      }`}
+                    >
+                      <Bell className="w-4 h-4" />
+                      <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full ring-2 ring-background animate-pulse" />
+                    </Link>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          className={`flex items-center gap-2.5 pl-1 pr-3 py-1 rounded-full transition-all duration-200 group ${
+                            onDark ? "hover:bg-white/10 active:bg-white/20" : "hover:bg-black/6 active:bg-black/10"
+                          }`}
+                        >
+                          <Avatar className="h-8 w-8 ring-2 ring-primary/20 group-hover:ring-primary/50 transition-all duration-200">
+                            <AvatarImage src={user.avatarUrl || undefined} alt={user.name} />
+                            <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+                              {user.name.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className={`hidden md:block text-sm font-medium max-w-[100px] truncate transition-colors duration-300 ${onDark ? "text-white" : "text-foreground"}`}>
+                            {user.name.split(" ")[0]}
+                          </span>
+                          <ChevronDown className={`hidden md:block w-3.5 h-3.5 transition-colors ${onDark ? "text-white/60 group-hover:text-white" : "text-muted-foreground group-hover:text-foreground"}`} />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="w-60 glass-strong border-black/8 rounded-2xl p-2 shadow-xl shadow-black/10 mt-2" align="end" sideOffset={8}>
+                        <div className="px-3 py-2.5 mb-1">
+                          <p className="text-sm font-semibold">{user.name}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{user.email}</p>
+                          <span className="inline-flex items-center mt-2 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-semibold uppercase tracking-wider">{user.role}</span>
+                        </div>
+                        <DropdownMenuSeparator className="bg-black/6 my-1" />
+                        {user.role === "admin" && (
+                          <DropdownMenuItem asChild className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5">
+                            <Link href="/admin" className="flex items-center w-full gap-2.5"><LayoutDashboard className="h-4 w-4 text-primary" /><span>Paneli Admin</span></Link>
+                          </DropdownMenuItem>
+                        )}
+                        {user.role === "owner" && (
+                          <DropdownMenuItem asChild className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5">
+                            <Link href="/dashboard" className="flex items-center w-full gap-2.5"><LayoutDashboard className="h-4 w-4 text-primary" /><span>Paneli i Dyqanit</span></Link>
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem asChild className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5">
+                          <Link href="/appointments" className="flex items-center w-full gap-2.5"><Calendar className="h-4 w-4 text-muted-foreground" /><span>Takimet e Mia</span></Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5">
+                          <Link href="/orders" className="flex items-center w-full gap-2.5"><ShoppingBag className="h-4 w-4 text-muted-foreground" /><span>Porositë e Mia</span></Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5">
+                          <Link href="/profile" className="flex items-center w-full gap-2.5"><User className="h-4 w-4 text-muted-foreground" /><span>Cilësimet e Profilit</span></Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator className="bg-black/6 my-1" />
+                        <DropdownMenuItem onClick={handleLogout} className="rounded-xl px-3 py-2.5 cursor-pointer text-red-500 hover:text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-600">
+                          <LogOut className="mr-2.5 h-4 w-4" /><span>Dil</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href="/login"
+                      className={`hidden md:inline-flex items-center btn-pill liquid-glass text-sm font-medium px-4 py-2 transition-all duration-200 hover:scale-[1.03] active:scale-95 ${
+                        onDark ? "text-white hover:bg-white/20" : "text-foreground hover:bg-black/8"
+                      }`}
+                    >
+                      Hyr
+                    </Link>
+                    <Link
+                      href="/register"
+                      className="btn-pill inline-flex items-center gap-1.5 px-5 py-2.5 bg-primary text-white text-sm font-semibold shadow-md shadow-primary/30 hover:shadow-lg hover:shadow-primary/40 hover:scale-[1.03] active:scale-95 transition-all duration-200"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      Fillo
+                    </Link>
+                  </>
+                )}
+              </div>
+            </nav>
+          </div>
+
+          {/* ── Mobile layout ── */}
+          <div
+            className={`md:hidden flex items-center justify-between transition-all duration-500 ${
+              scrolled
+                ? `${scrolledPillBg} rounded-2xl px-4 py-2`
+                : isTransparent
+                  ? "py-3"
+                  : "bg-background/90 backdrop-blur-xl border border-border/20 rounded-2xl px-4 py-2"
+            }`}
+          >
+            <button onClick={() => scrollToSection("home")} className="flex items-center">
               <img
                 src={logoImg}
                 alt="Line UP"
-                className="h-8 w-auto object-contain transition-opacity duration-300 group-hover:opacity-75"
+                className="h-7 w-auto object-contain"
                 style={{ filter: onDark ? "brightness(0) invert(1)" : "brightness(0)" }}
               />
             </button>
-          </div>
-
-          {/* RIGHT nav + auth */}
-          <nav className="flex items-center justify-start gap-0.5">
-            {isHome
-              ? rightSections.map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => scrollToSection(s.id)}
-                    className={sectionLinkClass(activeSection === s.id)}
-                  >
-                    {s.label}
-                  </button>
-                ))
-              : rightPageLinks.map((l) => (
-                  <Link
-                    key={l.href}
-                    href={l.href}
-                    className={pageLinkClass(location === l.href)}
-                    onClick={l.onClick}
-                  >
-                    {l.label}
-                  </Link>
-                ))}
-
-            {/* Auth / user */}
-            <div className="flex items-center gap-2 ml-3">
-              {user ? (
-                <>
-                  <Link
-                    href="/notifications"
-                    className={`relative w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 ${
-                      onDark
-                        ? "text-white/80 hover:text-white hover:bg-white/10 active:bg-white/20"
-                        : "text-muted-foreground hover:text-foreground hover:bg-black/6 active:bg-black/10"
-                    }`}
-                  >
-                    <Bell className="w-4 h-4" />
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full ring-2 ring-background animate-pulse" />
-                  </Link>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        className={`flex items-center gap-2.5 pl-1 pr-3 py-1 rounded-full transition-all duration-200 group ${
-                          onDark ? "hover:bg-white/10 active:bg-white/20" : "hover:bg-black/6 active:bg-black/10"
-                        }`}
-                      >
-                        <Avatar className="h-8 w-8 ring-2 ring-primary/20 group-hover:ring-primary/50 transition-all duration-200">
-                          <AvatarImage src={user.avatarUrl || undefined} alt={user.name} />
-                          <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
-                            {user.name.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className={`hidden md:block text-sm font-medium max-w-[100px] truncate transition-colors duration-300 ${onDark ? "text-white" : "text-foreground"}`}>
-                          {user.name.split(" ")[0]}
-                        </span>
-                        <ChevronDown className={`hidden md:block w-3.5 h-3.5 transition-colors ${onDark ? "text-white/60 group-hover:text-white" : "text-muted-foreground group-hover:text-foreground"}`} />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-60 glass-strong border-black/8 rounded-2xl p-2 shadow-xl shadow-black/10 mt-2" align="end" sideOffset={8}>
-                      <div className="px-3 py-2.5 mb-1">
-                        <p className="text-sm font-semibold">{user.name}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{user.email}</p>
-                        <span className="inline-flex items-center mt-2 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-semibold uppercase tracking-wider">{user.role}</span>
-                      </div>
-                      <DropdownMenuSeparator className="bg-black/6 my-1" />
-                      {user.role === "admin" && (
-                        <DropdownMenuItem asChild className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5">
-                          <Link href="/admin" className="flex items-center w-full gap-2.5"><LayoutDashboard className="h-4 w-4 text-primary" /><span>Paneli Admin</span></Link>
-                        </DropdownMenuItem>
-                      )}
-                      {user.role === "owner" && (
-                        <DropdownMenuItem asChild className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5">
-                          <Link href="/dashboard" className="flex items-center w-full gap-2.5"><LayoutDashboard className="h-4 w-4 text-primary" /><span>Paneli i Dyqanit</span></Link>
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuItem asChild className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5">
-                        <Link href="/appointments" className="flex items-center w-full gap-2.5"><Calendar className="h-4 w-4 text-muted-foreground" /><span>Takimet e Mia</span></Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5">
-                        <Link href="/orders" className="flex items-center w-full gap-2.5"><ShoppingBag className="h-4 w-4 text-muted-foreground" /><span>Porositë e Mia</span></Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5">
-                        <Link href="/profile" className="flex items-center w-full gap-2.5"><User className="h-4 w-4 text-muted-foreground" /><span>Cilësimet e Profilit</span></Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator className="bg-black/6 my-1" />
-                      <DropdownMenuItem onClick={handleLogout} className="rounded-xl px-3 py-2.5 cursor-pointer text-red-500 hover:text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-600">
-                        <LogOut className="mr-2.5 h-4 w-4" /><span>Dil</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </>
-              ) : (
-                <>
-                  <Link
-                    href="/login"
-                    className={`hidden md:inline-flex items-center btn-pill liquid-glass text-sm font-medium px-4 py-2 transition-all duration-200 hover:scale-[1.03] active:scale-95 ${
-                      onDark ? "text-white hover:bg-white/20" : "text-foreground hover:bg-black/8"
-                    }`}
-                  >
-                    Hyr
-                  </Link>
-                  <Link
-                    href="/register"
-                    className="btn-pill inline-flex items-center gap-1.5 px-5 py-2.5 bg-primary text-white text-sm font-semibold shadow-md shadow-primary/30 hover:shadow-lg hover:shadow-primary/40 hover:scale-[1.03] active:scale-95 transition-all duration-200"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    Fillo
-                  </Link>
-                </>
+            <div className="flex items-center gap-2">
+              {user && (
+                <Link
+                  href="/notifications"
+                  className={`relative w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${onDark ? "text-white/80 hover:text-white hover:bg-white/10" : "text-muted-foreground hover:text-foreground hover:bg-black/6"}`}
+                >
+                  <Bell className="w-4 h-4" />
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full ring-2 ring-background animate-pulse" />
+                </Link>
               )}
-            </div>
-          </nav>
-        </div>
-
-        {/* ── Mobile layout ── */}
-        <div className="md:hidden flex items-center justify-between px-4 h-14">
-          <button onClick={() => scrollToSection("home")} className="flex items-center">
-            <img
-              src={logoImg}
-              alt="Line UP"
-              className="h-7 w-auto object-contain"
-              style={{ filter: onDark ? "brightness(0) invert(1)" : "brightness(0)" }}
-            />
-          </button>
-          <div className="flex items-center gap-2">
-            {user && (
-              <Link
-                href="/notifications"
-                className={`relative w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${onDark ? "text-white/80 hover:text-white hover:bg-white/10" : "text-muted-foreground hover:text-foreground hover:bg-black/6"}`}
+              <button
+                className={`w-9 h-9 flex flex-col items-center justify-center gap-1.5 rounded-full transition-all ${onDark ? "hover:bg-white/10 active:bg-white/20" : "hover:bg-black/6 active:bg-black/10"}`}
+                onClick={() => setMobileOpen((p) => !p)}
+                aria-label="Menu"
               >
-                <Bell className="w-4 h-4" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full ring-2 ring-background animate-pulse" />
-              </Link>
-            )}
-            <button
-              className={`w-9 h-9 flex flex-col items-center justify-center gap-1.5 rounded-full transition-all ${onDark ? "hover:bg-white/10 active:bg-white/20" : "hover:bg-black/6 active:bg-black/10"}`}
-              onClick={() => setMobileOpen((p) => !p)}
-              aria-label="Menu"
-            >
-              <span className={`block h-0.5 rounded-full transition-all duration-300 origin-center ${onDark ? "bg-white" : "bg-foreground"} ${mobileOpen ? "w-5 rotate-45 translate-y-2" : "w-4.5"}`} />
-              <span className={`block w-4.5 h-0.5 rounded-full transition-all duration-300 ${onDark ? "bg-white" : "bg-foreground"} ${mobileOpen ? "opacity-0 scale-x-0" : ""}`} />
-              <span className={`block h-0.5 rounded-full transition-all duration-300 origin-center ${onDark ? "bg-white" : "bg-foreground"} ${mobileOpen ? "w-5 -rotate-45 -translate-y-2" : "w-4.5"}`} />
-            </button>
+                <span className={`block h-0.5 rounded-full transition-all duration-300 origin-center ${onDark ? "bg-white" : "bg-foreground"} ${mobileOpen ? "w-5 rotate-45 translate-y-2" : "w-4.5"}`} />
+                <span className={`block w-4.5 h-0.5 rounded-full transition-all duration-300 ${onDark ? "bg-white" : "bg-foreground"} ${mobileOpen ? "opacity-0 scale-x-0" : ""}`} />
+                <span className={`block h-0.5 rounded-full transition-all duration-300 origin-center ${onDark ? "bg-white" : "bg-foreground"} ${mobileOpen ? "w-5 -rotate-45 -translate-y-2" : "w-4.5"}`} />
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Mobile menu */}
+        {/* Mobile menu dropdown */}
         <div className={`md:hidden mx-4 mt-2 glass-strong rounded-2xl overflow-hidden transition-all duration-300 ${mobileOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>
           <div className="p-4 flex flex-col gap-1">
             {isHome
@@ -393,7 +408,7 @@ export function Navbar() {
       </header>
 
       {/* Spacer — skip on home so hero starts from top */}
-      {!isHome && <div className="h-14" />}
+      {!isHome && <div className="h-16" />}
     </>
   );
 }
