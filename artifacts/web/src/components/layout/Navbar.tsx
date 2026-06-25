@@ -87,10 +87,27 @@ export function Navbar() {
     setLocation("/");
   };
 
-  const navLinks = [
+  const pageLinks = [
     { href: "/barbershops", label: "Zbulo" },
     { href: "/marketplace", label: "Dyqani" },
+    { href: "/#reklama", label: "Reklama" },
   ];
+
+  const homeSections = [
+    { id: "si-funksionon", label: "Si Funksionon" },
+    { id: "numrat", label: "Numrat tanë" },
+    { id: "vleresuar", label: "Më të vlerësuarat" },
+    { id: "pse-trim", label: "Pse TRIM" },
+    { id: "shop", label: "Grooming Shop" },
+    { id: "disponueshem", label: "I disponueshëm në" },
+    { id: "reklama", label: "Reklama" },
+    { id: "kontakt", label: "Na kontaktoni" },
+  ];
+
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: "smooth" });
+  };
 
   const handleReklama = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -98,8 +115,7 @@ export function Navbar() {
       window.location.href = "/#reklama";
       return;
     }
-    const el = document.getElementById("reklama");
-    if (el) el.scrollIntoView({ behavior: "smooth" });
+    scrollToSection("reklama");
   };
 
   // When scrolled over a light section, the pill pill needs a dark bg so text is readable
@@ -151,38 +167,38 @@ export function Navbar() {
             </Link>
 
             {/* Desktop nav */}
-            <nav className="hidden md:flex items-center gap-1">
-              {navLinks.map((link) => {
-                const isActive = location === link.href;
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={`relative text-sm font-medium transition-all duration-200 px-3.5 py-2 rounded-full group ${
-                      onDark
-                        ? isActive
-                          ? "text-white bg-white/15 font-semibold"
-                          : "text-white/75 hover:text-white hover:bg-white/10 active:bg-white/20"
-                        : isActive
-                          ? "text-foreground bg-black/8 font-semibold"
+            <nav className="hidden md:flex items-center gap-0.5">
+              {isHome
+                ? homeSections.map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => scrollToSection(s.id)}
+                      className={`text-xs font-medium transition-all duration-200 px-2.5 py-1.5 rounded-full cursor-pointer whitespace-nowrap ${
+                        onDark
+                          ? "text-white/75 hover:text-white hover:bg-white/10 active:bg-white/20"
                           : "text-muted-foreground hover:text-foreground hover:bg-black/6 active:bg-black/10"
-                    }`}
-                  >
-                    {link.label}
-                  </Link>
-                );
-              })}
-              <a
-                href="/#reklama"
-                onClick={handleReklama}
-                className={`relative text-sm font-medium transition-all duration-200 px-3.5 py-2 rounded-full cursor-pointer ${
-                  onDark
-                    ? "text-white/75 hover:text-white hover:bg-white/10 active:bg-white/20"
-                    : "text-muted-foreground hover:text-foreground hover:bg-black/6 active:bg-black/10"
-                }`}
-              >
-                Reklama
-              </a>
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  ))
+                : pageLinks.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={`text-sm font-medium transition-all duration-200 px-3.5 py-2 rounded-full ${
+                        onDark
+                          ? location === link.href
+                            ? "text-white bg-white/15 font-semibold"
+                            : "text-white/75 hover:text-white hover:bg-white/10 active:bg-white/20"
+                          : location === link.href
+                            ? "text-foreground bg-black/8 font-semibold"
+                            : "text-muted-foreground hover:text-foreground hover:bg-black/6 active:bg-black/10"
+                      }`}
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
             </nav>
 
             {/* Right side */}
@@ -370,29 +386,32 @@ export function Navbar() {
           className={`md:hidden mx-4 mt-2 glass-strong rounded-2xl overflow-hidden transition-all duration-300 ${mobileOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}
         >
           <div className="p-4 flex flex-col gap-1">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                  location === link.href
-                    ? "text-foreground bg-primary/8 font-semibold"
-                    : "text-muted-foreground hover:text-foreground hover:bg-black/5"
-                }`}
-              >
-                {link.label}
-              </Link>
-            ))}
-            <a
-              href="/#reklama"
-              onClick={(e) => {
-                setMobileOpen(false);
-                handleReklama(e);
-              }}
-              className="px-4 py-3 rounded-xl text-sm font-medium transition-all text-muted-foreground hover:text-foreground hover:bg-black/5"
-            >
-              Reklama
-            </a>
+            {isHome
+              ? homeSections.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => {
+                      setMobileOpen(false);
+                      scrollToSection(s.id);
+                    }}
+                    className="px-4 py-3 rounded-xl text-sm font-medium transition-all text-left text-muted-foreground hover:text-foreground hover:bg-black/5"
+                  >
+                    {s.label}
+                  </button>
+                ))
+              : pageLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                      location === link.href
+                        ? "text-foreground bg-primary/8 font-semibold"
+                        : "text-muted-foreground hover:text-foreground hover:bg-black/5"
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
             {!user && (
               <div className="flex gap-2 mt-2 pt-2 border-t border-black/6">
                 <Link

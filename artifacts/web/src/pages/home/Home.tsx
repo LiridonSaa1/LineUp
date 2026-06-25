@@ -1005,7 +1005,7 @@ function HowItWorks() {
   }, []);
 
   return (
-    <section className="py-18 relative overflow-hidden bg-primary/6">
+    <section id="si-funksionon" className="py-18 relative overflow-hidden bg-primary/6">
       {/* Subtle dot-grid background */}
       <div
         className="absolute inset-0 pointer-events-none opacity-[0.03]"
@@ -1362,7 +1362,7 @@ export default function Home() {
       </section>
 
       {/* ── STATS ────────────────────────────────────────── */}
-      <section className="py-24 relative overflow-hidden">
+      <section id="numrat" className="py-24 relative overflow-hidden">
         {/* Tools photo background */}
         <div className="absolute inset-0 pointer-events-none">
           <img
@@ -1454,7 +1454,7 @@ export default function Home() {
       <HowItWorks />
 
       {/* ── TOP SHOPS ────────────────────────────────────── */}
-      <section className="py-24 relative overflow-hidden">
+      <section id="vleresuar" className="py-24 relative overflow-hidden">
         {/* Decorative background elements */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
@@ -1555,7 +1555,7 @@ export default function Home() {
       </section>
 
       {/* ── FEATURES ─────────────────────────────────────── */}
-      <section className="py-28 bg-zinc-950 relative overflow-hidden">
+      <section id="pse-trim" className="py-28 bg-zinc-950 relative overflow-hidden">
         {/* Subtle grid pattern */}
         <div
           className="absolute inset-0 opacity-[0.04] pointer-events-none"
@@ -1604,7 +1604,7 @@ export default function Home() {
       </section>
 
       {/* ── PRODUCTS ─────────────────────────────────────── */}
-      <section className="py-24 bg-background relative overflow-hidden">
+      <section id="shop" className="py-24 bg-background relative overflow-hidden">
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/15 to-transparent" />
         {/* Floating brush decoration */}
         <div
@@ -1684,7 +1684,7 @@ export default function Home() {
       </section>
 
       {/* ── CITIES ───────────────────────────────────────── */}
-      <section className="py-20 bg-background relative overflow-hidden">
+      <section id="disponueshem" className="py-20 bg-background relative overflow-hidden">
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
         <div className="container px-6 max-w-7xl mx-auto">
@@ -1721,6 +1721,7 @@ export default function Home() {
 
       {/* ── OWNER CTA ────────────────────────────────────── */}
       <section
+        id="reklama"
         className="py-28 relative overflow-hidden"
         style={{ background: "linear-gradient(135deg, #0c1445 0%, #1a1060 40%, #0d1b3e 70%, #081229 100%)" }}
       >
@@ -1847,7 +1848,7 @@ function ContactSection() {
   ];
 
   return (
-    <section className="py-24 bg-primary/6 relative overflow-hidden" ref={ref}>
+    <section id="kontakt" className="py-24 bg-primary/6 relative overflow-hidden" ref={ref}>
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
       <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/10 to-transparent" />
 
