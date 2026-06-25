@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowRight, Scissors, Star, Users, Calendar } from "lucide-react";
-import logoImg from "@assets/LINE_1782305856031.png";
+import logoImg from "@assets/LINE_(2)_1782421072087.png";
 
 const loginSchema = z.object({
   email: z.string().email("Ju lutem vendosni një email të vlefshëm"),
@@ -74,10 +74,7 @@ export default function Login() {
 
         <div className="relative z-10 flex flex-col justify-between p-14 w-full">
           <Link href="/" className="inline-flex items-center gap-2.5 animate-fade-in">
-            <img src={logoImg} alt="TRIM" className="h-9 w-auto object-contain" style={{ filter: "brightness(0) invert(1)" }} />
-            <span className="text-2xl font-bold tracking-tight text-white">
-              TRIM<span className="text-primary">.</span>
-            </span>
+            <img src={logoImg} alt="Line UP" className="h-9 w-auto object-contain" style={{ filter: "brightness(0) invert(1)" }} />
           </Link>
 
           <div className="space-y-8">
@@ -111,7 +108,7 @@ export default function Login() {
                 </div>
                 <div>
                   <p className="text-white/80 text-sm leading-relaxed italic">
-                    "Që kur u bashkuam me TRIM, dyqani ka parë 40% rritje në klientë të rinj."
+                    "Që kur u bashkuam me Line UP, dyqani ka parë 40% rritje në klientë të rinj."
                   </p>
                   <div className="mt-2.5">
                     <div className="font-semibold text-white text-sm">Dardan Krasniqi</div>
@@ -133,8 +130,7 @@ export default function Login() {
 
         <div className="w-full max-w-sm relative z-10">
           <Link href="/" className="inline-flex items-center gap-2 mb-8 lg:hidden animate-fade-in">
-            <img src={logoImg} alt="TRIM" className="h-7 w-auto object-contain" style={{ filter: "brightness(0)" }} />
-            <span className="text-xl font-bold tracking-tight">TRIM<span className="text-primary">.</span></span>
+            <img src={logoImg} alt="Line UP" className="h-7 w-auto object-contain" style={{ filter: "brightness(0)" }} />
           </Link>
 
           <div className="mb-8 animate-fade-up">

@@ -5,7 +5,7 @@ import {
   Mail, Twitter, Instagram, ArrowUpRight,
   Sparkles, Phone, Users, Star,
 } from "lucide-react";
-import logoImg from "@assets/LINE_1782305856031.png";
+import logoImg from "@assets/LINE_(2)_1782421072087.png";
 
 function FooterSection({ label, icon: Icon, children }: {
   label: string;
@@ -80,7 +80,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
                   </span>
                 </div>
                 <p className="text-sm font-bold text-white truncate">
-                  Regjistro dyqanin tënd në TRIM{" "}
+                  Regjistro dyqanin tënd në Line UP{" "}
                   <span className="hidden md:inline text-white/60 font-normal">
                     — Hapi i parë drejt klientëve të rinj
                   </span>
@@ -131,7 +131,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
         <div className="container px-6 max-w-7xl mx-auto pt-14 pb-10 relative z-10">
           {/* Section label */}
           <div className="flex items-center gap-3 mb-12">
-            <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-zinc-600">// TRIM</span>
+            <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-zinc-600">// LINE UP</span>
             <div className="flex-1 h-px bg-white/8" />
             <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-zinc-600">Kosovo's Barbershop Network</span>
           </div>
@@ -140,8 +140,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
             {/* Brand */}
             <div className="md:col-span-1">
               <div className="flex items-center gap-2 mb-4">
-                <img src={logoImg} alt="TRIM" className="h-8 w-auto object-contain" style={{ filter: "brightness(0) invert(1)" }} />
-                <span className="text-xl font-bold tracking-tight text-white">TRIM<span className="text-primary">.</span></span>
+                <img src={logoImg} alt="Line UP" className="h-8 w-auto object-contain" style={{ filter: "brightness(0) invert(1)" }} />
               </div>
               <p className="text-sm text-zinc-500 leading-relaxed mb-5">
                 Platforma premium e rezervimit të berberive në Kosovë. Gjej, rezervo, dhe shijo.
@@ -212,7 +211,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
               <div className="mt-6 p-4 rounded-2xl bg-primary/8 border border-primary/15">
                 <p className="text-xs font-semibold text-zinc-200 mb-1">Bashkohu me ne</p>
                 <p className="text-xs text-zinc-500 leading-relaxed">
-                  Mbi 340 berberë tashmë e besojnë TRIM-in.
+                  Mbi 340 berberë tashmë e besojnë Line UP-in.
                 </p>
               </div>
             </FooterSection>
@@ -222,7 +221,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 pt-8 border-t border-white/8">
             <div className="flex items-center gap-3">
               <p className="text-xs text-zinc-600">
-                © {new Date().getFullYear()} TRIM. Të gjitha të drejtat e rezervuara.
+                © {new Date().getFullYear()} Line UP. Të gjitha të drejtat e rezervuara.
               </p>
               <span className="text-xs text-zinc-700">·</span>
               <span className="text-xs font-medium text-zinc-600">

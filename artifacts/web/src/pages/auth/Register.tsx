@@ -29,7 +29,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import logoImg from "@assets/LINE_1782305856031.png";
+import logoImg from "@assets/LINE_(2)_1782421072087.png";
 
 const userSchema = z
   .object({
@@ -133,7 +133,7 @@ function UserForm() {
         },
       });
       login(response.token, response.user);
-      toast({ title: "Llogaria u krijua!", description: "Mirë se vini në TRIM." });
+      toast({ title: "Llogaria u krijua!", description: "Mirë se vini në Line UP." });
       setLocation("/");
     } catch (error: any) {
       toast({
@@ -766,10 +766,7 @@ export default function Register() {
 
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           <Link href="/" className="inline-flex items-center gap-2 animate-fade-in">
-            <img src={logoImg} alt="TRIM" className="h-9 w-auto object-contain" style={{ filter: "brightness(0) invert(1)" }} />
-            <span className="text-2xl font-bold tracking-tight text-white">
-              TRIM<span className="text-primary">.</span>
-            </span>
+            <img src={logoImg} alt="Line UP" className="h-9 w-auto object-contain" style={{ filter: "brightness(0) invert(1)" }} />
           </Link>
 
           <div className="space-y-7 animate-fade-up delay-100">
@@ -779,7 +776,7 @@ export default function Register() {
               </p>
               <h2 className="text-4xl font-bold text-white leading-tight mb-3">
                 {isOwner ? (
-                  <>Rrit biznesin<br /><span className="text-shimmer">me TRIM.</span></>
+                  <>Rrit biznesin<br /><span className="text-shimmer">me Line UP.</span></>
                 ) : (
                   <>Prerje precize,<br /><span className="text-shimmer">pa asnjë pritje.</span></>
                 )}
@@ -813,7 +810,7 @@ export default function Register() {
                 <div>
                   <p className="text-white/80 text-xs italic leading-relaxed">
                     {isOwner
-                      ? '"TRIM e bëri menaxhimin e dyqanit tim shumë më të lehtë."'
+                      ? '"Line UP e bëri menaxhimin e dyqanit tim shumë më të lehtë."'
                       : '"Rezervoj terminin brenda 30 sekondash. Fantastike!"'}
                   </p>
                   <p className="text-white/40 text-xs mt-1">
@@ -835,8 +832,7 @@ export default function Register() {
         <div className="w-full max-w-md py-8 space-y-6 relative z-10">
           <div className="space-y-1 animate-fade-up">
             <Link href="/" className="inline-flex items-center gap-2 mb-5 lg:hidden">
-              <img src={logoImg} alt="TRIM" className="h-7 w-auto object-contain" style={{ filter: "brightness(0)" }} />
-              <span className="text-xl font-bold tracking-tight">TRIM<span className="text-primary">.</span></span>
+              <img src={logoImg} alt="Line UP" className="h-7 w-auto object-contain" style={{ filter: "brightness(0)" }} />
             </Link>
             <p className="text-xs font-bold uppercase tracking-[0.15em] text-primary">— Regjistrim</p>
             <h1 className="text-3xl font-bold tracking-tight">Krijo llogarinë</h1>

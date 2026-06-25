@@ -13,7 +13,7 @@ export default function DashboardSubscription() {
     <div className="max-w-3xl mx-auto space-y-8 py-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Subscription Plan</h1>
-        <p className="text-muted-foreground">Manage your TRIM Partner subscription.</p>
+        <p className="text-muted-foreground">Manage your Line UP Partner subscription.</p>
       </div>
 
       <Card className="border-primary/20 bg-primary/5">

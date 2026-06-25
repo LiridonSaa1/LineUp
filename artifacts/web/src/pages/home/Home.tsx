@@ -847,7 +847,7 @@ const bannerAds = [
     bg: "from-[#0f0c29] via-[#302b63] to-[#24243e]",
     image:
       "https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=1200&q=80",
-    label: "TRIM PRISHTINA",
+    label: "LINE UP PRISHTINA",
     headline: "Skin Fade me çmim special",
     sub: "Vetëm këtë javë · Rezervo tani",
     cta: "Rezervo Tani",
@@ -1088,7 +1088,7 @@ function HowItWorks() {
                   <Scissors className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold">TRIM Prishtina</p>
+                  <p className="text-sm font-bold">Line UP Prishtina</p>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
                     Rr. Bill Clinton Nr. 42
                   </p>
@@ -1583,7 +1583,7 @@ export default function Home() {
           <div className="text-center max-w-2xl mx-auto mb-16">
             <div className="inline-flex items-center gap-2 mb-4">
               <div className="w-6 h-px bg-primary/60" />
-              <span className="text-xs font-bold text-primary tracking-widest uppercase">Pse TRIM</span>
+              <span className="text-xs font-bold text-primary tracking-widest uppercase">Pse Line UP</span>
               <div className="w-6 h-px bg-primary/60" />
             </div>
             <h2 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight leading-tight mb-4">
@@ -1778,7 +1778,7 @@ export default function Home() {
           <h2 className="text-5xl md:text-6xl font-extrabold text-white tracking-tight leading-[1.06] mb-6">
             Zhvillo dyqanin tënd
             <br />
-            <span className="text-shimmer">me TRIM.</span>
+            <span className="text-shimmer">me Line UP.</span>
           </h2>
 
           <p className="text-xl text-white/55 mb-8 max-w-2xl mx-auto leading-relaxed">

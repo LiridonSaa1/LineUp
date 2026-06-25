@@ -21,7 +21,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useLogout } from "@workspace/api-client-react";
-import logoImg from "@assets/LINE_1782305856031.png";
+import logoImg from "@assets/LINE_(2)_1782421072087.png";
 
 export function Navbar() {
   const { user, logout } = useAuth();
@@ -211,7 +211,7 @@ export function Navbar() {
             <Link href="/" className="flex items-center gap-2 group">
               <img
                 src={logoImg}
-                alt="TRIM"
+                alt="Line UP"
                 className="h-8 w-auto object-contain transition-opacity duration-300 group-hover:opacity-80"
                 style={{
                   filter: onDark ? "brightness(0) invert(1)" : "brightness(0)",

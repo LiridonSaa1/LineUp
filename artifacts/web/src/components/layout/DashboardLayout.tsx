@@ -42,7 +42,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <aside className="w-full md:w-64 bg-card border-b md:border-b-0 md:border-r border-border shrink-0 flex flex-col sticky top-0 md:h-screen z-20">
         <div className="p-6">
           <Link href="/" className="inline-block">
-            <span className="text-2xl font-bold tracking-tighter text-primary">TRIM.</span>
+            <span className="text-2xl font-bold tracking-tighter text-primary">Line UP</span>
             <span className="ml-2 text-sm font-medium text-muted-foreground uppercase tracking-wider">Biznes</span>
           </Link>
         </div>

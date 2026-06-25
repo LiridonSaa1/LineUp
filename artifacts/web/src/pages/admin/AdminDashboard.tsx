@@ -12,7 +12,7 @@ export default function AdminDashboard() {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Pasqyra e Platformës</h1>
-        <p className="text-muted-foreground">Statistikat globale për TRIM.</p>
+        <p className="text-muted-foreground">Statistikat globale për Line UP.</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
