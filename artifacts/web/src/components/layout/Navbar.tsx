@@ -116,7 +116,7 @@ export function Navbar() {
         <div className="mx-auto max-w-7xl px-4">
 
           {/* ── Desktop: dark pill, 3-column centered-logo layout ── */}
-          <div className={`hidden md:grid grid-cols-[1fr_auto_1fr] items-center rounded-2xl px-5 py-2.5 ${DARK_PILL}`}>
+          <div className={`hidden md:grid grid-cols-[1fr_auto_1fr] items-center rounded-2xl px-5 py-1 ${DARK_PILL}`}>
 
             {/* LEFT nav */}
             <nav className="flex items-center justify-end gap-0.5">
@@ -149,7 +149,7 @@ export function Navbar() {
                 <img
                   src={logoImg}
                   alt="Line UP"
-                  className="h-8 w-auto object-contain transition-opacity duration-300 group-hover:opacity-70"
+                  className="h-[100px] w-auto object-contain transition-opacity duration-300 group-hover:opacity-70"
                   style={{ filter: "brightness(0) invert(1)" }}
                 />
               </button>
