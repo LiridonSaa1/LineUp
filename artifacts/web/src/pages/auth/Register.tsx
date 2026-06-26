@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,30 +7,30 @@ import { useAuth } from "@/lib/auth";
 import { useRegister } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Eye, EyeOff, ArrowRight, ArrowLeft, Scissors, User,
-  Building2, MapPin, Image, Check, Sparkles, Plus, Trash2,
+  Eye, EyeOff, ArrowRight, ArrowLeft, Scissors, Mail, Lock,
+  User, Building2, MapPin, Phone, Layers, Check, Plus, Trash2,
 } from "lucide-react";
 
 /* ── Schemas ─────────────────────────────────────────────── */
 const userSchema = z.object({
-  firstName:       z.string().min(1, "Emri është i detyrueshëm"),
-  lastName:        z.string().min(1, "Mbiemri është i detyrueshëm"),
+  firstName:       z.string().min(1, "Emri i detyrueshëm"),
+  lastName:        z.string().min(1, "Mbiemri i detyrueshëm"),
   email:           z.string().email("Email i pavlefshëm"),
-  phone:           z.string().min(5, "Numri i telefonit është i detyrueshëm"),
+  phone:           z.string().min(5, "Telefoni i detyrueshëm"),
   password:        z.string().min(6, "Minimum 6 karaktere"),
-  confirmPassword: z.string().min(6, "Konfirmo fjalëkalimin"),
+  confirmPassword: z.string().min(1, "Konfirmo fjalëkalimin"),
 }).refine(d => d.password === d.confirmPassword, { message: "Fjalëkalimet nuk përputhen", path: ["confirmPassword"] });
 
-const ownerStep1Schema = z.object({
-  ownerName:      z.string().min(2, "Emri i plotë i detyrueshëm"),
+const step1Schema = z.object({
+  ownerName:      z.string().min(2, "Emri i detyrueshëm"),
   email:          z.string().email("Email i pavlefshëm"),
-  phone:          z.string().min(5, "Numri i detyrueshëm"),
+  phone:          z.string().min(5, "Telefoni i detyrueshëm"),
   password:       z.string().min(6, "Minimum 6 karaktere"),
   businessName:   z.string().min(2, "Emri i biznesit i detyrueshëm"),
   businessNumber: z.string().optional(),
 });
 
-const ownerStep2Schema = z.object({
+const step2Schema = z.object({
   city:        z.string().min(1, "Qyteti i detyrueshëm"),
   address:     z.string().min(3, "Adresa e detyrueshme"),
   latitude:    z.coerce.number().optional().or(z.literal("")),
@@ -39,40 +39,57 @@ const ownerStep2Schema = z.object({
   gender:      z.enum(["male", "female", "both"], { required_error: "Zgjidhni gjininë" }),
 });
 
-const ownerStep3Schema = z.object({
+const step3Schema = z.object({
   imageUrl: z.string().optional(),
   iban:     z.string().optional(),
 });
 
-type UserFormValues    = z.infer<typeof userSchema>;
-type OwnerStep1Values  = z.infer<typeof ownerStep1Schema>;
-type OwnerStep2Values  = z.infer<typeof ownerStep2Schema>;
-type OwnerStep3Values  = z.infer<typeof ownerStep3Schema>;
+type UserFormValues = z.infer<typeof userSchema>;
+type S1Values       = z.infer<typeof step1Schema>;
+type S2Values       = z.infer<typeof step2Schema>;
+type S3Values       = z.infer<typeof step3Schema>;
 
-/* ── Floating-label input ────────────────────────────────── */
-function FloatingInput({
-  id, label, type = "text", placeholder, value, onChange, error, hint,
+const PRIMARY = "#4f8ef7";
+
+/* ── Icon input ──────────────────────────────────────────── */
+function IconInput({
+  id, icon: Icon, label, type = "text", placeholder,
+  value, onChange, error, hint,
 }: {
-  id: string; label: string; type?: string; placeholder?: string;
-  value: string; onChange: (v: string) => void; error?: string; hint?: string;
+  id: string; icon: React.ElementType; label: string; type?: string;
+  placeholder?: string; value: string; onChange: (v: string) => void;
+  error?: string; hint?: string;
 }) {
   const [focused, setFocused] = useState(false);
-  const [show, setShow] = useState(false);
-  const filled = value.length > 0;
-  const isPass = type === "password";
+  const [show, setShow]       = useState(false);
+  const filled  = value.length > 0;
+  const active  = focused || filled;
+  const isPass  = type === "password";
 
   return (
     <div className="space-y-1.5">
-      <div className={`relative rounded-2xl transition-all duration-200 ${
-        focused ? "ring-2 ring-primary/40 shadow-lg shadow-primary/8"
-        : error  ? "ring-2 ring-red-500/40"
-        : "ring-1 ring-white/8 hover:ring-white/14"
-      } bg-white/4`}>
-        <label htmlFor={id} className={`absolute left-4 pointer-events-none select-none transition-all duration-200 ${
-          focused || filled
-            ? "top-2.5 text-[10px] font-semibold uppercase tracking-wider text-primary"
-            : "top-1/2 -translate-y-1/2 text-sm text-muted-foreground"
-        }`}>
+      <div
+        className="relative rounded-[14px] transition-all duration-200"
+        style={{
+          background: focused ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.03)",
+          border: `1px solid ${focused ? "rgba(79,142,247,0.45)" : error ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.08)"}`,
+          boxShadow: focused ? "0 0 0 3px rgba(79,142,247,0.10), 0 4px 16px rgba(0,0,0,0.2)" : "none",
+        }}
+      >
+        <div className="absolute left-4 top-1/2 -translate-y-1/2">
+          <Icon className="w-4 h-4 transition-colors duration-200"
+            style={{ color: focused ? PRIMARY : "rgba(255,255,255,0.25)" }} />
+        </div>
+        <label htmlFor={id} className="absolute left-11 pointer-events-none select-none transition-all duration-200"
+          style={{
+            top:           active ? "9px" : "50%",
+            transform:     active ? "none" : "translateY(-50%)",
+            fontSize:      active ? "10px" : "13px",
+            fontWeight:    active ? 600 : 400,
+            letterSpacing: active ? "0.05em" : "0",
+            textTransform: active ? "uppercase" : "none",
+            color:         active ? PRIMARY : "rgba(255,255,255,0.35)",
+          }}>
           {label}
         </label>
         <input
@@ -80,96 +97,84 @@ function FloatingInput({
           type={isPass ? (show ? "text" : "password") : type}
           placeholder={focused && placeholder ? placeholder : ""}
           value={value}
+          step={type === "number" ? "any" : undefined}
           onChange={e => onChange(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          className="w-full bg-transparent pt-7 pb-3 px-4 text-sm text-foreground outline-none placeholder:text-muted-foreground/50 rounded-2xl pr-12"
-          step={type === "number" ? "any" : undefined}
+          autoComplete={isPass ? "new-password" : type === "email" ? "email" : "off"}
+          className="w-full bg-transparent outline-none text-sm text-white placeholder:text-white/20 pl-11 pr-12"
+          style={{ paddingTop: "26px", paddingBottom: "10px" }}
         />
         {isPass && (
           <button type="button" onClick={() => setShow(p => !p)}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 transition-colors">
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 transition-colors"
+            style={{ color: "rgba(255,255,255,0.28)" }}>
             {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
         )}
       </div>
-      {error && <p className="text-xs text-red-400 pl-1">{error}</p>}
-      {hint && !error && <p className="text-xs text-muted-foreground/60 pl-1">{hint}</p>}
+      {error && <p className="text-xs pl-1" style={{ color: "#f87171" }}>{error}</p>}
+      {hint && !error && <p className="text-xs pl-1" style={{ color: "rgba(255,255,255,0.25)" }}>{hint}</p>}
     </div>
   );
 }
 
-/* ── FloatingTextarea ────────────────────────────────────── */
-function FloatingTextarea({ id, label, placeholder, value, onChange, error }: {
+/* ── Textarea input ──────────────────────────────────────── */
+function TextareaInput({ id, label, placeholder, value, onChange, error }: {
   id: string; label: string; placeholder?: string;
   value: string; onChange: (v: string) => void; error?: string;
 }) {
   const [focused, setFocused] = useState(false);
   const filled = value.length > 0;
+  const active = focused || filled;
   return (
     <div className="space-y-1.5">
-      <div className={`relative rounded-2xl transition-all duration-200 ${
-        focused ? "ring-2 ring-primary/40 shadow-lg shadow-primary/8"
-        : error  ? "ring-2 ring-red-500/40"
-        : "ring-1 ring-white/8 hover:ring-white/14"
-      } bg-white/4`}>
-        <label htmlFor={id} className={`absolute left-4 pointer-events-none select-none transition-all duration-200 ${
-          focused || filled
-            ? "top-3 text-[10px] font-semibold uppercase tracking-wider text-primary"
-            : "top-4 text-sm text-muted-foreground"
-        }`}>{label}</label>
+      <div className="relative rounded-[14px] transition-all duration-200"
+        style={{
+          background: focused ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.03)",
+          border: `1px solid ${focused ? "rgba(79,142,247,0.45)" : error ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.08)"}`,
+          boxShadow: focused ? "0 0 0 3px rgba(79,142,247,0.10)" : "none",
+        }}>
+        <label htmlFor={id} className="absolute left-4 pointer-events-none select-none transition-all duration-200"
+          style={{
+            top: active ? "10px" : "16px",
+            fontSize: active ? "10px" : "13px",
+            fontWeight: active ? 600 : 400,
+            letterSpacing: active ? "0.05em" : "0",
+            textTransform: active ? "uppercase" : "none",
+            color: active ? PRIMARY : "rgba(255,255,255,0.35)",
+          }}>
+          {label}
+        </label>
         <textarea
-          id={id}
-          rows={3}
+          id={id} rows={3}
           placeholder={focused && placeholder ? placeholder : ""}
           value={value}
           onChange={e => onChange(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          className="w-full bg-transparent pt-8 pb-3 px-4 text-sm text-foreground outline-none placeholder:text-muted-foreground/50 rounded-2xl resize-none"
+          className="w-full bg-transparent outline-none text-sm text-white placeholder:text-white/20 resize-none px-4 pb-3"
+          style={{ paddingTop: "28px" }}
         />
       </div>
-      {error && <p className="text-xs text-red-400 pl-1">{error}</p>}
-    </div>
-  );
-}
-
-/* ── Step dot indicator ──────────────────────────────────── */
-function StepDots({ current, total }: { current: number; total: number }) {
-  return (
-    <div className="flex items-center gap-2 mb-8">
-      {Array.from({ length: total }).map((_, i) => (
-        <div key={i} className="flex items-center gap-2">
-          <div className={`flex items-center justify-center rounded-full transition-all duration-300 font-bold text-xs ${
-            i < current
-              ? "w-7 h-7 bg-primary text-primary-foreground shadow-lg shadow-primary/30"
-              : i === current
-              ? "w-8 h-8 bg-primary text-primary-foreground ring-4 ring-primary/20 shadow-xl shadow-primary/30"
-              : "w-7 h-7 bg-white/6 text-muted-foreground"
-          }`}>
-            {i < current ? <Check className="w-3.5 h-3.5" /> : i + 1}
-          </div>
-          {i < total - 1 && (
-            <div className={`h-px w-8 transition-all duration-500 ${i < current ? "bg-primary" : "bg-white/10"}`} />
-          )}
-        </div>
-      ))}
+      {error && <p className="text-xs pl-1" style={{ color: "#f87171" }}>{error}</p>}
     </div>
   );
 }
 
 /* ── Gender picker ───────────────────────────────────────── */
 function GenderPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const opts = [{ v: "male", l: "Mashkull" }, { v: "female", l: "Femër" }, { v: "both", l: "Të dyja" }];
   return (
     <div className="flex gap-2">
-      {opts.map(o => (
+      {[{ v: "male", l: "Mashkull" }, { v: "female", l: "Femër" }, { v: "both", l: "Të dyja" }].map(o => (
         <button key={o.v} type="button" onClick={() => onChange(o.v)}
-          className={`flex-1 py-3 text-xs font-semibold rounded-xl border transition-all duration-200 ${
-            value === o.v
-              ? "border-primary bg-primary/10 text-primary shadow-sm shadow-primary/10"
-              : "border-white/8 bg-white/4 text-muted-foreground hover:border-white/15"
-          }`}>
+          className="flex-1 py-3 text-xs font-semibold rounded-xl transition-all duration-200"
+          style={{
+            background: value === o.v ? "rgba(79,142,247,0.15)" : "rgba(255,255,255,0.03)",
+            border: `1px solid ${value === o.v ? "rgba(79,142,247,0.4)" : "rgba(255,255,255,0.08)"}`,
+            color: value === o.v ? "#7db3ff" : "rgba(255,255,255,0.4)",
+            boxShadow: value === o.v ? "0 0 12px rgba(79,142,247,0.15)" : "none",
+          }}>
           {o.l}
         </button>
       ))}
@@ -177,23 +182,103 @@ function GenderPicker({ value, onChange }: { value: string; onChange: (v: string
   );
 }
 
-/* ── UserForm ────────────────────────────────────────────── */
+/* ── Step bar ────────────────────────────────────────────── */
+function StepBar({ current, total }: { current: number; total: number }) {
+  return (
+    <div className="space-y-2 mb-7">
+      <div className="flex items-center justify-between mb-1">
+        {Array.from({ length: total }).map((_, i) => (
+          <div key={i} className="flex items-center gap-1.5">
+            <div className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold transition-all duration-300"
+              style={{
+                background: i < current ? PRIMARY : i === current ? "rgba(79,142,247,0.2)" : "rgba(255,255,255,0.05)",
+                border: `1.5px solid ${i <= current ? PRIMARY : "rgba(255,255,255,0.1)"}`,
+                color: i <= current ? (i < current ? "#fff" : PRIMARY) : "rgba(255,255,255,0.3)",
+                boxShadow: i === current ? `0 0 12px rgba(79,142,247,0.35)` : "none",
+              }}>
+              {i < current ? <Check className="w-3 h-3" /> : i + 1}
+            </div>
+            {i < total - 1 && (
+              <div className="flex-1 h-px w-16 transition-all duration-500"
+                style={{ background: i < current ? PRIMARY : "rgba(255,255,255,0.08)" }} />
+            )}
+          </div>
+        ))}
+      </div>
+      {/* Progress bar */}
+      <div className="w-full h-0.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+        <div className="h-full rounded-full transition-all duration-500"
+          style={{ width: `${((current) / total) * 100}%`, background: `linear-gradient(90deg, ${PRIMARY}, #93c5fd)` }} />
+      </div>
+    </div>
+  );
+}
+
+/* ── Primary button ──────────────────────────────────────── */
+function PrimaryBtn({ children, disabled, type = "submit" }: {
+  children: React.ReactNode; disabled?: boolean; type?: "submit" | "button";
+}) {
+  return (
+    <button type={type} disabled={disabled}
+      className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-[14px] text-sm font-semibold text-white transition-all duration-200 disabled:opacity-50"
+      style={{
+        background: "linear-gradient(135deg, #4f8ef7 0%, #3b6fd4 100%)",
+        boxShadow: "0 4px 20px rgba(79,142,247,0.35), 0 1px 0 rgba(255,255,255,0.08) inset",
+      }}>
+      {children}
+    </button>
+  );
+}
+
+/* ── Ghost back button ───────────────────────────────────── */
+function BackBtn({ onClick }: { onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick}
+      className="flex items-center justify-center gap-2 py-3.5 px-5 rounded-[14px] text-sm font-semibold transition-all"
+      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)" }}>
+      <ArrowLeft className="w-4 h-4" /> Kthehu
+    </button>
+  );
+}
+
+/* ── Animated step container ─────────────────────────────── */
+function StepSlide({ children, step }: { children: React.ReactNode; step: number }) {
+  const [key, setKey] = useState(step);
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    setVisible(false);
+    const t = setTimeout(() => { setKey(step); setVisible(true); }, 120);
+    return () => clearTimeout(t);
+  }, [step]);
+
+  return (
+    <div style={{
+      opacity: visible ? 1 : 0,
+      transform: visible ? "translateY(0)" : "translateY(10px)",
+      transition: "opacity 0.25s ease, transform 0.25s ease",
+    }}>
+      {children}
+    </div>
+  );
+}
+
+/* ── User form ───────────────────────────────────────────── */
 function UserForm() {
   const [, setLocation] = useLocation();
-  const { login } = useAuth();
-  const { toast } = useToast();
-  const registerMutation = useRegister();
+  const { login }       = useAuth();
+  const { toast }       = useToast();
+  const mut             = useRegister();
 
   const { handleSubmit, setValue, watch, formState: { errors } } = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
     defaultValues: { firstName: "", lastName: "", email: "", phone: "", password: "", confirmPassword: "" },
   });
-
-  const w = (k: keyof UserFormValues) => watch(k) ?? "";
+  const w = (k: keyof UserFormValues) => (watch(k) ?? "") as string;
 
   async function onSubmit(data: UserFormValues) {
     try {
-      const res = await registerMutation.mutateAsync({ data: {
+      const res = await mut.mutateAsync({ data: {
         name: `${data.firstName} ${data.lastName}`,
         email: data.email, password: data.password, role: "user", phone: data.phone,
       }});
@@ -201,56 +286,52 @@ function UserForm() {
       toast({ title: "Llogaria u krijua!", description: "Mirë se vini në TRIM." });
       setLocation("/");
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Regjistrimi dështoi", description: err.message ?? "Provoni përsëri." });
+      toast({ variant: "destructive", title: "Regjistrimi dështoi", description: err.message });
     }
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 animate-fade-up delay-100">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
       <div className="grid grid-cols-2 gap-3">
-        <FloatingInput id="fn" label="Emri" placeholder="Besim" value={w("firstName")} onChange={v => setValue("firstName", v)} error={errors.firstName?.message} />
-        <FloatingInput id="ln" label="Mbiemri" placeholder="Gashi" value={w("lastName")} onChange={v => setValue("lastName", v)} error={errors.lastName?.message} />
+        <IconInput id="fn" icon={User} label="Emri" placeholder="Besim" value={w("firstName")} onChange={v => setValue("firstName", v)} error={errors.firstName?.message} />
+        <IconInput id="ln" icon={User} label="Mbiemri" placeholder="Gashi" value={w("lastName")} onChange={v => setValue("lastName", v)} error={errors.lastName?.message} />
       </div>
-      <FloatingInput id="em" label="Email" type="email" placeholder="ti@shembull.com" value={w("email")} onChange={v => setValue("email", v)} error={errors.email?.message} />
-      <FloatingInput id="ph" label="Telefoni" type="tel" placeholder="+383 44 000 000" value={w("phone")} onChange={v => setValue("phone", v)} error={errors.phone?.message} />
-      <FloatingInput id="pw" label="Fjalëkalimi" type="password" value={w("password")} onChange={v => setValue("password", v)} error={errors.password?.message} />
-      <FloatingInput id="cpw" label="Konfirmo fjalëkalimin" type="password" value={w("confirmPassword")} onChange={v => setValue("confirmPassword", v)} error={errors.confirmPassword?.message} />
-
-      <button type="submit" disabled={registerMutation.isPending}
-        className="btn-pill w-full flex items-center justify-center gap-2 py-3.5 bg-primary text-primary-foreground font-semibold text-sm shadow-lg shadow-primary/25 hover:shadow-primary/40 disabled:opacity-60 disabled:cursor-not-allowed transition-all mt-2">
-        {registerMutation.isPending ? (
-          <><span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" /> Duke krijuar...</>
-        ) : (<>Krijo llogarinë <ArrowRight className="w-4 h-4" /></>)}
-      </button>
+      <IconInput id="em" icon={Mail} label="Email" type="email" placeholder="ti@shembull.com" value={w("email")} onChange={v => setValue("email", v)} error={errors.email?.message} />
+      <IconInput id="ph" icon={Phone} label="Telefoni" type="tel" placeholder="+383 44 000 000" value={w("phone")} onChange={v => setValue("phone", v)} error={errors.phone?.message} />
+      <IconInput id="pw" icon={Lock} label="Fjalëkalimi" type="password" value={w("password")} onChange={v => setValue("password", v)} error={errors.password?.message} />
+      <IconInput id="cpw" icon={Lock} label="Konfirmo fjalëkalimin" type="password" value={w("confirmPassword")} onChange={v => setValue("confirmPassword", v)} error={errors.confirmPassword?.message} />
+      <div className="pt-1">
+        <PrimaryBtn disabled={mut.isPending}>
+          {mut.isPending ? <><span className="w-4 h-4 rounded-full border-2 border-white/25 border-t-white animate-spin" /> Duke krijuar...</> : <>Krijo llogarinë <ArrowRight className="w-4 h-4" /></>}
+        </PrimaryBtn>
+      </div>
     </form>
   );
 }
 
-/* ── OwnerForm ───────────────────────────────────────────── */
+/* ── Owner multi-step ────────────────────────────────────── */
 function OwnerForm() {
   const [step, setStep] = useState(0);
   const [, setLocation] = useLocation();
-  const { login } = useAuth();
-  const { toast } = useToast();
-  const registerMutation = useRegister();
-  const [s1, setS1] = useState<OwnerStep1Values | null>(null);
-  const [s2, setS2] = useState<OwnerStep2Values | null>(null);
+  const { login }       = useAuth();
+  const { toast }       = useToast();
+  const mut             = useRegister();
+  const [s1, setS1]     = useState<S1Values | null>(null);
+  const [s2, setS2]     = useState<S2Values | null>(null);
   const [photos, setPhotos] = useState<string[]>([""]);
 
-  const f1 = useForm<OwnerStep1Values>({ resolver: zodResolver(ownerStep1Schema), defaultValues: { ownerName: "", email: "", phone: "", password: "", businessName: "", businessNumber: "" } });
-  const f2 = useForm<OwnerStep2Values>({ resolver: zodResolver(ownerStep2Schema), defaultValues: { city: "", address: "", latitude: "", longitude: "", description: "", gender: undefined } });
-  const f3 = useForm<OwnerStep3Values>({ resolver: zodResolver(ownerStep3Schema), defaultValues: { imageUrl: "", iban: "" } });
+  const f1 = useForm<S1Values>({ resolver: zodResolver(step1Schema), defaultValues: { ownerName: "", email: "", phone: "", password: "", businessName: "", businessNumber: "" } });
+  const f2 = useForm<S2Values>({ resolver: zodResolver(step2Schema), defaultValues: { city: "", address: "", latitude: "", longitude: "", description: "", gender: undefined } });
+  const f3 = useForm<S3Values>({ resolver: zodResolver(step3Schema), defaultValues: { imageUrl: "", iban: "" } });
 
-  const w1 = (k: keyof OwnerStep1Values) => f1.watch(k) ?? "";
-  const w2 = (k: keyof OwnerStep2Values) => f2.watch(k) ?? "";
-  const w3 = (k: keyof OwnerStep3Values) => f3.watch(k) ?? "";
+  const w1 = (k: keyof S1Values) => (f1.watch(k) ?? "") as string;
+  const w2 = (k: keyof S2Values) => (f2.watch(k) ?? "") as string;
+  const w3 = (k: keyof S3Values) => (f3.watch(k) ?? "") as string;
 
-  async function submit3(data: OwnerStep3Values) {
+  async function submit3(data: S3Values) {
     if (!s1 || !s2) return;
     try {
-      const res = await registerMutation.mutateAsync({ data: {
-        name: s1.ownerName, email: s1.email, password: s1.password, role: "owner", phone: s1.phone,
-      }});
+      const res = await mut.mutateAsync({ data: { name: s1.ownerName, email: s1.email, password: s1.password, role: "owner", phone: s1.phone } });
       login(res.token, res.user);
       const validPhotos = photos.filter(p => p.trim());
       await fetch("/api/barbershops", {
@@ -270,196 +351,189 @@ function OwnerForm() {
       toast({ title: "Biznesi u regjistrua!", description: "Profili juaj është dërguar për aprovim." });
       setLocation("/dashboard");
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Regjistrimi dështoi", description: err.message ?? "Provoni përsëri." });
+      toast({ variant: "destructive", title: "Regjistrimi dështoi", description: err.message });
     }
   }
 
-  const STEPS = [
-    { label: "Llogaria", icon: User },
-    { label: "Lokacioni", icon: MapPin },
-    { label: "Media", icon: Image },
-  ];
-
   return (
     <div>
-      <StepDots current={step} total={3} />
+      <StepBar current={step} total={3} />
+      <StepSlide step={step}>
+        {step === 0 && (
+          <form onSubmit={f1.handleSubmit(d => { setS1(d); setStep(1); })} className="space-y-3.5">
+            <div className="text-xs font-semibold uppercase tracking-widest mb-1 flex items-center gap-2" style={{ color: "rgba(255,255,255,0.3)" }}>
+              <Building2 className="w-3.5 h-3.5" /> Informata Bazë
+            </div>
+            <IconInput id="bname" icon={Building2} label="Emri i biznesit" placeholder="TRIM Prishtina" value={w1("businessName")} onChange={v => f1.setValue("businessName", v)} error={f1.formState.errors.businessName?.message} />
+            <IconInput id="bnum"  icon={Layers}    label="Nr. biznesit (opsionale)" placeholder="70XXXXXXX" value={w1("businessNumber")} onChange={v => f1.setValue("businessNumber", v)} />
+            <IconInput id="oname" icon={User}      label="Pronari (emri i plotë)" placeholder="Artan Berisha" value={w1("ownerName")} onChange={v => f1.setValue("ownerName", v)} error={f1.formState.errors.ownerName?.message} />
+            <IconInput id="oemail" icon={Mail}     label="Email" type="email" placeholder="biznesi@shembull.com" value={w1("email")} onChange={v => f1.setValue("email", v)} error={f1.formState.errors.email?.message} />
+            <IconInput id="ophone" icon={Phone}    label="Telefoni" type="tel" placeholder="+383 44 000 000" value={w1("phone")} onChange={v => f1.setValue("phone", v)} error={f1.formState.errors.phone?.message} />
+            <IconInput id="opw"   icon={Lock}      label="Fjalëkalimi" type="password" value={w1("password")} onChange={v => f1.setValue("password", v)} error={f1.formState.errors.password?.message} />
+            <div className="pt-1"><PrimaryBtn>Vazhdo <ArrowRight className="w-4 h-4" /></PrimaryBtn></div>
+          </form>
+        )}
 
-      {/* Step labels */}
-      <div className="flex gap-2 mb-6">
-        {STEPS.map((s, i) => (
-          <div key={i} className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${i === step ? "text-primary" : i < step ? "text-muted-foreground" : "text-muted-foreground/40"}`}>
-            <s.icon className="w-3.5 h-3.5" />
-            {s.label}
-          </div>
-        ))}
-      </div>
+        {step === 1 && (
+          <form onSubmit={f2.handleSubmit(d => { setS2(d); setStep(2); })} className="space-y-3.5">
+            <div className="text-xs font-semibold uppercase tracking-widest mb-1 flex items-center gap-2" style={{ color: "rgba(255,255,255,0.3)" }}>
+              <MapPin className="w-3.5 h-3.5" /> Lokacioni & Detajet
+            </div>
+            <IconInput id="city" icon={MapPin} label="Qyteti" placeholder="Prishtinë" value={w2("city")} onChange={v => f2.setValue("city", v)} error={f2.formState.errors.city?.message} />
+            <IconInput id="addr" icon={MapPin} label="Adresa" placeholder="Rr. Garibaldi, Nr. 12" value={w2("address")} onChange={v => f2.setValue("address", v)} error={f2.formState.errors.address?.message} />
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-widest mb-2 pl-1" style={{ color: "rgba(255,255,255,0.3)" }}>Gjinia e klientelës</div>
+              <GenderPicker value={w2("gender")} onChange={v => f2.setValue("gender", v as any)} />
+              {f2.formState.errors.gender && <p className="text-xs pl-1 mt-1" style={{ color: "#f87171" }}>{f2.formState.errors.gender.message}</p>}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <IconInput id="lat" icon={MapPin} label="Gjerësia (lat)" type="number" placeholder="42.6629" value={w2("latitude")} onChange={v => f2.setValue("latitude", v)} hint="Opsionale" />
+              <IconInput id="lng" icon={MapPin} label="Gjatësia (lng)" type="number" placeholder="21.1655" value={w2("longitude")} onChange={v => f2.setValue("longitude", v)} hint="Opsionale" />
+            </div>
+            <TextareaInput id="desc" label="Përshkrimi (opsionale)" placeholder="Tregoni diçka për sallon tuaj..." value={w2("description")} onChange={v => f2.setValue("description", v)} />
+            <div className="flex gap-3 pt-1">
+              <BackBtn onClick={() => setStep(0)} />
+              <PrimaryBtn>Vazhdo <ArrowRight className="w-4 h-4" /></PrimaryBtn>
+            </div>
+          </form>
+        )}
 
-      {/* Step 1 — Account */}
-      {step === 0 && (
-        <form onSubmit={f1.handleSubmit(d => { setS1(d); setStep(1); })} className="space-y-4 animate-fade-up">
-          <FloatingInput id="bname" label="Emri i biznesit" placeholder="TRIM Prishtina" value={w1("businessName")} onChange={v => f1.setValue("businessName", v)} error={f1.formState.errors.businessName?.message} />
-          <FloatingInput id="bnum" label="Nr. i biznesit (opsionale)" placeholder="70XXXXXXX" value={w1("businessNumber") as string} onChange={v => f1.setValue("businessNumber", v)} />
-          <FloatingInput id="oname" label="Pronari (emri i plotë)" placeholder="Artan Berisha" value={w1("ownerName")} onChange={v => f1.setValue("ownerName", v)} error={f1.formState.errors.ownerName?.message} />
-          <FloatingInput id="oemail" label="Email" type="email" placeholder="biznesi@shembull.com" value={w1("email")} onChange={v => f1.setValue("email", v)} error={f1.formState.errors.email?.message} />
-          <FloatingInput id="ophone" label="Telefoni" type="tel" placeholder="+383 44 000 000" value={w1("phone")} onChange={v => f1.setValue("phone", v)} error={f1.formState.errors.phone?.message} />
-          <FloatingInput id="opw" label="Fjalëkalimi" type="password" value={w1("password")} onChange={v => f1.setValue("password", v)} error={f1.formState.errors.password?.message} />
-          <button type="submit" className="btn-pill w-full flex items-center justify-center gap-2 py-3.5 bg-primary text-primary-foreground font-semibold text-sm shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all">
-            Vazhdo <ArrowRight className="w-4 h-4" />
-          </button>
-        </form>
-      )}
+        {step === 2 && (
+          <form onSubmit={f3.handleSubmit(submit3)} className="space-y-4">
+            <div className="text-xs font-semibold uppercase tracking-widest mb-1 flex items-center gap-2" style={{ color: "rgba(255,255,255,0.3)" }}>
+              <Layers className="w-3.5 h-3.5" /> Media & Pagesa
+            </div>
+            <IconInput id="img"  icon={Layers} label="Logo URL (opsionale)" placeholder="https://..." value={w3("imageUrl")} onChange={v => f3.setValue("imageUrl", v)} />
+            <IconInput id="iban" icon={Layers} label="IBAN (opsionale)" placeholder="XK05 1212..." value={w3("iban")} onChange={v => f3.setValue("iban", v)} />
 
-      {/* Step 2 — Location */}
-      {step === 1 && (
-        <form onSubmit={f2.handleSubmit(d => { setS2(d); setStep(2); })} className="space-y-4 animate-fade-up">
-          <FloatingInput id="city" label="Qyteti" placeholder="Prishtinë" value={w2("city")} onChange={v => f2.setValue("city", v)} error={f2.formState.errors.city?.message} />
-          <FloatingInput id="addr" label="Adresa" placeholder="Rr. Garibaldi, Nr. 12" value={w2("address")} onChange={v => f2.setValue("address", v)} error={f2.formState.errors.address?.message} />
-
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mb-2 pl-1">Gjinia e klientelës</p>
-            <GenderPicker value={w2("gender")} onChange={v => f2.setValue("gender", v as any)} />
-            {f2.formState.errors.gender && <p className="text-xs text-red-400 pl-1 mt-1">{f2.formState.errors.gender.message}</p>}
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <FloatingInput id="lat" label="Gjerësia (lat)" type="number" placeholder="42.6629" value={w2("latitude") as string} onChange={v => f2.setValue("latitude", v)} hint="Opsionale" />
-            <FloatingInput id="lng" label="Gjatësia (lng)" type="number" placeholder="21.1655" value={w2("longitude") as string} onChange={v => f2.setValue("longitude", v)} hint="Opsionale" />
-          </div>
-
-          <FloatingTextarea id="desc" label="Përshkrimi (opsionale)" placeholder="Tregoni diçka për sallon tuaj..." value={w2("description") as string} onChange={v => f2.setValue("description", v)} />
-
-          <div className="flex gap-3">
-            <button type="button" onClick={() => setStep(0)}
-              className="flex-1 flex items-center justify-center gap-2 py-3.5 glass rounded-2xl text-sm font-semibold hover:bg-white/8 transition-all">
-              <ArrowLeft className="w-4 h-4" /> Kthehu
-            </button>
-            <button type="submit"
-              className="btn-pill flex-1 flex items-center justify-center gap-2 py-3.5 bg-primary text-primary-foreground font-semibold text-sm shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all">
-              Vazhdo <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-        </form>
-      )}
-
-      {/* Step 3 — Media */}
-      {step === 2 && (
-        <form onSubmit={f3.handleSubmit(submit3)} className="space-y-5 animate-fade-up">
-          <FloatingInput id="img" label="Logo URL (opsionale)" placeholder="https://shembull.com/logo.png" value={w3("imageUrl") as string} onChange={v => f3.setValue("imageUrl", v)} />
-          <FloatingInput id="iban" label="IBAN (opsionale)" placeholder="XK05 1212 0123 4567 8906" value={w3("iban") as string} onChange={v => f3.setValue("iban", v)} />
-
-          <div className="space-y-2">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 pl-1">Fotot e sallonit (opsionale)</p>
-            {photos.map((url, i) => (
-              <div key={i} className="flex gap-2">
-                <div className="flex-1 relative rounded-2xl ring-1 ring-white/8 bg-white/4 hover:ring-white/14 transition-all">
-                  <input
-                    type="text"
-                    placeholder={`https://shembull.com/foto-${i + 1}.jpg`}
-                    value={url}
-                    onChange={e => setPhotos(p => p.map((v, idx) => idx === i ? e.target.value : v))}
-                    className="w-full bg-transparent py-3.5 px-4 text-sm text-foreground outline-none placeholder:text-muted-foreground/40 rounded-2xl"
-                  />
+            <div className="space-y-2">
+              <div className="text-[10px] font-semibold uppercase tracking-widest pl-1" style={{ color: "rgba(255,255,255,0.3)" }}>Fotot e sallonit (opsionale)</div>
+              {photos.map((url, i) => (
+                <div key={i} className="flex gap-2">
+                  <div className="flex-1 rounded-[14px] transition-all"
+                    style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                    <input type="text" placeholder={`https://.../foto-${i + 1}.jpg`} value={url}
+                      onChange={e => setPhotos(p => p.map((v, idx) => idx === i ? e.target.value : v))}
+                      className="w-full bg-transparent px-4 py-3.5 text-sm text-white outline-none placeholder:text-white/20 rounded-[14px]" />
+                  </div>
+                  {photos.length > 1 && (
+                    <button type="button" onClick={() => setPhotos(p => p.filter((_, idx) => idx !== i))}
+                      className="w-10 h-10 my-auto flex items-center justify-center rounded-xl transition-all"
+                      style={{ background: "rgba(239,68,68,0.1)", color: "#f87171" }}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
-                {photos.length > 1 && (
-                  <button type="button" onClick={() => setPhotos(p => p.filter((_, idx) => idx !== i))}
-                    className="w-10 h-10 my-auto flex items-center justify-center rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all">
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-            ))}
-            <button type="button" onClick={() => setPhotos(p => [...p, ""])}
-              className="flex items-center gap-2 text-xs font-medium text-primary hover:text-primary/80 transition-colors pl-1 mt-1">
-              <Plus className="w-3.5 h-3.5" /> Shto foto tjetër
-            </button>
-          </div>
+              ))}
+              <button type="button" onClick={() => setPhotos(p => [...p, ""])}
+                className="flex items-center gap-1.5 text-xs font-medium transition-colors pl-1 pt-0.5"
+                style={{ color: PRIMARY }}>
+                <Plus className="w-3.5 h-3.5" /> Shto foto tjetër
+              </button>
+            </div>
 
-          <div className="flex gap-3 pt-1">
-            <button type="button" onClick={() => setStep(1)}
-              className="flex-1 flex items-center justify-center gap-2 py-3.5 glass rounded-2xl text-sm font-semibold hover:bg-white/8 transition-all">
-              <ArrowLeft className="w-4 h-4" /> Kthehu
-            </button>
-            <button type="submit" disabled={registerMutation.isPending}
-              className="btn-pill flex-1 flex items-center justify-center gap-2 py-3.5 bg-primary text-primary-foreground font-semibold text-sm shadow-lg shadow-primary/25 hover:shadow-primary/40 disabled:opacity-60 transition-all">
-              {registerMutation.isPending ? (
-                <><span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" /> Duke regjistruar...</>
-              ) : (<>Regjistro biznesin <ArrowRight className="w-4 h-4" /></>)}
-            </button>
-          </div>
-        </form>
-      )}
+            <div className="flex gap-3 pt-1">
+              <BackBtn onClick={() => setStep(1)} />
+              <PrimaryBtn disabled={mut.isPending}>
+                {mut.isPending ? <><span className="w-4 h-4 rounded-full border-2 border-white/25 border-t-white animate-spin" /> Duke regjistruar...</> : <>Regjistro biznesin <ArrowRight className="w-4 h-4" /></>}
+              </PrimaryBtn>
+            </div>
+          </form>
+        )}
+      </StepSlide>
     </div>
   );
 }
 
-/* ── Main Register ───────────────────────────────────────── */
+/* ── Main ────────────────────────────────────────────────── */
 export default function Register() {
   const [role, setRole] = useState<"user" | "owner">("user");
 
   return (
-    <div className="min-h-screen flex bg-background overflow-hidden">
+    <div className="min-h-screen flex overflow-hidden" style={{ background: "#080b12", fontFamily: "'Inter', sans-serif" }}>
 
       {/* ── Left brand panel ──────────────────────────── */}
-      <div className="hidden lg:flex lg:w-[42%] relative overflow-hidden flex-col">
+      <div className="hidden lg:flex lg:w-[38%] relative overflow-hidden flex-col">
         <img
           src="https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1200&q=85"
-          alt="Barbershop"
+          alt=""
           className="absolute inset-0 w-full h-full object-cover"
+          style={{ filter: "brightness(0.35) saturate(0.9)" }}
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-black/85 via-black/65 to-black/40" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" />
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px]" />
+        <div className="absolute inset-0" style={{ background: "linear-gradient(160deg, rgba(8,11,18,0.92) 0%, rgba(8,11,18,0.5) 60%, transparent 100%)" }} />
+        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(8,11,18,0.98) 0%, transparent 55%)" }} />
+        <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(8,11,18,0.4) 0%, transparent 100%)" }} />
+        <div className="absolute inset-0 opacity-15" style={{
+          backgroundImage: "linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)",
+          backgroundSize: "50px 50px",
+        }} />
+        <div className="absolute -bottom-20 -right-20 w-80 h-80 rounded-full opacity-15" style={{
+          background: "radial-gradient(circle, #4f8ef7 0%, transparent 70%)",
+          filter: "blur(40px)",
+        }} />
 
-        <div className="relative z-10 flex flex-col justify-between p-12 h-full">
-          <Link href="/" className="flex items-center gap-2.5 animate-fade-in">
-            <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/40">
-              <Scissors className="w-4.5 h-4.5 text-primary-foreground" />
+        <div className="relative z-10 flex flex-col justify-between h-full p-11">
+          <Link href="/" className="flex items-center gap-2.5 animate-fade-in w-fit">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "#4f8ef7", boxShadow: "0 4px 20px rgba(79,142,247,0.4)" }}>
+              <Scissors className="w-[18px] h-[18px] text-white" />
             </div>
-            <span className="text-2xl font-bold text-white tracking-tight">TRIM<span className="text-primary">.</span></span>
+            <span className="text-[22px] font-bold text-white tracking-tight">TRIM<span style={{ color: "#4f8ef7" }}>.</span></span>
           </Link>
 
-          <div className="space-y-6 animate-fade-up delay-100">
-            <div className="inline-flex items-center gap-2 glass px-3.5 py-1.5 rounded-full text-xs font-semibold text-primary">
-              <Sparkles className="w-3 h-3" />
-              Platforma #1 në Kosovë
+          <div className="space-y-7">
+            <div className="animate-fade-up delay-100">
+              <h2 className="text-[38px] font-bold text-white leading-[1.12] tracking-tight mb-4">
+                Fillo udhëtimin<br />
+                <span style={{
+                  background: "linear-gradient(90deg, #4f8ef7, #93c5fd, #4f8ef7)",
+                  backgroundSize: "200% auto",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                  animation: "shimmer 3s linear infinite",
+                }}>
+                  tënd me TRIM.
+                </span>
+              </h2>
+              <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.45)", maxWidth: "260px" }}>
+                Bashkohu me mijëra klientë dhe berberë që zgjodhën platformën premium të Kosovës.
+              </p>
             </div>
-            <h2 className="text-4xl font-bold text-white leading-[1.15] tracking-tight">
-              Fillo udhëtimin<br />
-              <span className="text-shimmer">tënd me TRIM.</span>
-            </h2>
-            <p className="text-white/55 text-base leading-relaxed max-w-xs">
-              Bashkohu me mijëra klientë dhe berberë që zgjodhën platformën premium të Kosovës.
-            </p>
 
             {/* Benefits */}
             <div className="space-y-3">
               {[
-                "Rezervo në 30 sekonda",
-                "Konfirmo me OTP të sigurt",
+                "Rezervo termin në 30 sekonda",
+                "Konfirmim i sigurt me OTP",
                 "Gjej berberët kryesorë",
-                "Blij produkte premium",
+                "Produkte premium në marketplace",
               ].map((item, i) => (
-                <div key={i} className="flex items-center gap-3 animate-slide-right" style={{ animationDelay: `${200 + i * 80}ms` }}>
-                  <div className="w-5 h-5 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center shrink-0">
-                    <Check className="w-3 h-3 text-primary" />
+                <div key={i} className="flex items-center gap-3 animate-slide-right"
+                  style={{ animationDelay: `${200 + i * 80}ms` }}>
+                  <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
+                    style={{ background: "rgba(79,142,247,0.15)", border: "1px solid rgba(79,142,247,0.35)" }}>
+                    <Check className="w-2.5 h-2.5" style={{ color: "#4f8ef7" }} />
                   </div>
-                  <span className="text-sm text-white/70">{item}</span>
+                  <span className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>{item}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="glass rounded-2xl p-4 animate-fade-up delay-400">
+          {/* Social proof */}
+          <div className="rounded-2xl p-4 animate-fade-up delay-400"
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
             <div className="flex items-center gap-3">
               <div className="flex -space-x-2">
-                {["B", "A", "V"].map((l, i) => (
-                  <div key={i} className="w-8 h-8 rounded-full bg-primary/25 border-2 border-black/50 flex items-center justify-center text-xs font-bold text-primary">
+                {["B", "A", "V", "D"].map((l, i) => (
+                  <div key={i} className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2"
+                    style={{ background: `rgba(79,142,247,${0.1 + i * 0.05})`, borderColor: "#080b12", color: "#7db3ff" }}>
                     {l}
                   </div>
                 ))}
               </div>
-              <p className="text-white/60 text-xs leading-relaxed">
-                <span className="text-white font-semibold">12,000+ klientë</span> tashmë besojnë TRIM
+              <p className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
+                <span className="text-white font-semibold">12,000+</span> klientë besojnë TRIM
               </p>
             </div>
           </div>
@@ -467,38 +541,42 @@ export default function Register() {
       </div>
 
       {/* ── Right form panel ──────────────────────────── */}
-      <div className="flex-1 flex items-start justify-center p-6 lg:p-10 overflow-y-auto relative">
-        {/* Bg orbs */}
-        <div className="absolute top-1/3 right-1/4 w-72 h-72 glow-orb bg-primary/5 animate-glow-pulse pointer-events-none" />
-        <div className="absolute bottom-1/4 left-1/4 w-48 h-48 glow-orb bg-primary/4 animate-float-slow pointer-events-none" />
+      <div
+        className="flex-1 overflow-y-auto flex items-start justify-center p-6 lg:p-10 relative"
+        style={{ background: "#0d1117" }}
+      >
+        <div className="absolute top-0 right-0 w-[350px] h-[350px] pointer-events-none"
+          style={{ background: "radial-gradient(circle at top right, rgba(79,142,247,0.06) 0%, transparent 70%)" }} />
 
-        <div className="w-full max-w-[400px] relative z-10 py-8">
+        <div className="w-full max-w-[420px] relative z-10 py-8">
           {/* Mobile logo */}
-          <Link href="/" className="flex items-center gap-2 mb-8 lg:hidden animate-fade-in">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <Scissors className="w-4 h-4 text-primary-foreground" />
+          <Link href="/" className="flex items-center gap-2 mb-8 lg:hidden">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#4f8ef7" }}>
+              <Scissors className="w-4 h-4 text-white" />
             </div>
-            <span className="text-xl font-bold">TRIM<span className="text-primary">.</span></span>
+            <span className="text-xl font-bold text-white tracking-tight">TRIM<span style={{ color: "#4f8ef7" }}>.</span></span>
           </Link>
 
           {/* Header */}
-          <div className="mb-7 animate-fade-up">
-            <h1 className="text-3xl font-bold tracking-tight mb-1.5">Krijo llogari</h1>
-            <p className="text-muted-foreground text-sm">Fillo falas sot. Pa kartë krediti.</p>
+          <div className="mb-6 animate-fade-up">
+            <h1 className="text-[26px] font-bold text-white tracking-tight mb-1.5">Krijo llogari</h1>
+            <p className="text-sm" style={{ color: "rgba(255,255,255,0.35)" }}>Fillo falas sot. Pa kartë krediti.</p>
           </div>
 
           {/* Role toggle */}
-          <div className="glass rounded-2xl p-1.5 flex mb-7 animate-fade-up delay-75">
+          <div className="flex mb-6 rounded-[16px] p-1.5 animate-fade-up delay-75"
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
             {[
-              { v: "user" as const, icon: User, label: "Rezervoj termin" },
+              { v: "user" as const,  icon: User,      label: "Rezervoj termin" },
               { v: "owner" as const, icon: Building2, label: "Pronar salloni" },
             ].map(({ v, icon: Icon, label }) => (
               <button key={v} type="button" onClick={() => setRole(v)}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-300 ${
-                  role === v
-                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}>
+                className="flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-[12px] text-sm font-semibold transition-all duration-300"
+                style={{
+                  background: role === v ? "linear-gradient(135deg, #4f8ef7, #3b6fd4)" : "transparent",
+                  color: role === v ? "#fff" : "rgba(255,255,255,0.4)",
+                  boxShadow: role === v ? "0 4px 16px rgba(79,142,247,0.3)" : "none",
+                }}>
                 <Icon className="w-4 h-4" />
                 <span className="hidden sm:block">{label}</span>
               </button>
@@ -506,11 +584,13 @@ export default function Register() {
           </div>
 
           {/* Form */}
-          {role === "user" ? <UserForm /> : <OwnerForm />}
+          <div className="animate-fade-up delay-100">
+            {role === "user" ? <UserForm /> : <OwnerForm />}
+          </div>
 
-          <p className="text-center text-xs text-muted-foreground mt-6 animate-fade-in delay-200">
+          <p className="text-center text-xs mt-6 animate-fade-in delay-200" style={{ color: "rgba(255,255,255,0.28)" }}>
             Keni tashmë llogari?{" "}
-            <Link href="/login" className="text-primary hover:text-primary/80 font-semibold transition-colors">
+            <Link href="/login" className="font-semibold hover:opacity-80 transition-opacity" style={{ color: "#4f8ef7" }}>
               Kyçu tani →
             </Link>
           </p>
