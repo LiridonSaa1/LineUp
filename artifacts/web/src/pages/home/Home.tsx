@@ -48,7 +48,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import barberToolsBg from "@assets/vintage-equipment-of-barber-shop-on-wood-backgroun-2023-11-27-_1782291490098.jpg";
-import barberCutout from "@assets/bearded-handsome-barber-holding-comb-and-scissors-2023-11-27-_1782291537000.webp";
+import barberCutout from "@assets/bearded-handsome-barber-holding-comb-and-scissors-2023-11-27-_1782486060662.webp";
 import brushImg from "@assets/download_1782414907276.png";
 import razorImg from "@assets/download_1782414908403.png";
 
@@ -1803,7 +1803,7 @@ export default function Home() {
           <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 via-transparent to-transparent" />
         </div>
 
-        <div className="container px-6 max-w-7xl mx-auto relative z-10 pt-28 pb-20">
+        <div className="container px-4 sm:px-6 max-w-7xl mx-auto relative z-10 pt-24 sm:pt-28 pb-16 sm:pb-20">
           <div className="max-w-4xl">
             {/* Eyebrow badge */}
             <div className="inline-flex items-center gap-2 border border-white/20 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full text-xs font-semibold text-white mb-8 animate-badge-pop">
@@ -1813,13 +1813,13 @@ export default function Home() {
             </div>
 
             {/* Headline */}
-            <h1 className="text-6xl md:text-8xl font-bold tracking-tight leading-[1.04] animate-fade-up text-white">
+            <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-[1.04] animate-fade-up text-white">
               Gjej berberin
               <br />
               <span className="text-shimmer">tënd të përsosur.</span>
             </h1>
 
-            <p className="mt-6 text-xl text-white/70 max-w-xl leading-relaxed animate-fade-up delay-200">
+            <p className="mt-4 sm:mt-6 text-base sm:text-xl text-white/70 max-w-xl leading-relaxed animate-fade-up delay-200">
               Rezervo takime në berbertë më të mirë të Kosovës në nën 30
               sekonda. Pa telefonata, pa pritje.
             </p>
@@ -1876,7 +1876,7 @@ export default function Home() {
 
         {/* Barber cutout figure */}
         <div
-          className="absolute right-0 bottom-0 hidden lg:block w-[420px] xl:w-[500px] pointer-events-none select-none"
+          className="absolute right-0 bottom-0 hidden md:block w-[280px] lg:w-[420px] xl:w-[500px] pointer-events-none select-none"
           style={{ zIndex: 8 }}
         >
           {/* Shadow under feet */}
@@ -2064,7 +2064,7 @@ export default function Home() {
 
         <div className="container px-6 max-w-7xl mx-auto relative z-10">
           {/* Header */}
-          <div className="flex justify-between items-end mb-12">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-12">
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-5 h-[2px] bg-primary rounded-full" />
@@ -2073,7 +2073,7 @@ export default function Home() {
                 </span>
                 <div className="w-5 h-[2px] bg-primary rounded-full" />
               </div>
-              <h2 className="text-4xl font-extrabold tracking-tight leading-tight">
+              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight">
                 Dyqanet më të mira në{" "}
                 <span className="text-shimmer">
                   {city !== "all" ? city : "Kosovë"}
@@ -2086,7 +2086,7 @@ export default function Home() {
             </div>
             <Link
               href="/barbershops"
-              className="hidden md:flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary/80 transition-colors group"
+              className="hidden md:flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary/80 transition-colors group shrink-0"
             >
               Shiko të gjitha{" "}
               <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
@@ -2180,7 +2180,7 @@ export default function Home() {
               <span className="text-xs font-bold text-primary tracking-widest uppercase">Pse Line UP</span>
               <div className="w-6 h-px bg-primary/60" />
             </div>
-            <h2 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight leading-tight mb-4">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight leading-tight mb-4">
               Ndërtuar për kulturën e<br className="hidden md:block" /> berberëve të Kosovës
             </h2>
             <p className="text-white/50 text-lg">Gjithçka që ju nevojitet, asgjë tjetër.</p>
@@ -2213,15 +2213,15 @@ export default function Home() {
           />
         </div>
 
-        <div className="container px-6 max-w-7xl mx-auto relative z-10">
-          <div className="flex justify-between items-end mb-12">
+        <div className="container px-4 sm:px-6 max-w-7xl mx-auto relative z-10">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-12">
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-5 h-[2px] bg-primary rounded-full" />
                 <span className="text-xs font-bold text-primary tracking-widest uppercase">Grooming Shop</span>
                 <div className="w-5 h-[2px] bg-primary rounded-full" />
               </div>
-              <h2 className="text-4xl font-extrabold tracking-tight leading-tight">
+              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight">
                 Produktet më të mira<br />
                 <span className="text-shimmer">për grooming</span>
               </h2>
@@ -2231,7 +2231,7 @@ export default function Home() {
             </div>
             <Link
               href="/marketplace"
-              className="hidden md:flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary/80 transition-colors group"
+              className="hidden md:flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary/80 transition-colors group shrink-0"
             >
               Shiko të gjitha{" "}
               <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
@@ -2262,7 +2262,7 @@ export default function Home() {
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-xs font-bold text-emerald-400 tracking-widest uppercase">I disponueshëm në</span>
             </div>
-            <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-white">
               Qyteti juaj është{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">
                 i mbuluar
@@ -2336,7 +2336,7 @@ export default function Home() {
             Për pronarët e berberive
           </div>
 
-          <h2 className="text-5xl md:text-6xl font-extrabold text-white tracking-tight leading-[1.06] mb-6">
+          <h2 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white tracking-tight leading-[1.06] mb-6">
             Zhvillo dyqanin tënd
             <br />
             <span className="text-shimmer">me Line UP.</span>
@@ -2428,7 +2428,7 @@ function ContactSection() {
             <span className="text-xs font-bold text-primary tracking-widest uppercase">Na kontaktoni</span>
             <div className="w-5 h-[2px] bg-primary rounded-full" />
           </div>
-          <h2 className="text-4xl font-extrabold tracking-tight">Si mund t'ju ndihmojmë?</h2>
+          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">Si mund t'ju ndihmojmë?</h2>
           <p className="text-muted-foreground mt-2 max-w-xl mx-auto">
             Pyetje rreth platformës, partneriteteve ose mbështetjes teknike — jemi këtu.
           </p>

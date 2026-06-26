@@ -35,7 +35,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
-      <aside className="w-full md:w-64 bg-card border-b md:border-b-0 md:border-r border-border shrink-0 flex flex-col sticky top-0 md:h-screen z-20">
+      {/* ── Desktop Sidebar ── */}
+      <aside className="hidden md:flex md:w-64 bg-card border-r border-border shrink-0 flex-col sticky top-0 md:h-screen z-20">
         <div className="p-6">
           <Link href="/" className="inline-block">
             <span className="text-2xl font-bold tracking-tighter text-primary">Line UP</span>
@@ -65,8 +66,37 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         </div>
       </aside>
 
+      {/* ── Mobile Top Bar ── */}
+      <div className="md:hidden sticky top-0 z-20 bg-card border-b border-border">
+        <div className="flex items-center justify-between px-4 py-3">
+          <Link href="/" className="inline-block">
+            <span className="text-lg font-bold tracking-tighter text-primary">Line UP</span>
+            <span className="ml-1.5 text-xs font-medium text-destructive uppercase tracking-wider">Admin</span>
+          </Link>
+          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg h-8 px-2" onClick={handleLogout}>
+            <LogOut className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+        <nav className="flex overflow-x-auto gap-1 px-3 pb-3 scrollbar-hide">
+          {navItems.map(item => {
+            const Icon = item.icon;
+            const isActive = location === item.href || (item.href !== "/admin" && location.startsWith(item.href));
+            return (
+              <Link key={item.href} href={item.href}>
+                <div className={`flex items-center gap-1.5 shrink-0 px-3 py-2 rounded-xl font-medium text-xs cursor-pointer transition-colors whitespace-nowrap ${
+                  isActive ? "bg-primary text-white" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                }`}>
+                  <Icon className="w-3.5 h-3.5" />
+                  {item.label}
+                </div>
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <div className="flex-1 p-6 md:p-8 overflow-y-auto">
+        <div className="flex-1 p-4 md:p-8 overflow-y-auto">
           {children}
         </div>
       </main>
