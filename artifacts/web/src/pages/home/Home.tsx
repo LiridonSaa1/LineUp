@@ -1685,22 +1685,41 @@ export default function Home() {
       </section>
 
       {/* ── CITIES ───────────────────────────────────────── */}
-      <section id="disponueshem" className="py-20 bg-background relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+      <section
+        id="disponueshem"
+        className="py-24 relative overflow-hidden"
+        style={{ background: "linear-gradient(160deg, #0a1628 0%, #0d2137 40%, #071a14 75%, #050e0a 100%)" }}
+      >
+        {/* Top divider */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
+        {/* Ambient glow blobs */}
+        <div className="absolute -top-32 left-1/4 w-96 h-96 bg-emerald-500/8 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-emerald-600/6 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-1/2 left-0 w-64 h-64 bg-teal-500/5 rounded-full blur-2xl pointer-events-none" />
 
-        <div className="container px-6 max-w-7xl mx-auto">
-          <div className="text-center mb-10">
-            <div className="flex items-center justify-center gap-2 mb-3">
-              <div className="w-5 h-[2px] bg-primary rounded-full" />
-              <span className="text-xs font-bold text-primary tracking-widest uppercase">I disponueshëm në</span>
-              <div className="w-5 h-[2px] bg-primary rounded-full" />
+        <div className="container px-6 max-w-7xl mx-auto relative z-10">
+          {/* Header */}
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-4">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-xs font-bold text-emerald-400 tracking-widest uppercase">I disponueshëm në</span>
             </div>
-            <h2 className="text-4xl font-extrabold tracking-tight">Qyteti juaj është i mbuluar</h2>
-            <p className="text-muted-foreground mt-2">Zgjedh qytetin tënd dhe rezervo ose porosit online.</p>
+            <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white">
+              Qyteti juaj është{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">
+                i mbuluar
+              </span>
+            </h2>
+            <p className="text-white/50 mt-3 text-base max-w-md mx-auto">
+              Zgjedh qytetin tënd dhe rezervo ose porosit online.
+            </p>
           </div>
 
           <KosovoCitiesMap />
         </div>
+
+        {/* Bottom divider */}
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent" />
       </section>
 
       {/* ── OWNER CTA ────────────────────────────────────── */}
