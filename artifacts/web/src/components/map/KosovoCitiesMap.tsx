@@ -37,10 +37,10 @@ export default function KosovoCitiesMap() {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row items-center lg:items-start gap-10 lg:gap-16 w-full">
+    <div className="flex flex-col lg:flex-row items-center lg:items-start gap-8 lg:gap-16 w-full">
 
       {/* ── MAP ── */}
-      <div className="relative flex-1 w-full max-w-xl lg:max-w-none">
+      <div className="relative flex-1 w-full">
         {/* Ambient glow behind map */}
         <div className="absolute inset-0 -m-8 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -51,7 +51,6 @@ export default function KosovoCitiesMap() {
           aria-label="Harta e Komunave të Kosovës"
         >
           <defs>
-            {/* Green gradient fills */}
             <linearGradient id="coveredGrad" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%"   stopColor="#34d399" />
               <stop offset="100%" stopColor="#059669" />
@@ -60,8 +59,6 @@ export default function KosovoCitiesMap() {
               <stop offset="0%"   stopColor="#6ee7b7" />
               <stop offset="100%" stopColor="#10b981" />
             </linearGradient>
-
-            {/* Glow for hovered */}
             <filter id="hoverGlow" x="-30%" y="-30%" width="160%" height="160%">
               <feGaussianBlur stdDeviation="5" result="blur" />
               <feMerge>
@@ -69,18 +66,12 @@ export default function KosovoCitiesMap() {
                 <feMergeNode in="SourceGraphic" />
               </feMerge>
             </filter>
-
-            {/* Soft drop shadow for whole map */}
             <filter id="mapShadow" x="-8%" y="-8%" width="120%" height="120%">
               <feDropShadow dx="0" dy="8" stdDeviation="16" floodColor="#000" floodOpacity="0.5" />
             </filter>
-
-            {/* Text shadow */}
             <filter id="textShadow">
               <feDropShadow dx="0" dy="1" stdDeviation="2.5" floodColor="#000" floodOpacity="0.9" />
             </filter>
-
-            {/* Inner shadow for municipality depth */}
             <filter id="innerShadow" x="-5%" y="-5%" width="110%" height="110%">
               <feOffset dx="0" dy="2" />
               <feGaussianBlur stdDeviation="2" result="blur" />
@@ -88,19 +79,16 @@ export default function KosovoCitiesMap() {
             </filter>
           </defs>
 
-          {/* All municipality paths */}
           <g filter="url(#mapShadow)">
             {MUNICIPALITIES.map((m) => {
               const isHovered = hovered === m.shapeName;
               const isCovered = m.isCovered;
-
               let fill: string;
               if (isCovered) {
                 fill = isHovered ? "url(#hoveredGrad)" : "url(#coveredGrad)";
               } else {
                 fill = isHovered ? "#374151" : "#1e293b";
               }
-
               return (
                 <path
                   key={m.shapeName}
@@ -120,14 +108,12 @@ export default function KosovoCitiesMap() {
             })}
           </g>
 
-          {/* Covered city markers + labels */}
           {MUNICIPALITIES.filter(m => m.isCovered).map((m, i) => {
             const off    = LABEL_OFFSETS[m.displayName!] ?? {};
             const dx     = off.dx ?? 0;
             const dy     = off.dy ?? 0;
             const anchor = off.anchor ?? "middle";
             const isHov  = hovered === m.shapeName;
-
             return (
               <g
                 key={m.shapeName}
@@ -136,17 +122,12 @@ export default function KosovoCitiesMap() {
                 onMouseLeave={() => setHovered(null)}
                 onClick={() => handleClick(m.displayName)}
               >
-                {/* Outer pulse */}
                 <circle cx={m.cx} cy={m.cy} r="8" fill="#34d399" opacity="0">
                   <animate attributeName="r"       values="6;18;6"     dur="2.6s" repeatCount="indefinite" begin={`${i * 0.37}s`} />
                   <animate attributeName="opacity" values="0.3;0;0.3"  dur="2.6s" repeatCount="indefinite" begin={`${i * 0.37}s`} />
                 </circle>
-
-                {/* Ring */}
                 <circle cx={m.cx} cy={m.cy} r={isHov ? 9 : 7} fill="white" opacity="0.2"
                   style={{ transition: "r 0.15s" }} />
-
-                {/* Core dot */}
                 <circle cx={m.cx} cy={m.cy} r={isHov ? 5.5 : 4}
                   fill={isHov ? "#ffffff" : "#a7f3d0"}
                   stroke={isHov ? "#059669" : "#065f46"}
@@ -154,8 +135,6 @@ export default function KosovoCitiesMap() {
                   filter="url(#hoverGlow)"
                   style={{ transition: "r 0.15s" }}
                 />
-
-                {/* Label */}
                 <text
                   x={m.cx + dx} y={m.cy + dy}
                   textAnchor={anchor}
@@ -174,14 +153,14 @@ export default function KosovoCitiesMap() {
         </svg>
 
         {/* Legend */}
-        <div className="flex items-center justify-center gap-5 mt-4">
+        <div className="flex items-center justify-center gap-5 mt-3">
           <div className="flex items-center gap-2">
-            <div className="w-3.5 h-3.5 rounded-sm"
+            <div className="w-3 h-3 rounded-sm"
               style={{ background: "linear-gradient(135deg, #34d399, #059669)" }} />
             <span className="text-xs text-white/40 font-medium">7 qytete aktive</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3.5 h-3.5 rounded-sm bg-slate-700 border border-slate-600" />
+            <div className="w-3 h-3 rounded-sm bg-slate-700 border border-slate-600" />
             <span className="text-xs text-white/40 font-medium">Duke ardhur</span>
           </div>
         </div>
@@ -189,11 +168,12 @@ export default function KosovoCitiesMap() {
 
       {/* ── CITY LIST PANEL ── */}
       <div className="w-full lg:w-72 flex-shrink-0">
-        <p className="text-xs font-bold text-emerald-400/70 tracking-widest uppercase mb-4">
+        <p className="text-xs font-bold text-emerald-400/70 tracking-widest uppercase mb-3">
           Qytetet e mbuluara
         </p>
 
-        <div className="flex flex-col gap-2">
+        {/* Mobile: 2-column compact grid | Desktop: single-column list */}
+        <div className="grid grid-cols-2 lg:grid-cols-1 gap-2">
           {COVERED_CITIES.map((city) => {
             const muni     = MUNICIPALITIES.find(m => m.displayName === city.name);
             const isActive = hovered === muni?.shapeName;
@@ -201,14 +181,13 @@ export default function KosovoCitiesMap() {
             return (
               <button
                 key={city.name}
-                className="group flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-left w-full
-                  border transition-all duration-200"
+                className="group flex items-center gap-2.5 lg:gap-3.5 px-3 py-2.5 lg:px-4 lg:py-3.5 rounded-2xl text-left w-full border transition-all duration-200"
                 style={{
                   background: isActive
                     ? "linear-gradient(135deg, rgba(52,211,153,0.18), rgba(5,150,105,0.10))"
                     : "rgba(255,255,255,0.04)",
                   borderColor: isActive ? "rgba(52,211,153,0.4)" : "rgba(255,255,255,0.06)",
-                  transform: isActive ? "translateX(4px)" : "none",
+                  transform: isActive ? "translateX(2px)" : "none",
                 }}
                 onMouseEnter={() => muni && setHovered(muni.shapeName)}
                 onMouseLeave={() => setHovered(null)}
@@ -216,7 +195,7 @@ export default function KosovoCitiesMap() {
               >
                 {/* Icon */}
                 <div
-                  className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-200"
+                  className="w-7 h-7 lg:w-9 lg:h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-200"
                   style={{
                     background: isActive
                       ? "linear-gradient(135deg, #34d399, #059669)"
@@ -224,7 +203,7 @@ export default function KosovoCitiesMap() {
                   }}
                 >
                   <MapPin
-                    className="w-4 h-4 transition-colors duration-200"
+                    className="w-3.5 h-3.5 lg:w-4 lg:h-4 transition-colors duration-200"
                     style={{ color: isActive ? "#ffffff" : "#34d399" }}
                   />
                 </div>
@@ -232,22 +211,22 @@ export default function KosovoCitiesMap() {
                 {/* Text */}
                 <div className="flex-1 min-w-0">
                   <p
-                    className="font-bold text-sm transition-colors duration-200"
+                    className="font-bold text-xs lg:text-sm truncate transition-colors duration-200"
                     style={{ color: isActive ? "#a7f3d0" : "#e2e8f0" }}
                   >
                     {city.name}
                   </p>
                   <div className="flex items-center gap-1 mt-0.5">
-                    <Scissors className="w-3 h-3 text-emerald-500/70" />
-                    <span className="text-[11px] text-white/35 font-medium">
+                    <Scissors className="w-2.5 h-2.5 lg:w-3 lg:h-3 text-emerald-500/70 flex-shrink-0" />
+                    <span className="text-[10px] text-white/35 font-medium whitespace-nowrap">
                       {city.shops}+ berberë
                     </span>
                   </div>
                 </div>
 
-                {/* Arrow */}
+                {/* Arrow — desktop only */}
                 <ArrowRight
-                  className="w-4 h-4 flex-shrink-0 transition-all duration-200"
+                  className="w-4 h-4 flex-shrink-0 transition-all duration-200 hidden lg:block"
                   style={{
                     color: isActive ? "#34d399" : "rgba(255,255,255,0.15)",
                     transform: isActive ? "translateX(2px)" : "none",
@@ -260,16 +239,16 @@ export default function KosovoCitiesMap() {
 
         {/* Stats footer */}
         <div
-          className="mt-6 px-4 py-4 rounded-2xl border border-emerald-500/15"
+          className="mt-4 px-4 py-3 rounded-2xl border border-emerald-500/15"
           style={{ background: "rgba(52,211,153,0.06)" }}
         >
           <div className="grid grid-cols-2 gap-4 text-center">
             <div>
-              <p className="text-2xl font-extrabold text-emerald-400">7</p>
+              <p className="text-xl lg:text-2xl font-extrabold text-emerald-400">7</p>
               <p className="text-[10px] text-white/35 uppercase tracking-wider mt-0.5">Qytete</p>
             </div>
             <div>
-              <p className="text-2xl font-extrabold text-emerald-400">42+</p>
+              <p className="text-xl lg:text-2xl font-extrabold text-emerald-400">42+</p>
               <p className="text-[10px] text-white/35 uppercase tracking-wider mt-0.5">Berberë</p>
             </div>
           </div>
