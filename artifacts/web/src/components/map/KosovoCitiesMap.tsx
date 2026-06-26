@@ -1,198 +1,178 @@
-import { Link } from "wouter";
+import { useState } from "react";
+import { useLocation } from "wouter";
+import { MUNICIPALITIES } from "./kosovo-paths";
 
-interface City {
-  name: string;
-  // center coords in image coordinate space (415 x 432)
-  cx: number;
-  cy: number;
-  rx: number; // ellipse x-radius covering municipality
-  ry: number; // ellipse y-radius covering municipality
-  labelDx?: number;
-  labelDy?: number;
-  anchor?: "start" | "middle" | "end";
-}
-
-// Coordinates derived from geographic position mapped to the Kosovo map image (415×432 px).
-// Each ellipse is sized to roughly cover the municipality area visible in the image.
-const CITIES: City[] = [
-  {
-    name: "Mitrovica",
-    cx: 208, cy: 118,
-    rx: 52,  ry: 36,
-    labelDy: -44, anchor: "middle",
-  },
-  {
-    name: "Peja",
-    cx: 68,  cy: 185,
-    rx: 56,  ry: 48,
-    labelDx: -4, labelDy: -56, anchor: "middle",
-  },
-  {
-    name: "Prishtina",
-    cx: 275, cy: 192,
-    rx: 56,  ry: 44,
-    labelDx: 8, labelDy: -52, anchor: "middle",
-  },
-  {
-    name: "Gjakova",
-    cx: 98,  cy: 278,
-    rx: 52,  ry: 52,
-    labelDx: -4, labelDy: 62, anchor: "middle",
-  },
-  {
-    name: "Gjilan",
-    cx: 348, cy: 255,
-    rx: 48,  ry: 40,
-    labelDx: 8, labelDy: -48, anchor: "middle",
-  },
-  {
-    name: "Ferizaj",
-    cx: 272, cy: 280,
-    rx: 44,  ry: 38,
-    labelDx: 4, labelDy: 50, anchor: "middle",
-  },
-  {
-    name: "Prizren",
-    cx: 168, cy: 340,
-    rx: 58,  ry: 44,
-    labelDx: -4, labelDy: 54, anchor: "middle",
-  },
-];
+// Label offsets to avoid overlap for covered cities
+const LABEL_OFFSETS: Record<string, { dx?: number; dy?: number; anchor?: "start" | "middle" | "end" }> = {
+  Prishtina:  { dy: -14, anchor: "middle" },
+  Prizren:    { dy:  14, anchor: "middle" },
+  Peja:       { dx: -6,  dy: -12, anchor: "end" },
+  Gjakova:    { dx: -4,  dy:  14, anchor: "middle" },
+  Mitrovica:  { dy: -12, anchor: "middle" },
+  Ferizaj:    { dy:  14, anchor: "middle" },
+  Gjilan:     { dx:  6,  dy: -12, anchor: "start" },
+};
 
 export default function KosovoCitiesMap() {
-  // We render the map in its natural 415×432 coordinate space.
-  // The image is placed as an SVG <image>; overlays are drawn on top.
-  const W = 415;
-  const H = 432;
+  const [hovered, setHovered] = useState<string | null>(null);
+  const [, setLocation] = useLocation();
+
+  const handleClick = (displayName: string | null) => {
+    if (displayName) setLocation(`/barbershops?city=${displayName}`);
+  };
 
   return (
-    <div className="relative w-full max-w-xl mx-auto select-none">
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        xmlns="http://www.w3.org/2000/svg"
-        className="w-full h-auto"
-        aria-label="Harta e Komunave të Kosovës"
-      >
-        <defs>
-          {/* Soft green radial gradient for municipality highlight */}
-          {CITIES.map((c) => (
-            <radialGradient
-              key={`g-${c.name}`}
-              id={`grad-${c.name}`}
-              cx="50%" cy="50%" r="50%"
-            >
-              <stop offset="0%"   stopColor="#16a34a" stopOpacity="0.55" />
-              <stop offset="60%"  stopColor="#22c55e" stopOpacity="0.28" />
-              <stop offset="100%" stopColor="#4ade80" stopOpacity="0"    />
+    <div className="flex flex-col items-center w-full">
+      <div className="relative w-full max-w-2xl mx-auto">
+        <svg
+          viewBox="0 0 600 520"
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-full h-auto drop-shadow-lg"
+          aria-label="Harta e Komunave të Kosovës"
+        >
+          <defs>
+            {/* Shadow / depth for whole map */}
+            <filter id="mapShadow" x="-5%" y="-5%" width="115%" height="115%">
+              <feDropShadow dx="2" dy="4" stdDeviation="6" floodColor="#000" floodOpacity="0.25" />
+            </filter>
+            {/* Glow for hovered covered city */}
+            <filter id="hoverGlow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="4" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            {/* Text shadow for labels */}
+            <filter id="textShadow">
+              <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#000" floodOpacity="0.8" />
+            </filter>
+            {/* Pulse animation gradient */}
+            <radialGradient id="pulseGrad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%"   stopColor="#4ade80" stopOpacity="0.5" />
+              <stop offset="100%" stopColor="#22c55e" stopOpacity="0"   />
             </radialGradient>
-          ))}
+          </defs>
 
-          {/* Glow filter for markers */}
-          <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
-            <feGaussianBlur stdDeviation="3.5" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
+          {/* ── All municipality paths ── */}
+          <g filter="url(#mapShadow)">
+            {MUNICIPALITIES.map((m) => {
+              const isHovered   = hovered === m.shapeName;
+              const isCovered   = m.isCovered;
+              const fill = isCovered
+                ? isHovered ? "#16a34a" : "#22c55e"
+                : isHovered ? "#94a3b8" : "#cbd5e1";
+              const stroke = "#fff";
 
-          {/* Soft drop shadow for labels */}
-          <filter id="textShadow" x="-10%" y="-10%" width="120%" height="120%">
-            <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#000" floodOpacity="0.7" />
-          </filter>
-        </defs>
-
-        {/* ── Base map image ── */}
-        <image
-          href="/kosovo-map.png"
-          x="0" y="0"
-          width={W} height={H}
-          preserveAspectRatio="xMidYMid meet"
-        />
-
-        {/* ── Semi-transparent dark overlay to desaturate non-covered areas ── */}
-        <rect x="0" y="0" width={W} height={H} fill="#0f172a" opacity="0.35" />
-
-        {/* ── Green ellipse overlays for covered municipalities ── */}
-        {CITIES.map((c, i) => (
-          <Link key={c.name} href={`/barbershops?city=${c.name}`}>
-            <g className="cursor-pointer" role="link" aria-label={c.name}>
-
-              {/* Ellipse glow background */}
-              <ellipse
-                cx={c.cx} cy={c.cy}
-                rx={c.rx + 12} ry={c.ry + 12}
-                fill={`url(#grad-${c.name})`}
-                opacity="0.6"
-              />
-
-              {/* Main green ellipse */}
-              <ellipse
-                cx={c.cx} cy={c.cy}
-                rx={c.rx} ry={c.ry}
-                fill={`url(#grad-${c.name})`}
-                stroke="#22c55e"
-                strokeWidth="1.4"
-                strokeOpacity="0.7"
-              />
-
-              {/* Pulse ring */}
-              <circle cx={c.cx} cy={c.cy} r="10" fill="#22c55e" opacity="0.15">
-                <animate
-                  attributeName="r"
-                  values="8;18;8"
-                  dur="2.4s"
-                  repeatCount="indefinite"
-                  begin={`${i * 0.34}s`}
+              return (
+                <path
+                  key={m.shapeName}
+                  d={m.d}
+                  fill={fill}
+                  stroke={stroke}
+                  strokeWidth={isHovered ? 1.8 : 1}
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                  className={isCovered ? "cursor-pointer" : "cursor-default"}
+                  style={{ transition: "fill 0.18s, stroke-width 0.18s" }}
+                  onMouseEnter={() => setHovered(m.shapeName)}
+                  onMouseLeave={() => setHovered(null)}
+                  onClick={() => handleClick(m.displayName)}
+                  filter={isHovered && isCovered ? "url(#hoverGlow)" : undefined}
+                  aria-label={m.displayName ?? m.shapeName}
                 />
-                <animate
-                  attributeName="opacity"
-                  values="0.2;0;0.2"
-                  dur="2.4s"
-                  repeatCount="indefinite"
-                  begin={`${i * 0.34}s`}
-                />
-              </circle>
+              );
+            })}
+          </g>
 
-              {/* Core dot */}
-              <circle
-                cx={c.cx} cy={c.cy}
-                r="5"
-                fill="#4ade80"
-                stroke="#ffffff"
-                strokeWidth="1.5"
-                filter="url(#glow)"
-              />
+          {/* ── Covered city markers + labels ── */}
+          {MUNICIPALITIES.filter((m) => m.isCovered).map((m, i) => {
+            const off   = LABEL_OFFSETS[m.displayName!] ?? {};
+            const dx    = off.dx ?? 0;
+            const dy    = off.dy ?? 0;
+            const anchor = off.anchor ?? "middle";
+            const isHov  = hovered === m.shapeName;
 
-              {/* City label */}
-              <text
-                x={c.cx + (c.labelDx ?? 0)}
-                y={c.cy + (c.labelDy ?? 0)}
-                textAnchor={c.anchor ?? "middle"}
-                fontSize="12"
-                fontWeight="800"
-                fill="#ffffff"
-                filter="url(#textShadow)"
-                letterSpacing="0.2"
-                style={{ fontFamily: "Inter, sans-serif" }}
+            return (
+              <g
+                key={m.shapeName}
+                className="cursor-pointer"
+                onMouseEnter={() => setHovered(m.shapeName)}
+                onMouseLeave={() => setHovered(null)}
+                onClick={() => handleClick(m.displayName)}
               >
-                {c.name}
-              </text>
-            </g>
-          </Link>
-        ))}
-      </svg>
+                {/* Pulse ring */}
+                <circle cx={m.cx} cy={m.cy} r="10" fill="#22c55e" opacity="0">
+                  <animate
+                    attributeName="r"
+                    values="6;16;6"
+                    dur="2.5s"
+                    repeatCount="indefinite"
+                    begin={`${i * 0.36}s`}
+                  />
+                  <animate
+                    attributeName="opacity"
+                    values="0.35;0;0.35"
+                    dur="2.5s"
+                    repeatCount="indefinite"
+                    begin={`${i * 0.36}s`}
+                  />
+                </circle>
+
+                {/* Outer ring */}
+                <circle
+                  cx={m.cx} cy={m.cy} r={isHov ? 9 : 7}
+                  fill="white"
+                  opacity="0.35"
+                  style={{ transition: "r 0.15s" }}
+                />
+                {/* Core dot */}
+                <circle
+                  cx={m.cx} cy={m.cy} r={isHov ? 5.5 : 4}
+                  fill={isHov ? "#ffffff" : "#dcfce7"}
+                  stroke={isHov ? "#16a34a" : "#166534"}
+                  strokeWidth="1.5"
+                  style={{ transition: "r 0.15s" }}
+                />
+
+                {/* Label */}
+                <text
+                  x={m.cx + dx}
+                  y={m.cy + dy}
+                  textAnchor={anchor}
+                  fontSize={isHov ? "13" : "11.5"}
+                  fontWeight="800"
+                  fill="#ffffff"
+                  filter="url(#textShadow)"
+                  letterSpacing="0.3"
+                  style={{ fontFamily: "Inter, sans-serif", transition: "font-size 0.15s" }}
+                >
+                  {m.displayName}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+
+      {/* ── Tooltip for hovered covered city ── */}
+      {hovered && MUNICIPALITIES.find(m => m.shapeName === hovered)?.isCovered && (
+        <div className="mt-2 px-4 py-1.5 rounded-full bg-green-600 text-white text-sm font-semibold shadow-lg animate-in fade-in duration-150">
+          Klikoni për berberët në{" "}
+          {MUNICIPALITIES.find(m => m.shapeName === hovered)?.displayName}
+        </div>
+      )}
 
       {/* ── Legend ── */}
-      <div className="flex items-center justify-center gap-6 mt-3">
+      <div className="flex items-center justify-center gap-6 mt-4">
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_8px_2px_rgba(34,197,94,0.6)]" />
+          <div className="w-4 h-4 rounded-sm bg-green-500 border border-green-400" />
           <span className="text-xs text-muted-foreground font-medium">
             Qytete të mbuluara (7)
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-sm bg-slate-600/70 border border-slate-500" />
+          <div className="w-4 h-4 rounded-sm bg-slate-300 border border-slate-400" />
           <span className="text-xs text-muted-foreground font-medium">
             Duke ardhur së shpejti
           </span>
