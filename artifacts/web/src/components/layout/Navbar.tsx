@@ -93,8 +93,8 @@ export function Navbar() {
   const leftSections = [
     { id: "home",          label: "Home" },
     { id: "si-funksionon", label: "Si Funksionon" },
-    { id: "vleresuar",     label: "Më të vlerësuarat" },
-    { id: "pse-trim",      label: "Pse" },
+    { id: "vleresuar",     label: "Top 10 berberët" },
+    { id: "pse-trim",      label: "Pse ne" },
   ];
   const rightSections = [
     { id: "shop",         label: "Grooming Shop" },

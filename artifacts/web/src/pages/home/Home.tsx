@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useState, useEffect, useRef } from "react";
 import { useListTopBarbershops } from "@workspace/api-client-react";
+import KosovoCitiesMap from "@/components/map/KosovoCitiesMap";
 import {
   MapPin,
   Star,
@@ -1698,24 +1699,7 @@ export default function Home() {
             <p className="text-muted-foreground mt-2">Zgjedh qytetin tënd dhe rezervo ose porosit online.</p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
-            {cities.map((c, i) => (
-              <Link
-                key={c}
-                href={`/barbershops?city=${c}`}
-                className="flex flex-col items-center gap-2.5 px-3 py-5 rounded-2xl bg-card border border-border/60
-                  hover:border-primary/40 hover:bg-primary/3 transition-all duration-200 text-center group"
-              >
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                  <MapPin className="w-4 h-4 text-primary" />
-                </div>
-                <span className="text-sm font-semibold leading-tight">{c}</span>
-                <span className="text-[11px] text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity -mt-1">
-                  Zbulo →
-                </span>
-              </Link>
-            ))}
-          </div>
+          <KosovoCitiesMap />
         </div>
       </section>
 
