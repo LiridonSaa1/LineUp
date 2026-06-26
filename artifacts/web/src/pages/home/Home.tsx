@@ -923,6 +923,8 @@ function AdvertiseModal({ open, onClose }: { open: boolean; onClose: () => void 
   const [form, setForm] = useState({ business: "", contact: "", city: "", address: "", message: "" });
   const [cardholderName, setCardholderName] = useState("");
   const [cardError, setCardError] = useState("");
+  const [stripeReady, setStripeReady] = useState(false);
+  const [stripeInitError, setStripeInitError] = useState("");
   const cardContainerRef = useRef<HTMLDivElement>(null);
   const stripeRef = useRef<any>(null);
   const cardRef = useRef<any>(null);
@@ -933,45 +935,65 @@ function AdvertiseModal({ open, onClose }: { open: boolean; onClose: () => void 
   useEffect(() => {
     if (!open || step !== "pay") return;
 
+    setStripeReady(false);
+    setStripeInitError("");
+
     let mounted = true;
-    let card: any;
 
     (async () => {
       try {
         if (!stripeRef.current) {
           const cfg = await fetch("/api/payments/stripe-config").then(r => r.json());
-          if (!cfg.publishableKey) return;
+          if (!cfg.publishableKey) throw new Error("Publishable key mungon");
           const { loadStripe } = await import("@stripe/stripe-js");
           stripeRef.current = await loadStripe(cfg.publishableKey);
+          if (!stripeRef.current) throw new Error("loadStripe ktheu null");
         }
-        if (!mounted || !cardContainerRef.current) return;
+
+        if (!mounted) return;
+
+        // Wait one tick to ensure the container ref is in the DOM
+        await new Promise(r => setTimeout(r, 50));
+        if (!mounted || !cardContainerRef.current) throw new Error("Kontaineri nuk u gjet");
+
+        // Destroy previous card instance if any
+        if (cardRef.current) {
+          cardRef.current.unmount();
+          cardRef.current = null;
+        }
 
         const elements = stripeRef.current.elements();
-        card = elements.create("card", {
+        const card = elements.create("card", {
           hidePostalCode: true,
           style: {
             base: {
               fontSize: "15px",
               fontFamily: "Inter, sans-serif",
-              color: "hsl(0 0% 90%)",
-              "::placeholder": { color: "hsl(0 0% 45%)" },
-              iconColor: "hsl(0 0% 60%)",
+              color: "#e5e7eb",
+              "::placeholder": { color: "#6b7280" },
+              iconColor: "#9ca3af",
             },
             invalid: { color: "#f87171", iconColor: "#f87171" },
           },
         });
+
         card.mount(cardContainerRef.current);
         card.on("change", (e: any) => setCardError(e.error?.message ?? ""));
         cardRef.current = card;
-      } catch {
-        /* ignore load errors */
+
+        if (mounted) setStripeReady(true);
+      } catch (err: any) {
+        if (mounted) setStripeInitError(err.message ?? "Stripe nuk u ngarkua");
       }
     })();
 
     return () => {
       mounted = false;
-      card?.unmount();
-      cardRef.current = null;
+      if (cardRef.current) {
+        cardRef.current.unmount();
+        cardRef.current = null;
+      }
+      setStripeReady(false);
     };
   }, [open, step]);
 
@@ -1144,6 +1166,14 @@ function AdvertiseModal({ open, onClose }: { open: boolean; onClose: () => void 
                 </div>
               </div>
 
+              {/* Stripe init error */}
+              {stripeInitError && (
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/30">
+                  <span className="text-red-500 text-sm">⚠</span>
+                  <p className="text-xs text-red-400">{stripeInitError}</p>
+                </div>
+              )}
+
               {/* Card inputs */}
               <div className="space-y-3">
                 <div>
@@ -1157,20 +1187,25 @@ function AdvertiseModal({ open, onClose }: { open: boolean; onClose: () => void 
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Të dhënat e kartës</label>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                    Të dhënat e kartës
+                    {!stripeReady && !stripeInitError && (
+                      <span className="ml-2 text-muted-foreground font-normal">— duke ngarkuar...</span>
+                    )}
+                  </label>
+                  {/* Stripe mounts its iframe directly into this div — no flex/items-center */}
                   <div
                     ref={cardContainerRef}
-                    className="h-11 px-3 flex items-center rounded-xl border border-input bg-background focus-within:ring-2 focus-within:ring-primary/30 transition-shadow"
+                    className="rounded-xl border border-input bg-background px-3 py-3 transition-shadow focus-within:ring-2 focus-within:ring-primary/30"
+                    style={{ minHeight: "44px" }}
                   />
                   {cardError && (
-                    <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                      <span>⚠</span> {cardError}
-                    </p>
+                    <p className="text-xs text-red-500 mt-1">⚠ {cardError}</p>
                   )}
                 </div>
 
                 <p className="text-[10px] text-muted-foreground">
-                  Numri i kartës · Data e skadimit · CVC · Zip (opsional)
+                  Numri i kartës · Data e skadimit · CVC
                 </p>
               </div>
 
