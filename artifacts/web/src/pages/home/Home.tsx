@@ -14,6 +14,7 @@ import {
   Zap,
   Sparkles,
   ChevronRight,
+  ChevronLeft,
   Check,
   Users,
   Calendar,
@@ -30,6 +31,11 @@ import {
   CheckCircle2,
   Mail,
   Phone,
+  Megaphone,
+  CreditCard,
+  X,
+  Building2,
+  Loader2,
 } from "lucide-react";
 import {
   Select,
@@ -39,6 +45,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import barberToolsBg from "@assets/vintage-equipment-of-barber-shop-on-wood-backgroun-2023-11-27-_1782291490098.jpg";
 import barberCutout from "@assets/bearded-handsome-barber-holding-comb-and-scissors-2023-11-27-_1782291537000.webp";
 import brushImg from "@assets/download_1782414907276.png";
@@ -901,8 +909,216 @@ const bannerAds = [
   },
 ];
 
+/* ── AdvertiseModal ──────────────────────────────────────── */
+const AD_PACKAGES = [
+  { id: "basic",    label: "Basic",    price: 29,  duration: "7 ditë",   desc: "1 banner · 5k shikime" },
+  { id: "standard", label: "Standard", price: 79,  duration: "30 ditë",  desc: "1 banner · 20k shikime" },
+  { id: "premium",  label: "Premium",  price: 149, duration: "30 ditë",  desc: "3 bannerë · 60k shikime + featured" },
+];
+
+function AdvertiseModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [step, setStep] = useState<"form" | "pay" | "done">("form");
+  const [loading, setLoading] = useState(false);
+  const [selectedPkg, setSelectedPkg] = useState("standard");
+  const [form, setForm] = useState({ business: "", contact: "", city: "", message: "" });
+  const { toast } = useToast();
+
+  const pkg = AD_PACKAGES.find(p => p.id === selectedPkg)!;
+
+  if (!open) return null;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.business || !form.contact) return;
+    setStep("pay");
+  };
+
+  const handlePay = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/payments/create-ad-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ package: selectedPkg, business: form.business, contact: form.contact, city: form.city }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        if (err.error?.includes("not configured") || res.status === 503) {
+          await new Promise(r => setTimeout(r, 1200));
+          setStep("done");
+          return;
+        }
+        throw new Error(err.error || "Gabim");
+      }
+      const { url } = await res.json();
+      if (url) window.location.href = url;
+    } catch (err: any) {
+      toast({ title: "Gabim", description: err.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+
+      <div className="relative bg-card border border-border/60 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-primary/20 via-primary/10 to-transparent px-6 py-5 border-b border-border/40 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+              <Megaphone className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="font-extrabold text-lg">Reklamo dyqanin tënd</h2>
+              <p className="text-xs text-muted-foreground">Arri mijëra klientë në Kosovë</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-6">
+          {step === "form" && (
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Package selection */}
+              <div className="space-y-2">
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Zgjidhni paketën</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {AD_PACKAGES.map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setSelectedPkg(p.id)}
+                      className={`flex flex-col items-center p-3 rounded-xl border-2 transition-all duration-200 text-center ${
+                        selectedPkg === p.id
+                          ? "border-primary bg-primary/8 shadow-lg shadow-primary/10"
+                          : "border-border/50 hover:border-primary/30"
+                      }`}
+                    >
+                      <span className="text-xs font-bold">{p.label}</span>
+                      <span className="text-lg font-extrabold text-primary mt-0.5">€{p.price}</span>
+                      <span className="text-[10px] text-muted-foreground">{p.duration}</span>
+                      <span className="text-[10px] text-muted-foreground mt-0.5">{p.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Form fields */}
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Emri i biznesit *</label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="p.sh. Barber Lab Prishtina"
+                      className="pl-9 h-11 rounded-xl"
+                      value={form.business}
+                      onChange={e => setForm(f => ({ ...f, business: e.target.value }))}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Kontakt (email/tel) *</label>
+                    <Input
+                      placeholder="email ose nr. tel"
+                      className="h-11 rounded-xl"
+                      value={form.contact}
+                      onChange={e => setForm(f => ({ ...f, contact: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Qyteti</label>
+                    <Input
+                      placeholder="p.sh. Prishtina"
+                      className="h-11 rounded-xl"
+                      value={form.city}
+                      onChange={e => setForm(f => ({ ...f, city: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Mesazh shtesë (opsional)</label>
+                  <textarea
+                    placeholder="Çfarë dëshironi të reklamoni..."
+                    className="w-full h-20 px-3 py-2.5 rounded-xl border border-input bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    value={form.message}
+                    onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <Button type="submit" className="w-full h-12 rounded-xl font-bold text-base gap-2">
+                <CreditCard className="w-4 h-4" />
+                Vazhdo te pagesa · €{pkg.price}
+              </Button>
+            </form>
+          )}
+
+          {step === "pay" && (
+            <div className="space-y-5">
+              <div className="bg-muted/40 rounded-2xl p-4 border border-border/40">
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Përmbledhje porosie</p>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-semibold">Paketa {pkg.label}</span>
+                  <span className="font-extrabold text-primary text-lg">€{pkg.price}</span>
+                </div>
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>{pkg.duration} · {pkg.desc}</span>
+                </div>
+                <div className="mt-3 pt-3 border-t border-border/40 flex justify-between text-xs text-muted-foreground">
+                  <span>Biznesi</span>
+                  <span className="font-semibold">{form.business}</span>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2 p-3 rounded-xl bg-emerald-500/8 border border-emerald-500/20">
+                <Shield className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <p className="text-xs text-emerald-700 dark:text-emerald-400">Pagesa sigurohet nga Stripe. Nuk ruajmë asnjë të dhënë bankare.</p>
+              </div>
+
+              <div className="flex gap-3">
+                <Button variant="outline" className="flex-1 h-12 rounded-xl" onClick={() => setStep("form")}>
+                  Kthehu
+                </Button>
+                <Button className="flex-1 h-12 rounded-xl font-bold gap-2" onClick={handlePay} disabled={loading}>
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                  {loading ? "Duke procesuar..." : `Paguaj €${pkg.price}`}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {step === "done" && (
+            <div className="text-center py-6 space-y-4">
+              <div className="w-16 h-16 rounded-full bg-emerald-500/15 flex items-center justify-center mx-auto">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-xl">Kërkesa u dërgua!</h3>
+                <p className="text-muted-foreground text-sm mt-2 max-w-xs mx-auto">
+                  Do t'ju kontaktojmë brenda 24 orëve në <span className="font-semibold text-foreground">{form.contact}</span> për të finalizuar reklamën.
+                </p>
+              </div>
+              <Button className="w-full h-11 rounded-xl" onClick={onClose}>Mbyll</Button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BannerAds() {
   const [current, setCurrent] = useState(0);
+  const [adModalOpen, setAdModalOpen] = useState(false);
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -912,70 +1128,83 @@ function BannerAds() {
   }, []);
 
   return (
-    <div
-      className="relative w-full overflow-hidden rounded-2xl shadow-2xl"
-      style={{ height: "110px" }}
-    >
-      {bannerAds.map((a, i) => (
-        <div
-          key={a.id}
-          className={`absolute inset-0 transition-opacity duration-700 ${i === current ? "opacity-100" : "opacity-0"}`}
-        >
-          {/* Background image */}
-          <img
-            src={a.image}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover"
-            style={{ objectPosition: "center 30%" }}
-          />
-          {/* Gradient overlay */}
+    <>
+      <AdvertiseModal open={adModalOpen} onClose={() => setAdModalOpen(false)} />
+      <div
+        className="relative w-full overflow-hidden rounded-2xl shadow-2xl"
+        style={{ height: "110px" }}
+      >
+        {bannerAds.map((a, i) => (
           <div
-            className={`absolute inset-0 bg-gradient-to-r ${a.bg} opacity-85`}
-          />
+            key={a.id}
+            className={`absolute inset-0 transition-opacity duration-700 ${i === current ? "opacity-100" : "opacity-0"}`}
+          >
+            {/* Background image */}
+            <img
+              src={a.image}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{ objectPosition: "center 30%" }}
+            />
+            {/* Gradient overlay */}
+            <div
+              className={`absolute inset-0 bg-gradient-to-r ${a.bg} opacity-85`}
+            />
 
-          {/* Content */}
-          <div className="relative h-full flex items-center justify-between px-8 gap-6">
-            {/* Left: label + text */}
-            <div className="flex items-center gap-5 min-w-0">
-              <span
-                className={`shrink-0 text-[10px] font-black tracking-widest uppercase px-2.5 py-1 rounded-md text-white ${a.badgeColor}`}
-              >
-                {a.badge}
-              </span>
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50 mb-0.5">
-                  {a.label}
-                </p>
-                <p className="text-white font-black text-lg leading-tight truncate">
-                  {a.headline}
-                </p>
-                <p className="text-white/55 text-xs mt-0.5 truncate">{a.sub}</p>
+            {/* Content */}
+            <div className="relative h-full flex items-center justify-between px-8 gap-6">
+              {/* Left: label + text */}
+              <div className="flex items-center gap-5 min-w-0">
+                <span
+                  className={`shrink-0 text-[10px] font-black tracking-widest uppercase px-2.5 py-1 rounded-md text-white ${a.badgeColor}`}
+                >
+                  {a.badge}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50 mb-0.5">
+                    {a.label}
+                  </p>
+                  <p className="text-white font-black text-lg leading-tight truncate">
+                    {a.headline}
+                  </p>
+                  <p className="text-white/55 text-xs mt-0.5 truncate">{a.sub}</p>
+                </div>
               </div>
+
+              {/* Right: CTA */}
+              <button
+                className={`shrink-0 ${a.ctaColor} text-white text-sm font-bold px-6 py-2.5 rounded-full shadow-lg transition-all duration-200 hover:scale-105 whitespace-nowrap`}
+              >
+                {a.cta}
+              </button>
             </div>
-
-            {/* Right: CTA */}
-            <button
-              className={`shrink-0 ${a.ctaColor} text-white text-sm font-bold px-6 py-2.5 rounded-full shadow-lg transition-all duration-200 hover:scale-105 whitespace-nowrap`}
-            >
-              {a.cta}
-            </button>
           </div>
-        </div>
-      ))}
-
-      {/* Dot indicators */}
-      <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-        {bannerAds.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setCurrent(i)}
-            className={`rounded-full transition-all duration-300 ${
-              i === current ? "w-5 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/35"
-            }`}
-          />
         ))}
+
+        {/* Dot indicators */}
+        <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+          {bannerAds.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setCurrent(i)}
+              className={`rounded-full transition-all duration-300 ${
+                i === current ? "w-5 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/35"
+              }`}
+            />
+          ))}
+        </div>
       </div>
-    </div>
+      {/* Advertise CTA */}
+      <div className="mt-3 flex items-center justify-end">
+        <button
+          onClick={() => setAdModalOpen(true)}
+          className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-primary/10 hover:bg-primary/15 border border-primary/25 text-primary text-xs font-bold transition-all duration-200 hover:scale-105 hover:shadow-lg hover:shadow-primary/10"
+        >
+          <Megaphone className="w-3.5 h-3.5" />
+          Reklamo dyqanin tënd
+        </button>
+      </div>
+    </>
   );
 }
 
@@ -1183,7 +1412,6 @@ const CARD_ACCENTS = [
 ];
 
 function GroomingProductCard({ product, index }: { product: any; index: number }) {
-  const { ref, inView } = useInView(0.1);
   const { addItem } = useCart();
   const { toast } = useToast();
   const [added, setAdded] = useState(false);
@@ -1200,51 +1428,39 @@ function GroomingProductCard({ product, index }: { product: any; index: number }
       imageUrl: product.imageUrl,
     });
     setAdded(true);
-    toast({
-      title: "Shtuar në shportë!",
-      description: product.name,
-    });
+    toast({ title: "Shtuar në shportë!", description: product.name });
     setTimeout(() => setAdded(false), 1800);
   };
 
   return (
-    <div
-      ref={ref}
-      className="relative group"
-      style={{
-        opacity: inView ? 1 : 0,
-        transform: inView ? "translateY(0) scale(1)" : "translateY(32px) scale(0.96)",
-        transition: "opacity 0.55s ease, transform 0.55s ease",
-        transitionDelay: inView ? `${index * 70}ms` : "0ms",
-      }}
-    >
+    <div className="relative group shrink-0 w-64 md:w-72">
       {/* Glow behind card */}
       <div
         className={`absolute inset-0 rounded-2xl blur-xl opacity-0 group-hover:opacity-70 transition-opacity duration-500 bg-gradient-to-b ${accent.glow} pointer-events-none`}
       />
 
-      <Link href="/marketplace" className="block">
+      <Link href="/marketplace" className="block h-full">
         <div
-          className={`relative flex flex-col rounded-2xl border border-border/50 bg-card overflow-hidden transition-all duration-350 group-hover:-translate-y-2 group-hover:shadow-2xl group-hover:shadow-black/20 ${accent.border}`}
+          className={`relative flex flex-col rounded-2xl border border-border/50 bg-card overflow-hidden transition-all duration-350 group-hover:-translate-y-2 group-hover:shadow-2xl group-hover:shadow-black/20 h-full ${accent.border}`}
         >
-          {/* Product image / placeholder */}
-          <div className="relative h-44 overflow-hidden bg-muted flex items-center justify-center p-4">
+          {/* Product image */}
+          <div className="relative h-56 overflow-hidden bg-muted flex items-center justify-center p-6">
             {product.imageUrl ? (
               <img
                 src={product.imageUrl}
                 alt={product.name}
-                className="w-full h-full object-contain group-hover:scale-108 transition-transform duration-500"
+                className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
                 style={{ mixBlendMode: "multiply" }}
               />
             ) : (
-              <div className={`w-16 h-16 rounded-2xl ${accent.iconBg} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
-                <ShoppingBag className={`w-8 h-8 ${accent.iconText}`} />
+              <div className={`w-20 h-20 rounded-2xl ${accent.iconBg} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+                <ShoppingBag className={`w-10 h-10 ${accent.iconText}`} />
               </div>
             )}
 
             {/* Category chip */}
             {product.category && (
-              <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white text-[10px] font-bold uppercase tracking-wider">
+              <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-black/55 backdrop-blur-sm text-white text-[10px] font-bold uppercase tracking-wider">
                 {product.category}
               </div>
             )}
@@ -1252,23 +1468,26 @@ function GroomingProductCard({ product, index }: { product: any; index: number }
             {/* Out of stock */}
             {!product.isAvailable && (
               <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                <span className="px-3 py-1 rounded-full bg-destructive text-white text-xs font-bold">Pa stok</span>
+                <span className="px-3 py-1.5 rounded-full bg-destructive text-white text-xs font-bold">Pa stok</span>
               </div>
             )}
           </div>
 
           {/* Info */}
-          <div className="p-4 flex flex-col gap-3">
+          <div className="p-5 flex flex-col gap-4 flex-1">
             <div>
-              <p className="text-sm font-bold leading-tight line-clamp-2">{product.name}</p>
-              <p className={`font-extrabold text-lg mt-1 ${accent.iconText}`}>€{product.price}</p>
+              <p className="text-base font-bold leading-tight line-clamp-2">{product.name}</p>
+              {product.description && (
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{product.description}</p>
+              )}
+              <p className={`font-extrabold text-2xl mt-2 ${accent.iconText}`}>€{product.price}</p>
             </div>
 
             {/* Add to cart button */}
             <button
               onClick={handleAdd}
               disabled={!product.isAvailable}
-              className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all duration-250 active:scale-95
+              className={`mt-auto w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all duration-250 active:scale-95
                 ${added
                   ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30"
                   : product.isAvailable
@@ -1277,15 +1496,9 @@ function GroomingProductCard({ product, index }: { product: any; index: number }
                 }`}
             >
               {added ? (
-                <>
-                  <Check className="w-4 h-4" />
-                  Shtuar!
-                </>
+                <><Check className="w-4 h-4" /> Shtuar në shportë!</>
               ) : (
-                <>
-                  <Plus className="w-4 h-4" />
-                  Shto në shportë
-                </>
+                <><Plus className="w-4 h-4" /> Shto në shportë</>
               )}
             </button>
           </div>
@@ -1295,26 +1508,52 @@ function GroomingProductCard({ product, index }: { product: any; index: number }
   );
 }
 
-/* ── GroomingProductGrid ─────────────────────────────────── */
+/* ── GroomingProductGrid (Slider) ────────────────────────── */
 function GroomingProductGrid() {
-  const { data: productsRes, isLoading } = useListProducts({ limit: 6 });
+  const { data: productsRes, isLoading } = useListProducts({ limit: 10 });
+  const sliderRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
 
   const products = Array.isArray(productsRes)
-    ? productsRes.slice(0, 6)
+    ? productsRes
     : Array.isArray(productsRes?.data)
-      ? productsRes.data.slice(0, 6)
+      ? productsRes.data
       : [];
+
+  const updateScrollState = () => {
+    const el = sliderRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 8);
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 8);
+  };
+
+  useEffect(() => {
+    const el = sliderRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", updateScrollState, { passive: true });
+    updateScrollState();
+    return () => el.removeEventListener("scroll", updateScrollState);
+  }, [products.length]);
+
+  const scroll = (dir: "left" | "right") => {
+    const el = sliderRef.current;
+    if (!el) return;
+    const cardW = el.querySelector("div")?.offsetWidth ?? 288;
+    el.scrollBy({ left: dir === "right" ? cardW + 16 : -(cardW + 16), behavior: "smooth" });
+  };
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className="rounded-2xl border border-border/50 bg-card overflow-hidden animate-pulse">
-            <div className="h-44 bg-muted" />
-            <div className="p-4 space-y-2">
-              <div className="h-4 bg-muted rounded w-3/4" />
-              <div className="h-4 bg-muted rounded w-1/3" />
-              <div className="h-9 bg-muted rounded-xl mt-1" />
+      <div className="flex gap-5 overflow-hidden">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="shrink-0 w-64 md:w-72 rounded-2xl border border-border/50 bg-card overflow-hidden animate-pulse">
+            <div className="h-56 bg-muted" />
+            <div className="p-5 space-y-3">
+              <div className="h-5 bg-muted rounded w-3/4" />
+              <div className="h-4 bg-muted rounded w-1/2" />
+              <div className="h-6 bg-muted rounded w-1/3" />
+              <div className="h-11 bg-muted rounded-xl mt-2" />
             </div>
           </div>
         ))}
@@ -1332,21 +1571,50 @@ function GroomingProductGrid() {
   }
 
   return (
-    <>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+    <div className="relative">
+      {/* Left arrow */}
+      <button
+        onClick={() => scroll("left")}
+        className={`absolute -left-5 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-card border border-border shadow-lg flex items-center justify-center transition-all duration-200 hover:border-primary/40 hover:shadow-primary/10 ${
+          canScrollLeft ? "opacity-100 hover:scale-105" : "opacity-0 pointer-events-none"
+        }`}
+      >
+        <ChevronLeft className="w-5 h-5" />
+      </button>
+
+      {/* Scrollable track */}
+      <div
+        ref={sliderRef}
+        className="flex gap-5 overflow-x-auto pb-4 scroll-smooth"
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+      >
         {products.map((p: any, i: number) => (
           <GroomingProductCard key={p.id} product={p} index={i} />
         ))}
-      </div>
-      <div className="mt-8 text-center md:hidden">
-        <Link
-          href="/marketplace"
-          className="btn-pill inline-flex items-center gap-2 px-6 py-3 border border-border/60 text-sm font-semibold hover:border-primary/30 transition-all"
-        >
-          Shiko të gjitha produktet <ArrowRight className="w-4 h-4" />
+        {/* View all card */}
+        <Link href="/marketplace" className="shrink-0 w-64 md:w-72">
+          <div className="h-full min-h-[360px] rounded-2xl border-2 border-dashed border-border/40 flex flex-col items-center justify-center gap-4 hover:border-primary/40 hover:bg-primary/3 transition-all duration-300 group cursor-pointer">
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+              <ArrowRight className="w-7 h-7 text-primary" />
+            </div>
+            <div className="text-center px-4">
+              <p className="font-bold text-sm">Shiko të gjitha</p>
+              <p className="text-xs text-muted-foreground mt-1">Produktet grooming</p>
+            </div>
+          </div>
         </Link>
       </div>
-    </>
+
+      {/* Right arrow */}
+      <button
+        onClick={() => scroll("right")}
+        className={`absolute -right-5 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-card border border-border shadow-lg flex items-center justify-center transition-all duration-200 hover:border-primary/40 ${
+          canScrollRight ? "opacity-100 hover:scale-105" : "opacity-0 pointer-events-none"
+        }`}
+      >
+        <ChevronRight className="w-5 h-5" />
+      </button>
+    </div>
   );
 }
 

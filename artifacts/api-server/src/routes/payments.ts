@@ -105,6 +105,60 @@ router.post("/payments/create-checkout", requireAuth, async (req: AuthRequest, r
   res.json({ sessionId: session.id, url: session.url });
 });
 
+const AD_PACKAGE_PRICES: Record<string, number> = {
+  basic: 2900,
+  standard: 7900,
+  premium: 14900,
+};
+
+const AD_PACKAGE_NAMES: Record<string, string> = {
+  basic: "Paketë Reklame Basic (7 ditë)",
+  standard: "Paketë Reklame Standard (30 ditë)",
+  premium: "Paketë Reklame Premium (30 ditë)",
+};
+
+router.post("/payments/create-ad-checkout", async (req, res): Promise<void> => {
+  const { package: pkg, business, contact, city } = req.body;
+  const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+  if (!STRIPE_SECRET_KEY) {
+    res.status(503).json({ error: "Stripe not configured. Please add STRIPE_SECRET_KEY to environment." }); return;
+  }
+  const amountCents = AD_PACKAGE_PRICES[pkg];
+  if (!amountCents) { res.status(400).json({ error: "Invalid package" }); return; }
+
+  const domains = process.env.REPLIT_DOMAINS?.split(",")[0] ?? "localhost";
+  const protocol = domains.includes("localhost") ? "http" : "https";
+  const baseUrl = `${protocol}://${domains}`;
+
+  const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      mode: "payment",
+      "line_items[0][price_data][currency]": "eur",
+      "line_items[0][price_data][product_data][name]": AD_PACKAGE_NAMES[pkg] ?? "Paketë Reklame",
+      "line_items[0][price_data][product_data][description]": `Biznesi: ${business} · Kontakt: ${contact}${city ? ` · Qyteti: ${city}` : ""}`,
+      "line_items[0][price_data][unit_amount]": amountCents.toString(),
+      "line_items[0][quantity]": "1",
+      success_url: `${baseUrl}/?ad_success=true`,
+      cancel_url: `${baseUrl}/`,
+      "metadata[ad_package]": pkg,
+      "metadata[business]": business,
+      "metadata[contact]": contact,
+    }),
+  });
+  if (!stripeRes.ok) {
+    const err = await stripeRes.json() as any;
+    logger.error({ err }, "Stripe error creating ad checkout");
+    res.status(500).json({ error: "Failed to create Stripe session" }); return;
+  }
+  const session = await stripeRes.json() as any;
+  res.json({ sessionId: session.id, url: session.url });
+});
+
 router.post("/payments/webhook", async (req, res): Promise<void> => {
   const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
   logger.info("Stripe webhook received");
