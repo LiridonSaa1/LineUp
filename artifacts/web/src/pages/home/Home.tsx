@@ -1024,12 +1024,16 @@ function AdvertiseModal({ open, onClose }: { open: boolean; onClose: () => void 
         }),
       });
 
+      const body = await res.text();
+      let data: any = {};
+      try { data = JSON.parse(body); } catch {}
+
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Gabim gjatë krijimit të pagesës");
+        throw new Error(data?.error || `Gabim i serverit (${res.status})`);
       }
 
-      const { clientSecret } = await res.json();
+      const clientSecret: string = data?.clientSecret;
+      if (!clientSecret) throw new Error("Nuk u mor clientSecret nga serveri");
 
       const { error, paymentIntent } = await stripeRef.current.confirmCardPayment(clientSecret, {
         payment_method: {

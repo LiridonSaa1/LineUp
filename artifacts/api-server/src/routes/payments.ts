@@ -34,37 +34,44 @@ router.post("/payments/create-subscription", requireAuth, requireRole("owner"), 
   if (!STRIPE_SECRET_KEY) {
     res.status(503).json({ error: "Stripe not configured. Please add STRIPE_SECRET_KEY to environment." }); return;
   }
-  const [shop] = await db.select().from(barbershopsTable).where(eq(barbershopsTable.id, shopId));
-  if (!shop) { res.status(404).json({ error: "Shop not found" }); return; }
-  const domains = process.env.REPLIT_DOMAINS?.split(",")[0] ?? "localhost";
-  const protocol = domains.includes("localhost") ? "http" : "https";
-  const baseUrl = `${protocol}://${domains}`;
+  try {
+    const [shop] = await db.select().from(barbershopsTable).where(eq(barbershopsTable.id, shopId));
+    if (!shop) { res.status(404).json({ error: "Shop not found" }); return; }
+    const domains = process.env.REPLIT_DOMAINS?.split(",")[0] ?? "localhost";
+    const protocol = domains.includes("localhost") ? "http" : "https";
+    const baseUrl = `${protocol}://${domains}`;
 
-  const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({
-      mode: "subscription",
-      "line_items[0][price_data][currency]": "eur",
-      "line_items[0][price_data][product_data][name]": "Barbershop Monthly Subscription",
-      "line_items[0][price_data][recurring][interval]": "month",
-      "line_items[0][price_data][unit_amount]": "1000",
-      "line_items[0][quantity]": "1",
-      success_url: `${baseUrl}/dashboard/subscription?success=true`,
-      cancel_url: `${baseUrl}/dashboard/subscription?cancelled=true`,
-      "metadata[shopId]": shopId.toString(),
-    }),
-  });
-  if (!stripeRes.ok) {
-    const err = await stripeRes.json();
-    logger.error({ err }, "Stripe error creating subscription");
-    res.status(500).json({ error: "Failed to create Stripe session" }); return;
+    const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        mode: "subscription",
+        "line_items[0][price_data][currency]": "eur",
+        "line_items[0][price_data][product_data][name]": "Barbershop Monthly Subscription",
+        "line_items[0][price_data][recurring][interval]": "month",
+        "line_items[0][price_data][unit_amount]": "1000",
+        "line_items[0][quantity]": "1",
+        success_url: `${baseUrl}/dashboard/subscription?success=true`,
+        cancel_url: `${baseUrl}/dashboard/subscription?cancelled=true`,
+        "metadata[shopId]": shopId.toString(),
+      }),
+    });
+    const stripeBody = await stripeRes.text();
+    if (!stripeRes.ok) {
+      let err: any = {};
+      try { err = JSON.parse(stripeBody); } catch {}
+      logger.error({ err }, "Stripe error creating subscription");
+      res.status(500).json({ error: err?.error?.message ?? "Failed to create Stripe session" }); return;
+    }
+    const session = JSON.parse(stripeBody);
+    res.json({ sessionId: session.id, url: session.url });
+  } catch (err: any) {
+    logger.error({ err }, "Unexpected error creating subscription");
+    res.status(500).json({ error: err?.message ?? "Internal error" });
   }
-  const session = await stripeRes.json() as any;
-  res.json({ sessionId: session.id, url: session.url });
 });
 
 router.post("/payments/create-checkout", requireAuth, async (req: AuthRequest, res): Promise<void> => {
@@ -73,36 +80,43 @@ router.post("/payments/create-checkout", requireAuth, async (req: AuthRequest, r
   if (!STRIPE_SECRET_KEY) {
     res.status(503).json({ error: "Stripe not configured. Please add STRIPE_SECRET_KEY to environment." }); return;
   }
-  const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId));
-  if (!order) { res.status(404).json({ error: "Order not found" }); return; }
-  const domains = process.env.REPLIT_DOMAINS?.split(",")[0] ?? "localhost";
-  const protocol = domains.includes("localhost") ? "http" : "https";
-  const baseUrl = `${protocol}://${domains}`;
+  try {
+    const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId));
+    if (!order) { res.status(404).json({ error: "Order not found" }); return; }
+    const domains = process.env.REPLIT_DOMAINS?.split(",")[0] ?? "localhost";
+    const protocol = domains.includes("localhost") ? "http" : "https";
+    const baseUrl = `${protocol}://${domains}`;
 
-  const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({
-      mode: "payment",
-      "line_items[0][price_data][currency]": "eur",
-      "line_items[0][price_data][product_data][name]": `Order #${orderId}`,
-      "line_items[0][price_data][unit_amount]": Math.round(parseFloat(order.totalAmount) * 100).toString(),
-      "line_items[0][quantity]": "1",
-      success_url: `${baseUrl}/orders?success=true`,
-      cancel_url: `${baseUrl}/orders`,
-      "metadata[orderId]": orderId.toString(),
-    }),
-  });
-  if (!stripeRes.ok) {
-    const err = await stripeRes.json();
-    logger.error({ err }, "Stripe error creating checkout");
-    res.status(500).json({ error: "Failed to create Stripe session" }); return;
+    const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        mode: "payment",
+        "line_items[0][price_data][currency]": "eur",
+        "line_items[0][price_data][product_data][name]": `Order #${orderId}`,
+        "line_items[0][price_data][unit_amount]": Math.round(parseFloat(order.totalAmount) * 100).toString(),
+        "line_items[0][quantity]": "1",
+        success_url: `${baseUrl}/orders?success=true`,
+        cancel_url: `${baseUrl}/orders`,
+        "metadata[orderId]": orderId.toString(),
+      }),
+    });
+    const stripeBody = await stripeRes.text();
+    if (!stripeRes.ok) {
+      let err: any = {};
+      try { err = JSON.parse(stripeBody); } catch {}
+      logger.error({ err }, "Stripe error creating checkout");
+      res.status(500).json({ error: err?.error?.message ?? "Failed to create Stripe session" }); return;
+    }
+    const session = JSON.parse(stripeBody);
+    res.json({ sessionId: session.id, url: session.url });
+  } catch (err: any) {
+    logger.error({ err }, "Unexpected error creating checkout");
+    res.status(500).json({ error: err?.message ?? "Internal error" });
   }
-  const session = await stripeRes.json() as any;
-  res.json({ sessionId: session.id, url: session.url });
 });
 
 const AD_PACKAGE_PRICES: Record<string, number> = {
@@ -131,31 +145,37 @@ router.post("/payments/create-ad-payment-intent", async (req, res): Promise<void
   }
   const amountCents = AD_PACKAGE_PRICES[pkg];
   if (!amountCents) { res.status(400).json({ error: "Invalid package" }); return; }
-
-  const stripeRes = await fetch("https://api.stripe.com/v1/payment_intents", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({
-      amount: amountCents.toString(),
-      currency: "eur",
-      "payment_method_types[]": "card",
-      "metadata[ad_package]": pkg ?? "",
-      "metadata[business]": business ?? "",
-      "metadata[contact]": contact ?? "",
-      "metadata[city]": city ?? "",
-      "metadata[address]": address ?? "",
-    }),
-  });
-  if (!stripeRes.ok) {
-    const err = await stripeRes.json() as any;
-    logger.error({ err }, "Stripe error creating PaymentIntent for ad");
-    res.status(500).json({ error: "Failed to create payment" }); return;
+  try {
+    const stripeRes = await fetch("https://api.stripe.com/v1/payment_intents", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        amount: amountCents.toString(),
+        currency: "eur",
+        "payment_method_types[]": "card",
+        "metadata[ad_package]": pkg ?? "",
+        "metadata[business]": business ?? "",
+        "metadata[contact]": contact ?? "",
+        "metadata[city]": city ?? "",
+        "metadata[address]": address ?? "",
+      }),
+    });
+    const stripeBody = await stripeRes.text();
+    if (!stripeRes.ok) {
+      let err: any = {};
+      try { err = JSON.parse(stripeBody); } catch {}
+      logger.error({ err }, "Stripe error creating PaymentIntent for ad");
+      res.status(500).json({ error: err?.error?.message ?? "Failed to create payment" }); return;
+    }
+    const intent = JSON.parse(stripeBody);
+    res.json({ clientSecret: intent.client_secret });
+  } catch (err: any) {
+    logger.error({ err }, "Unexpected error creating ad payment intent");
+    res.status(500).json({ error: err?.message ?? "Internal error" });
   }
-  const intent = await stripeRes.json() as any;
-  res.json({ clientSecret: intent.client_secret });
 });
 
 router.post("/payments/create-ad-checkout", async (req, res): Promise<void> => {
@@ -166,38 +186,44 @@ router.post("/payments/create-ad-checkout", async (req, res): Promise<void> => {
   }
   const amountCents = AD_PACKAGE_PRICES[pkg];
   if (!amountCents) { res.status(400).json({ error: "Invalid package" }); return; }
+  try {
+    const domains = process.env.REPLIT_DOMAINS?.split(",")[0] ?? "localhost";
+    const protocol = domains.includes("localhost") ? "http" : "https";
+    const baseUrl = `${protocol}://${domains}`;
 
-  const domains = process.env.REPLIT_DOMAINS?.split(",")[0] ?? "localhost";
-  const protocol = domains.includes("localhost") ? "http" : "https";
-  const baseUrl = `${protocol}://${domains}`;
-
-  const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({
-      mode: "payment",
-      "line_items[0][price_data][currency]": "eur",
-      "line_items[0][price_data][product_data][name]": AD_PACKAGE_NAMES[pkg] ?? "Paketë Reklame",
-      "line_items[0][price_data][product_data][description]": `Biznesi: ${business} · Kontakt: ${contact}${city ? ` · Qyteti: ${city}` : ""}`,
-      "line_items[0][price_data][unit_amount]": amountCents.toString(),
-      "line_items[0][quantity]": "1",
-      success_url: `${baseUrl}/?ad_success=true`,
-      cancel_url: `${baseUrl}/`,
-      "metadata[ad_package]": pkg,
-      "metadata[business]": business,
-      "metadata[contact]": contact,
-    }),
-  });
-  if (!stripeRes.ok) {
-    const err = await stripeRes.json() as any;
-    logger.error({ err }, "Stripe error creating ad checkout");
-    res.status(500).json({ error: "Failed to create Stripe session" }); return;
+    const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        mode: "payment",
+        "line_items[0][price_data][currency]": "eur",
+        "line_items[0][price_data][product_data][name]": AD_PACKAGE_NAMES[pkg] ?? "Paketë Reklame",
+        "line_items[0][price_data][product_data][description]": `Biznesi: ${business} · Kontakt: ${contact}${city ? ` · Qyteti: ${city}` : ""}`,
+        "line_items[0][price_data][unit_amount]": amountCents.toString(),
+        "line_items[0][quantity]": "1",
+        success_url: `${baseUrl}/?ad_success=true`,
+        cancel_url: `${baseUrl}/`,
+        "metadata[ad_package]": pkg,
+        "metadata[business]": business,
+        "metadata[contact]": contact,
+      }),
+    });
+    const stripeBody = await stripeRes.text();
+    if (!stripeRes.ok) {
+      let err: any = {};
+      try { err = JSON.parse(stripeBody); } catch {}
+      logger.error({ err }, "Stripe error creating ad checkout");
+      res.status(500).json({ error: err?.error?.message ?? "Failed to create Stripe session" }); return;
+    }
+    const session = JSON.parse(stripeBody);
+    res.json({ sessionId: session.id, url: session.url });
+  } catch (err: any) {
+    logger.error({ err }, "Unexpected error creating ad checkout");
+    res.status(500).json({ error: err?.message ?? "Internal error" });
   }
-  const session = await stripeRes.json() as any;
-  res.json({ sessionId: session.id, url: session.url });
 });
 
 router.post("/payments/webhook", async (req, res): Promise<void> => {
