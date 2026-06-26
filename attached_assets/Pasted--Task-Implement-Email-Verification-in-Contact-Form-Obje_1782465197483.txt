@@ -1,0 +1,83 @@
+# Task: Implement Email Verification in Contact Form
+
+## Objective
+
+Improve the Contact Form by validating whether the entered email address is likely to exist before allowing the message to be sent.
+
+## Requirements
+
+### Frontend
+
+* Validate that the email has a valid format.
+* When the user clicks **Send Message**, call the backend email verification endpoint before submitting the contact form.
+* Display a loading indicator while verification is in progress.
+* If the email is invalid or does not exist, prevent the form submission and display the following message:
+
+> "The email address appears to be invalid or does not exist. Please enter a valid email address."
+
+* If the email is valid, continue with the normal message submission.
+
+### Backend
+
+Create a new endpoint:
+
+`POST /api/verify-email`
+
+Request:
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+Response:
+
+```json
+{
+  "valid": true
+}
+```
+
+or
+
+```json
+{
+  "valid": false,
+  "reason": "Email does not exist"
+}
+```
+
+### Email Verification
+
+Use an email verification service such as:
+
+* ZeroBounce
+* Emailable
+* Abstract API
+
+The verification should check:
+
+* Valid email format
+* Valid domain
+* MX records
+* Disposable email detection
+* Mailbox existence (if supported by the provider)
+
+### Security
+
+* Store the API key in environment variables.
+* Never expose the API key on the frontend.
+* Handle API failures gracefully. If the verification service is temporarily unavailable, show:
+
+> "We couldn't verify your email at the moment. Please try again later."
+
+### UX
+
+* Disable the "Send Message" button while verification is running.
+* Show success or error notifications.
+* Do not send the contact email unless verification succeeds.
+
+### Expected Result
+
+Users should only be able to send a contact message if the provided email address passes verification. Invalid, disposable, or non-existent email addresses should be rejected before the message is sent.
