@@ -920,7 +920,7 @@ function AdvertiseModal({ open, onClose }: { open: boolean; onClose: () => void 
   const [step, setStep] = useState<"form" | "pay" | "done">("form");
   const [loading, setLoading] = useState(false);
   const [selectedPkg, setSelectedPkg] = useState("standard");
-  const [form, setForm] = useState({ business: "", contact: "", city: "", message: "" });
+  const [form, setForm] = useState({ business: "", contact: "", city: "", address: "", message: "" });
   const { toast } = useToast();
 
   const pkg = AD_PACKAGES.find(p => p.id === selectedPkg)!;
@@ -939,7 +939,7 @@ function AdvertiseModal({ open, onClose }: { open: boolean; onClose: () => void 
       const res = await fetch("/api/payments/create-ad-checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ package: selectedPkg, business: form.business, contact: form.contact, city: form.city }),
+        body: JSON.stringify({ package: selectedPkg, business: form.business, contact: form.contact, city: form.city, address: form.address }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -1033,25 +1033,36 @@ function AdvertiseModal({ open, onClose }: { open: boolean; onClose: () => void 
                     required
                   />
                 </div>
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Lokacioni *</label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10 pointer-events-none" />
-                    <Select value={form.city} onValueChange={v => setForm(f => ({ ...f, city: v }))}>
-                      <SelectTrigger className="pl-9 h-11 rounded-xl">
-                        <SelectValue placeholder="Zgjidhni qytetin..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Prishtina">Prishtina</SelectItem>
-                        <SelectItem value="Prizren">Prizren</SelectItem>
-                        <SelectItem value="Peja">Peja</SelectItem>
-                        <SelectItem value="Gjakova">Gjakova</SelectItem>
-                        <SelectItem value="Mitrovica">Mitrovica</SelectItem>
-                        <SelectItem value="Ferizaj">Ferizaj</SelectItem>
-                        <SelectItem value="Gjilan">Gjilan</SelectItem>
-                        <SelectItem value="I gjithë Kosova">I gjithë Kosova</SelectItem>
-                      </SelectContent>
-                    </Select>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Qyteti *</label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10 pointer-events-none" />
+                      <Select value={form.city} onValueChange={v => setForm(f => ({ ...f, city: v }))}>
+                        <SelectTrigger className="pl-9 h-11 rounded-xl">
+                          <SelectValue placeholder="Zgjidhni qytetin..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Prishtina">Prishtina</SelectItem>
+                          <SelectItem value="Prizren">Prizren</SelectItem>
+                          <SelectItem value="Peja">Peja</SelectItem>
+                          <SelectItem value="Gjakova">Gjakova</SelectItem>
+                          <SelectItem value="Mitrovica">Mitrovica</SelectItem>
+                          <SelectItem value="Ferizaj">Ferizaj</SelectItem>
+                          <SelectItem value="Gjilan">Gjilan</SelectItem>
+                          <SelectItem value="I gjithë Kosova">I gjithë Kosova</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Adresa</label>
+                    <Input
+                      placeholder="p.sh. Rruga UCK, nr. 12"
+                      className="h-11 rounded-xl"
+                      value={form.address ?? ""}
+                      onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
+                    />
                   </div>
                 </div>
                 <div>
