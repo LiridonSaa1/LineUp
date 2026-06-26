@@ -1,9 +1,10 @@
 import { Navbar } from "./Navbar";
 import { Link } from "wouter";
+import { useState, useEffect } from "react";
 import {
   MapPin, Calendar, ShoppingBag,
   Mail, Twitter, Instagram, ArrowUpRight,
-  Sparkles, Phone, Users, Star,
+  Sparkles, Phone, Users, Star, ArrowUp,
 } from "lucide-react";
 import logoImg from "@assets/LINE_(2)_1782421072087.png";
 
@@ -44,6 +45,14 @@ function FooterLink({ href, children }: { href: string; children: React.ReactNod
 }
 
 export function RootLayout({ children }: { children: React.ReactNode }) {
+  const [showTop, setShowTop] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setShowTop(window.scrollY > 400);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground selection:bg-primary/30">
       <Navbar />
@@ -140,7 +149,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
             {/* Brand */}
             <div className="md:col-span-1">
               <div className="flex items-center gap-2 mb-4">
-                <img src={logoImg} alt="Line UP" className="h-8 w-auto object-contain" style={{ filter: "brightness(0) invert(1)" }} />
+                <img src={logoImg} alt="Line UP" className="h-24 w-auto object-contain" style={{ filter: "brightness(0) invert(1)" }} />
               </div>
               <p className="text-sm text-zinc-500 leading-relaxed mb-5">
                 Platforma premium e rezervimit të berberive në Kosovë. Gjej, rezervo, dhe shijo.
@@ -241,6 +250,25 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </footer>
+
+      {/* ── Go to Top button ── */}
+      <button
+        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        aria-label="Shko lart"
+        className={`fixed bottom-6 right-6 z-50 w-11 h-11 rounded-full flex items-center justify-center shadow-lg shadow-black/40 transition-all duration-300 ${
+          showTop
+            ? "opacity-100 translate-y-0 pointer-events-auto"
+            : "opacity-0 translate-y-4 pointer-events-none"
+        }`}
+        style={{
+          background: "rgba(15,15,20,0.85)",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
+          border: "1px solid rgba(255,255,255,0.12)",
+        }}
+      >
+        <ArrowUp className="w-4 h-4 text-white" />
+      </button>
     </div>
   );
 }
