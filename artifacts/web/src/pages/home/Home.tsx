@@ -921,9 +921,59 @@ function AdvertiseModal({ open, onClose }: { open: boolean; onClose: () => void 
   const [loading, setLoading] = useState(false);
   const [selectedPkg, setSelectedPkg] = useState("standard");
   const [form, setForm] = useState({ business: "", contact: "", city: "", address: "", message: "" });
+  const [cardholderName, setCardholderName] = useState("");
+  const [cardError, setCardError] = useState("");
+  const cardContainerRef = useRef<HTMLDivElement>(null);
+  const stripeRef = useRef<any>(null);
+  const cardRef = useRef<any>(null);
   const { toast } = useToast();
 
   const pkg = AD_PACKAGES.find(p => p.id === selectedPkg)!;
+
+  useEffect(() => {
+    if (!open || step !== "pay") return;
+
+    let mounted = true;
+    let card: any;
+
+    (async () => {
+      try {
+        if (!stripeRef.current) {
+          const cfg = await fetch("/api/payments/stripe-config").then(r => r.json());
+          if (!cfg.publishableKey) return;
+          const { loadStripe } = await import("@stripe/stripe-js");
+          stripeRef.current = await loadStripe(cfg.publishableKey);
+        }
+        if (!mounted || !cardContainerRef.current) return;
+
+        const elements = stripeRef.current.elements();
+        card = elements.create("card", {
+          hidePostalCode: true,
+          style: {
+            base: {
+              fontSize: "15px",
+              fontFamily: "Inter, sans-serif",
+              color: "hsl(0 0% 90%)",
+              "::placeholder": { color: "hsl(0 0% 45%)" },
+              iconColor: "hsl(0 0% 60%)",
+            },
+            invalid: { color: "#f87171", iconColor: "#f87171" },
+          },
+        });
+        card.mount(cardContainerRef.current);
+        card.on("change", (e: any) => setCardError(e.error?.message ?? ""));
+        cardRef.current = card;
+      } catch {
+        /* ignore load errors */
+      }
+    })();
+
+    return () => {
+      mounted = false;
+      card?.unmount();
+      cardRef.current = null;
+    };
+  }, [open, step]);
 
   if (!open) return null;
 
@@ -934,26 +984,42 @@ function AdvertiseModal({ open, onClose }: { open: boolean; onClose: () => void 
   };
 
   const handlePay = async () => {
+    if (!stripeRef.current || !cardRef.current) {
+      toast({ title: "Gabim", description: "Stripe nuk u ngarkua. Rifresko faqen.", variant: "destructive" });
+      return;
+    }
     setLoading(true);
     try {
-      const res = await fetch("/api/payments/create-ad-checkout", {
+      const res = await fetch("/api/payments/create-ad-payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ package: selectedPkg, business: form.business, contact: form.contact, city: form.city, address: form.address }),
+        body: JSON.stringify({
+          package: selectedPkg,
+          business: form.business,
+          contact: form.contact,
+          city: form.city,
+          address: form.address,
+        }),
       });
+
       if (!res.ok) {
         const err = await res.json();
-        if (err.error?.includes("not configured") || res.status === 503) {
-          await new Promise(r => setTimeout(r, 1200));
-          setStep("done");
-          return;
-        }
-        throw new Error(err.error || "Gabim");
+        throw new Error(err.error || "Gabim gjatë krijimit të pagesës");
       }
-      const { url } = await res.json();
-      if (url) window.location.href = url;
+
+      const { clientSecret } = await res.json();
+
+      const { error, paymentIntent } = await stripeRef.current.confirmCardPayment(clientSecret, {
+        payment_method: {
+          card: cardRef.current,
+          billing_details: { name: cardholderName || form.business },
+        },
+      });
+
+      if (error) throw new Error(error.message);
+      if (paymentIntent?.status === "succeeded") setStep("done");
     } catch (err: any) {
-      toast({ title: "Gabim", description: err.message, variant: "destructive" });
+      toast({ title: "Pagesa dështoi", description: err.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -961,7 +1027,6 @@ function AdvertiseModal({ open, onClose }: { open: boolean; onClose: () => void 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       <div className="relative bg-card border border-border/60 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
@@ -982,9 +1047,9 @@ function AdvertiseModal({ open, onClose }: { open: boolean; onClose: () => void 
         </div>
 
         <div className="p-6">
+          {/* ── Step 1: Form ── */}
           {step === "form" && (
             <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Package selection */}
               <div className="space-y-2">
                 <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Zgjidhni paketën</p>
                 <div className="grid grid-cols-3 gap-2">
@@ -1008,30 +1073,19 @@ function AdvertiseModal({ open, onClose }: { open: boolean; onClose: () => void 
                 </div>
               </div>
 
-              {/* Form fields */}
               <div className="space-y-3">
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground mb-1 block">Emri i biznesit *</label>
                   <div className="relative">
                     <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="p.sh. Barber Lab Prishtina"
-                      className="pl-9 h-11 rounded-xl"
-                      value={form.business}
-                      onChange={e => setForm(f => ({ ...f, business: e.target.value }))}
-                      required
-                    />
+                    <Input placeholder="p.sh. Barber Lab Prishtina" className="pl-9 h-11 rounded-xl"
+                      value={form.business} onChange={e => setForm(f => ({ ...f, business: e.target.value }))} required />
                   </div>
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground mb-1 block">Kontakt (email/tel) *</label>
-                  <Input
-                    placeholder="email ose nr. telefoni"
-                    className="h-11 rounded-xl"
-                    value={form.contact}
-                    onChange={e => setForm(f => ({ ...f, contact: e.target.value }))}
-                    required
-                  />
+                  <Input placeholder="email ose nr. telefoni" className="h-11 rounded-xl"
+                    value={form.contact} onChange={e => setForm(f => ({ ...f, contact: e.target.value }))} required />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -1043,36 +1097,24 @@ function AdvertiseModal({ open, onClose }: { open: boolean; onClose: () => void 
                           <SelectValue placeholder="Zgjidhni qytetin..." />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Prishtina">Prishtina</SelectItem>
-                          <SelectItem value="Prizren">Prizren</SelectItem>
-                          <SelectItem value="Peja">Peja</SelectItem>
-                          <SelectItem value="Gjakova">Gjakova</SelectItem>
-                          <SelectItem value="Mitrovica">Mitrovica</SelectItem>
-                          <SelectItem value="Ferizaj">Ferizaj</SelectItem>
-                          <SelectItem value="Gjilan">Gjilan</SelectItem>
-                          <SelectItem value="I gjithë Kosova">I gjithë Kosova</SelectItem>
+                          {["Prishtina","Prizren","Peja","Gjakova","Mitrovica","Ferizaj","Gjilan","I gjithë Kosova"].map(c => (
+                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-muted-foreground mb-1 block">Adresa</label>
-                    <Input
-                      placeholder="p.sh. Rruga UCK, nr. 12"
-                      className="h-11 rounded-xl"
-                      value={form.address ?? ""}
-                      onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
-                    />
+                    <Input placeholder="p.sh. Rruga UCK, nr. 12" className="h-11 rounded-xl"
+                      value={form.address ?? ""} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} />
                   </div>
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground mb-1 block">Mesazh shtesë (opsional)</label>
-                  <textarea
-                    placeholder="Çfarë dëshironi të reklamoni..."
+                  <textarea placeholder="Çfarë dëshironi të reklamoni..."
                     className="w-full h-20 px-3 py-2.5 rounded-xl border border-input bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    value={form.message}
-                    onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
-                  />
+                    value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} />
                 </div>
               </div>
 
@@ -1083,26 +1125,69 @@ function AdvertiseModal({ open, onClose }: { open: boolean; onClose: () => void 
             </form>
           )}
 
+          {/* ── Step 2: Card payment ── */}
           {step === "pay" && (
-            <div className="space-y-5">
+            <div className="space-y-4">
+              {/* Order summary */}
               <div className="bg-muted/40 rounded-2xl p-4 border border-border/40">
-                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Përmbledhje porosie</p>
-                <div className="flex justify-between items-center mb-2">
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Përmbledhje</p>
+                <div className="flex justify-between items-center mb-1">
                   <span className="font-semibold">Paketa {pkg.label}</span>
-                  <span className="font-extrabold text-primary text-lg">€{pkg.price}</span>
+                  <span className="font-extrabold text-primary">€{pkg.price}</span>
                 </div>
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>{pkg.duration} · {pkg.desc}</span>
                 </div>
-                <div className="mt-3 pt-3 border-t border-border/40 flex justify-between text-xs text-muted-foreground">
+                <div className="mt-2 pt-2 border-t border-border/40 flex justify-between text-xs text-muted-foreground">
                   <span>Biznesi</span>
-                  <span className="font-semibold">{form.business}</span>
+                  <span className="font-semibold text-foreground">{form.business}</span>
                 </div>
               </div>
 
-              <div className="flex items-start gap-2 p-3 rounded-xl bg-emerald-500/8 border border-emerald-500/20">
-                <Shield className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                <p className="text-xs text-emerald-700 dark:text-emerald-400">Pagesa sigurohet nga Stripe. Nuk ruajmë asnjë të dhënë bankare.</p>
+              {/* Card inputs */}
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Emri në kartë</label>
+                  <Input
+                    placeholder="p.sh. Artan Berisha"
+                    className="h-11 rounded-xl"
+                    value={cardholderName}
+                    onChange={e => setCardholderName(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Të dhënat e kartës</label>
+                  <div
+                    ref={cardContainerRef}
+                    className="h-11 px-3 flex items-center rounded-xl border border-input bg-background focus-within:ring-2 focus-within:ring-primary/30 transition-shadow"
+                  />
+                  {cardError && (
+                    <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                      <span>⚠</span> {cardError}
+                    </p>
+                  )}
+                </div>
+
+                <p className="text-[10px] text-muted-foreground">
+                  Numri i kartës · Data e skadimit · CVC · Zip (opsional)
+                </p>
+              </div>
+
+              {/* Security badge */}
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/8 border border-emerald-500/20">
+                <Shield className="w-4 h-4 text-emerald-500 shrink-0" />
+                <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                  Pagesa sigurohet nga Stripe. Nuk ruajmë asnjë të dhënë bankare.
+                </p>
+              </div>
+
+              {/* Test card helper */}
+              <div className="flex items-center gap-2 p-2.5 rounded-xl bg-blue-500/8 border border-blue-500/20">
+                <CreditCard className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                <p className="text-[10px] text-blue-400">
+                  Test: <span className="font-mono font-bold">4242 4242 4242 4242</span> · çdo datë e ardhshme · çdo 3 shifra CVC
+                </p>
               </div>
 
               <div className="flex gap-3">
@@ -1117,15 +1202,17 @@ function AdvertiseModal({ open, onClose }: { open: boolean; onClose: () => void 
             </div>
           )}
 
+          {/* ── Step 3: Done ── */}
           {step === "done" && (
             <div className="text-center py-6 space-y-4">
               <div className="w-16 h-16 rounded-full bg-emerald-500/15 flex items-center justify-center mx-auto">
                 <CheckCircle2 className="w-8 h-8 text-emerald-500" />
               </div>
               <div>
-                <h3 className="font-extrabold text-xl">Kërkesa u dërgua!</h3>
+                <h3 className="font-extrabold text-xl">Pagesa u krye me sukses!</h3>
                 <p className="text-muted-foreground text-sm mt-2 max-w-xs mx-auto">
-                  Do t'ju kontaktojmë brenda 24 orëve në <span className="font-semibold text-foreground">{form.contact}</span> për të finalizuar reklamën.
+                  Do t'ju kontaktojmë brenda 24 orëve në{" "}
+                  <span className="font-semibold text-foreground">{form.contact}</span> për të aktivizuar reklamën tuaj.
                 </p>
               </div>
               <Button className="w-full h-11 rounded-xl" onClick={onClose}>Mbyll</Button>
