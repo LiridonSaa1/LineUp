@@ -1000,7 +1000,7 @@ function AdvertiseModal({ open, onClose }: { open: boolean; onClose: () => void 
                       }`}
                     >
                       <span className="text-xs font-bold">{p.label}</span>
-                      <span className="text-lg font-extrabold text-primary mt-0.5">€{p.price}</span>
+                      <span className="text-sm font-extrabold text-primary mt-0.5">€{p.price}</span>
                       <span className="text-[10px] text-muted-foreground">{p.duration}</span>
                       <span className="text-[10px] text-muted-foreground mt-0.5">{p.desc}</span>
                     </button>
@@ -1023,25 +1023,35 @@ function AdvertiseModal({ open, onClose }: { open: boolean; onClose: () => void 
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Kontakt (email/tel) *</label>
-                    <Input
-                      placeholder="email ose nr. tel"
-                      className="h-11 rounded-xl"
-                      value={form.contact}
-                      onChange={e => setForm(f => ({ ...f, contact: e.target.value }))}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Qyteti</label>
-                    <Input
-                      placeholder="p.sh. Prishtina"
-                      className="h-11 rounded-xl"
-                      value={form.city}
-                      onChange={e => setForm(f => ({ ...f, city: e.target.value }))}
-                    />
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Kontakt (email/tel) *</label>
+                  <Input
+                    placeholder="email ose nr. telefoni"
+                    className="h-11 rounded-xl"
+                    value={form.contact}
+                    onChange={e => setForm(f => ({ ...f, contact: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Lokacioni *</label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10 pointer-events-none" />
+                    <Select value={form.city} onValueChange={v => setForm(f => ({ ...f, city: v }))}>
+                      <SelectTrigger className="pl-9 h-11 rounded-xl">
+                        <SelectValue placeholder="Zgjidhni qytetin..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Prishtina">Prishtina</SelectItem>
+                        <SelectItem value="Prizren">Prizren</SelectItem>
+                        <SelectItem value="Peja">Peja</SelectItem>
+                        <SelectItem value="Gjakova">Gjakova</SelectItem>
+                        <SelectItem value="Mitrovica">Mitrovica</SelectItem>
+                        <SelectItem value="Ferizaj">Ferizaj</SelectItem>
+                        <SelectItem value="Gjilan">Gjilan</SelectItem>
+                        <SelectItem value="I gjithë Kosova">I gjithë Kosova</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <div>
