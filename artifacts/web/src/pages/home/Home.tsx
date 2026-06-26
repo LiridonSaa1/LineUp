@@ -1,6 +1,8 @@
 import { Link, useLocation } from "wouter";
 import { useState, useEffect, useRef } from "react";
-import { useListTopBarbershops } from "@workspace/api-client-react";
+import { useListTopBarbershops, useListProducts } from "@workspace/api-client-react";
+import { useCart } from "@/context/CartContext";
+import { useToast } from "@/hooks/use-toast";
 import KosovoCitiesMap from "@/components/map/KosovoCitiesMap";
 import {
   MapPin,
@@ -18,6 +20,8 @@ import {
   TrendingUp,
   Play,
   ShoppingBag,
+  ShoppingCart,
+  Plus,
   Clock,
   Crown,
   BadgeCheck,
@@ -1168,6 +1172,184 @@ function HowItWorks() {
   );
 }
 
+/* ── GroomingProductCard ──────────────────────────────────── */
+const CARD_ACCENTS = [
+  { glow: "from-amber-500/20 to-orange-400/10",  border: "hover:border-amber-400/50",  iconBg: "bg-amber-500/15",  iconText: "text-amber-400" },
+  { glow: "from-sky-500/20 to-blue-400/10",       border: "hover:border-sky-400/50",    iconBg: "bg-sky-500/15",    iconText: "text-sky-400" },
+  { glow: "from-emerald-500/20 to-green-400/10",  border: "hover:border-emerald-400/50",iconBg: "bg-emerald-500/15",iconText: "text-emerald-400" },
+  { glow: "from-violet-500/20 to-purple-400/10",  border: "hover:border-violet-400/50", iconBg: "bg-violet-500/15", iconText: "text-violet-400" },
+  { glow: "from-cyan-500/20 to-sky-400/10",       border: "hover:border-cyan-400/50",   iconBg: "bg-cyan-500/15",   iconText: "text-cyan-400" },
+  { glow: "from-pink-500/20 to-rose-400/10",      border: "hover:border-pink-400/50",   iconBg: "bg-pink-500/15",   iconText: "text-pink-400" },
+];
+
+function GroomingProductCard({ product, index }: { product: any; index: number }) {
+  const { ref, inView } = useInView(0.1);
+  const { addItem } = useCart();
+  const { toast } = useToast();
+  const [added, setAdded] = useState(false);
+  const accent = CARD_ACCENTS[index % CARD_ACCENTS.length];
+
+  const handleAdd = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!product.isAvailable) return;
+    addItem({
+      id: product.id,
+      name: product.name,
+      price: String(product.price),
+      imageUrl: product.imageUrl,
+    });
+    setAdded(true);
+    toast({
+      title: "Shtuar në shportë!",
+      description: product.name,
+    });
+    setTimeout(() => setAdded(false), 1800);
+  };
+
+  return (
+    <div
+      ref={ref}
+      className="relative group"
+      style={{
+        opacity: inView ? 1 : 0,
+        transform: inView ? "translateY(0) scale(1)" : "translateY(32px) scale(0.96)",
+        transition: "opacity 0.55s ease, transform 0.55s ease",
+        transitionDelay: inView ? `${index * 70}ms` : "0ms",
+      }}
+    >
+      {/* Glow behind card */}
+      <div
+        className={`absolute inset-0 rounded-2xl blur-xl opacity-0 group-hover:opacity-70 transition-opacity duration-500 bg-gradient-to-b ${accent.glow} pointer-events-none`}
+      />
+
+      <Link href="/marketplace" className="block">
+        <div
+          className={`relative flex flex-col rounded-2xl border border-border/50 bg-card overflow-hidden transition-all duration-350 group-hover:-translate-y-2 group-hover:shadow-2xl group-hover:shadow-black/20 ${accent.border}`}
+        >
+          {/* Product image / placeholder */}
+          <div className="relative h-44 overflow-hidden bg-muted flex items-center justify-center p-4">
+            {product.imageUrl ? (
+              <img
+                src={product.imageUrl}
+                alt={product.name}
+                className="w-full h-full object-contain group-hover:scale-108 transition-transform duration-500"
+                style={{ mixBlendMode: "multiply" }}
+              />
+            ) : (
+              <div className={`w-16 h-16 rounded-2xl ${accent.iconBg} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+                <ShoppingBag className={`w-8 h-8 ${accent.iconText}`} />
+              </div>
+            )}
+
+            {/* Category chip */}
+            {product.category && (
+              <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white text-[10px] font-bold uppercase tracking-wider">
+                {product.category}
+              </div>
+            )}
+
+            {/* Out of stock */}
+            {!product.isAvailable && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                <span className="px-3 py-1 rounded-full bg-destructive text-white text-xs font-bold">Pa stok</span>
+              </div>
+            )}
+          </div>
+
+          {/* Info */}
+          <div className="p-4 flex flex-col gap-3">
+            <div>
+              <p className="text-sm font-bold leading-tight line-clamp-2">{product.name}</p>
+              <p className={`font-extrabold text-lg mt-1 ${accent.iconText}`}>€{product.price}</p>
+            </div>
+
+            {/* Add to cart button */}
+            <button
+              onClick={handleAdd}
+              disabled={!product.isAvailable}
+              className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all duration-250 active:scale-95
+                ${added
+                  ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30"
+                  : product.isAvailable
+                    ? "bg-primary/10 text-primary hover:bg-primary hover:text-white border border-primary/20 hover:border-transparent hover:shadow-lg hover:shadow-primary/25"
+                    : "bg-muted text-muted-foreground cursor-not-allowed"
+                }`}
+            >
+              {added ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  Shtuar!
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4" />
+                  Shto në shportë
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </Link>
+    </div>
+  );
+}
+
+/* ── GroomingProductGrid ─────────────────────────────────── */
+function GroomingProductGrid() {
+  const { data: productsRes, isLoading } = useListProducts({ limit: 6 });
+
+  const products = Array.isArray(productsRes)
+    ? productsRes.slice(0, 6)
+    : Array.isArray(productsRes?.data)
+      ? productsRes.data.slice(0, 6)
+      : [];
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="rounded-2xl border border-border/50 bg-card overflow-hidden animate-pulse">
+            <div className="h-44 bg-muted" />
+            <div className="p-4 space-y-2">
+              <div className="h-4 bg-muted rounded w-3/4" />
+              <div className="h-4 bg-muted rounded w-1/3" />
+              <div className="h-9 bg-muted rounded-xl mt-1" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (!products.length) {
+    return (
+      <div className="text-center py-12 text-muted-foreground">
+        <ShoppingBag className="w-12 h-12 mx-auto mb-3 opacity-20" />
+        <p>Nuk u gjetën produkte.</p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        {products.map((p: any, i: number) => (
+          <GroomingProductCard key={p.id} product={p} index={i} />
+        ))}
+      </div>
+      <div className="mt-8 text-center md:hidden">
+        <Link
+          href="/marketplace"
+          className="btn-pill inline-flex items-center gap-2 px-6 py-3 border border-border/60 text-sm font-semibold hover:border-primary/30 transition-all"
+        >
+          Shiko të gjitha produktet <ArrowRight className="w-4 h-4" />
+        </Link>
+      </div>
+    </>
+  );
+}
+
 /* ── Main component ──────────────────────────────────────── */
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -1645,42 +1827,7 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {[
-              { name: "Pomadë Strong Hold", price: "12€", emoji: "💈", from: "from-amber-500/12", to: "to-orange-400/8", hover: "hover:border-amber-400/40" },
-              { name: "Gel Fijksues",        price: "8€",  emoji: "✨", from: "from-sky-500/12",   to: "to-blue-400/8",   hover: "hover:border-sky-400/40" },
-              { name: "Vaj Mjekre Cedar",   price: "9€",  emoji: "🪒", from: "from-emerald-500/12", to: "to-green-400/8", hover: "hover:border-emerald-400/40" },
-              { name: "Krem Rroje",         price: "8€",  emoji: "🫧", from: "from-slate-500/12",  to: "to-zinc-400/8",   hover: "hover:border-slate-400/40" },
-              { name: "Sea Salt Spray",     price: "11€", emoji: "🌊", from: "from-cyan-500/12",   to: "to-sky-400/8",    hover: "hover:border-cyan-400/40" },
-              { name: "Balsam Pas-Rrojës",  price: "10€", emoji: "🌿", from: "from-green-500/12",  to: "to-emerald-400/8",hover: "hover:border-green-400/40" },
-            ].map((p, i) => (
-              <Link
-                key={p.name}
-                href="/marketplace"
-                className={`group flex flex-col items-center gap-3 p-5 rounded-2xl bg-gradient-to-b ${p.from} ${p.to}
-                  border border-border/50 ${p.hover} hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300 text-center`}
-                style={{ transitionDelay: `${i * 30}ms` }}
-              >
-                <div className="text-4xl mb-1 group-hover:scale-110 transition-transform duration-300">{p.emoji}</div>
-                <div>
-                  <p className="text-sm font-bold leading-tight">{p.name}</p>
-                  <p className="text-primary font-bold text-sm mt-1">{p.price}</p>
-                </div>
-                <div className="mt-auto text-xs text-muted-foreground group-hover:text-primary transition-colors flex items-center gap-1">
-                  Bli tani <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                </div>
-              </Link>
-            ))}
-          </div>
-
-          <div className="mt-8 text-center md:hidden">
-            <Link
-              href="/marketplace"
-              className="btn-pill inline-flex items-center gap-2 px-6 py-3 border border-border/60 text-sm font-semibold hover:border-primary/30 transition-all"
-            >
-              Shiko të gjitha produktet <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
+          <GroomingProductGrid />
         </div>
       </section>
 

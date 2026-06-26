@@ -15,15 +15,18 @@ import {
   LayoutDashboard,
   Calendar,
   ShoppingBag,
+  ShoppingCart,
   Bell,
   ChevronDown,
   Sparkles,
 } from "lucide-react";
 import { useLogout } from "@workspace/api-client-react";
+import { useCart } from "@/context/CartContext";
 import logoImg from "@assets/LINE_(2)_1782421072087.png";
 
 export function Navbar() {
   const { user, logout } = useAuth();
+  const { count: cartCount } = useCart();
   const [location, setLocation] = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -233,6 +236,19 @@ export function Navbar() {
 
               {/* Auth */}
               <div className="flex items-center gap-2 ml-3">
+                {/* Cart icon */}
+                <Link
+                  href="/marketplace"
+                  className="relative w-9 h-9 rounded-full flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200"
+                  aria-label="Shporta"
+                >
+                  <ShoppingCart className="w-4 h-4" />
+                  {cartCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-primary text-white text-[10px] font-black rounded-full flex items-center justify-center leading-none ring-2 ring-zinc-900 animate-bounce-once">
+                      {cartCount > 99 ? "99+" : cartCount}
+                    </span>
+                  )}
+                </Link>
                 {user ? (
                   <>
                     <Link
@@ -387,6 +403,18 @@ export function Navbar() {
               />
             </button>
             <div className="flex items-center gap-2">
+              <Link
+                href="/marketplace"
+                className="relative w-8 h-8 rounded-full flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 transition-all"
+                aria-label="Shporta"
+              >
+                <ShoppingCart className="w-4 h-4" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-0.5 bg-primary text-white text-[9px] font-black rounded-full flex items-center justify-center leading-none ring-2 ring-zinc-900">
+                    {cartCount > 99 ? "99+" : cartCount}
+                  </span>
+                )}
+              </Link>
               {user && (
                 <Link
                   href="/notifications"
