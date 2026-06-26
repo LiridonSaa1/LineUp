@@ -5,6 +5,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import stripeWebhookHandler from "./routes/stripe-webhook";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -30,6 +31,15 @@ app.use(
   }),
 );
 app.use(cors());
+
+// ⚠️  Stripe webhooks need the raw body for signature verification.
+// Register BEFORE express.json() so the Buffer is preserved.
+app.post(
+  "/api/stripe/webhook",
+  express.raw({ type: "application/json" }),
+  stripeWebhookHandler,
+);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
