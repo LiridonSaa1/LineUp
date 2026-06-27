@@ -943,8 +943,12 @@ function AdvertiseModal({ open, onClose }: { open: boolean; onClose: () => void 
     (async () => {
       try {
         if (!stripeRef.current) {
-          const cfg = await fetch("/api/payments/stripe-config").then(r => r.json());
-          if (!cfg.publishableKey) throw new Error("Publishable key mungon");
+          const cfgRes = await fetch("/api/payments/stripe-config");
+          const cfgText = await cfgRes.text();
+          let cfg: any = {};
+          try { cfg = JSON.parse(cfgText); } catch {}
+          if (!cfgRes.ok) throw new Error(cfg?.error ?? `Stripe config gabim (${cfgRes.status})`);
+          if (!cfg.publishableKey) throw new Error("Çelësi publik i Stripe mungon — kontrolloni variablat e mjedisit");
           const { loadStripe } = await import("@stripe/stripe-js");
           stripeRef.current = await loadStripe(cfg.publishableKey);
           if (!stripeRef.current) throw new Error("loadStripe ktheu null");
