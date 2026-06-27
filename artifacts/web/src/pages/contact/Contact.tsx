@@ -67,10 +67,21 @@ export default function Contact() {
     if (!ok) return;
 
     setSending(true);
-    await new Promise(r => setTimeout(r, 900));
-    setSending(false);
-    setSent(true);
-    toast({ title: "Mesazhi u dërgua!", description: "Do t'ju kontaktojmë brenda 24 orëve." });
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? "Gabim i serverit");
+      setSent(true);
+      toast({ title: "Mesazhi u dërgua!", description: "Do t'ju kontaktojmë brenda 24 orëve." });
+    } catch (err: any) {
+      toast({ title: "Dërgimi dështoi", description: err.message, variant: "destructive" });
+    } finally {
+      setSending(false);
+    }
   };
 
   const info = [

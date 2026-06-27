@@ -12,6 +12,7 @@ import paymentsRouter from "./payments";
 import notificationsRouter from "./notifications";
 import dashboardRouter from "./dashboard";
 import verifyEmailRouter from "./verify-email";
+import contactRouter from "./contact";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(paymentsRouter);
 router.use(notificationsRouter);
 router.use(dashboardRouter);
 router.use(verifyEmailRouter);
+router.use(contactRouter);
 
 export default router;
