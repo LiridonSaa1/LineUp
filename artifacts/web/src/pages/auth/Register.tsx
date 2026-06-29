@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import {
   Eye, EyeOff, ArrowRight, ArrowLeft, Scissors, Mail, Lock,
-  User, Building2, MapPin, Phone, Layers, Check, Upload, X, ImagePlus,
+  Building2, MapPin, Phone, Layers, Check, Upload, X, ImagePlus,
   ChevronDown, CreditCard,
 } from "lucide-react";
 
@@ -21,12 +21,10 @@ const KOSOVO_CITIES = [
 
 /* ── Schemas ─────────────────────────────────────────────── */
 const step1Schema = z.object({
-  ownerName:      z.string().min(2, "Emri i detyrueshëm"),
-  email:          z.string().email("Email i pavlefshëm"),
-  phone:          z.string().min(5, "Telefoni i detyrueshëm"),
-  password:       z.string().min(6, "Minimum 6 karaktere"),
-  businessName:   z.string().min(2, "Emri i biznesit i detyrueshëm"),
-  businessNumber: z.string().optional(),
+  email:        z.string().email("Email i pavlefshëm"),
+  phone:        z.string().min(5, "Telefoni i detyrueshëm"),
+  password:     z.string().min(6, "Minimum 6 karaktere"),
+  businessName: z.string().min(2, "Emri i biznesit i detyrueshëm"),
 });
 
 const step2Schema = z.object({
@@ -432,7 +430,7 @@ function OwnerForm() {
 
   const [paying, setPaying] = useState(false);
 
-  const f1 = useForm<S1Values>({ resolver: zodResolver(step1Schema), defaultValues: { ownerName: "", email: "", phone: "", password: "", businessName: "", businessNumber: "" } });
+  const f1 = useForm<S1Values>({ resolver: zodResolver(step1Schema), defaultValues: { email: "", phone: "", password: "", businessName: "" } });
   const f2 = useForm<S2Values>({ resolver: zodResolver(step2Schema), defaultValues: { city: "", address: "", description: "" } });
 
   const w1 = (k: keyof S1Values) => (f1.watch(k) ?? "") as string;
@@ -474,12 +472,12 @@ function OwnerForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ownerName: s1.ownerName,
+          ownerName: s1.businessName,
           email: s1.email,
           password: s1.password,
           phone: s1.phone,
           businessName: s1.businessName,
-          businessNumber: s1.businessNumber || null,
+          businessNumber: null,
           city: s2.city,
           address: s2.address,
           description: s2.description || null,
@@ -511,8 +509,6 @@ function OwnerForm() {
               <Building2 className="w-3.5 h-3.5" /> Informata Bazë
             </div>
             <IconInput id="bname" icon={Building2} label="Emri i biznesit" placeholder="TRIM Prishtina" value={w1("businessName")} onChange={v => f1.setValue("businessName", v)} error={f1.formState.errors.businessName?.message} />
-            <IconInput id="bnum"  icon={Layers}    label="Nr. biznesit (opsionale)" placeholder="70XXXXXXX" value={w1("businessNumber")} onChange={v => f1.setValue("businessNumber", v)} />
-            <IconInput id="oname" icon={User}      label="Pronari (emri i plotë)" placeholder="Artan Berisha" value={w1("ownerName")} onChange={v => f1.setValue("ownerName", v)} error={f1.formState.errors.ownerName?.message} />
             <IconInput id="oemail" icon={Mail}     label="Email" type="email" placeholder="biznesi@shembull.com" value={w1("email")} onChange={v => f1.setValue("email", v)} error={f1.formState.errors.email?.message} />
             <IconInput id="ophone" icon={Phone}    label="Telefoni" type="tel" placeholder="+383 44 000 000" value={w1("phone")} onChange={v => f1.setValue("phone", v)} error={f1.formState.errors.phone?.message} />
             <IconInput id="opw"   icon={Lock}      label="Fjalëkalimi" type="password" value={w1("password")} onChange={v => f1.setValue("password", v)} error={f1.formState.errors.password?.message} />
