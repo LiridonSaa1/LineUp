@@ -1,8 +1,8 @@
 import { logger } from "./logger";
 
-const BREVO_API_KEY = process.env.BREVO_API_KEY;
-const FROM_EMAIL = "noreply@trimkosova.com";
-const FROM_NAME = "TRIM Kosovo";
+const BREVO_API_KEY   = process.env.BREVO_API_KEY;
+const FROM_EMAIL      = process.env.BREVO_SENDER_EMAIL ?? "noreply@lineupkosova.com";
+const FROM_NAME       = process.env.BREVO_SENDER_NAME  ?? "LineUP";
 
 interface SendEmailOptions {
   to: { email: string; name: string };
@@ -74,7 +74,7 @@ export async function sendOtpEmail(opts: {
           <td style="background:linear-gradient(135deg,#1a1e2e 0%,#12151e 100%);padding:40px 40px 30px;text-align:center;">
             <div style="display:inline-flex;align-items:center;gap:10px;margin-bottom:8px;">
               <div style="width:36px;height:36px;background:#e8a020;border-radius:10px;display:inline-block;line-height:36px;text-align:center;font-size:18px;">✂</div>
-              <span style="font-size:24px;font-weight:800;color:#fff;letter-spacing:-0.5px;">TRIM<span style="color:#e8a020;">.</span></span>
+              <span style="font-size:24px;font-weight:800;color:#fff;letter-spacing:-0.5px;">Line<span style="color:#e8a020;">UP</span></span>
             </div>
           </td>
         </tr>
@@ -121,7 +121,7 @@ export async function sendOtpEmail(opts: {
         <!-- Footer -->
         <tr>
           <td style="padding:20px 40px 30px;border-top:1px solid #1e2330;text-align:center;">
-            <p style="color:#4a5568;font-size:12px;margin:0;">© ${new Date().getFullYear()} TRIM Kosovo · Platforma e berbertëve premium</p>
+            <p style="color:#4a5568;font-size:12px;margin:0;">© ${new Date().getFullYear()} LineUP · Platforma e berbertëve premium</p>
           </td>
         </tr>
       </table>
@@ -192,12 +192,12 @@ export async function sendBookingConfirmedEmail(opts: {
                 </tr>
               </table>
             </div>
-            <p style="color:#8892a0;font-size:13px;text-align:center;margin:24px 0 0;">Faleminderit që zgjodhët <strong style="color:#fff;">TRIM Kosovo</strong>.</p>
+            <p style="color:#8892a0;font-size:13px;text-align:center;margin:24px 0 0;">Faleminderit që zgjodhët <strong style="color:#fff;">LineUP</strong>.</p>
           </td>
         </tr>
         <tr>
           <td style="padding:20px 40px 30px;border-top:1px solid #1e2330;text-align:center;">
-            <p style="color:#4a5568;font-size:12px;margin:0;">© ${new Date().getFullYear()} TRIM Kosovo · Platforma e berbertëve premium</p>
+            <p style="color:#4a5568;font-size:12px;margin:0;">© ${new Date().getFullYear()} LineUP · Platforma e berbertëve premium</p>
           </td>
         </tr>
       </table>
@@ -209,10 +209,10 @@ export async function sendBookingConfirmedEmail(opts: {
 }
 
 const PKG_NAMES: Record<string, string> = {
-  "2": "TRIM Starter — 2 Punëtorë",
-  "4": "TRIM Standard — 4 Punëtorë",
-  "6": "TRIM Pro — 6 Punëtorë",
-  "8": "TRIM Business — 8 Punëtorë",
+  "2": "LineUP Starter — 2 Punëtorë",
+  "4": "LineUP Standard — 4 Punëtorë",
+  "6": "LineUP Pro — 6 Punëtorë",
+  "8": "LineUP Business — 8 Punëtorë",
 };
 
 export async function sendSubscriptionInvoiceEmail(opts: {
@@ -247,7 +247,7 @@ export async function sendSubscriptionInvoiceEmail(opts: {
           <td style="background:linear-gradient(135deg,#1a1e2e 0%,#12151e 100%);padding:40px;text-align:center;">
             <div style="display:inline-block;margin-bottom:16px;">
               <div style="width:44px;height:44px;background:#4f8ef7;border-radius:12px;display:inline-block;line-height:44px;text-align:center;font-size:22px;">✂</div>
-              <span style="font-size:26px;font-weight:900;color:#fff;letter-spacing:-1px;vertical-align:middle;margin-left:10px;">TRIM<span style="color:#4f8ef7;">.</span></span>
+              <span style="font-size:26px;font-weight:900;color:#fff;letter-spacing:-1px;vertical-align:middle;margin-left:10px;">Line<span style="color:#4f8ef7;">UP</span></span>
             </div>
             <h1 style="color:#fff;font-size:22px;font-weight:800;margin:0 0 6px;">Fatura e Abonimit</h1>
             <p style="color:#8892a0;font-size:14px;margin:0;">Nr. ${opts.invoiceNumber}</p>
@@ -269,7 +269,7 @@ export async function sendSubscriptionInvoiceEmail(opts: {
                 </tr>
                 <tr>
                   <td style="padding:8px 0;color:#8892a0;font-size:13px;border-bottom:1px solid #1e2330;">🔄 Paketa</td>
-                  <td style="padding:8px 0;color:#fff;font-size:13px;font-weight:600;text-align:right;border-bottom:1px solid #1e2330;">${PKG_NAMES[opts.packageId ?? "2"] ?? "Abonim Mujor TRIM"}</td>
+                  <td style="padding:8px 0;color:#fff;font-size:13px;font-weight:600;text-align:right;border-bottom:1px solid #1e2330;">${PKG_NAMES[opts.packageId ?? "2"] ?? "Abonim Mujor LineUP"}</td>
                 </tr>
                 <tr>
                   <td style="padding:8px 0;color:#8892a0;font-size:13px;border-bottom:1px solid #1e2330;">📆 Faturimi i ardhshëm</td>
@@ -286,12 +286,12 @@ export async function sendSubscriptionInvoiceEmail(opts: {
               <p style="color:#8892a0;font-size:13px;margin:0;">✅ Saloni juaj <strong style="color:#fff;">${opts.shopName}</strong> është regjistruar dhe do të shfaqet pas aprovimit nga ekipi ynë.</p>
             </div>
 
-            <p style="color:#4a5568;font-size:12px;text-align:center;margin:0;">Pyetje? Na kontaktoni: <a href="mailto:support@trimkosova.com" style="color:#4f8ef7;text-decoration:none;">support@trimkosova.com</a></p>
+            <p style="color:#4a5568;font-size:12px;text-align:center;margin:0;">Pyetje? Na kontaktoni: <a href="mailto:${FROM_EMAIL}" style="color:#4f8ef7;text-decoration:none;">${FROM_EMAIL}</a></p>
           </td>
         </tr>
         <tr>
           <td style="padding:20px 40px 28px;border-top:1px solid #1e2330;text-align:center;">
-            <p style="color:#4a5568;font-size:12px;margin:0;">© ${new Date().getFullYear()} TRIM Kosovo · Platforma e berbertëve premium</p>
+            <p style="color:#4a5568;font-size:12px;margin:0;">© ${new Date().getFullYear()} LineUP · Platforma e berbertëve premium</p>
           </td>
         </tr>
       </table>
@@ -309,7 +309,7 @@ export async function sendWelcomeEmail(opts: {
   const isOwner = opts.role === "owner";
   return sendEmail({
     to: opts.to,
-    subject: `Mirë se vini te TRIM Kosovo! 🎉`,
+    subject: `Mirë se vini te LineUP! 🎉`,
     htmlContent: `
 <!DOCTYPE html>
 <html lang="sq">
@@ -322,7 +322,7 @@ export async function sendWelcomeEmail(opts: {
           <td style="background:linear-gradient(135deg,#1a1e2e 0%,#0f1117 100%);padding:48px 40px;text-align:center;">
             <div style="display:inline-block;margin-bottom:20px;">
               <div style="width:44px;height:44px;background:#e8a020;border-radius:12px;display:inline-block;line-height:44px;text-align:center;font-size:22px;">✂</div>
-              <span style="font-size:28px;font-weight:900;color:#fff;letter-spacing:-1px;vertical-align:middle;margin-left:10px;">TRIM<span style="color:#e8a020;">.</span></span>
+              <span style="font-size:28px;font-weight:900;color:#fff;letter-spacing:-1px;vertical-align:middle;margin-left:10px;">Line<span style="color:#e8a020;">UP</span></span>
             </div>
             <h1 style="color:#fff;font-size:28px;font-weight:800;margin:0 0 10px;line-height:1.2;">
               ${isOwner ? "Mirë se vini, Partner! 🤝" : "Mirë se vini, " + opts.to.name.split(" ")[0] + "! 👋"}
@@ -361,13 +361,13 @@ export async function sendWelcomeEmail(opts: {
             </div>
             `}
             <div style="text-align:center;">
-              <p style="color:#4a5568;font-size:12px;margin:0;">Nëse keni pyetje, na kontaktoni në <a href="mailto:support@trimkosova.com" style="color:#e8a020;text-decoration:none;">support@trimkosova.com</a></p>
+              <p style="color:#4a5568;font-size:12px;margin:0;">Nëse keni pyetje, na kontaktoni në <a href="mailto:${FROM_EMAIL}" style="color:#e8a020;text-decoration:none;">${FROM_EMAIL}</a></p>
             </div>
           </td>
         </tr>
         <tr>
           <td style="padding:20px 40px 30px;border-top:1px solid #1e2330;text-align:center;">
-            <p style="color:#4a5568;font-size:12px;margin:0;">© ${new Date().getFullYear()} TRIM Kosovo · Platforma e berbertëve premium</p>
+            <p style="color:#4a5568;font-size:12px;margin:0;">© ${new Date().getFullYear()} LineUP · Platforma e berbertëve premium</p>
           </td>
         </tr>
       </table>
