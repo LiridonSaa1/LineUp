@@ -1,15 +1,23 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { useRegister } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Eye, EyeOff, ArrowRight, ArrowLeft, Scissors, Mail, Lock,
-  User, Building2, MapPin, Phone, Layers, Check, Plus, Trash2,
+  User, Building2, MapPin, Phone, Layers, Check, Upload, X, ImagePlus,
+  ChevronDown, CreditCard,
 } from "lucide-react";
+
+const KOSOVO_CITIES = [
+  "Prishtinë", "Prizren", "Pejë", "Gjakovë", "Gjilan", "Mitrovicë",
+  "Ferizaj", "Vushtrri", "Suharekë", "Rahovec", "Malishevë", "Skënderaj",
+  "Klinë", "Istog", "Deçan", "Junik", "Dragash", "Shtime", "Lipjan",
+  "Podujevë", "Drenas", "Obiliq", "Fushë Kosovë", "Kaçanik", "Viti",
+  "Kamenicë", "Novobërdë",
+];
 
 /* ── Schemas ─────────────────────────────────────────────── */
 const step1Schema = z.object({
@@ -24,20 +32,11 @@ const step1Schema = z.object({
 const step2Schema = z.object({
   city:        z.string().min(1, "Qyteti i detyrueshëm"),
   address:     z.string().min(3, "Adresa e detyrueshme"),
-  latitude:    z.coerce.number().optional().or(z.literal("")),
-  longitude:   z.coerce.number().optional().or(z.literal("")),
   description: z.string().optional(),
-  gender:      z.enum(["male", "female", "both"], { required_error: "Zgjidhni gjininë" }),
 });
 
-const step3Schema = z.object({
-  imageUrl: z.string().optional(),
-  iban:     z.string().optional(),
-});
-
-type S1Values       = z.infer<typeof step1Schema>;
-type S2Values       = z.infer<typeof step2Schema>;
-type S3Values       = z.infer<typeof step3Schema>;
+type S1Values = z.infer<typeof step1Schema>;
+type S2Values = z.infer<typeof step2Schema>;
 
 const PRIMARY = "#4f8ef7";
 
@@ -87,7 +86,6 @@ function IconInput({
           type={isPass ? (show ? "text" : "password") : type}
           placeholder={focused && placeholder ? placeholder : ""}
           value={value}
-          step={type === "number" ? "any" : undefined}
           onChange={e => onChange(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
@@ -152,22 +150,176 @@ function TextareaInput({ id, label, placeholder, value, onChange, error }: {
   );
 }
 
-/* ── Gender picker ───────────────────────────────────────── */
-function GenderPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+/* ── City Dropdown ───────────────────────────────────────── */
+function CityDropdown({ value, onChange, error }: { value: string; onChange: (v: string) => void; error?: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handle(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, []);
+
   return (
-    <div className="flex gap-2">
-      {[{ v: "male", l: "Mashkull" }, { v: "female", l: "Femër" }, { v: "both", l: "Të dyja" }].map(o => (
-        <button key={o.v} type="button" onClick={() => onChange(o.v)}
-          className="flex-1 py-3 text-xs font-semibold rounded-xl transition-all duration-200"
+    <div className="space-y-1.5" ref={ref}>
+      <div className="relative">
+        <button type="button" onClick={() => setOpen(p => !p)}
+          className="w-full rounded-[14px] transition-all duration-200 flex items-center"
           style={{
-            background: value === o.v ? "rgba(79,142,247,0.15)" : "rgba(255,255,255,0.03)",
-            border: `1px solid ${value === o.v ? "rgba(79,142,247,0.4)" : "rgba(255,255,255,0.08)"}`,
-            color: value === o.v ? "#7db3ff" : "rgba(255,255,255,0.4)",
-            boxShadow: value === o.v ? "0 0 12px rgba(79,142,247,0.15)" : "none",
+            background: open ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.03)",
+            border: `1px solid ${open ? "rgba(79,142,247,0.45)" : error ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.08)"}`,
+            boxShadow: open ? "0 0 0 3px rgba(79,142,247,0.10), 0 4px 16px rgba(0,0,0,0.2)" : "none",
+            paddingTop: "26px", paddingBottom: "10px", paddingLeft: "44px", paddingRight: "44px",
           }}>
-          {o.l}
+          <span className="text-sm text-left w-full" style={{ color: value ? "#fff" : "rgba(255,255,255,0.35)" }}>
+            {value || ""}
+          </span>
         </button>
-      ))}
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+          <MapPin className="w-4 h-4" style={{ color: open ? PRIMARY : "rgba(255,255,255,0.25)" }} />
+        </div>
+        <label className="absolute left-11 pointer-events-none select-none transition-all duration-200"
+          style={{
+            top: (open || value) ? "9px" : "50%",
+            transform: (open || value) ? "none" : "translateY(-50%)",
+            fontSize: (open || value) ? "10px" : "13px",
+            fontWeight: (open || value) ? 600 : 400,
+            letterSpacing: (open || value) ? "0.05em" : "0",
+            textTransform: (open || value) ? "uppercase" : "none",
+            color: (open || value) ? PRIMARY : "rgba(255,255,255,0.35)",
+          }}>
+          Qyteti
+        </label>
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+          <ChevronDown className="w-4 h-4 transition-transform duration-200" style={{
+            color: "rgba(255,255,255,0.28)",
+            transform: open ? "rotate(180deg)" : "rotate(0deg)",
+          }} />
+        </div>
+        {open && (
+          <div className="absolute z-50 w-full mt-1.5 rounded-[14px] overflow-hidden overflow-y-auto"
+            style={{
+              background: "#12151e",
+              border: "1px solid rgba(79,142,247,0.25)",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+              maxHeight: "220px",
+            }}>
+            {KOSOVO_CITIES.map(city => (
+              <button key={city} type="button"
+                onClick={() => { onChange(city); setOpen(false); }}
+                className="w-full px-4 py-2.5 text-left text-sm transition-all duration-150"
+                style={{
+                  background: city === value ? "rgba(79,142,247,0.15)" : "transparent",
+                  color: city === value ? "#7db3ff" : "rgba(255,255,255,0.7)",
+                }}
+                onMouseEnter={e => { if (city !== value) (e.target as HTMLElement).style.background = "rgba(255,255,255,0.05)"; }}
+                onMouseLeave={e => { (e.target as HTMLElement).style.background = city === value ? "rgba(79,142,247,0.15)" : "transparent"; }}>
+                {city}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      {error && <p className="text-xs pl-1" style={{ color: "#f87171" }}>{error}</p>}
+    </div>
+  );
+}
+
+/* ── File Upload ─────────────────────────────────────────── */
+function FileUploadBox({
+  label, accept = "image/*", preview, onFile, onRemove, loading,
+}: {
+  label: string; accept?: string; preview?: string;
+  onFile: (file: File) => void; onRemove: () => void; loading?: boolean;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  return (
+    <div>
+      <div className="text-[10px] font-semibold uppercase tracking-widest mb-2 pl-1"
+        style={{ color: "rgba(255,255,255,0.3)" }}>
+        {label}
+      </div>
+      {preview ? (
+        <div className="relative rounded-[14px] overflow-hidden"
+          style={{ border: "1px solid rgba(79,142,247,0.3)", background: "rgba(255,255,255,0.03)" }}>
+          <img src={preview} alt="preview" className="w-full h-28 object-cover" />
+          <button type="button" onClick={onRemove}
+            className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center"
+            style={{ background: "rgba(0,0,0,0.7)", border: "1px solid rgba(255,255,255,0.15)" }}>
+            <X className="w-3.5 h-3.5 text-white" />
+          </button>
+        </div>
+      ) : (
+        <button type="button" onClick={() => inputRef.current?.click()}
+          disabled={loading}
+          className="w-full h-24 rounded-[14px] flex flex-col items-center justify-center gap-2 transition-all duration-200"
+          style={{
+            background: "rgba(255,255,255,0.02)",
+            border: "1.5px dashed rgba(255,255,255,0.12)",
+          }}
+          onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(79,142,247,0.4)")}
+          onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)")}>
+          {loading
+            ? <span className="w-5 h-5 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+            : <><ImagePlus className="w-5 h-5" style={{ color: "rgba(255,255,255,0.3)" }} />
+              <span className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>Kliko për të ngarkuar</span></>
+          }
+        </button>
+      )}
+      <input ref={inputRef} type="file" accept={accept} className="hidden"
+        onChange={e => e.target.files?.[0] && onFile(e.target.files[0])} />
+    </div>
+  );
+}
+
+/* ── Photo Grid Upload ───────────────────────────────────── */
+function PhotosUpload({ photos, onAdd, onRemove, loadingIdx }: {
+  photos: { url: string; preview: string }[];
+  onAdd: (file: File) => void;
+  onRemove: (i: number) => void;
+  loadingIdx: number | null;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  return (
+    <div>
+      <div className="text-[10px] font-semibold uppercase tracking-widest mb-2 pl-1"
+        style={{ color: "rgba(255,255,255,0.3)" }}>
+        Fotot e sallonit (opsionale)
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {photos.map((p, i) => (
+          <div key={i} className="relative rounded-xl overflow-hidden aspect-square"
+            style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
+            <img src={p.preview} alt="" className="w-full h-full object-cover" />
+            <button type="button" onClick={() => onRemove(i)}
+              className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center"
+              style={{ background: "rgba(0,0,0,0.7)" }}>
+              <X className="w-2.5 h-2.5 text-white" />
+            </button>
+          </div>
+        ))}
+        {loadingIdx !== null && (
+          <div className="aspect-square rounded-xl flex items-center justify-center"
+            style={{ background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.1)" }}>
+            <span className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+          </div>
+        )}
+        {photos.length < 6 && loadingIdx === null && (
+          <button type="button" onClick={() => inputRef.current?.click()}
+            className="aspect-square rounded-xl flex flex-col items-center justify-center gap-1 transition-all"
+            style={{ background: "rgba(255,255,255,0.02)", border: "1.5px dashed rgba(255,255,255,0.1)" }}
+            onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(79,142,247,0.35)")}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)")}>
+            <Upload className="w-4 h-4" style={{ color: "rgba(255,255,255,0.25)" }} />
+            <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.25)" }}>Shto</span>
+          </button>
+        )}
+      </div>
+      <input ref={inputRef} type="file" accept="image/*" className="hidden"
+        onChange={e => e.target.files?.[0] && onAdd(e.target.files[0])} />
     </div>
   );
 }
@@ -195,7 +347,6 @@ function StepBar({ current, total }: { current: number; total: number }) {
           </div>
         ))}
       </div>
-      {/* Progress bar */}
       <div className="w-full h-0.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
         <div className="h-full rounded-full transition-all duration-500"
           style={{ width: `${((current) / total) * 100}%`, background: `linear-gradient(90deg, ${PRIMARY}, #93c5fd)` }} />
@@ -205,11 +356,11 @@ function StepBar({ current, total }: { current: number; total: number }) {
 }
 
 /* ── Primary button ──────────────────────────────────────── */
-function PrimaryBtn({ children, disabled, type = "submit" }: {
-  children: React.ReactNode; disabled?: boolean; type?: "submit" | "button";
+function PrimaryBtn({ children, disabled, type = "submit", onClick }: {
+  children: React.ReactNode; disabled?: boolean; type?: "submit" | "button"; onClick?: () => void;
 }) {
   return (
-    <button type={type} disabled={disabled}
+    <button type={type} disabled={disabled} onClick={onClick}
       className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-[14px] text-sm font-semibold text-white transition-all duration-200 disabled:opacity-50"
       style={{
         background: "linear-gradient(135deg, #4f8ef7 0%, #3b6fd4 100%)",
@@ -253,49 +404,100 @@ function StepSlide({ children, step }: { children: React.ReactNode; step: number
   );
 }
 
+/* ── Upload helper ───────────────────────────────────────── */
+async function uploadFile(file: File): Promise<string> {
+  const fd = new FormData();
+  fd.append("file", file);
+  const res = await fetch("/api/upload", { method: "POST", body: fd });
+  if (!res.ok) throw new Error("Ngarkimi dështoi");
+  const data = await res.json();
+  return data.url as string;
+}
+
 /* ── Owner multi-step ────────────────────────────────────── */
 function OwnerForm() {
-  const [step, setStep] = useState(0);
-  const [, setLocation] = useLocation();
-  const { login }       = useAuth();
-  const { toast }       = useToast();
-  const mut             = useRegister();
-  const [s1, setS1]     = useState<S1Values | null>(null);
-  const [s2, setS2]     = useState<S2Values | null>(null);
-  const [photos, setPhotos] = useState<string[]>([""]);
+  const [step, setStep]   = useState(0);
+  const [, setLocation]   = useLocation();
+  const { login }         = useAuth();
+  const { toast }         = useToast();
+  const [s1, setS1]       = useState<S1Values | null>(null);
+  const [s2, setS2]       = useState<S2Values | null>(null);
+
+  const [logoUrl, setLogoUrl]       = useState<string>("");
+  const [logoPreview, setLogoPreview] = useState<string>("");
+  const [logoLoading, setLogoLoading] = useState(false);
+
+  const [photos, setPhotos]         = useState<{ url: string; preview: string }[]>([]);
+  const [photoLoadingIdx, setPhotoLoadingIdx] = useState<number | null>(null);
+
+  const [paying, setPaying] = useState(false);
 
   const f1 = useForm<S1Values>({ resolver: zodResolver(step1Schema), defaultValues: { ownerName: "", email: "", phone: "", password: "", businessName: "", businessNumber: "" } });
-  const f2 = useForm<S2Values>({ resolver: zodResolver(step2Schema), defaultValues: { city: "", address: "", latitude: "", longitude: "", description: "", gender: undefined } });
-  const f3 = useForm<S3Values>({ resolver: zodResolver(step3Schema), defaultValues: { imageUrl: "", iban: "" } });
+  const f2 = useForm<S2Values>({ resolver: zodResolver(step2Schema), defaultValues: { city: "", address: "", description: "" } });
 
   const w1 = (k: keyof S1Values) => (f1.watch(k) ?? "") as string;
   const w2 = (k: keyof S2Values) => (f2.watch(k) ?? "") as string;
-  const w3 = (k: keyof S3Values) => (f3.watch(k) ?? "") as string;
 
-  async function submit3(data: S3Values) {
-    if (!s1 || !s2) return;
+  async function handleLogoFile(file: File) {
+    setLogoPreview(URL.createObjectURL(file));
+    setLogoLoading(true);
     try {
-      const res = await mut.mutateAsync({ data: { name: s1.ownerName, email: s1.email, password: s1.password, role: "owner", phone: s1.phone } });
-      login(res.token, res.user);
-      const validPhotos = photos.filter(p => p.trim());
-      await fetch("/api/barbershops", {
+      const url = await uploadFile(file);
+      setLogoUrl(url);
+    } catch {
+      toast({ variant: "destructive", title: "Logo nuk u ngarkua" });
+      setLogoPreview("");
+    } finally {
+      setLogoLoading(false);
+    }
+  }
+
+  async function handlePhotoFile(file: File) {
+    const idx = photos.length;
+    setPhotoLoadingIdx(idx);
+    const preview = URL.createObjectURL(file);
+    try {
+      const url = await uploadFile(file);
+      setPhotos(p => [...p, { url, preview }]);
+    } catch {
+      toast({ variant: "destructive", title: "Foto nuk u ngarkua" });
+    } finally {
+      setPhotoLoadingIdx(null);
+    }
+  }
+
+  async function handlePay() {
+    if (!s1 || !s2) return;
+    setPaying(true);
+    try {
+      const res = await fetch("/api/payments/register-owner-subscription", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${res.token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: s1.businessName, city: s2.city, address: s2.address,
-          description: s2.description || null, phone: s1.phone,
-          latitude: s2.latitude !== "" ? Number(s2.latitude) : null,
-          longitude: s2.longitude !== "" ? Number(s2.longitude) : null,
-          gender: s2.gender, businessNumber: s1.businessNumber || null,
-          imageUrl: data.imageUrl || null,
-          photos: validPhotos.length ? validPhotos : null,
-          iban: data.iban || null,
+          ownerName: s1.ownerName,
+          email: s1.email,
+          password: s1.password,
+          phone: s1.phone,
+          businessName: s1.businessName,
+          businessNumber: s1.businessNumber || null,
+          city: s2.city,
+          address: s2.address,
+          description: s2.description || null,
+          imageUrl: logoUrl || null,
+          photos: photos.map(p => p.url),
         }),
       });
-      toast({ title: "Biznesi u regjistrua!", description: "Profili juaj është dërguar për aprovim." });
-      setLocation("/dashboard");
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ variant: "destructive", title: "Regjistrimi dështoi", description: data.error });
+        return;
+      }
+      login(data.token, data.user);
+      window.location.href = data.stripeUrl;
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Regjistrimi dështoi", description: err.message });
+      toast({ variant: "destructive", title: "Gabim", description: err.message });
+    } finally {
+      setPaying(false);
     }
   }
 
@@ -323,17 +525,12 @@ function OwnerForm() {
             <div className="text-xs font-semibold uppercase tracking-widest mb-1 flex items-center gap-2" style={{ color: "rgba(255,255,255,0.3)" }}>
               <MapPin className="w-3.5 h-3.5" /> Lokacioni & Detajet
             </div>
-            <IconInput id="city" icon={MapPin} label="Qyteti" placeholder="Prishtinë" value={w2("city")} onChange={v => f2.setValue("city", v)} error={f2.formState.errors.city?.message} />
+            <CityDropdown
+              value={w2("city")}
+              onChange={v => f2.setValue("city", v)}
+              error={f2.formState.errors.city?.message}
+            />
             <IconInput id="addr" icon={MapPin} label="Adresa" placeholder="Rr. Garibaldi, Nr. 12" value={w2("address")} onChange={v => f2.setValue("address", v)} error={f2.formState.errors.address?.message} />
-            <div>
-              <div className="text-[10px] font-semibold uppercase tracking-widest mb-2 pl-1" style={{ color: "rgba(255,255,255,0.3)" }}>Gjinia e klientelës</div>
-              <GenderPicker value={w2("gender")} onChange={v => f2.setValue("gender", v as any)} />
-              {f2.formState.errors.gender && <p className="text-xs pl-1 mt-1" style={{ color: "#f87171" }}>{f2.formState.errors.gender.message}</p>}
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <IconInput id="lat" icon={MapPin} label="Gjerësia (lat)" type="number" placeholder="42.6629" value={w2("latitude")} onChange={v => f2.setValue("latitude", v)} hint="Opsionale" />
-              <IconInput id="lng" icon={MapPin} label="Gjatësia (lng)" type="number" placeholder="21.1655" value={w2("longitude")} onChange={v => f2.setValue("longitude", v)} hint="Opsionale" />
-            </div>
             <TextareaInput id="desc" label="Përshkrimi (opsionale)" placeholder="Tregoni diçka për sallon tuaj..." value={w2("description")} onChange={v => f2.setValue("description", v)} />
             <div className="flex gap-3 pt-1">
               <BackBtn onClick={() => setStep(0)} />
@@ -343,46 +540,58 @@ function OwnerForm() {
         )}
 
         {step === 2 && (
-          <form onSubmit={f3.handleSubmit(submit3)} className="space-y-4">
+          <div className="space-y-5">
             <div className="text-xs font-semibold uppercase tracking-widest mb-1 flex items-center gap-2" style={{ color: "rgba(255,255,255,0.3)" }}>
-              <Layers className="w-3.5 h-3.5" /> Media & Pagesa
+              <Layers className="w-3.5 h-3.5" /> Media
             </div>
-            <IconInput id="img"  icon={Layers} label="Logo URL (opsionale)" placeholder="https://..." value={w3("imageUrl")} onChange={v => f3.setValue("imageUrl", v)} />
-            <IconInput id="iban" icon={Layers} label="IBAN (opsionale)" placeholder="XK05 1212..." value={w3("iban")} onChange={v => f3.setValue("iban", v)} />
 
-            <div className="space-y-2">
-              <div className="text-[10px] font-semibold uppercase tracking-widest pl-1" style={{ color: "rgba(255,255,255,0.3)" }}>Fotot e sallonit (opsionale)</div>
-              {photos.map((url, i) => (
-                <div key={i} className="flex gap-2">
-                  <div className="flex-1 rounded-[14px] transition-all"
-                    style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                    <input type="text" placeholder={`https://.../foto-${i + 1}.jpg`} value={url}
-                      onChange={e => setPhotos(p => p.map((v, idx) => idx === i ? e.target.value : v))}
-                      className="w-full bg-transparent px-4 py-3.5 text-sm text-white outline-none placeholder:text-white/20 rounded-[14px]" />
-                  </div>
-                  {photos.length > 1 && (
-                    <button type="button" onClick={() => setPhotos(p => p.filter((_, idx) => idx !== i))}
-                      className="w-10 h-10 my-auto flex items-center justify-center rounded-xl transition-all"
-                      style={{ background: "rgba(239,68,68,0.1)", color: "#f87171" }}>
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
+            <FileUploadBox
+              label="Logo e sallonit (opsionale)"
+              preview={logoPreview}
+              onFile={handleLogoFile}
+              onRemove={() => { setLogoUrl(""); setLogoPreview(""); }}
+              loading={logoLoading}
+            />
+
+            <PhotosUpload
+              photos={photos}
+              onAdd={handlePhotoFile}
+              onRemove={i => setPhotos(p => p.filter((_, idx) => idx !== i))}
+              loadingIdx={photoLoadingIdx}
+            />
+
+            {/* Pricing card */}
+            <div className="rounded-[14px] p-4" style={{ background: "rgba(79,142,247,0.08)", border: "1px solid rgba(79,142,247,0.2)" }}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="w-4 h-4" style={{ color: PRIMARY }} />
+                  <span className="text-sm font-semibold text-white">TRIM Pro</span>
                 </div>
-              ))}
-              <button type="button" onClick={() => setPhotos(p => [...p, ""])}
-                className="flex items-center gap-1.5 text-xs font-medium transition-colors pl-1 pt-0.5"
-                style={{ color: PRIMARY }}>
-                <Plus className="w-3.5 h-3.5" /> Shto foto tjetër
-              </button>
+                <span className="text-lg font-bold" style={{ color: PRIMARY }}>5€<span className="text-xs font-normal text-white/40">/muaj</span></span>
+              </div>
+              <ul className="space-y-1">
+                {["Listim i pakufizuar i sallonit", "Sistemi i rezervimit online", "Njoftimet me email për klientët", "Panel i menaxhimit"].map((f, i) => (
+                  <li key={i} className="flex items-center gap-2 text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>
+                    <Check className="w-3 h-3" style={{ color: PRIMARY }} /> {f}
+                  </li>
+                ))}
+              </ul>
             </div>
 
-            <div className="flex gap-3 pt-1">
+            <div className="flex gap-3">
               <BackBtn onClick={() => setStep(1)} />
-              <PrimaryBtn disabled={mut.isPending}>
-                {mut.isPending ? <><span className="w-4 h-4 rounded-full border-2 border-white/25 border-t-white animate-spin" /> Duke regjistruar...</> : <>Regjistro biznesin <ArrowRight className="w-4 h-4" /></>}
+              <PrimaryBtn type="button" disabled={paying} onClick={handlePay}>
+                {paying
+                  ? <><span className="w-4 h-4 rounded-full border-2 border-white/25 border-t-white animate-spin" /> Duke procesuar...</>
+                  : <><CreditCard className="w-4 h-4" /> Paguaj 5€/muaj</>
+                }
               </PrimaryBtn>
             </div>
-          </form>
+
+            <p className="text-center text-[11px]" style={{ color: "rgba(255,255,255,0.22)" }}>
+              Do të ridrejtoheni te Stripe për pagesë të sigurt. Fatura dërgohet me email pas pagesës.
+            </p>
+          </div>
         )}
       </StepSlide>
     </div>
@@ -408,10 +617,6 @@ export default function Register() {
         <div className="absolute inset-0 opacity-15" style={{
           backgroundImage: "linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)",
           backgroundSize: "50px 50px",
-        }} />
-        <div className="absolute -bottom-20 -right-20 w-80 h-80 rounded-full opacity-15" style={{
-          background: "radial-gradient(circle, #4f8ef7 0%, transparent 70%)",
-          filter: "blur(40px)",
         }} />
 
         <div className="relative z-10 flex flex-col justify-between h-full p-11">
@@ -442,7 +647,6 @@ export default function Register() {
               </p>
             </div>
 
-            {/* Benefits */}
             <div className="space-y-3">
               {[
                 "Rezervo termin në 30 sekonda",
@@ -462,7 +666,6 @@ export default function Register() {
             </div>
           </div>
 
-          {/* Social proof */}
           <div className="rounded-2xl p-4 animate-fade-up delay-400"
             style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
             <div className="flex items-center gap-3">
@@ -491,7 +694,6 @@ export default function Register() {
           style={{ background: "radial-gradient(circle at top right, rgba(79,142,247,0.06) 0%, transparent 70%)" }} />
 
         <div className="w-full max-w-[420px] relative z-10 py-8">
-          {/* Mobile logo */}
           <Link href="/" className="flex items-center gap-2 mb-8 lg:hidden">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#4f8ef7" }}>
               <Scissors className="w-4 h-4 text-white" />
@@ -499,7 +701,6 @@ export default function Register() {
             <span className="text-xl font-bold text-white tracking-tight">TRIM<span style={{ color: "#4f8ef7" }}>.</span></span>
           </Link>
 
-          {/* Header */}
           <div className="mb-6 animate-fade-up">
             <div className="flex items-center gap-2.5 mb-2">
               <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "rgba(79,142,247,0.15)", border: "1px solid rgba(79,142,247,0.3)" }}>
@@ -510,7 +711,6 @@ export default function Register() {
             <p className="text-sm" style={{ color: "rgba(255,255,255,0.35)" }}>Shto sallon tënd dhe fillo të marrësh rezervime.</p>
           </div>
 
-          {/* Form */}
           <div className="animate-fade-up delay-100">
             <OwnerForm />
           </div>

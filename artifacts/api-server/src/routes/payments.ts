@@ -1,8 +1,10 @@
 import { Router } from "express";
-import { db, paymentsTable, barbershopsTable, ordersTable } from "@workspace/db";
+import { db, paymentsTable, barbershopsTable, ordersTable, usersTable } from "@workspace/db";
 import { eq, and, sql, desc } from "drizzle-orm";
-import { requireAuth, requireRole, type AuthRequest } from "../lib/auth";
+import { requireAuth, requireRole, type AuthRequest, generateToken, hashPassword } from "../lib/auth";
 import { logger } from "../lib/logger";
+import { sendSubscriptionInvoiceEmail, sendWelcomeEmail } from "../lib/email";
+import crypto from "crypto";
 
 const router = Router();
 
@@ -26,6 +28,86 @@ router.get("/payments", requireAuth, requireRole("admin", "owner"), async (req: 
   const [{ count }] = await db.select({ count: sql<number>`count(*)::int` }).from(paymentsTable)
     .where(conditions.length > 0 ? and(...conditions) : undefined);
   res.json({ data: payments.map(formatPayment), total: count });
+});
+
+router.post("/payments/register-owner-subscription", async (req, res): Promise<void> => {
+  const { ownerName, email, password, phone, businessName, businessNumber, city, address, description, imageUrl, photos } = req.body;
+  if (!ownerName || !email || !password || !businessName || !city || !address) {
+    res.status(400).json({ error: "Fushat e detyrueshme mungojnë" }); return;
+  }
+  const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+  if (!STRIPE_SECRET_KEY) {
+    res.status(503).json({ error: "Stripe nuk është konfiguruar. Shto STRIPE_SECRET_KEY." }); return;
+  }
+  try {
+    const [existing] = await db.select().from(usersTable).where(eq(usersTable.email, email));
+    if (existing) { res.status(400).json({ error: "Ky email është i regjistruar tashmë" }); return; }
+
+    const passwordHash = await hashPassword(password);
+    const [user] = await db.insert(usersTable).values({
+      name: ownerName, email, passwordHash, role: "owner", phone: phone ?? null,
+    }).returning();
+
+    const subdomain = businessName.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+    const [shop] = await db.insert(barbershopsTable).values({
+      ownerId: user.id, name: businessName, city, address,
+      description: description ?? null, phone: phone ?? null,
+      imageUrl: imageUrl ?? null,
+      photos: Array.isArray(photos) && photos.length > 0 ? photos : null,
+      businessNumber: businessNumber ?? null,
+      subdomain, status: "pending", gender: "both",
+    }).returning();
+
+    const domains = process.env.REPLIT_DOMAINS?.split(",")[0] ?? "localhost";
+    const protocol = domains.includes("localhost") ? "http" : "https";
+    const baseUrl = `${protocol}://${domains}`;
+
+    const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        mode: "subscription",
+        "line_items[0][price_data][currency]": "eur",
+        "line_items[0][price_data][product_data][name]": "TRIM Pro — Abonim Mujor",
+        "line_items[0][price_data][product_data][description]": `Barbershop: ${businessName}`,
+        "line_items[0][price_data][recurring][interval]": "month",
+        "line_items[0][price_data][unit_amount]": "500",
+        "line_items[0][quantity]": "1",
+        customer_email: email,
+        success_url: `${baseUrl}/dashboard?sub_success=true`,
+        cancel_url: `${baseUrl}/register?cancelled=true`,
+        "metadata[shopId]": shop.id.toString(),
+        "metadata[ownerName]": ownerName,
+        "metadata[ownerEmail]": email,
+        "metadata[shopName]": businessName,
+      }),
+    });
+
+    const stripeBody = await stripeRes.text();
+    if (!stripeRes.ok) {
+      let err: any = {};
+      try { err = JSON.parse(stripeBody); } catch {}
+      logger.error({ err }, "Stripe error creating owner subscription");
+      await db.delete(usersTable).where(eq(usersTable.id, user.id));
+      res.status(500).json({ error: err?.error?.message ?? "Gabim gjatë krijimit të sesionit Stripe" }); return;
+    }
+    const session = JSON.parse(stripeBody);
+    const token = generateToken({ id: user.id, email: user.email, role: user.role });
+
+    sendWelcomeEmail({ to: { email: user.email, name: user.name }, role: "owner" }).catch(() => {});
+
+    res.status(201).json({
+      token,
+      user: { id: user.id, name: user.name, email: user.email, role: user.role, phone: user.phone },
+      stripeUrl: session.url,
+    });
+  } catch (err: any) {
+    logger.error({ err }, "Unexpected error in register-owner-subscription");
+    res.status(500).json({ error: err?.message ?? "Gabim i brendshëm" });
+  }
 });
 
 router.post("/payments/create-subscription", requireAuth, requireRole("owner"), async (req: AuthRequest, res): Promise<void> => {
@@ -227,17 +309,38 @@ router.post("/payments/create-ad-checkout", async (req, res): Promise<void> => {
 });
 
 router.post("/payments/webhook", async (req, res): Promise<void> => {
-  const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
   logger.info("Stripe webhook received");
   const event = req.body;
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
     if (session.metadata?.shopId) {
-      await db.update(barbershopsTable).set({ subscriptionStatus: "active", stripeSubscriptionId: session.subscription }).where(eq(barbershopsTable.id, parseInt(session.metadata.shopId)));
-      await db.insert(paymentsTable).values({ shopId: parseInt(session.metadata.shopId), amount: "10.00", type: "subscription", status: "completed", stripePaymentId: session.id });
+      const shopId = parseInt(session.metadata.shopId);
+      await db.update(barbershopsTable)
+        .set({ subscriptionStatus: "active", stripeSubscriptionId: session.subscription })
+        .where(eq(barbershopsTable.id, shopId));
+      await db.insert(paymentsTable).values({
+        shopId, amount: "5.00", type: "subscription", status: "completed", stripePaymentId: session.id,
+      });
+
+      const invoiceNumber = `INV-${Date.now()}-${shopId}`;
+      const ownerEmail = session.metadata?.ownerEmail ?? session.customer_email;
+      const ownerName  = session.metadata?.ownerName  ?? "Pronar";
+      const shopName   = session.metadata?.shopName   ?? "Saloni";
+
+      if (ownerEmail) {
+        sendSubscriptionInvoiceEmail({
+          to: { email: ownerEmail, name: ownerName },
+          shopName,
+          amount: "5.00",
+          invoiceDate: new Date(),
+          invoiceNumber,
+        }).catch(() => {});
+      }
     }
     if (session.metadata?.orderId) {
-      await db.update(ordersTable).set({ status: "paid", stripeSessionId: session.id }).where(eq(ordersTable.id, parseInt(session.metadata.orderId)));
+      await db.update(ordersTable)
+        .set({ status: "paid", stripeSessionId: session.id })
+        .where(eq(ordersTable.id, parseInt(session.metadata.orderId)));
     }
   }
   res.json({ received: true });
