@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,15 +12,6 @@ import {
 } from "lucide-react";
 
 /* ── Schemas ─────────────────────────────────────────────── */
-const userSchema = z.object({
-  firstName:       z.string().min(1, "Emri i detyrueshëm"),
-  lastName:        z.string().min(1, "Mbiemri i detyrueshëm"),
-  email:           z.string().email("Email i pavlefshëm"),
-  phone:           z.string().min(5, "Telefoni i detyrueshëm"),
-  password:        z.string().min(6, "Minimum 6 karaktere"),
-  confirmPassword: z.string().min(1, "Konfirmo fjalëkalimin"),
-}).refine(d => d.password === d.confirmPassword, { message: "Fjalëkalimet nuk përputhen", path: ["confirmPassword"] });
-
 const step1Schema = z.object({
   ownerName:      z.string().min(2, "Emri i detyrueshëm"),
   email:          z.string().email("Email i pavlefshëm"),
@@ -44,7 +35,6 @@ const step3Schema = z.object({
   iban:     z.string().optional(),
 });
 
-type UserFormValues = z.infer<typeof userSchema>;
 type S1Values       = z.infer<typeof step1Schema>;
 type S2Values       = z.infer<typeof step2Schema>;
 type S3Values       = z.infer<typeof step3Schema>;
@@ -263,52 +253,6 @@ function StepSlide({ children, step }: { children: React.ReactNode; step: number
   );
 }
 
-/* ── User form ───────────────────────────────────────────── */
-function UserForm() {
-  const [, setLocation] = useLocation();
-  const { login }       = useAuth();
-  const { toast }       = useToast();
-  const mut             = useRegister();
-
-  const { handleSubmit, setValue, watch, formState: { errors } } = useForm<UserFormValues>({
-    resolver: zodResolver(userSchema),
-    defaultValues: { firstName: "", lastName: "", email: "", phone: "", password: "", confirmPassword: "" },
-  });
-  const w = (k: keyof UserFormValues) => (watch(k) ?? "") as string;
-
-  async function onSubmit(data: UserFormValues) {
-    try {
-      const res = await mut.mutateAsync({ data: {
-        name: `${data.firstName} ${data.lastName}`,
-        email: data.email, password: data.password, role: "user", phone: data.phone,
-      }});
-      login(res.token, res.user);
-      toast({ title: "Llogaria u krijua!", description: "Mirë se vini në TRIM." });
-      setLocation("/");
-    } catch (err: any) {
-      toast({ variant: "destructive", title: "Regjistrimi dështoi", description: err.message });
-    }
-  }
-
-  return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
-      <div className="grid grid-cols-2 gap-3">
-        <IconInput id="fn" icon={User} label="Emri" placeholder="Besim" value={w("firstName")} onChange={v => setValue("firstName", v)} error={errors.firstName?.message} />
-        <IconInput id="ln" icon={User} label="Mbiemri" placeholder="Gashi" value={w("lastName")} onChange={v => setValue("lastName", v)} error={errors.lastName?.message} />
-      </div>
-      <IconInput id="em" icon={Mail} label="Email" type="email" placeholder="ti@shembull.com" value={w("email")} onChange={v => setValue("email", v)} error={errors.email?.message} />
-      <IconInput id="ph" icon={Phone} label="Telefoni" type="tel" placeholder="+383 44 000 000" value={w("phone")} onChange={v => setValue("phone", v)} error={errors.phone?.message} />
-      <IconInput id="pw" icon={Lock} label="Fjalëkalimi" type="password" value={w("password")} onChange={v => setValue("password", v)} error={errors.password?.message} />
-      <IconInput id="cpw" icon={Lock} label="Konfirmo fjalëkalimin" type="password" value={w("confirmPassword")} onChange={v => setValue("confirmPassword", v)} error={errors.confirmPassword?.message} />
-      <div className="pt-1">
-        <PrimaryBtn disabled={mut.isPending}>
-          {mut.isPending ? <><span className="w-4 h-4 rounded-full border-2 border-white/25 border-t-white animate-spin" /> Duke krijuar...</> : <>Krijo llogarinë <ArrowRight className="w-4 h-4" /></>}
-        </PrimaryBtn>
-      </div>
-    </form>
-  );
-}
-
 /* ── Owner multi-step ────────────────────────────────────── */
 function OwnerForm() {
   const [step, setStep] = useState(0);
@@ -447,8 +391,6 @@ function OwnerForm() {
 
 /* ── Main ────────────────────────────────────────────────── */
 export default function Register() {
-  const [role, setRole] = useState<"user" | "owner">("user");
-
   return (
     <div className="min-h-screen flex overflow-hidden" style={{ background: "#080b12", fontFamily: "'Inter', sans-serif" }}>
 
@@ -559,33 +501,18 @@ export default function Register() {
 
           {/* Header */}
           <div className="mb-6 animate-fade-up">
-            <h1 className="text-[26px] font-bold text-white tracking-tight mb-1.5">Krijo llogari</h1>
-            <p className="text-sm" style={{ color: "rgba(255,255,255,0.35)" }}>Fillo falas sot. Pa kartë krediti.</p>
-          </div>
-
-          {/* Role toggle */}
-          <div className="flex mb-6 rounded-[16px] p-1.5 animate-fade-up delay-75"
-            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-            {[
-              { v: "user" as const,  icon: User,      label: "Rezervoj termin" },
-              { v: "owner" as const, icon: Building2, label: "Pronar salloni" },
-            ].map(({ v, icon: Icon, label }) => (
-              <button key={v} type="button" onClick={() => setRole(v)}
-                className="flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-[12px] text-sm font-semibold transition-all duration-300"
-                style={{
-                  background: role === v ? "linear-gradient(135deg, #4f8ef7, #3b6fd4)" : "transparent",
-                  color: role === v ? "#fff" : "rgba(255,255,255,0.4)",
-                  boxShadow: role === v ? "0 4px 16px rgba(79,142,247,0.3)" : "none",
-                }}>
-                <Icon className="w-4 h-4" />
-                <span className="hidden sm:block">{label}</span>
-              </button>
-            ))}
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "rgba(79,142,247,0.15)", border: "1px solid rgba(79,142,247,0.3)" }}>
+                <Building2 className="w-4 h-4" style={{ color: "#4f8ef7" }} />
+              </div>
+              <h1 className="text-[26px] font-bold text-white tracking-tight">Regjistro biznesin</h1>
+            </div>
+            <p className="text-sm" style={{ color: "rgba(255,255,255,0.35)" }}>Shto sallon tënd dhe fillo të marrësh rezervime.</p>
           </div>
 
           {/* Form */}
           <div className="animate-fade-up delay-100">
-            {role === "user" ? <UserForm /> : <OwnerForm />}
+            <OwnerForm />
           </div>
 
           <p className="text-center text-xs mt-6 animate-fade-in delay-200" style={{ color: "rgba(255,255,255,0.28)" }}>
