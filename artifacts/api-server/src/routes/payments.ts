@@ -131,8 +131,43 @@ router.post("/payments/register-owner-subscription", async (req, res): Promise<v
       res.status(500).json({ error: err?.error?.message ?? "Gabim gjatë krijimit të abonimit" }); return;
     }
     const sub = JSON.parse(subBody) as any;
-    const clientSecret: string | undefined = sub.latest_invoice?.payment_intent?.client_secret;
+    logger.info({ subStatus: sub.status, latestInvoice: typeof sub.latest_invoice, paymentIntent: typeof sub.latest_invoice?.payment_intent }, "Stripe subscription created");
+
+    /* ── Resolve client_secret: expand may return object, string ID, or nothing ── */
+    let clientSecret: string | undefined;
+
+    const rawInvoice = sub.latest_invoice;
+
+    // Helper: given a payment_intent value (object or string ID), extract client_secret
+    async function resolveClientSecret(pi: any): Promise<string | undefined> {
+      if (!pi) return undefined;
+      if (typeof pi === "object") return pi.client_secret as string | undefined;
+      // pi is a string ID — fetch the full PaymentIntent
+      const piRes = await fetch(`https://api.stripe.com/v1/payment_intents/${pi}`, {
+        headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}` },
+      });
+      if (!piRes.ok) return undefined;
+      const piData = JSON.parse(await piRes.text());
+      return piData.client_secret as string | undefined;
+    }
+
+    if (rawInvoice && typeof rawInvoice === "object") {
+      // Invoice was expanded inline
+      clientSecret = await resolveClientSecret(rawInvoice.payment_intent);
+    } else if (typeof rawInvoice === "string") {
+      // Invoice came back as a bare ID — fetch it with payment_intent expanded
+      const invRes = await fetch(
+        `https://api.stripe.com/v1/invoices/${rawInvoice}?expand[]=payment_intent`,
+        { headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}` } },
+      );
+      if (invRes.ok) {
+        const inv = JSON.parse(await invRes.text());
+        clientSecret = await resolveClientSecret(inv.payment_intent);
+      }
+    }
+
     if (!clientSecret) {
+      logger.error({ subId: sub.id, subStatus: sub.status, rawInvoice }, "Could not resolve Stripe clientSecret");
       await db.delete(usersTable).where(eq(usersTable.id, user.id));
       res.status(500).json({ error: "Stripe nuk ktheu clientSecret — provoni përsëri" }); return;
     }
