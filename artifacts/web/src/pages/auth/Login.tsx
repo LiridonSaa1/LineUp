@@ -1,4 +1,5 @@
 import { useState } from "react";
+import logoImg from "@assets/LINE_(2)_1782771053641.png";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -171,11 +172,8 @@ export default function Login() {
 
         <div className="relative z-10 flex flex-col justify-between h-full p-14">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 animate-fade-in w-fit">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "#4f8ef7", boxShadow: "0 4px 20px rgba(79,142,247,0.4)" }}>
-              <Scissors className="w-[18px] h-[18px] text-white" />
-            </div>
-            <span className="text-[22px] font-bold text-white tracking-tight">Line<span style={{ color: "#4f8ef7" }}>UP</span></span>
+          <Link href="/" className="flex items-center w-fit">
+            <img src={logoImg} alt="LineUP" className="h-10 w-auto" style={{ filter: "invert(1) brightness(2)" }} />
           </Link>
 
           <div className="space-y-8">
@@ -253,11 +251,8 @@ export default function Login() {
 
         <div className="w-full max-w-[360px] relative z-10">
           {/* Mobile logo */}
-          <Link href="/" className="flex items-center gap-2 mb-9 lg:hidden">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#4f8ef7" }}>
-              <Scissors className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-xl font-bold text-white tracking-tight">Line<span style={{ color: "#4f8ef7" }}>UP</span></span>
+          <Link href="/" className="flex items-center mb-9 lg:hidden">
+            <img src={logoImg} alt="LineUP" className="h-8 w-auto" style={{ filter: "invert(1) brightness(2)" }} />
           </Link>
 
           {/* Header */}
