@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,13 +7,11 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import {
   Eye, EyeOff, ArrowRight, ArrowLeft, Scissors, Mail, Lock,
-  Building2, MapPin, Phone, Check, ChevronDown, CreditCard, Users,
+  Building2, MapPin, Phone, Check, ChevronDown, Users,
   ShieldCheck,
 } from "lucide-react";
 import { loadStripe } from "@stripe/stripe-js";
-import {
-  Elements, PaymentElement, useStripe, useElements,
-} from "@stripe/react-stripe-js";
+import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
 
 /* ── Constants ───────────────────────────────────────────── */
 const KOSOVO_CITIES = [
@@ -247,90 +245,6 @@ function BackBtn({ onClick }: { onClick: () => void }) {
   );
 }
 
-/* ── Stripe payment sub-form ─────────────────────────────── */
-function StripePayForm({
-  pkg, onBack, onSuccess,
-}: {
-  pkg: PkgOption; onBack: () => void; onSuccess: () => void;
-}) {
-  const stripe   = useStripe();
-  const elements = useElements();
-  const { toast } = useToast();
-  const [paying, setPaying] = useState(false);
-  const [cardError, setCardError] = useState("");
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!stripe || !elements) return;
-    setPaying(true);
-    setCardError("");
-
-    const { error } = await stripe.confirmPayment({
-      elements,
-      confirmParams: { return_url: `${window.location.origin}/dashboard?sub_success=true` },
-      redirect: "if_required",
-    });
-
-    if (error) {
-      setCardError(error.message ?? "Pagesa dështoi. Provoni përsëri.");
-      setPaying(false);
-    } else {
-      onSuccess();
-    }
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="text-xs font-semibold uppercase tracking-widest mb-3 flex items-center gap-2"
-        style={{ color: "rgba(255,255,255,0.3)" }}>
-        <ShieldCheck className="w-3.5 h-3.5" /> Pagesa e Sigurt
-      </div>
-
-      <div className="rounded-[14px] p-3 mb-4"
-        style={{ background: "rgba(79,142,247,0.07)", border: `1px solid ${pkg.color}33` }}>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-white font-semibold text-sm">TRIM {pkg.label}</p>
-            <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
-              {pkg.workers} punëtorë · Abonim mujor
-            </p>
-          </div>
-          <span className="text-xl font-bold" style={{ color: pkg.color }}>
-            {pkg.price}€<span className="text-xs font-normal text-white/40">/muaj</span>
-          </span>
-        </div>
-      </div>
-
-      <div className="rounded-[14px] p-4"
-        style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
-        <PaymentElement
-          options={{
-            layout: "tabs",
-            wallets: { applePay: "never", googlePay: "never" },
-          }}
-        />
-      </div>
-
-      {cardError && (
-        <p className="text-xs pl-1" style={{ color: "#f87171" }}>{cardError}</p>
-      )}
-
-      <div className="flex gap-3">
-        <BackBtn onClick={onBack} />
-        <PrimaryBtn type="submit" disabled={!stripe || paying}>
-          {paying
-            ? <><span className="w-4 h-4 rounded-full border-2 border-white/25 border-t-white animate-spin" /> Duke procesuar...</>
-            : <><CreditCard className="w-4 h-4" /> Paguaj {pkg.price}€/muaj</>}
-        </PrimaryBtn>
-      </div>
-
-      <p className="text-center text-[11px]" style={{ color: "rgba(255,255,255,0.2)" }}>
-        🔒 Pagesa e sigurt me Stripe · Fatura dërgohet me email pas pagesës
-      </p>
-    </form>
-  );
-}
-
 /* ── OwnerForm ───────────────────────────────────────────── */
 function OwnerForm() {
   const [step, setStep]   = useState(0);
@@ -340,8 +254,6 @@ function OwnerForm() {
   const [s1, setS1]             = useState<S1Values | null>(null);
   const [selectedPkg, setPkg]   = useState<PkgOption | null>(null);
   const [clientSecret, setCS]   = useState<string>("");
-  const [authToken, setAuthTok] = useState<string>("");
-  const [authUser, setAuthUsr]  = useState<any>(null);
   const [loadingPay, setLoadPay]= useState(false);
   const [stripePromise, setSP]  = useState<ReturnType<typeof loadStripe> | null>(null);
 
@@ -381,9 +293,10 @@ function OwnerForm() {
         toast({ variant: "destructive", title: "Gabim", description: data.error });
         return;
       }
+      // Login immediately — user will already be authenticated when Stripe
+      // redirects back to /dashboard after successful payment
+      if (data.token && data.user) login(data.token, data.user);
       setCS(data.clientSecret);
-      setAuthTok(data.token);
-      setAuthUsr(data.user);
       setPkg(pkg);
       setStep(2);
     } catch (err: any) {
@@ -391,11 +304,6 @@ function OwnerForm() {
     } finally {
       setLoadPay(false);
     }
-  }
-
-  function handlePaySuccess() {
-    if (authToken && authUser) login(authToken, authUser);
-    window.location.href = "/dashboard?sub_success=true";
   }
 
   return (
@@ -505,35 +413,37 @@ function OwnerForm() {
         </div>
       )}
 
-      {/* ── Step 2: Embedded Stripe payment ─────────────── */}
-      {step === 2 && selectedPkg && clientSecret && stripePromise && (
-        <Elements
-          stripe={stripePromise}
-          options={{
-            clientSecret,
-            appearance: {
-              theme: "night",
-              variables: {
-                colorPrimary: "#4f8ef7",
-                colorBackground: "#12151e",
-                colorText: "#e2e8f0",
-                colorDanger: "#f87171",
-                borderRadius: "12px",
-                fontFamily: "Inter, sans-serif",
-              },
-            },
-          }}>
-          <StripePayForm
-            pkg={selectedPkg}
-            onBack={() => setStep(1)}
-            onSuccess={handlePaySuccess}
-          />
-        </Elements>
-      )}
+      {/* ── Step 2: Embedded Stripe Checkout ────────────── */}
+      {step === 2 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between mb-1">
+            <div className="text-xs font-semibold uppercase tracking-widest flex items-center gap-2"
+              style={{ color: "rgba(255,255,255,0.3)" }}>
+              <ShieldCheck className="w-3.5 h-3.5" /> Pagesa e Sigurt
+            </div>
+            <button type="button" onClick={() => setStep(1)}
+              className="flex items-center gap-1 text-xs transition-colors"
+              style={{ color: "rgba(255,255,255,0.35)" }}>
+              <ArrowLeft className="w-3 h-3" /> Kthehu
+            </button>
+          </div>
 
-      {step === 2 && (!clientSecret || !stripePromise) && (
-        <div className="flex items-center justify-center py-12">
-          <span className="w-6 h-6 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+          {clientSecret && stripePromise ? (
+            <div className="rounded-[14px] overflow-hidden"
+              style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
+              <EmbeddedCheckoutProvider stripe={stripePromise} options={{ clientSecret }}>
+                <EmbeddedCheckout />
+              </EmbeddedCheckoutProvider>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-12">
+              <span className="w-6 h-6 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+            </div>
+          )}
+
+          <p className="text-center text-[11px]" style={{ color: "rgba(255,255,255,0.2)" }}>
+            🔒 Pagesa e sigurt me Stripe · Fatura dërgohet me email pas pagesës
+          </p>
         </div>
       )}
     </div>

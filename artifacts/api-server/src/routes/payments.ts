@@ -83,98 +83,49 @@ router.post("/payments/register-owner-subscription", async (req, res): Promise<v
 
     await db.update(barbershopsTable).set({ stripeCustomerId: customer.id }).where(eq(barbershopsTable.id, shop.id));
 
-    /* ── Stripe Product (required before price_data on Subscriptions API) ── */
-    const prodRes = await fetch("https://api.stripe.com/v1/products", {
+    /* ── Stripe Checkout Session (embedded, subscription mode) ───────────────
+       The Subscriptions API no longer creates a payment_intent on invoices in
+       newer API versions. Checkout Sessions always return a client_secret and
+       handle subscription creation automatically on payment completion.        */
+    const domains = process.env.REPLIT_DOMAINS?.split(",")[0] ?? "localhost";
+    const protocol = domains.includes("localhost") ? "http" : "https";
+    const baseUrl = `${protocol}://${domains}`;
+
+    const sessionRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {
       method: "POST",
       headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}`, "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        name: pkg.name,
-        description: `${pkg.maxBarbers} punëtorë · ${businessName}`,
+        mode: "subscription",
+        ui_mode: "embedded",
+        customer: customer.id,
+        "line_items[0][price_data][currency]": "eur",
+        "line_items[0][price_data][product_data][name]": pkg.name,
+        "line_items[0][price_data][product_data][description]": `${pkg.maxBarbers} punëtorë · ${businessName}`,
+        "line_items[0][price_data][recurring][interval]": "month",
+        "line_items[0][price_data][unit_amount]": pkg.amountCents.toString(),
+        "line_items[0][quantity]": "1",
+        return_url: `${baseUrl}/dashboard?sub_success=true&session_id={CHECKOUT_SESSION_ID}`,
         "metadata[shopId]": shop.id.toString(),
+        "metadata[ownerName]": ownerName,
+        "metadata[ownerEmail]": email,
+        "metadata[shopName]": businessName,
+        "metadata[packageId]": String(packageId),
+        "metadata[amountEur]": (pkg.amountCents / 100).toFixed(2),
       }),
     });
-    const prodBody = await prodRes.text();
-    if (!prodRes.ok) {
-      let err: any = {}; try { err = JSON.parse(prodBody); } catch {}
+    const sessionBody = await sessionRes.text();
+    if (!sessionRes.ok) {
+      let err: any = {}; try { err = JSON.parse(sessionBody); } catch {}
       await db.delete(usersTable).where(eq(usersTable.id, user.id));
-      res.status(500).json({ error: err?.error?.message ?? "Gabim gjatë krijimit të produktit Stripe" }); return;
+      res.status(500).json({ error: err?.error?.message ?? "Gabim gjatë krijimit të sesionit të pagesës" }); return;
     }
-    const stripeProduct = JSON.parse(prodBody);
-
-    /* ── Stripe Subscription ─────────────────────────────── */
-    const subParams = new URLSearchParams({
-      customer: customer.id,
-      payment_behavior: "default_incomplete",
-      "items[0][price_data][currency]": "eur",
-      "items[0][price_data][product]": stripeProduct.id,
-      "items[0][price_data][recurring][interval]": "month",
-      "items[0][price_data][unit_amount]": pkg.amountCents.toString(),
-      "items[0][quantity]": "1",
-      "metadata[shopId]": shop.id.toString(),
-      "metadata[ownerName]": ownerName,
-      "metadata[ownerEmail]": email,
-      "metadata[shopName]": businessName,
-      "metadata[packageId]": String(packageId),
-      "metadata[amountEur]": (pkg.amountCents / 100).toFixed(2),
-      "expand[]": "latest_invoice.payment_intent",
-    });
-
-    const subRes = await fetch("https://api.stripe.com/v1/subscriptions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}`, "Content-Type": "application/x-www-form-urlencoded" },
-      body: subParams,
-    });
-    const subBody = await subRes.text();
-    if (!subRes.ok) {
-      let err: any = {}; try { err = JSON.parse(subBody); } catch {}
-      await db.delete(usersTable).where(eq(usersTable.id, user.id));
-      res.status(500).json({ error: err?.error?.message ?? "Gabim gjatë krijimit të abonimit" }); return;
-    }
-    const sub = JSON.parse(subBody) as any;
-    logger.info({ subStatus: sub.status, latestInvoice: typeof sub.latest_invoice, paymentIntent: typeof sub.latest_invoice?.payment_intent }, "Stripe subscription created");
-
-    /* ── Resolve client_secret: expand may return object, string ID, or nothing ── */
-    let clientSecret: string | undefined;
-
-    const rawInvoice = sub.latest_invoice;
-
-    // Helper: given a payment_intent value (object or string ID), extract client_secret
-    async function resolveClientSecret(pi: any): Promise<string | undefined> {
-      if (!pi) return undefined;
-      if (typeof pi === "object") return pi.client_secret as string | undefined;
-      // pi is a string ID — fetch the full PaymentIntent
-      const piRes = await fetch(`https://api.stripe.com/v1/payment_intents/${pi}`, {
-        headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}` },
-      });
-      if (!piRes.ok) return undefined;
-      const piData = JSON.parse(await piRes.text());
-      return piData.client_secret as string | undefined;
-    }
-
-    if (rawInvoice && typeof rawInvoice === "object") {
-      // Invoice was expanded inline
-      clientSecret = await resolveClientSecret(rawInvoice.payment_intent);
-    } else if (typeof rawInvoice === "string") {
-      // Invoice came back as a bare ID — fetch it with payment_intent expanded
-      const invRes = await fetch(
-        `https://api.stripe.com/v1/invoices/${rawInvoice}?expand[]=payment_intent`,
-        { headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}` } },
-      );
-      if (invRes.ok) {
-        const inv = JSON.parse(await invRes.text());
-        clientSecret = await resolveClientSecret(inv.payment_intent);
-      }
-    }
-
+    const session = JSON.parse(sessionBody);
+    const clientSecret: string | undefined = session.client_secret;
     if (!clientSecret) {
-      logger.error({ subId: sub.id, subStatus: sub.status, rawInvoice }, "Could not resolve Stripe clientSecret");
+      logger.error({ sessionId: session.id }, "Checkout session has no client_secret");
       await db.delete(usersTable).where(eq(usersTable.id, user.id));
-      res.status(500).json({ error: "Stripe nuk ktheu clientSecret — provoni përsëri" }); return;
+      res.status(500).json({ error: "Stripe nuk ktheu clientSecret" }); return;
     }
-
-    await db.update(barbershopsTable)
-      .set({ stripeSubscriptionId: sub.id })
-      .where(eq(barbershopsTable.id, shop.id));
 
     const token = generateToken({ id: user.id, email: user.email, role: user.role });
     sendWelcomeEmail({ to: { email: user.email, name: user.name }, role: "owner" }).catch(() => {});
