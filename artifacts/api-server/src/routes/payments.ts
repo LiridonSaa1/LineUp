@@ -96,7 +96,7 @@ router.post("/payments/register-owner-subscription", async (req, res): Promise<v
       headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}`, "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         mode: "subscription",
-        ui_mode: "embedded",
+        ui_mode: "embedded_page",
         customer: customer.id,
         "line_items[0][price_data][currency]": "eur",
         "line_items[0][price_data][product_data][name]": pkg.name,
