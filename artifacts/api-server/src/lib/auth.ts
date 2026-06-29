@@ -2,7 +2,10 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import type { Request, Response, NextFunction } from "express";
 
-const JWT_SECRET = process.env.SESSION_SECRET || "barber-booking-secret-key";
+const JWT_SECRET = process.env.SESSION_SECRET;
+if (!JWT_SECRET) {
+  throw new Error("SESSION_SECRET environment variable is required but was not provided.");
+}
 
 export function generateToken(payload: { id: number; email: string; role: string }): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });

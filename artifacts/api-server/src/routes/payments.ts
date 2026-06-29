@@ -3,8 +3,7 @@ import { db, paymentsTable, barbershopsTable, ordersTable, usersTable } from "@w
 import { eq, and, sql, desc } from "drizzle-orm";
 import { requireAuth, requireRole, type AuthRequest, generateToken, hashPassword } from "../lib/auth";
 import { logger } from "../lib/logger";
-import { sendSubscriptionInvoiceEmail, sendWelcomeEmail } from "../lib/email";
-import crypto from "crypto";
+import { sendWelcomeEmail } from "../lib/email";
 
 const router = Router();
 
@@ -196,6 +195,11 @@ router.post("/payments/create-checkout", requireAuth, async (req: AuthRequest, r
   try {
     const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId));
     if (!order) { res.status(404).json({ error: "Order not found" }); return; }
+
+    // Only the order owner or an admin may create a checkout session for it
+    if (req.user!.role === "user" && order.userId !== req.user!.id) {
+      res.status(403).json({ error: "Forbidden" }); return;
+    }
     const domains = process.env.REPLIT_DOMAINS?.split(",")[0] ?? "localhost";
     const protocol = domains.includes("localhost") ? "http" : "https";
     const baseUrl = `${protocol}://${domains}`;
@@ -337,62 +341,6 @@ router.post("/payments/create-ad-checkout", async (req, res): Promise<void> => {
     logger.error({ err }, "Unexpected error creating ad checkout");
     res.status(500).json({ error: err?.message ?? "Internal error" });
   }
-});
-
-router.post("/payments/webhook", async (req, res): Promise<void> => {
-  logger.info({ type: req.body?.type }, "Stripe webhook received");
-  const event = req.body;
-
-  /* ── Subscription payment succeeded ─────────────────────── */
-  if (event.type === "invoice.paid") {
-    const invoice = event.data.object as any;
-    const meta = invoice.subscription_details?.metadata ?? invoice.metadata ?? {};
-    const shopId = meta.shopId ? parseInt(meta.shopId) : null;
-
-    if (shopId) {
-      await db.update(barbershopsTable)
-        .set({ subscriptionStatus: "active", status: "active" })
-        .where(eq(barbershopsTable.id, shopId));
-
-      const amountStr = ((invoice.amount_paid ?? 0) / 100).toFixed(2);
-      await db.insert(paymentsTable).values({
-        shopId,
-        amount: amountStr,
-        type: "subscription",
-        status: "completed",
-        stripePaymentId: invoice.id,
-      }).catch(() => {});
-
-      const ownerEmail = meta.ownerEmail ?? invoice.customer_email;
-      const ownerName  = meta.ownerName  ?? "Pronar";
-      const shopName   = meta.shopName   ?? "Saloni";
-      const packageId  = meta.packageId  ?? "2";
-      const amountEur  = meta.amountEur  ?? amountStr;
-
-      if (ownerEmail) {
-        sendSubscriptionInvoiceEmail({
-          to: { email: ownerEmail, name: ownerName },
-          shopName,
-          amount: amountEur,
-          invoiceDate: new Date(invoice.created * 1000),
-          invoiceNumber: `INV-${invoice.id}`,
-          packageId,
-        }).catch(() => {});
-      }
-    }
-  }
-
-  /* ── Product order checkout ──────────────────────────────── */
-  if (event.type === "checkout.session.completed") {
-    const session = event.data.object as any;
-    if (session.metadata?.orderId) {
-      await db.update(ordersTable)
-        .set({ status: "paid", stripeSessionId: session.id })
-        .where(eq(ordersTable.id, parseInt(session.metadata.orderId)));
-    }
-  }
-
-  res.json({ received: true });
 });
 
 export default router;

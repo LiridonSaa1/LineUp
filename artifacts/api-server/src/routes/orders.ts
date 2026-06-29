@@ -89,6 +89,22 @@ router.get("/orders/:id", requireAuth, async (req: AuthRequest, res): Promise<vo
 router.patch("/orders/:id", requireAuth, async (req: AuthRequest, res): Promise<void> => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   const { status } = req.body;
+
+  // Fetch the order first to enforce ownership / role checks
+  const [existing] = await db.select().from(ordersTable).where(eq(ordersTable.id, id));
+  if (!existing) { res.status(404).json({ error: "Not found" }); return; }
+
+  // Regular users can only cancel their own orders; admins can update any order
+  if (req.user!.role === "user") {
+    if (existing.userId !== req.user!.id) {
+      res.status(403).json({ error: "Forbidden" }); return;
+    }
+    // Users may only cancel, not set arbitrary statuses
+    if (status !== "cancelled") {
+      res.status(403).json({ error: "Forbidden" }); return;
+    }
+  }
+
   const [order] = await db.update(ordersTable).set({ status }).where(eq(ordersTable.id, id)).returning();
   if (!order) { res.status(404).json({ error: "Not found" }); return; }
   res.json(formatOrder(order));
