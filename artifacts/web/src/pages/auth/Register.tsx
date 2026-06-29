@@ -476,7 +476,7 @@ export default function Register() {
               style={{ background: "#4f8ef7", boxShadow: "0 4px 20px rgba(79,142,247,0.4)" }}>
               <Scissors className="w-[18px] h-[18px] text-white" />
             </div>
-            <span className="text-[22px] font-bold text-white tracking-tight">TRIM<span style={{ color: "#4f8ef7" }}>.</span></span>
+            <span className="text-[22px] font-bold text-white tracking-tight">Line<span style={{ color: "#4f8ef7" }}>UP</span></span>
           </Link>
 
           <div className="space-y-7">
@@ -491,7 +491,7 @@ export default function Register() {
                   backgroundClip: "text",
                   animation: "shimmer 3s linear infinite",
                 }}>
-                  tënd me TRIM.
+                  tënd me LineUP.
                 </span>
               </h2>
               <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.45)", maxWidth: "260px" }}>
@@ -528,7 +528,7 @@ export default function Register() {
                 ))}
               </div>
               <p className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
-                <span className="text-white font-semibold">12,000+</span> klientë besojnë TRIM
+                <span className="text-white font-semibold">12,000+</span> klientë besojnë LineUP
               </p>
             </div>
           </div>
@@ -546,7 +546,7 @@ export default function Register() {
             <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#4f8ef7" }}>
               <Scissors className="w-4 h-4 text-white" />
             </div>
-            <span className="text-xl font-bold text-white tracking-tight">TRIM<span style={{ color: "#4f8ef7" }}>.</span></span>
+            <span className="text-xl font-bold text-white tracking-tight">Line<span style={{ color: "#4f8ef7" }}>UP</span></span>
           </Link>
 
           <div className="mb-6">

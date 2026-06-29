@@ -175,7 +175,7 @@ export default function Login() {
             <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "#4f8ef7", boxShadow: "0 4px 20px rgba(79,142,247,0.4)" }}>
               <Scissors className="w-[18px] h-[18px] text-white" />
             </div>
-            <span className="text-[22px] font-bold text-white tracking-tight">TRIM<span style={{ color: "#4f8ef7" }}>.</span></span>
+            <span className="text-[22px] font-bold text-white tracking-tight">Line<span style={{ color: "#4f8ef7" }}>UP</span></span>
           </Link>
 
           <div className="space-y-8">
@@ -226,7 +226,7 @@ export default function Login() {
                 </div>
                 <div>
                   <p className="text-sm leading-relaxed italic" style={{ color: "rgba(255,255,255,0.65)" }}>
-                    "Që kur u bashkuam me TRIM, dyqani ka 40% rritje në klientë të rinj çdo muaj."
+                    "Që kur u bashkuam me LineUP, dyqani ka 40% rritje në klientë të rinj çdo muaj."
                   </p>
                   <div className="mt-2.5 flex items-center gap-2">
                     <div className="font-semibold text-white text-sm">Dardan Krasniqi</div>
@@ -257,7 +257,7 @@ export default function Login() {
             <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#4f8ef7" }}>
               <Scissors className="w-4 h-4 text-white" />
             </div>
-            <span className="text-xl font-bold text-white tracking-tight">TRIM<span style={{ color: "#4f8ef7" }}>.</span></span>
+            <span className="text-xl font-bold text-white tracking-tight">Line<span style={{ color: "#4f8ef7" }}>UP</span></span>
           </Link>
 
           {/* Header */}
