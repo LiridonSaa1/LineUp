@@ -446,67 +446,58 @@ function OwnerForm() {
             <Users className="w-3.5 h-3.5" /> Zgjidh Paketën
           </div>
 
-          {PACKAGES.map(pkg => (
-            <div key={pkg.id} className="relative rounded-[14px] p-4 cursor-pointer transition-all duration-200 hover:scale-[1.01]"
-              style={{
-                background: `rgba(${pkg.color === "#4f8ef7" ? "79,142,247" : pkg.color === "#7c3aed" ? "124,58,237" : pkg.color === "#059669" ? "5,150,105" : "217,119,6"},0.07)`,
-                border: `1px solid ${pkg.color}44`,
-              }}>
-              {pkg.popular && (
-                <span className="absolute -top-2.5 left-4 text-[10px] font-bold px-2.5 py-0.5 rounded-full"
-                  style={{ background: pkg.color, color: "#fff" }}>
-                  MË POPULLORJA
-                </span>
-              )}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                    style={{ background: `${pkg.color}22` }}>
-                    <Users className="w-4 h-4" style={{ color: pkg.color }} />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-white text-sm">TRIM {pkg.label}</p>
-                    <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
-                      Deri {pkg.workers} punëtorë
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-xl font-bold" style={{ color: pkg.color }}>
-                    {pkg.price}€
-                  </p>
-                  <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>/muaj</p>
-                </div>
-              </div>
-              <ul className="mt-3 space-y-1">
-                {[
-                  "Listim i sallonit",
-                  "Sistem rezervimi online",
-                  `Deri ${pkg.workers} punëtorë/berberë`,
-                  "Panel menaxhimi",
-                ].map((f, i) => (
-                  <li key={i} className="flex items-center gap-2 text-xs"
-                    style={{ color: "rgba(255,255,255,0.45)" }}>
-                    <Check className="w-3 h-3 shrink-0" style={{ color: pkg.color }} /> {f}
-                  </li>
-                ))}
-              </ul>
-              <button
-                type="button"
-                disabled={loadingPay}
-                onClick={() => handleGoPayment(pkg)}
-                className="mt-4 w-full rounded-xl py-2.5 text-sm font-semibold transition-all duration-200"
+          <div className="grid grid-cols-2 gap-3">
+            {PACKAGES.map(pkg => (
+              <div key={pkg.id} className="relative rounded-[14px] p-3.5 flex flex-col transition-all duration-200 hover:scale-[1.02]"
                 style={{
-                  background: `${pkg.color}22`,
-                  border: `1px solid ${pkg.color}55`,
-                  color: pkg.color,
-                  cursor: loadingPay ? "not-allowed" : "pointer",
-                  opacity: loadingPay ? 0.6 : 1,
+                  background: `rgba(${pkg.color === "#4f8ef7" ? "79,142,247" : pkg.color === "#7c3aed" ? "124,58,237" : pkg.color === "#059669" ? "5,150,105" : "217,119,6"},0.07)`,
+                  border: `1px solid ${pkg.color}44`,
                 }}>
-                {loadingPay ? "Duke ngarkuar..." : `Zgjidh ${pkg.label} →`}
-              </button>
-            </div>
-          ))}
+                {pkg.popular && (
+                  <span className="absolute -top-2.5 left-3 text-[9px] font-bold px-2 py-0.5 rounded-full"
+                    style={{ background: pkg.color, color: "#fff" }}>
+                    ★ TOP
+                  </span>
+                )}
+
+                {/* Icon + name */}
+                <div className="flex items-center gap-2 mb-2.5">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                    style={{ background: `${pkg.color}22` }}>
+                    <Users className="w-3.5 h-3.5" style={{ color: pkg.color }} />
+                  </div>
+                  <p className="font-semibold text-white text-xs leading-tight">TRIM {pkg.label}</p>
+                </div>
+
+                {/* Price */}
+                <div className="mb-2">
+                  <span className="text-2xl font-bold" style={{ color: pkg.color }}>{pkg.price}€</span>
+                  <span className="text-[11px] ml-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>/muaj</span>
+                </div>
+
+                {/* Workers */}
+                <p className="text-[11px] mb-3" style={{ color: "rgba(255,255,255,0.4)" }}>
+                  Deri {pkg.workers} punëtorë
+                </p>
+
+                {/* CTA */}
+                <button
+                  type="button"
+                  disabled={loadingPay}
+                  onClick={() => handleGoPayment(pkg)}
+                  className="mt-auto w-full rounded-xl py-2 text-xs font-semibold transition-all duration-200"
+                  style={{
+                    background: `${pkg.color}22`,
+                    border: `1px solid ${pkg.color}55`,
+                    color: pkg.color,
+                    cursor: loadingPay ? "not-allowed" : "pointer",
+                    opacity: loadingPay ? 0.6 : 1,
+                  }}>
+                  {loadingPay ? "..." : "Zgjidh →"}
+                </button>
+              </div>
+            ))}
+          </div>
 
           <div className="pt-1">
             <BackBtn onClick={() => setStep(0)} />

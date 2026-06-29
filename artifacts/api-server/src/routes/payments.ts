@@ -83,13 +83,30 @@ router.post("/payments/register-owner-subscription", async (req, res): Promise<v
 
     await db.update(barbershopsTable).set({ stripeCustomerId: customer.id }).where(eq(barbershopsTable.id, shop.id));
 
+    /* ── Stripe Product (required before price_data on Subscriptions API) ── */
+    const prodRes = await fetch("https://api.stripe.com/v1/products", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}`, "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        name: pkg.name,
+        description: `${pkg.maxBarbers} punëtorë · ${businessName}`,
+        "metadata[shopId]": shop.id.toString(),
+      }),
+    });
+    const prodBody = await prodRes.text();
+    if (!prodRes.ok) {
+      let err: any = {}; try { err = JSON.parse(prodBody); } catch {}
+      await db.delete(usersTable).where(eq(usersTable.id, user.id));
+      res.status(500).json({ error: err?.error?.message ?? "Gabim gjatë krijimit të produktit Stripe" }); return;
+    }
+    const stripeProduct = JSON.parse(prodBody);
+
     /* ── Stripe Subscription ─────────────────────────────── */
     const subParams = new URLSearchParams({
       customer: customer.id,
       payment_behavior: "default_incomplete",
       "items[0][price_data][currency]": "eur",
-      "items[0][price_data][product_data][name]": pkg.name,
-      "items[0][price_data][product_data][description]": `${pkg.maxBarbers} punëtorë · ${businessName}`,
+      "items[0][price_data][product]": stripeProduct.id,
       "items[0][price_data][recurring][interval]": "month",
       "items[0][price_data][unit_amount]": pkg.amountCents.toString(),
       "items[0][quantity]": "1",
