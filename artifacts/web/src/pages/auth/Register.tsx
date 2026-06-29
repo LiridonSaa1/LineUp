@@ -21,20 +21,15 @@ const KOSOVO_CITIES = [
 
 /* ── Schemas ─────────────────────────────────────────────── */
 const step1Schema = z.object({
+  businessName: z.string().min(2, "Emri i biznesit i detyrueshëm"),
   email:        z.string().email("Email i pavlefshëm"),
   phone:        z.string().min(5, "Telefoni i detyrueshëm"),
   password:     z.string().min(6, "Minimum 6 karaktere"),
-  businessName: z.string().min(2, "Emri i biznesit i detyrueshëm"),
-});
-
-const step2Schema = z.object({
-  city:        z.string().min(1, "Qyteti i detyrueshëm"),
-  address:     z.string().min(3, "Adresa e detyrueshme"),
-  description: z.string().optional(),
+  city:         z.string().min(1, "Qyteti i detyrueshëm"),
+  address:      z.string().min(3, "Adresa e detyrueshme"),
 });
 
 type S1Values = z.infer<typeof step1Schema>;
-type S2Values = z.infer<typeof step2Schema>;
 
 const PRIMARY = "#4f8ef7";
 
@@ -419,7 +414,6 @@ function OwnerForm() {
   const { login }         = useAuth();
   const { toast }         = useToast();
   const [s1, setS1]       = useState<S1Values | null>(null);
-  const [s2, setS2]       = useState<S2Values | null>(null);
 
   const [logoUrl, setLogoUrl]       = useState<string>("");
   const [logoPreview, setLogoPreview] = useState<string>("");
@@ -430,11 +424,9 @@ function OwnerForm() {
 
   const [paying, setPaying] = useState(false);
 
-  const f1 = useForm<S1Values>({ resolver: zodResolver(step1Schema), defaultValues: { email: "", phone: "", password: "", businessName: "" } });
-  const f2 = useForm<S2Values>({ resolver: zodResolver(step2Schema), defaultValues: { city: "", address: "", description: "" } });
+  const f1 = useForm<S1Values>({ resolver: zodResolver(step1Schema), defaultValues: { businessName: "", email: "", phone: "", password: "", city: "", address: "" } });
 
   const w1 = (k: keyof S1Values) => (f1.watch(k) ?? "") as string;
-  const w2 = (k: keyof S2Values) => (f2.watch(k) ?? "") as string;
 
   async function handleLogoFile(file: File) {
     setLogoPreview(URL.createObjectURL(file));
@@ -465,7 +457,7 @@ function OwnerForm() {
   }
 
   async function handlePay() {
-    if (!s1 || !s2) return;
+    if (!s1) return;
     setPaying(true);
     try {
       const res = await fetch("/api/payments/register-owner-subscription", {
@@ -478,9 +470,9 @@ function OwnerForm() {
           phone: s1.phone,
           businessName: s1.businessName,
           businessNumber: null,
-          city: s2.city,
-          address: s2.address,
-          description: s2.description || null,
+          city: s1.city,
+          address: s1.address,
+          description: null,
           imageUrl: logoUrl || null,
           photos: photos.map(p => p.url),
         }),
@@ -501,41 +493,31 @@ function OwnerForm() {
 
   return (
     <div>
-      <StepBar current={step} total={3} />
+      <StepBar current={step} total={2} />
       <StepSlide step={step}>
         {step === 0 && (
           <form onSubmit={f1.handleSubmit(d => { setS1(d); setStep(1); })} className="space-y-3.5">
             <div className="text-xs font-semibold uppercase tracking-widest mb-1 flex items-center gap-2" style={{ color: "rgba(255,255,255,0.3)" }}>
               <Building2 className="w-3.5 h-3.5" /> Informata Bazë
             </div>
-            <IconInput id="bname" icon={Building2} label="Emri i biznesit" placeholder="TRIM Prishtina" value={w1("businessName")} onChange={v => f1.setValue("businessName", v)} error={f1.formState.errors.businessName?.message} />
-            <IconInput id="oemail" icon={Mail}     label="Email" type="email" placeholder="biznesi@shembull.com" value={w1("email")} onChange={v => f1.setValue("email", v)} error={f1.formState.errors.email?.message} />
-            <IconInput id="ophone" icon={Phone}    label="Telefoni" type="tel" placeholder="+383 44 000 000" value={w1("phone")} onChange={v => f1.setValue("phone", v)} error={f1.formState.errors.phone?.message} />
-            <IconInput id="opw"   icon={Lock}      label="Fjalëkalimi" type="password" value={w1("password")} onChange={v => f1.setValue("password", v)} error={f1.formState.errors.password?.message} />
+            <IconInput id="bname"  icon={Building2} label="Emri i biznesit" placeholder="TRIM Prishtina" value={w1("businessName")} onChange={v => f1.setValue("businessName", v)} error={f1.formState.errors.businessName?.message} />
+            <IconInput id="oemail" icon={Mail}       label="Email" type="email" placeholder="biznesi@shembull.com" value={w1("email")} onChange={v => f1.setValue("email", v)} error={f1.formState.errors.email?.message} />
+            <IconInput id="ophone" icon={Phone}      label="Telefoni" type="tel" placeholder="+383 44 000 000" value={w1("phone")} onChange={v => f1.setValue("phone", v)} error={f1.formState.errors.phone?.message} />
+            <IconInput id="opw"    icon={Lock}       label="Fjalëkalimi" type="password" value={w1("password")} onChange={v => f1.setValue("password", v)} error={f1.formState.errors.password?.message} />
+            <div className="text-xs font-semibold uppercase tracking-widest mt-4 mb-1 flex items-center gap-2" style={{ color: "rgba(255,255,255,0.3)" }}>
+              <MapPin className="w-3.5 h-3.5" /> Lokacioni
+            </div>
+            <CityDropdown
+              value={w1("city")}
+              onChange={v => f1.setValue("city", v)}
+              error={f1.formState.errors.city?.message}
+            />
+            <IconInput id="addr" icon={MapPin} label="Adresa" placeholder="Rr. Garibaldi, Nr. 12" value={w1("address")} onChange={v => f1.setValue("address", v)} error={f1.formState.errors.address?.message} />
             <div className="pt-1"><PrimaryBtn>Vazhdo <ArrowRight className="w-4 h-4" /></PrimaryBtn></div>
           </form>
         )}
 
         {step === 1 && (
-          <form onSubmit={f2.handleSubmit(d => { setS2(d); setStep(2); })} className="space-y-3.5">
-            <div className="text-xs font-semibold uppercase tracking-widest mb-1 flex items-center gap-2" style={{ color: "rgba(255,255,255,0.3)" }}>
-              <MapPin className="w-3.5 h-3.5" /> Lokacioni & Detajet
-            </div>
-            <CityDropdown
-              value={w2("city")}
-              onChange={v => f2.setValue("city", v)}
-              error={f2.formState.errors.city?.message}
-            />
-            <IconInput id="addr" icon={MapPin} label="Adresa" placeholder="Rr. Garibaldi, Nr. 12" value={w2("address")} onChange={v => f2.setValue("address", v)} error={f2.formState.errors.address?.message} />
-            <TextareaInput id="desc" label="Përshkrimi (opsionale)" placeholder="Tregoni diçka për sallon tuaj..." value={w2("description")} onChange={v => f2.setValue("description", v)} />
-            <div className="flex gap-3 pt-1">
-              <BackBtn onClick={() => setStep(0)} />
-              <PrimaryBtn>Vazhdo <ArrowRight className="w-4 h-4" /></PrimaryBtn>
-            </div>
-          </form>
-        )}
-
-        {step === 2 && (
           <div className="space-y-5">
             <div className="text-xs font-semibold uppercase tracking-widest mb-1 flex items-center gap-2" style={{ color: "rgba(255,255,255,0.3)" }}>
               <Layers className="w-3.5 h-3.5" /> Media
@@ -575,7 +557,7 @@ function OwnerForm() {
             </div>
 
             <div className="flex gap-3">
-              <BackBtn onClick={() => setStep(1)} />
+              <BackBtn onClick={() => setStep(0)} />
               <PrimaryBtn type="button" disabled={paying} onClick={handlePay}>
                 {paying
                   ? <><span className="w-4 h-4 rounded-full border-2 border-white/25 border-t-white animate-spin" /> Duke procesuar...</>
