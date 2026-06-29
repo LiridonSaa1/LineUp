@@ -208,12 +208,20 @@ export async function sendBookingConfirmedEmail(opts: {
   });
 }
 
+const PKG_NAMES: Record<string, string> = {
+  "2": "TRIM Starter — 2 Punëtorë",
+  "4": "TRIM Standard — 4 Punëtorë",
+  "6": "TRIM Pro — 6 Punëtorë",
+  "8": "TRIM Business — 8 Punëtorë",
+};
+
 export async function sendSubscriptionInvoiceEmail(opts: {
   to: { email: string; name: string };
   shopName: string;
   amount: string;
   invoiceDate: Date;
   invoiceNumber: string;
+  packageId?: string;
 }): Promise<boolean> {
   const dateStr = opts.invoiceDate.toLocaleDateString("sq-AL", {
     year: "numeric", month: "long", day: "numeric",
@@ -261,7 +269,7 @@ export async function sendSubscriptionInvoiceEmail(opts: {
                 </tr>
                 <tr>
                   <td style="padding:8px 0;color:#8892a0;font-size:13px;border-bottom:1px solid #1e2330;">🔄 Paketa</td>
-                  <td style="padding:8px 0;color:#fff;font-size:13px;font-weight:600;text-align:right;border-bottom:1px solid #1e2330;">Abonim Mujor — TRIM Pro</td>
+                  <td style="padding:8px 0;color:#fff;font-size:13px;font-weight:600;text-align:right;border-bottom:1px solid #1e2330;">${PKG_NAMES[opts.packageId ?? "2"] ?? "Abonim Mujor TRIM"}</td>
                 </tr>
                 <tr>
                   <td style="padding:8px 0;color:#8892a0;font-size:13px;border-bottom:1px solid #1e2330;">📆 Faturimi i ardhshëm</td>
