@@ -160,15 +160,16 @@ function CityDropdown({ value, onChange, error }: { value: string; onChange: (v:
     <div className="space-y-1.5" ref={ref}>
       <div className="relative">
         <button type="button" onClick={() => setOpen(p => !p)}
-          className="w-full rounded-[14px] transition-all duration-200 flex items-center"
+          className="w-full rounded-[14px] transition-all duration-200 relative"
           style={{
             background: open ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.03)",
             border: `1px solid ${open ? "rgba(79,142,247,0.45)" : error ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.08)"}`,
             boxShadow: open ? "0 0 0 3px rgba(79,142,247,0.10), 0 4px 16px rgba(0,0,0,0.2)" : "none",
             paddingTop: "26px", paddingBottom: "10px", paddingLeft: "44px", paddingRight: "44px",
+            minHeight: "58px",
           }}>
-          <span className="text-sm text-left w-full" style={{ color: value ? "#fff" : "rgba(255,255,255,0.35)" }}>
-            {value || ""}
+          <span className="text-sm text-left block w-full" style={{ color: value ? "#fff" : "transparent" }}>
+            {value || "​"}
           </span>
         </button>
         <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
