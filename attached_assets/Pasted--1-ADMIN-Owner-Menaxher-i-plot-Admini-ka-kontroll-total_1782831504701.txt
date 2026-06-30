@@ -1,0 +1,116 @@
+👑 1. ADMIN (Owner / Menaxher i plotë)
+
+Admini ka kontroll total mbi sistemin.
+
+📊 Dashboard
+Statistika të përgjithshme (rezervime, fitime, klientë)
+Rezervimet e sotme
+Berberët aktivë
+Grafiku i punës
+📅 Rezervimet
+Shiko të gjitha rezervimet
+Krijo rezervim manual
+Ndrysho / anulo rezervime
+Kalendari ditor / javor
+Status: Pending / Confirmed / Completed / Cancelled
+👥 Klientët
+Lista e klientëve
+Detajet e klientit
+Historiku i vizitave
+Fshi / blloko klient
+💈 Berberët
+Shto / fshi / edito berber
+Cakto orarin e punës
+Aktivizo / çaktivizo
+Shiko performancën (sa klientë ka)
+✂️ Shërbimet
+Shto shërbime (Fade, Beard, Haircut…)
+Vendos çmim + kohëzgjatje
+Aktivizo / çaktivizo shërbime
+💰 Pagesat
+Shiko pagesa
+Statusi (Paid / Unpaid)
+Raporte financiare
+Eksport PDF/Excel
+📈 Raporte
+Fitimet ditore / mujore
+Shërbimet më të kërkuara
+Klientët më aktivë
+Oraret më të ngarkuara
+📢 Njoftime
+Dërgo SMS / email / push notifications
+Kujtesa për termine
+🖼️ Galeria
+Ngarko foto të punës
+Fshi / organizo
+⭐ Vlerësime
+Shiko reviews
+Fshi komente
+⚙️ Cilësimet
+Emri i sallonit
+Logo
+Adresa
+Orari i punës
+Social media
+🔐 Sistem & Siguri
+Menaxhim rolesh
+Activity logs
+Audit (kush çka ka ndryshu)
+💈 2. BARBER (Punonjësi)
+
+Barberi ka vetëm atë që i duhet për punë.
+
+📅 Orari i tij
+Kalendari personal
+Rezervimet e veta
+Shiko klientët e ditës
+✂️ Rezervimet
+Shiko terminet e tij
+Konfirmo / refuzo (nëse lejohet)
+Shëno si “Completed”
+Shëno vonesa / mungesa
+👤 Klientët
+Shiko klientët që i ka shërbyer
+Historiku i tyre
+Shënime për klient (preferenca, stil)
+⏰ Disponueshmëria
+Vendos kur është i lirë
+Pushime / ditë jo pune
+Blloko orare
+📊 Statistika personale
+Sa klientë ka pasur
+Fitimet e tij (nëse ndahen)
+Shërbimet më të bëra
+⭐ Feedback
+Shiko vlerësimet e klientëve për të
+👤 3. CUSTOMER (Klienti)
+
+Klienti ka panel shumë të thjeshtë dhe user-friendly.
+
+🏠 Dashboard
+Mirëseardhje
+Termini i ardhshëm
+Sugjerime
+📅 Rezervo Termin
+Zgjedh shërbim
+Zgjedh berber
+Zgjedh datë/orë
+Konfirmon rezervimin
+📋 Rezervimet e mia
+Shiko rezervimet aktive
+Anulo / ndrysho (nëse lejohet)
+Historiku i rezervimeve
+👤 Profili
+Emri, email, telefoni
+Ndrysho të dhënat
+Fjalëkalimi
+💰 Pagesat
+Historia e pagesave
+Statusi (Paid / Pending)
+Fatura
+⭐ Vlerësime
+Jep review pas shërbimit
+Vlerëso berberin
+💬 Njoftime
+Kujtesa për termin
+Oferta / zbritje
