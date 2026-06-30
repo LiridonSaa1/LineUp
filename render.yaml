@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: trim-kosova
+    runtime: node
+    region: frankfurt
+    plan: free
+    buildCommand: pnpm install --frozen-lockfile && BASE_PATH=/ pnpm --filter @workspace/web run build && pnpm --filter @workspace/api-server run build
+    startCommand: NODE_ENV=production PORT=8080 pnpm --filter @workspace/api-server run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "8080"
+      - key: SUPABASE_DB_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: BREVO_API_KEY
+        sync: false
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false
