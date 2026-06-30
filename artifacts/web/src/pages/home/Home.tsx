@@ -1843,7 +1843,7 @@ export default function Home() {
                     <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 px-0 text-sm h-auto text-white [&>span]:text-white/80 [&>svg]:text-white/50">
                       <SelectValue placeholder="Zgjidhni qytetin…" />
                     </SelectTrigger>
-                    <SelectContent className="rounded-2xl">
+                    <SelectContent className="rounded-2xl max-h-60 overflow-y-auto">
                       <SelectItem value="all">Kudo në Kosovë</SelectItem>
                       {cities.map((c) => (
                         <SelectItem key={c} value={c}>
