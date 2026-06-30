@@ -259,9 +259,9 @@ router.post("/payments/create-checkout", requireAuth, async (req: AuthRequest, r
 });
 
 const AD_PACKAGE_PRICES: Record<string, number> = {
-  basic: 2900,
-  standard: 7900,
-  premium: 14900,
+  basic: 900,
+  standard: 1900,
+  premium: 3000,
 };
 
 const AD_PACKAGE_NAMES: Record<string, string> = {

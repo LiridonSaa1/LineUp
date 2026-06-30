@@ -912,9 +912,9 @@ const bannerAds = [
 
 /* ── AdvertiseModal ──────────────────────────────────────── */
 const AD_PACKAGES = [
-  { id: "basic",    label: "Basic",    price: 29,  duration: "7 ditë",   desc: "1 banner · 5k shikime" },
-  { id: "standard", label: "Standard", price: 79,  duration: "30 ditë",  desc: "1 banner · 20k shikime" },
-  { id: "premium",  label: "Premium",  price: 149, duration: "30 ditë",  desc: "3 bannerë · 60k shikime + featured" },
+  { id: "basic",    label: "Basic",    price: 9,  duration: "7 ditë",   desc: "1 banner · 5k shikime" },
+  { id: "standard", label: "Standard", price: 19, duration: "30 ditë",  desc: "1 banner · 20k shikime" },
+  { id: "premium",  label: "Premium",  price: 30, duration: "30 ditë",  desc: "3 bannerë · 60k shikime + featured" },
 ];
 
 function AdvertiseModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -1342,7 +1342,7 @@ function BannerAds() {
                 Reklamoni biznesin tuaj këtu
               </p>
               <p className="text-muted-foreground text-xs mt-0.5">
-                Arrini mijëra klientë në Kosovë · Nga €29/javë
+                Arrini mijëra klientë në Kosovë · Nga €9/javë
               </p>
             </div>
           </div>
