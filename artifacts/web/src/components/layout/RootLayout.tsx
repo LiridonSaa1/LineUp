@@ -177,9 +177,6 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
             <FooterSection label="Zbulo" icon={MapPin}>
               <ul className="space-y-3">
                 <FooterLink href="/barbershops">Të gjitha barberët</FooterLink>
-                {KOSOVO_CITIES.map((c) => (
-                  <FooterLink key={c} href={`/barbershops?city=${encodeURIComponent(c)}`}>{c}</FooterLink>
-                ))}
               </ul>
             </FooterSection>
 
