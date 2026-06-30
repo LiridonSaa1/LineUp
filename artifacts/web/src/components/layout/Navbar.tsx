@@ -339,6 +339,18 @@ export function Navbar() {
                         )}
                         <DropdownMenuItem
                           asChild
+                          className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-primary/10 focus:bg-primary/10"
+                        >
+                          <Link
+                            href="/me"
+                            className="flex items-center w-full gap-2.5"
+                          >
+                            <LayoutDashboard className="h-4 w-4 text-primary" />
+                            <span className="font-semibold text-primary">Paneli Im</span>
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          asChild
                           className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5"
                         >
                           <Link

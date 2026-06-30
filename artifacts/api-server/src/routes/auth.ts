@@ -81,4 +81,24 @@ router.post("/auth/logout", (_req, res): void => {
   res.json({ message: "Logged out" });
 });
 
+<<<<<<< HEAD
+=======
+router.post("/auth/change-password", requireAuth, async (req: AuthRequest, res): Promise<void> => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    res.status(400).json({ error: "currentPassword and newPassword are required" }); return;
+  }
+  if (newPassword.length < 6) {
+    res.status(400).json({ error: "New password must be at least 6 characters" }); return;
+  }
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.user!.id));
+  if (!user || !user.passwordHash) { res.status(404).json({ error: "User not found" }); return; }
+  const valid = await comparePassword(currentPassword, user.passwordHash);
+  if (!valid) { res.status(400).json({ error: "Fjalëkalimi aktual është i gabuar" }); return; }
+  const hashed = await hashPassword(newPassword);
+  await db.update(usersTable).set({ passwordHash: hashed }).where(eq(usersTable.id, req.user!.id));
+  res.json({ message: "Password changed successfully" });
+});
+
+>>>>>>> 98e3ed9 (Add "My Panel" link and update password change logic)
 export default router;
