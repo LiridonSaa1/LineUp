@@ -12,7 +12,10 @@ if (!connectionString) {
   );
 }
 
-export const pool = new Pool({ connectionString, ssl: process.env.SUPABASE_DB_URL ? true : false });
+// Supabase Transaction Pooler (pooler.supabase.com:6543) uses a certificate
+// chain that cannot be verified with the default CA store. rejectUnauthorized
+// must be false; the connection is still TLS-encrypted in transit.
+export const pool = new Pool({ connectionString, ssl: process.env.SUPABASE_DB_URL ? { rejectUnauthorized: false } : false });
 export const db = drizzle(pool, { schema });
 
 export * from "./schema";

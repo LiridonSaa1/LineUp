@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, barbershopsTable, usersTable } from "@workspace/db";
+import { db, barbershopsTable, barbersTable, usersTable } from "@workspace/db";
 import { eq, ilike, and, desc, sql, or } from "drizzle-orm";
 import { requireAuth, requireRole, type AuthRequest } from "../lib/auth";
 
@@ -13,6 +13,25 @@ function formatShop(shop: any) {
     longitude: shop.longitude != null ? parseFloat(shop.longitude) : null,
   };
 }
+
+router.get("/barbershops/city-stats", async (_req, res): Promise<void> => {
+  const rows = await db
+    .select({
+      city: barbershopsTable.city,
+      shopCount: sql<number>`count(distinct ${barbershopsTable.id})::int`,
+      barberCount: sql<number>`count(${barbersTable.id})::int`,
+    })
+    .from(barbershopsTable)
+    .leftJoin(
+      barbersTable,
+      and(eq(barbersTable.shopId, barbershopsTable.id), eq(barbersTable.isActive, true))
+    )
+    .where(eq(barbershopsTable.status, "active"))
+    .groupBy(barbershopsTable.city)
+    .orderBy(sql`count(${barbersTable.id}) desc`);
+
+  res.json(rows);
+});
 
 router.get("/barbershops", async (req, res): Promise<void> => {
   const page = parseInt(req.query.page as string) || 1;
