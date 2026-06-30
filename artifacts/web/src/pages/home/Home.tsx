@@ -1048,7 +1048,25 @@ function AdvertiseModal({ open, onClose }: { open: boolean; onClose: () => void 
       });
 
       if (error) throw new Error(error.message);
-      if (paymentIntent?.status === "succeeded") setStep("done");
+      if (paymentIntent?.status === "succeeded") {
+        await fetch("/api/ads", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            business: form.business,
+            contact: form.contact,
+            city: form.city || null,
+            address: form.address || null,
+            message: form.message || null,
+            headline: form.business,
+            badge: pkg.label.toUpperCase(),
+            cta: "Rezervo Tani",
+            pkg: selectedPkg,
+            stripePaymentId: paymentIntent.id,
+          }),
+        });
+        setStep("done");
+      }
     } catch (err: any) {
       toast({ title: "Pagesa dështoi", description: err.message, variant: "destructive" });
     } finally {
@@ -1271,82 +1289,123 @@ function AdvertiseModal({ open, onClose }: { open: boolean; onClose: () => void 
 function BannerAds() {
   const [current, setCurrent] = useState(0);
   const [adModalOpen, setAdModalOpen] = useState(false);
+  const [ads, setAds] = useState<any[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    const t = setInterval(() => {
-      setCurrent((c) => (c + 1) % bannerAds.length);
-    }, 4500);
-    return () => clearInterval(t);
+    fetch("/api/ads")
+      .then((r) => r.json())
+      .then((data) => { setAds(Array.isArray(data) ? data : []); setLoaded(true); })
+      .catch(() => setLoaded(true));
   }, []);
+
+  useEffect(() => {
+    if (ads.length < 2) return;
+    const t = setInterval(() => setCurrent((c) => (c + 1) % ads.length), 4500);
+    return () => clearInterval(t);
+  }, [ads.length]);
+
+  const BG_GRADIENTS = [
+    "from-[#0f0c29] via-[#302b63] to-[#24243e]",
+    "from-[#1a1a2e] via-[#16213e] to-[#0f3460]",
+    "from-[#0d0d0d] via-[#1a0a00] to-[#2d1500]",
+    "from-[#0a0a0a] via-[#0d1f0d] to-[#0a2a0a]",
+  ];
+  const BADGE_COLORS = ["bg-primary", "bg-blue-500", "bg-amber-500", "bg-emerald-500"];
+  const CTA_COLORS = [
+    "bg-primary hover:bg-primary/90",
+    "bg-blue-500 hover:bg-blue-600",
+    "bg-amber-500 hover:bg-amber-600",
+    "bg-emerald-500 hover:bg-emerald-600",
+  ];
 
   return (
     <>
       <AdvertiseModal open={adModalOpen} onClose={() => setAdModalOpen(false)} />
-      <div
-        className="relative w-full overflow-hidden rounded-2xl shadow-2xl"
-        style={{ height: "110px" }}
-      >
-        {bannerAds.map((a, i) => (
-          <div
-            key={a.id}
-            className={`absolute inset-0 transition-opacity duration-700 ${i === current ? "opacity-100" : "opacity-0"}`}
-          >
-            {/* Background image */}
-            <img
-              src={a.image}
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover"
-              style={{ objectPosition: "center 30%" }}
-            />
-            {/* Gradient overlay */}
-            <div
-              className={`absolute inset-0 bg-gradient-to-r ${a.bg} opacity-85`}
-            />
 
-            {/* Content */}
-            <div className="relative h-full flex items-center justify-between px-8 gap-6">
-              {/* Left: label + text */}
-              <div className="flex items-center gap-5 min-w-0">
-                <span
-                  className={`shrink-0 text-[10px] font-black tracking-widest uppercase px-2.5 py-1 rounded-md text-white ${a.badgeColor}`}
-                >
-                  {a.badge}
-                </span>
-                <div className="min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50 mb-0.5">
-                    {a.label}
-                  </p>
-                  <p className="text-white font-black text-lg leading-tight truncate">
-                    {a.headline}
-                  </p>
-                  <p className="text-white/55 text-xs mt-0.5 truncate">{a.sub}</p>
-                </div>
-              </div>
-
-              {/* Right: CTA */}
-              <button
-                className={`shrink-0 ${a.ctaColor} text-white text-sm font-bold px-6 py-2.5 rounded-full shadow-lg transition-all duration-200 hover:scale-105 whitespace-nowrap`}
-              >
-                {a.cta}
-              </button>
+      {loaded && ads.length === 0 ? (
+        /* ── Placeholder when no ads ── */
+        <div
+          className="relative w-full overflow-hidden rounded-2xl border border-dashed border-primary/25 bg-gradient-to-r from-primary/5 via-background to-primary/5 flex items-center justify-between px-8 gap-6 cursor-pointer group"
+          style={{ height: "110px" }}
+          onClick={() => setAdModalOpen(true)}
+        >
+          <div className="flex items-center gap-5">
+            <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+              <Megaphone className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-primary/60 mb-0.5">
+                Hapësirë reklamimi
+              </p>
+              <p className="font-black text-lg text-foreground leading-tight">
+                Reklamoni biznesin tuaj këtu
+              </p>
+              <p className="text-muted-foreground text-xs mt-0.5">
+                Arrini mijëra klientë në Kosovë · Nga €29/javë
+              </p>
             </div>
           </div>
-        ))}
-
-        {/* Dot indicators */}
-        <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-          {bannerAds.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setCurrent(i)}
-              className={`rounded-full transition-all duration-300 ${
-                i === current ? "w-5 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/35"
-              }`}
-            />
-          ))}
+          <button
+            className="shrink-0 bg-primary text-white text-sm font-bold px-6 py-2.5 rounded-full shadow-lg shadow-primary/20 transition-all duration-200 hover:scale-105 whitespace-nowrap"
+            onClick={(e) => { e.stopPropagation(); setAdModalOpen(true); }}
+          >
+            Fillo Tani
+          </button>
         </div>
-      </div>
-      {/* Advertise CTA */}
+      ) : (
+        /* ── Rotating banner when ads exist ── */
+        <div className="relative w-full overflow-hidden rounded-2xl shadow-2xl" style={{ height: "110px" }}>
+          {ads.map((a, i) => {
+            const bg = BG_GRADIENTS[i % BG_GRADIENTS.length];
+            const badgeColor = BADGE_COLORS[i % BADGE_COLORS.length];
+            const ctaColor = CTA_COLORS[i % CTA_COLORS.length];
+            return (
+              <div
+                key={a.id}
+                className={`absolute inset-0 transition-opacity duration-700 ${i === current ? "opacity-100" : "opacity-0"}`}
+              >
+                {a.imageUrl && (
+                  <img src={a.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: "center 30%" }} />
+                )}
+                <div className={`absolute inset-0 bg-gradient-to-r ${bg} ${a.imageUrl ? "opacity-85" : "opacity-95"}`} />
+                <div className="relative h-full flex items-center justify-between px-8 gap-6">
+                  <div className="flex items-center gap-5 min-w-0">
+                    {a.badge && (
+                      <span className={`shrink-0 text-[10px] font-black tracking-widest uppercase px-2.5 py-1 rounded-md text-white ${badgeColor}`}>
+                        {a.badge}
+                      </span>
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50 mb-0.5">
+                        {a.city ? `${a.business} · ${a.city}` : a.business}
+                      </p>
+                      <p className="text-white font-black text-lg leading-tight truncate">
+                        {a.headline || a.business}
+                      </p>
+                      {a.message && <p className="text-white/55 text-xs mt-0.5 truncate">{a.message}</p>}
+                    </div>
+                  </div>
+                  <button className={`shrink-0 ${ctaColor} text-white text-sm font-bold px-6 py-2.5 rounded-full shadow-lg transition-all duration-200 hover:scale-105 whitespace-nowrap`}>
+                    {a.cta || "Zbulo Tani"}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+          {ads.length > 1 && (
+            <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+              {ads.map((_, i) => (
+                <button key={i} onClick={() => setCurrent(i)}
+                  className={`rounded-full transition-all duration-300 ${i === current ? "w-5 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/35"}`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Advertise CTA — always visible below banner */}
       <div className="mt-3 flex items-center justify-end">
         <button
           onClick={() => setAdModalOpen(true)}

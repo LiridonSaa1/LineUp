@@ -14,6 +14,7 @@ import dashboardRouter from "./dashboard";
 import verifyEmailRouter from "./verify-email";
 import contactRouter from "./contact";
 import uploadRouter from "./upload";
+import adsRouter from "./ads";
 
 const router: IRouter = Router();
 
@@ -32,5 +33,6 @@ router.use(dashboardRouter);
 router.use(verifyEmailRouter);
 router.use(contactRouter);
 router.use(uploadRouter);
+router.use(adsRouter);
 
 export default router;

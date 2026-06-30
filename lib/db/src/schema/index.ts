@@ -8,3 +8,4 @@ export * from "./orders";
 export * from "./payments";
 export * from "./notifications";
 export * from "./activity";
+export * from "./ads";
