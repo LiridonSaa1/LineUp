@@ -1834,6 +1834,20 @@ export default function Home() {
   const [, setLocation] = useLocation();
   const [city, setCity] = useState<string>("all");
   const statsRef = useRef<HTMLDivElement>(null);
+  const [publicStats, setPublicStats] = useState<{
+    activeShops: number;
+    activeBarbers: number;
+    totalUsers: number;
+    confirmedAppointments: number;
+    citiesCount: number;
+  } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/stats/public")
+      .then((r) => r.json())
+      .then((d) => setPublicStats(d))
+      .catch(() => {});
+  }, []);
 
   const { data: topShopsData, isLoading: isLoadingTop } = useListTopBarbershops({
     limit: 12,
@@ -2063,7 +2077,7 @@ export default function Home() {
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
             <StatCard
-              value={6}
+              value={publicStats?.citiesCount ?? 0}
               suffix="+"
               label="Qytete në Kosovë"
               icon={MapPin}
@@ -2076,7 +2090,7 @@ export default function Home() {
               }}
             />
             <StatCard
-              value={500}
+              value={publicStats?.activeBarbers ?? 0}
               suffix="+"
               label="Berberë aktivë"
               icon={Scissors}
@@ -2089,9 +2103,9 @@ export default function Home() {
               }}
             />
             <StatCard
-              value={12000}
+              value={publicStats?.totalUsers ?? 0}
               suffix="+"
-              label="Klientë të kënaqur"
+              label="Klientë të regjistruar"
               icon={Users}
               index={2}
               color={{
@@ -2102,9 +2116,9 @@ export default function Home() {
               }}
             />
             <StatCard
-              value={50000}
+              value={publicStats?.confirmedAppointments ?? 0}
               suffix="+"
-              label="Takime të rezervuara"
+              label="Takime të konfirmuara"
               icon={Calendar}
               index={3}
               color={{

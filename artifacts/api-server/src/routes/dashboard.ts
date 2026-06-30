@@ -8,6 +8,21 @@ import { requireAuth, requireRole, type AuthRequest } from "../lib/auth";
 
 const router = Router();
 
+router.get("/stats/public", async (_req, res): Promise<void> => {
+  const [shops] = await db.select({ count: sql<number>`count(*)::int` }).from(barbershopsTable).where(eq(barbershopsTable.status, "active"));
+  const [barbers] = await db.select({ count: sql<number>`count(*)::int` }).from(barbersTable).where(eq(barbersTable.isActive, true));
+  const [users] = await db.select({ count: sql<number>`count(*)::int` }).from(usersTable);
+  const [appts] = await db.select({ count: sql<number>`count(*)::int` }).from(appointmentsTable).where(eq(appointmentsTable.status, "confirmed"));
+  const cities = await db.selectDistinct({ city: barbershopsTable.city }).from(barbershopsTable).where(eq(barbershopsTable.status, "active"));
+  res.json({
+    activeShops: shops.count,
+    activeBarbers: barbers.count,
+    totalUsers: users.count,
+    confirmedAppointments: appts.count,
+    citiesCount: cities.filter(c => c.city).length,
+  });
+});
+
 router.get("/dashboard/stats", requireAuth, requireRole("admin"), async (req, res): Promise<void> => {
   const [users] = await db.select({ count: sql<number>`count(*)::int` }).from(usersTable);
   const [shops] = await db.select({ count: sql<number>`count(*)::int` }).from(barbershopsTable);
