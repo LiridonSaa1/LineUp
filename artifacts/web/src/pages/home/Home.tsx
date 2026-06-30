@@ -1850,7 +1850,7 @@ export default function Home() {
   }, []);
 
   const { data: topShopsData, isLoading: isLoadingTop } = useListTopBarbershops({
-    limit: 12,
+    limit: 10,
   });
 
   const { data: allShopsData } = useListBarbershops({ status: "active", limit: 200 });
