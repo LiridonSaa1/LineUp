@@ -105,11 +105,12 @@ export function Navbar() {
 
   const scrollToSection = (id: string) => {
     if (id === "home") {
-      if (location !== "/") {
-        setLocation("/");
-        return;
-      }
+      if (location !== "/") { setLocation("/"); return; }
       window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    if (location !== "/") {
+      window.location.href = `/#${id}`;
       return;
     }
     const el = document.getElementById(id);
@@ -130,17 +131,19 @@ export function Navbar() {
     { id: "home", label: "Home" },
     { id: "si-funksionon", label: "Si Funksionon" },
     { id: "vleresuar", label: "Top 10 berberët" },
-    { id: "pse-trim", label: "Pse ne" },
   ];
   const rightSections = [
-    { id: "shop", label: "Grooming Shop" },
     { id: "disponueshem", label: "I disponueshëm në" },
     { id: "kontakt", label: "Na kontaktoni" },
   ];
-  const leftPageLinks = [{ href: "/barbershops", label: "Zbulo" }];
+  const leftPageLinks = [
+    { href: "/", label: "Home", onClick: (e: React.MouseEvent) => { e.preventDefault(); if (location === "/") window.scrollTo({ top: 0, behavior: "smooth" }); else setLocation("/"); } },
+    { href: "/#si-funksionon", label: "Si Funksionon", onClick: (e: React.MouseEvent) => { e.preventDefault(); scrollToSection("si-funksionon"); } },
+    { href: "/#vleresuar", label: "Top 10 berberët", onClick: (e: React.MouseEvent) => { e.preventDefault(); scrollToSection("vleresuar"); } },
+  ];
   const rightPageLinks = [
-    { href: "/marketplace", label: "Dyqani" },
-    { href: "/#reklama", label: "Reklama", onClick: handleReklama },
+    { href: "/#disponueshem", label: "I disponueshëm në", onClick: (e: React.MouseEvent) => { e.preventDefault(); scrollToSection("disponueshem"); } },
+    { href: "/#kontakt", label: "Na kontaktoni", onClick: (e: React.MouseEvent) => { e.preventDefault(); scrollToSection("kontakt"); } },
   ];
 
   const sectionIsActive = (id: string) =>
@@ -188,11 +191,19 @@ export function Navbar() {
                     <Link
                       key={l.href}
                       href={l.href}
+                      onClick={l.onClick}
                       className={pageLinkCls(location === l.href)}
                     >
                       {l.label}
                     </Link>
                   ))}
+              {/* Always-visible: Barbershops */}
+              <Link
+                href="/barbershops"
+                className={pageLinkCls(location === "/barbershops")}
+              >
+                Barbershops
+              </Link>
             </nav>
 
             {/* CENTER: logo — always 100px */}
@@ -213,6 +224,13 @@ export function Navbar() {
 
             {/* RIGHT nav + auth */}
             <nav className="flex items-center justify-start gap-0.5">
+              {/* Always-visible: Dyqani */}
+              <Link
+                href="/marketplace"
+                className={pageLinkCls(location === "/marketplace")}
+              >
+                Dyqani
+              </Link>
               {isHome
                 ? rightSections.map((s) => (
                     <button
@@ -473,7 +491,7 @@ export function Navbar() {
                   <Link
                     key={l.href}
                     href={l.href}
-                    onClick={l.onClick}
+                    onClick={(e) => { l.onClick?.(e as any); setMobileOpen(false); }}
                     className={`text-sm font-medium px-4 py-2.5 rounded-full border transition-all duration-200 nav-link-glass ${
                       location === l.href
                         ? "is-active font-semibold text-white border-white/15 bg-white/10"
@@ -483,6 +501,29 @@ export function Navbar() {
                     {l.label}
                   </Link>
                 ))}
+            {/* Always-visible fixed links */}
+            <Link
+              href="/barbershops"
+              onClick={() => setMobileOpen(false)}
+              className={`text-sm font-medium px-4 py-2.5 rounded-full border transition-all duration-200 nav-link-glass ${
+                location === "/barbershops"
+                  ? "is-active font-semibold text-white border-white/15 bg-white/10"
+                  : "text-white/70 hover:text-white border-transparent hover:bg-white/8"
+              }`}
+            >
+              Barbershops
+            </Link>
+            <Link
+              href="/marketplace"
+              onClick={() => setMobileOpen(false)}
+              className={`text-sm font-medium px-4 py-2.5 rounded-full border transition-all duration-200 nav-link-glass ${
+                location === "/marketplace"
+                  ? "is-active font-semibold text-white border-white/15 bg-white/10"
+                  : "text-white/70 hover:text-white border-transparent hover:bg-white/8"
+              }`}
+            >
+              Dyqani
+            </Link>
 
             {/* Auth buttons */}
             {!user && (
