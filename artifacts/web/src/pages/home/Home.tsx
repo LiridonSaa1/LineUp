@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { KOSOVO_CITIES } from "@/lib/kosovo-cities";
 import { useState, useEffect, useRef } from "react";
-import { useListTopBarbershops, useListProducts } from "@workspace/api-client-react";
+import { useListTopBarbershops, useListBarbershops, useListProducts } from "@workspace/api-client-react";
 import { useCart } from "@/context/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import KosovoCitiesMap from "@/components/map/KosovoCitiesMap";
@@ -1776,10 +1776,19 @@ export default function Home() {
   const [city, setCity] = useState<string>("all");
   const statsRef = useRef<HTMLDivElement>(null);
 
-  const { data: topShops, isLoading } = useListTopBarbershops({
-    city: city !== "all" ? city : undefined,
-    limit: 6,
+  const { data: topShopsData, isLoading: isLoadingTop } = useListTopBarbershops({
+    limit: 12,
   });
+
+  const { data: cityShopsData, isLoading: isLoadingCity } = useListBarbershops(
+    city !== "all" ? { city, status: "active", limit: 50 } : { limit: 0 },
+  );
+
+  const isLoading = city === "all" ? isLoadingTop : isLoadingCity;
+  const topShops =
+    city === "all"
+      ? (Array.isArray(topShopsData) ? topShopsData : [])
+      : (cityShopsData?.data ?? []);
 
   const handleSearch = () => {
     setLocation(city !== "all" ? `/barbershops?city=${city}` : "/barbershops");
@@ -2130,9 +2139,15 @@ export default function Home() {
                 </div>
               ))}
             </div>
+          ) : topShops.length === 0 ? (
+            <div className="text-center py-16 text-muted-foreground">
+              <Scissors className="w-12 h-12 mx-auto mb-3 opacity-20" />
+              <p className="font-medium">Nuk ka dyqane në {city !== "all" ? city : "Kosovë"} ende.</p>
+              <p className="text-sm mt-1">Provoni një qytet tjetër ose shikoni të gjitha.</p>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {(Array.isArray(topShops) ? topShops : []).map((shop, i) => (
+              {topShops.map((shop, i) => (
                 <ShopCard key={shop.id} shop={shop} index={i} />
               ))}
             </div>
