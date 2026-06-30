@@ -16,7 +16,24 @@ router.get("/payments", requireAuth, requireRole("admin", "owner"), async (req: 
   const limit = parseInt(req.query.limit as string) || 20;
   const offset = (page - 1) * limit;
   const conditions = [];
-  if (req.query.shopId) conditions.push(eq(paymentsTable.shopId, parseInt(req.query.shopId as string)));
+
+  // Owners may only see payments for their own shop(s)
+  if (req.user!.role === "owner") {
+    const ownerShops = await db.select({ id: barbershopsTable.id })
+      .from(barbershopsTable).where(eq(barbershopsTable.ownerId, req.user!.id));
+    const shopIds = ownerShops.map((s) => s.id);
+    if (shopIds.length === 0) { res.json({ data: [], total: 0 }); return; }
+    if (req.query.shopId) {
+      const requestedId = parseInt(req.query.shopId as string);
+      if (!shopIds.includes(requestedId)) { res.status(403).json({ error: "Forbidden" }); return; }
+      conditions.push(eq(paymentsTable.shopId, requestedId));
+    } else {
+      conditions.push(sql`${paymentsTable.shopId} = ANY(ARRAY[${sql.join(shopIds.map(id => sql`${id}`), sql`, `)}]::int[])`);
+    }
+  } else {
+    if (req.query.shopId) conditions.push(eq(paymentsTable.shopId, parseInt(req.query.shopId as string)));
+  }
+
   if (req.query.type) conditions.push(eq(paymentsTable.type, req.query.type as any));
 
   const payments = await db.select().from(paymentsTable)
@@ -152,6 +169,8 @@ router.post("/payments/create-subscription", requireAuth, requireRole("owner"), 
   try {
     const [shop] = await db.select().from(barbershopsTable).where(eq(barbershopsTable.id, shopId));
     if (!shop) { res.status(404).json({ error: "Shop not found" }); return; }
+    // Owners may only create a subscription for their own shop
+    if (shop.ownerId !== req.user!.id) { res.status(403).json({ error: "Forbidden" }); return; }
     const domains = process.env.REPLIT_DOMAINS?.split(",")[0] ?? "localhost";
     const protocol = domains.includes("localhost") ? "http" : "https";
     const baseUrl = `${protocol}://${domains}`;

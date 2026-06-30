@@ -1,3 +1,5 @@
 - [API response shapes](api-response-shapes.md) — some endpoints return arrays directly (not wrapped in `{ data: [] }`); guard with Array.isArray()
 - [Auth token pattern](auth-token-pattern.md) — JWT in localStorage `barber_token`; wire via setAuthTokenGetter from @workspace/api-client-react main index (not deep import)
 - [Deep imports blocked](deep-imports.md) — @workspace/api-client-react only exports `.` — never import `/src/custom-fetch` directly; use the main package index
+- [Supabase DB connection](supabase-db.md) — must use Transaction Pooler URL (pooler.supabase.com:6543), not direct (db.supabase.co:5432); direct host is ENOTFOUND from Replit
+- [Drizzle push non-TTY](drizzle-push-tty.md) — drizzle-kit push fails in non-TTY shells when schema conflicts exist; use generate then apply SQL manually per-statement, skipping "already exists" errors
