@@ -6,6 +6,13 @@ import { Input } from "@/components/ui/input";
 import { MapPin, Search, Star, SlidersHorizontal, Scissors, Map } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { KOSOVO_CITIES } from "@/lib/kosovo-cities";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Lazy-load Leaflet so it doesn't bloat the initial bundle
 const KosovoMap = lazy(() => import("@/components/map/KosovoMap"));
@@ -72,27 +79,20 @@ export default function BarbershopsList() {
             </Button>
           </div>
 
-          {/* City pills */}
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-            <Button
-              variant={city === "all" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setCity("all")}
-              className="rounded-full shrink-0 text-xs"
-            >
-              Kudo
-            </Button>
-            {KOSOVO_CITIES.map((c) => (
-              <Button
-                key={c}
-                variant={city === c ? "default" : "outline"}
-                size="sm"
-                onClick={() => setCity(c)}
-                className="rounded-full shrink-0 text-xs"
-              >
-                {c}
-              </Button>
-            ))}
+          {/* City dropdown */}
+          <div className="relative">
+            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10 pointer-events-none" />
+            <Select value={city} onValueChange={setCity}>
+              <SelectTrigger className="pl-9 h-10 rounded-xl bg-background">
+                <SelectValue placeholder="Filtro sipas qytetit..." />
+              </SelectTrigger>
+              <SelectContent className="max-h-64 overflow-y-auto">
+                <SelectItem value="all">Kudo në Kosovë</SelectItem>
+                {KOSOVO_CITIES.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
