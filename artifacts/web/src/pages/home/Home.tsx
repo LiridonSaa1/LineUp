@@ -1780,6 +1780,8 @@ export default function Home() {
     limit: 12,
   });
 
+  const { data: allShopsData } = useListBarbershops({ status: "active", limit: 200 });
+
   const { data: cityShopsData, isLoading: isLoadingCity } = useListBarbershops(
     city !== "all" ? { city, status: "active", limit: 50 } : { limit: 0 },
   );
@@ -1790,11 +1792,14 @@ export default function Home() {
       ? (Array.isArray(topShopsData) ? topShopsData : [])
       : (cityShopsData?.data ?? []);
 
+  // Only show cities that actually have at least one active barbershop
+  const availableCities = Array.from(
+    new Set((allShopsData?.data ?? []).map((s: any) => s.city).filter(Boolean))
+  ).sort() as string[];
+
   const handleSearch = () => {
     setLocation(city !== "all" ? `/barbershops?city=${city}` : "/barbershops");
   };
-
-  const cities = KOSOVO_CITIES;
 
   return (
     <div className="flex flex-col">
@@ -1845,7 +1850,7 @@ export default function Home() {
                     </SelectTrigger>
                     <SelectContent className="rounded-2xl max-h-60 overflow-y-auto">
                       <SelectItem value="all">Kudo në Kosovë</SelectItem>
-                      {cities.map((c) => (
+                      {availableCities.map((c) => (
                         <SelectItem key={c} value={c}>
                           {c}
                         </SelectItem>
@@ -2103,9 +2108,9 @@ export default function Home() {
             </Link>
           </div>
 
-          {/* City filter pills */}
+          {/* City filter pills — only cities with actual shops */}
           <div className="flex flex-wrap gap-2 mb-10">
-            {["all", ...cities].map((c) => (
+            {["all", ...availableCities].map((c) => (
               <button
                 key={c}
                 onClick={() => setCity(c)}
