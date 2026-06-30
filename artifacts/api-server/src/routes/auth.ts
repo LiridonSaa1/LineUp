@@ -81,8 +81,7 @@ router.post("/auth/logout", (_req, res): void => {
   res.json({ message: "Logged out" });
 });
 
-<<<<<<< HEAD
-=======
+
 router.post("/auth/change-password", requireAuth, async (req: AuthRequest, res): Promise<void> => {
   const { currentPassword, newPassword } = req.body;
   if (!currentPassword || !newPassword) {
@@ -100,5 +99,4 @@ router.post("/auth/change-password", requireAuth, async (req: AuthRequest, res):
   res.json({ message: "Password changed successfully" });
 });
 
->>>>>>> 98e3ed9 (Add "My Panel" link and update password change logic)
 export default router;
