@@ -5,11 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MapPin, Search, Star, SlidersHorizontal, Scissors, Map } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { KOSOVO_CITIES } from "@/lib/kosovo-cities";
 
 // Lazy-load Leaflet so it doesn't bloat the initial bundle
 const KosovoMap = lazy(() => import("@/components/map/KosovoMap"));
-
-const CITIES = ["Prishtina", "Prizren", "Peja", "Gjakova", "Mitrovica", "Ferizaj", "Gjilan"];
 
 export default function BarbershopsList() {
   const searchParams = new URLSearchParams(window.location.search);
@@ -83,7 +82,7 @@ export default function BarbershopsList() {
             >
               Kudo
             </Button>
-            {CITIES.map((c) => (
+            {KOSOVO_CITIES.map((c) => (
               <Button
                 key={c}
                 variant={city === c ? "default" : "outline"}

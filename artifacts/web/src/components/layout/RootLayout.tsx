@@ -1,5 +1,6 @@
 import { Navbar } from "./Navbar";
 import { Link } from "wouter";
+import { KOSOVO_CITIES } from "@/lib/kosovo-cities";
 import { useState, useEffect } from "react";
 import {
   MapPin, Calendar, ShoppingBag,
@@ -175,15 +176,9 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
             {/* Discover */}
             <FooterSection label="Zbulo" icon={MapPin}>
               <ul className="space-y-3">
-                {[
-                  ["Të gjitha barberët", "/barbershops"],
-                  ["Prishtinë", "/barbershops?city=Prishtinë"],
-                  ["Prizren", "/barbershops?city=Prizren"],
-                  ["Pejë", "/barbershops?city=Pejë"],
-                  ["Gjakovë", "/barbershops?city=Gjakovë"],
-                  ["Gjilan", "/barbershops?city=Gjilan"],
-                ].map(([label, href]) => (
-                  <FooterLink key={label} href={href}>{label}</FooterLink>
+                <FooterLink href="/barbershops">Të gjitha barberët</FooterLink>
+                {KOSOVO_CITIES.map((c) => (
+                  <FooterLink key={c} href={`/barbershops?city=${encodeURIComponent(c)}`}>{c}</FooterLink>
                 ))}
               </ul>
             </FooterSection>

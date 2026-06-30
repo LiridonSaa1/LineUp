@@ -1,4 +1,5 @@
 import { Link, useLocation } from "wouter";
+import { KOSOVO_CITIES } from "@/lib/kosovo-cities";
 import { useState, useEffect, useRef } from "react";
 import { useListTopBarbershops, useListProducts } from "@workspace/api-client-react";
 import { useCart } from "@/context/CartContext";
@@ -1127,7 +1128,7 @@ function AdvertiseModal({ open, onClose }: { open: boolean; onClose: () => void 
                           <SelectValue placeholder="Zgjidhni qytetin..." />
                         </SelectTrigger>
                         <SelectContent>
-                          {["Prishtina","Prizren","Peja","Gjakova","Mitrovica","Ferizaj","Gjilan","I gjithë Kosova"].map(c => (
+                          {KOSOVO_CITIES.map(c => (
                             <SelectItem key={c} value={c}>{c}</SelectItem>
                           ))}
                         </SelectContent>
@@ -1784,15 +1785,7 @@ export default function Home() {
     setLocation(city !== "all" ? `/barbershops?city=${city}` : "/barbershops");
   };
 
-  const cities = [
-    "Prishtina",
-    "Prizren",
-    "Peja",
-    "Gjakova",
-    "Mitrovica",
-    "Ferizaj",
-    "Gjilan",
-  ];
+  const cities = KOSOVO_CITIES;
 
   return (
     <div className="flex flex-col">

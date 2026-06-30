@@ -15,13 +15,7 @@ import { loadStripe } from "@stripe/stripe-js";
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
 
 /* ── Constants ───────────────────────────────────────────── */
-const KOSOVO_CITIES = [
-  "Prishtinë", "Prizren", "Pejë", "Gjakovë", "Gjilan", "Mitrovicë",
-  "Ferizaj", "Vushtrri", "Suharekë", "Rahovec", "Malishevë", "Skënderaj",
-  "Klinë", "Istog", "Deçan", "Junik", "Dragash", "Shtime", "Lipjan",
-  "Podujevë", "Drenas", "Obiliq", "Fushë Kosovë", "Kaçanik", "Viti",
-  "Kamenicë", "Novobërdë",
-];
+import { KOSOVO_CITIES } from "@/lib/kosovo-cities";
 
 const PRIMARY = "#4f8ef7";
 
