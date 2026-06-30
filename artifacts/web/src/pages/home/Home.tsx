@@ -2173,10 +2173,10 @@ export default function Home() {
               </p>
             </div>
             <Link
-              href="/barbershops"
+              href={city !== "all" ? `/barbershops?city=${encodeURIComponent(city)}` : "/barbershops"}
               className="hidden md:flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary/80 transition-colors group shrink-0"
             >
-              Shiko të gjitha{" "}
+              Shiko të gjitha{city !== "all" ? ` në ${city}` : ""}{" "}
               <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
             </Link>
           </div>
@@ -2233,10 +2233,10 @@ export default function Home() {
 
           <div className="mt-10 text-center md:hidden">
             <Link
-              href="/barbershops"
+              href={city !== "all" ? `/barbershops?city=${encodeURIComponent(city)}` : "/barbershops"}
               className="btn-pill inline-flex items-center gap-2 px-6 py-3 bg-background/80 border border-border/60 text-sm font-semibold hover:border-primary/30 transition-all"
             >
-              Shiko të gjitha dyqanet <ArrowRight className="w-4 h-4" />
+              Shiko të gjitha{city !== "all" ? ` në ${city}` : " dyqanet"} <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>
