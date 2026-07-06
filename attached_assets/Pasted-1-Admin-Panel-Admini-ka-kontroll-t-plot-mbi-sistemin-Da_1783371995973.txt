@@ -1,0 +1,203 @@
+1. Admin Panel
+
+Admini ka kontroll të plotë mbi sistemin.
+
+Dashboard
+Numri total i rezervimeve
+Rezervimet e sotme
+Numri i klientëve
+Numri i salloneve/berberëve
+Të ardhurat totale
+Grafiku i rezervimeve
+Grafiku i të ardhurave
+Menaxhimi i Salloneve
+Shto sallon
+Edito sallon
+Fshij sallon
+Aktivizo/Çaktivizo sallon
+Shiko detajet
+Menaxhimi i Punëtorëve
+Shto barber/stilist
+Edito
+Fshij
+Ndrysho orarin
+Cakto në sallon
+Menaxhimi i Klientëve
+Lista e klientëve
+Historia e rezervimeve
+Blloko klient
+Aktivizo klient
+Menaxhimi i Shërbimeve
+
+P.sh.
+
+Mashkuj
+
+Haircut
+Beard Trim
+Hair Wash
+Hair Coloring
+
+Femra
+
+Haircut
+Blow Dry
+Makeup
+Nails
+Facial
+Eyebrows
+Hair Coloring
+Menaxhimi i Rezervimeve
+Të gjitha rezervimet
+Aprovo
+Refuzo
+Anulo
+Përfundo
+Pagesat
+Pagesat online
+Pagesat cash
+Raporte mujore
+Raporte ditore
+Kuponat / Zbritjet
+Krijo kupon
+Përqindje zbritjeje
+Data e skadimit
+Komentet dhe Vlerësimet
+Shiko review
+Fshij review
+Raporto review
+Raportet
+Rezervime sipas muajit
+Rezervime sipas sallonit
+Punëtori më aktiv
+Shërbimi më i kërkuar
+Të ardhurat
+CMS
+Slider
+About Us
+Contact
+FAQ
+Privacy Policy
+Terms
+Njoftimet
+Email
+SMS
+Push Notifications
+Settings
+Currency
+Timezone
+Tax
+Working Hours
+Booking Interval
+2. Barber / Salon Panel
+
+Ky panel është për pronarin ose menaxherin e sallonit.
+
+Dashboard
+Rezervimet e sotme
+Fitimet
+Klientët
+Grafiku javor
+Profili
+Foto
+Logo
+Përshkrimi
+Adresa
+Lokacioni në hartë
+Telefoni
+Facebook
+Instagram
+Website
+Punëtorët
+Shto punëtor
+Edito
+Fshij
+Orari
+Shërbimet
+Emri
+Çmimi
+Kohëzgjatja
+Foto
+Kategoria
+Kalendari
+Calendar View
+Day View
+Week View
+Month View
+Rezervimet
+Pending
+Confirmed
+Completed
+Cancelled
+Orari i Punës
+Pushime
+Ditë jo pune
+Ora e hapjes
+Ora e mbylljes
+Klientët
+Lista
+Historia
+Shpenzimet
+Shënime
+Produktet (Opsionale)
+Shampo
+Gel
+Wax
+Beard Oil
+Galeria
+Foto
+Video
+Review
+Vlerësimet
+Përgjigju komenteve
+Raportet
+Fitimet
+Shërbimet më të kërkuara
+Punëtori më i mirë
+3. Klienti
+Dashboard
+Rezervimi i ardhshëm
+Rezervimet e fundit
+Profili
+Foto
+Emri
+Telefoni
+Email
+Adresa
+Gjej Sallon
+
+Filtër sipas:
+
+Qytetit
+Komunës
+Gjinisë (Meshkuj/Femra/Unisex)
+Çmimit
+Rating
+Distancës
+Rezervo
+Zgjedh sallonin
+Zgjedh barberin
+Zgjedh shërbimin
+Zgjedh datën
+Zgjedh orën
+Pagesa
+Konfirmimi
+Kalendari
+Rezervimet e mia
+Historia
+Completed
+Cancelled
+Favorite
+Sallonet favorite
+Barberët favoritë
+Review
+Jep vlerësim
+Shkruaj koment
+Pagesat
+Kartë
+Cash
+Historia e pagesave
+Njoftimet
+Kujtesë për rezervim
+Ndryshim orari
+Oferta
