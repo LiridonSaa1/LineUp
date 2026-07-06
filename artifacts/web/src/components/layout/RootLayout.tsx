@@ -1,7 +1,8 @@
 import { Navbar } from "./Navbar";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { KOSOVO_CITIES } from "@/lib/kosovo-cities";
 import { useState, useEffect } from "react";
+import barberToolsBg from "@assets/vintage-equipment-of-barber-shop-on-wood-backgroun-2023-11-27-_1782291490098.jpg";
 import {
   MapPin, Calendar, ShoppingBag,
   Mail, Twitter, Instagram, ArrowUpRight,
@@ -45,8 +46,40 @@ function FooterLink({ href, children }: { href: string; children: React.ReactNod
   );
 }
 
+const PAGE_HERO_TITLES: Record<string, string> = {
+  "/barbershops": "Barbershops",
+  "/marketplace": "Dyqani",
+  "/contact": "Na Kontaktoni",
+  "/appointments": "Takimet e Mia",
+  "/orders": "Porositë e Mia",
+  "/notifications": "Njoftimet",
+  "/profile": "Profili Im",
+  "/me": "Paneli Im",
+};
+
+function PageHero({ path }: { path: string }) {
+  const title = PAGE_HERO_TITLES[path];
+  if (!title) return null;
+  return (
+    <div className="relative h-[42vh] min-h-[220px] max-h-[340px] overflow-hidden flex items-end">
+      <img
+        src={barberToolsBg}
+        alt=""
+        className="absolute inset-0 w-full h-full object-cover scale-105"
+      />
+      <div className="absolute inset-0 bg-black/65" />
+      <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 via-transparent to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+      <div className="relative z-10 container px-6 max-w-7xl mx-auto pb-10">
+        <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">{title}</h1>
+      </div>
+    </div>
+  );
+}
+
 export function RootLayout({ children }: { children: React.ReactNode }) {
   const [showTop, setShowTop] = useState(false);
+  const [path] = useLocation();
 
   useEffect(() => {
     const onScroll = () => setShowTop(window.scrollY > 400);
@@ -58,6 +91,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen flex flex-col bg-background text-foreground selection:bg-primary/30">
       <Navbar />
       <main className="flex-1 flex flex-col">
+        <PageHero path={path} />
         {children}
       </main>
 
