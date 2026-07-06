@@ -9,3 +9,8 @@ export * from "./payments";
 export * from "./notifications";
 export * from "./activity";
 export * from "./ads";
+export * from "./waiting-list";
+export * from "./holidays";
+export * from "./coupons";
+export * from "./loyalty";
+export * from "./recurring";

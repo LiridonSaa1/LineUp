@@ -1,7 +1,11 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Scissors, Calendar, Package, CreditCard, LogOut, Settings, Users, Euro } from "lucide-react";
+import {
+  LayoutDashboard, Scissors, Calendar, Package, CreditCard, LogOut,
+  Settings, Users, Euro, BarChart3, CalendarOff, Ticket, Star,
+  Clock, RefreshCw,
+} from "lucide-react";
 import { useLogout } from "@workspace/api-client-react";
 
 interface DashboardLayoutProps {
@@ -29,12 +33,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const navItems = [
     { href: "/dashboard", label: "Pasqyra", icon: LayoutDashboard },
+    { href: "/dashboard/stats", label: "Statistikat", icon: BarChart3 },
     { href: "/dashboard/appointments", label: "Takimet", icon: Calendar },
+    { href: "/dashboard/waiting-list", label: "Lista Pritjes", icon: Clock },
+    { href: "/dashboard/recurring", label: "Periodike", icon: RefreshCw },
     { href: "/dashboard/barbers", label: "Ekipi", icon: Scissors },
     { href: "/dashboard/clients", label: "Klientët", icon: Users },
     { href: "/dashboard/services", label: "Shërbimet", icon: Settings },
     { href: "/dashboard/products", label: "Produktet", icon: Package },
     { href: "/dashboard/payments", label: "Financat", icon: Euro },
+    { href: "/dashboard/holidays", label: "Pushimet", icon: CalendarOff },
+    { href: "/dashboard/coupons", label: "Kuponat", icon: Ticket },
+    { href: "/dashboard/loyalty", label: "Besnikëria", icon: Star },
     { href: "/dashboard/settings", label: "Cilësimet", icon: Settings },
     { href: "/dashboard/subscription", label: "Abonimi", icon: CreditCard },
   ];

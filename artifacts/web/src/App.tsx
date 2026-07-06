@@ -27,6 +27,7 @@ import NotFound from "@/pages/not-found";
 
 // Owner Dashboard Pages
 import Dashboard from "@/pages/dashboard/Dashboard";
+import DashboardStats from "@/pages/dashboard/DashboardStats";
 import DashboardAppointments from "@/pages/dashboard/DashboardAppointments";
 import DashboardBarbers from "@/pages/dashboard/DashboardBarbers";
 import DashboardServices from "@/pages/dashboard/DashboardServices";
@@ -35,6 +36,11 @@ import DashboardSubscription from "@/pages/dashboard/DashboardSubscription";
 import DashboardClients from "@/pages/dashboard/DashboardClients";
 import DashboardSettings from "@/pages/dashboard/DashboardSettings";
 import DashboardPayments from "@/pages/dashboard/DashboardPayments";
+import DashboardHolidays from "@/pages/dashboard/DashboardHolidays";
+import DashboardCoupons from "@/pages/dashboard/DashboardCoupons";
+import DashboardLoyalty from "@/pages/dashboard/DashboardLoyalty";
+import DashboardWaitingList from "@/pages/dashboard/DashboardWaitingList";
+import DashboardRecurring from "@/pages/dashboard/DashboardRecurring";
 
 // Admin Pages
 import AdminDashboard from "@/pages/admin/AdminDashboard";
@@ -94,6 +100,7 @@ function App() {
                 <DashboardLayout>
                   <Switch>
                     <Route path="/dashboard" component={Dashboard} />
+                    <Route path="/dashboard/stats" component={DashboardStats} />
                     <Route path="/dashboard/appointments" component={DashboardAppointments} />
                     <Route path="/dashboard/barbers" component={DashboardBarbers} />
                     <Route path="/dashboard/services" component={DashboardServices} />
@@ -102,6 +109,11 @@ function App() {
                     <Route path="/dashboard/clients" component={DashboardClients} />
                     <Route path="/dashboard/settings" component={DashboardSettings} />
                     <Route path="/dashboard/payments" component={DashboardPayments} />
+                    <Route path="/dashboard/holidays" component={DashboardHolidays} />
+                    <Route path="/dashboard/coupons" component={DashboardCoupons} />
+                    <Route path="/dashboard/loyalty" component={DashboardLoyalty} />
+                    <Route path="/dashboard/waiting-list" component={DashboardWaitingList} />
+                    <Route path="/dashboard/recurring" component={DashboardRecurring} />
                     <Route component={NotFound} />
                   </Switch>
                 </DashboardLayout>

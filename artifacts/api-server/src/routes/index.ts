@@ -15,6 +15,11 @@ import verifyEmailRouter from "./verify-email";
 import contactRouter from "./contact";
 import uploadRouter from "./upload";
 import adsRouter from "./ads";
+import waitingListRouter from "./waiting-list";
+import holidaysRouter from "./holidays";
+import couponsRouter from "./coupons";
+import loyaltyRouter from "./loyalty";
+import recurringRouter from "./recurring";
 
 const router: IRouter = Router();
 
@@ -34,5 +39,10 @@ router.use(verifyEmailRouter);
 router.use(contactRouter);
 router.use(uploadRouter);
 router.use(adsRouter);
+router.use(waitingListRouter);
+router.use(holidaysRouter);
+router.use(couponsRouter);
+router.use(loyaltyRouter);
+router.use(recurringRouter);
 
 export default router;
