@@ -73,6 +73,20 @@ router.get("/barbershops/top", async (req, res): Promise<void> => {
   res.json(shops.map(formatShop));
 });
 
+router.get("/barbershops/mine", requireAuth, async (req: AuthRequest, res): Promise<void> => {
+  const [shop] = await db.select().from(barbershopsTable)
+    .where(eq(barbershopsTable.ownerId, req.user!.id))
+    .orderBy(desc(barbershopsTable.createdAt))
+    .limit(1);
+
+  if (!shop) {
+    res.status(404).json({ error: "No barbershop found for current user" });
+    return;
+  }
+
+  res.json(formatShop(shop));
+});
+
 router.post("/barbershops", requireAuth, async (req: AuthRequest, res): Promise<void> => {
   const { name, city, address, description, phone, imageUrl, latitude, longitude, openTime, closeTime, businessNumber, gender, stripeConnectAccountId, iban, photos } = req.body;
   if (!name || !city || !address) {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListProducts, useCreateProduct, useDeleteProduct } from "@workspace/api-client-react";
+import { useListShopProducts, useCreateProduct, useDeleteProduct } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,11 +7,16 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Trash2, Package } from "lucide-react";
+import { useOwnerShop } from "@/hooks/use-owner-shop";
 
 export default function DashboardProducts() {
-  const shopId = 1;
+  const { data: ownerShop, isLoading: shopLoading } = useOwnerShop();
+  const shopId = ownerShop?.id ?? 0;
   const { toast } = useToast();
-  const { data: productsRes, isLoading, refetch } = useListProducts(shopId);
+  const { data: productsRes, isLoading, refetch } = useListShopProducts(shopId, {
+    query: { enabled: !!ownerShop } as any,
+  });
+  const products = Array.isArray(productsRes) ? productsRes : [];
   const createMutation = useCreateProduct();
   const deleteMutation = useDeleteProduct();
 
@@ -23,6 +28,7 @@ export default function DashboardProducts() {
   const handleCreate = async () => {
     try {
       await createMutation.mutateAsync({ 
+        shopId,
         data: { 
           name, 
           price: parseFloat(price), 
@@ -41,7 +47,7 @@ export default function DashboardProducts() {
   const handleDelete = async (id: number) => {
     if (!confirm("Delete this product?")) return;
     try {
-      await deleteMutation.mutateAsync({ id });
+      await deleteMutation.mutateAsync({ shopId, productId: id });
       toast({ title: "Product deleted" });
       refetch();
     } catch (e) {
@@ -86,14 +92,14 @@ export default function DashboardProducts() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {isLoading ? (
+        {shopLoading || isLoading ? (
           [1,2,3].map(i => <Card key={i} className="h-48 bg-muted animate-pulse" />)
-        ) : !productsRes?.data.length ? (
+        ) : products.length === 0 ? (
           <div className="col-span-full text-center py-12 text-muted-foreground bg-card border border-border rounded-xl">
             No products listed yet.
           </div>
         ) : (
-          productsRes.data.map(product => (
+          products.map(product => (
             <Card key={product.id} className="overflow-hidden group">
               <div className="h-32 bg-muted flex items-center justify-center relative">
                 {product.imageUrl ? (

@@ -8,11 +8,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Scissors, Trash2 } from "lucide-react";
+import { useOwnerShop } from "@/hooks/use-owner-shop";
 
 export default function DashboardBarbers() {
-  const shopId = 1;
+  const { data: ownerShop, isLoading: shopLoading } = useOwnerShop();
+  const shopId = ownerShop?.id ?? 0;
   const { toast } = useToast();
-  const { data: barbersRes, isLoading, refetch } = useListBarbers(shopId);
+  const { data: barbersRes, isLoading, refetch } = useListBarbers(shopId, {
+    query: { enabled: !!ownerShop } as any,
+  });
+  const barbers = Array.isArray(barbersRes) ? barbersRes : [];
   const createMutation = useCreateBarber();
   const deleteMutation = useDeleteBarber();
 
@@ -22,7 +27,7 @@ export default function DashboardBarbers() {
 
   const handleCreate = async () => {
     try {
-      await createMutation.mutateAsync({ data: { name, specialties } });
+      await createMutation.mutateAsync({ shopId, data: { name, specialties } });
       toast({ title: "Barber added" });
       setIsOpen(false);
       setName("");
@@ -36,7 +41,7 @@ export default function DashboardBarbers() {
   const handleDelete = async (id: number) => {
     if (!confirm("Remove this barber?")) return;
     try {
-      await deleteMutation.mutateAsync({ id });
+      await deleteMutation.mutateAsync({ shopId, barberId: id });
       toast({ title: "Barber removed" });
       refetch();
     } catch (e) {
@@ -75,10 +80,10 @@ export default function DashboardBarbers() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {isLoading ? (
+        {shopLoading || isLoading ? (
           [1,2,3].map(i => <Card key={i} className="h-32 bg-muted animate-pulse" />)
         ) : (
-          barbersRes?.data.map(barber => (
+          barbers.map(barber => (
             <Card key={barber.id} className="p-6 flex items-center justify-between group">
               <div className="flex items-center gap-4">
                 <Avatar className="h-12 w-12 border border-primary/20">

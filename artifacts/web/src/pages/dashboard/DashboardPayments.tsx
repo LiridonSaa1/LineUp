@@ -3,22 +3,24 @@ import { useGetRevenueByMonth, useGetOwnerStats } from "@workspace/api-client-re
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Euro, TrendingUp, Calendar, BarChart2 } from "lucide-react";
+import { useOwnerShop } from "@/hooks/use-owner-shop";
 
 export default function DashboardPayments() {
   const { user } = useAuth();
-  const shopId = 1;
+  const { data: ownerShop, isLoading: shopLoading } = useOwnerShop();
+  const shopId = ownerShop?.id ?? 0;
 
   const { data: stats, isLoading: statsLoading } = useGetOwnerStats(
     { shopId },
-    { query: { enabled: !!user } }
+    { query: { enabled: !!user && !!ownerShop } as any }
   );
 
   const { data: monthlyRev, isLoading: revLoading } = useGetRevenueByMonth(
     { shopId, months: 6 },
-    { query: { enabled: !!user } }
+    { query: { enabled: !!user && !!ownerShop } as any }
   );
 
-  const isLoading = statsLoading || revLoading;
+  const isLoading = shopLoading || statsLoading || revLoading;
   const months = Array.isArray(monthlyRev) ? monthlyRev : [];
   const maxRev = Math.max(...months.map(m => m.revenue ?? 0), 1);
 
@@ -81,7 +83,7 @@ export default function DashboardPayments() {
             <CardContent>
               <div className="text-3xl font-bold">
                 {stats?.totalAppointments
-                  ? `${Math.round((stats.cancelledAppointments / stats.totalAppointments) * 100)}%`
+                  ? `${Math.round(((stats.cancelledAppointments ?? 0) / stats.totalAppointments) * 100)}%`
                   : "0%"}
               </div>
               <p className="text-xs text-muted-foreground mt-1">anulime</p>

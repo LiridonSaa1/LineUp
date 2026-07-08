@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useListTopBarbershops, useListBarbershops, useListProducts } from "@workspace/api-client-react";
 import { useCart } from "@/context/CartContext";
 import { useToast } from "@/hooks/use-toast";
+import SharedContactSection from "@/components/ContactSection";
 import KosovoCitiesMap from "@/components/map/KosovoCitiesMap";
 import {
   MapPin,
@@ -2471,7 +2472,7 @@ export default function Home() {
       </section>
 
       {/* ── CONTACT FORM ─────────────────────────────────── */}
-      <ContactSection />
+      <SharedContactSection />
     </div>
   );
 }

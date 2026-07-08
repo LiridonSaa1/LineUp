@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import type { Request, Response, NextFunction } from "express";
 
-const JWT_SECRET = process.env.SESSION_SECRET;
+const JWT_SECRET: string = process.env.SESSION_SECRET ?? "";
 if (!JWT_SECRET) {
   throw new Error("SESSION_SECRET environment variable is required but was not provided.");
 }
@@ -12,7 +12,7 @@ export function generateToken(payload: { id: number; email: string; role: string
 }
 
 export function verifyToken(token: string): { id: number; email: string; role: string } {
-  return jwt.verify(token, JWT_SECRET) as { id: number; email: string; role: string };
+  return jwt.verify(token, JWT_SECRET) as unknown as { id: number; email: string; role: string };
 }
 
 export async function hashPassword(password: string): Promise<string> {

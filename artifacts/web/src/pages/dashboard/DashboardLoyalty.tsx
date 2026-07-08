@@ -6,17 +6,17 @@ import { Badge } from "@/components/ui/badge";
 import { Star, Save, Award, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useOwnerShop } from "@/hooks/use-owner-shop";
 
-const SHOP_ID = 1;
 const token = () => localStorage.getItem("barber_token");
 
 const api = {
-  getProgram: async () => {
-    const r = await fetch(`/api/barbershops/${SHOP_ID}/loyalty/program`);
+  getProgram: async (shopId: number) => {
+    const r = await fetch(`/api/barbershops/${shopId}/loyalty/program`);
     return r.json();
   },
-  upsertProgram: async (payload: any) => {
-    const r = await fetch(`/api/barbershops/${SHOP_ID}/loyalty/program`, {
+  upsertProgram: async (shopId: number, payload: any) => {
+    const r = await fetch(`/api/barbershops/${shopId}/loyalty/program`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
       body: JSON.stringify(payload),
@@ -29,7 +29,13 @@ const api = {
 export default function DashboardLoyalty() {
   const { toast } = useToast();
   const qc = useQueryClient();
-  const { data: program, isLoading } = useQuery({ queryKey: ["loyalty-program", SHOP_ID], queryFn: api.getProgram });
+  const { data: ownerShop, isLoading: shopLoading } = useOwnerShop();
+  const shopId = ownerShop?.id ?? 0;
+  const { data: program, isLoading } = useQuery({
+    queryKey: ["loyalty-program", shopId],
+    queryFn: () => api.getProgram(shopId),
+    enabled: !!ownerShop,
+  });
   const [form, setForm] = useState({ pointsPerEuro: 10, pointsToRedeem: 100, minPointsRedeem: 100, isActive: true });
   const [initialized, setInitialized] = useState(false);
 
@@ -39,8 +45,8 @@ export default function DashboardLoyalty() {
   }
 
   const saveMut = useMutation({
-    mutationFn: api.upsertProgram,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["loyalty-program"] }); toast({ title: "Programi i besnikërisë u ruajt!" }); },
+    mutationFn: (payload: any) => api.upsertProgram(shopId, payload),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["loyalty-program", shopId] }); toast({ title: "Programi i besnikërisë u ruajt!" }); },
     onError: (e: any) => toast({ title: "Gabim", description: e.message, variant: "destructive" }),
   });
 
@@ -93,7 +99,7 @@ export default function DashboardLoyalty() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
+          {shopLoading || isLoading ? (
             <div className="text-sm text-muted-foreground">Duke ngarkuar...</div>
           ) : (
             <div className="space-y-6">

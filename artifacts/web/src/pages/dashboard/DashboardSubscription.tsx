@@ -2,10 +2,15 @@ import { useGetOwnerStats } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, CreditCard } from "lucide-react";
+import { useOwnerShop } from "@/hooks/use-owner-shop";
 
 export default function DashboardSubscription() {
-  const shopId = 1;
-  const { data: stats } = useGetOwnerStats({ shopId });
+  const { data: ownerShop } = useOwnerShop();
+  const shopId = ownerShop?.id ?? 0;
+  const { data: stats } = useGetOwnerStats(
+    { shopId },
+    { query: { enabled: !!ownerShop } as any },
+  );
 
   const isSubscribed = stats?.subscriptionActive;
 

@@ -6,13 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Ticket, Plus, Trash2, ToggleLeft, ToggleRight, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useOwnerShop } from "@/hooks/use-owner-shop";
 
-const SHOP_ID = 1;
 const token = () => localStorage.getItem("barber_token");
 
 const api = {
-  list: async () => {
-    const r = await fetch(`/api/coupons?shopId=${SHOP_ID}`, { headers: { Authorization: `Bearer ${token()}` } });
+  list: async (shopId: number) => {
+    const r = await fetch(`/api/coupons?shopId=${shopId}`, { headers: { Authorization: `Bearer ${token()}` } });
     return r.json();
   },
   create: async (payload: any) => {
@@ -34,31 +34,37 @@ const EMPTY_FORM = { code: "", description: "", discountType: "percentage" as "p
 export default function DashboardCoupons() {
   const { toast } = useToast();
   const qc = useQueryClient();
+  const { data: ownerShop, isLoading: shopLoading } = useOwnerShop();
+  const shopId = ownerShop?.id ?? 0;
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
 
-  const { data: coupons = [], isLoading } = useQuery({ queryKey: ["coupons", SHOP_ID], queryFn: api.list });
+  const { data: coupons = [], isLoading } = useQuery({
+    queryKey: ["coupons", shopId],
+    queryFn: () => api.list(shopId),
+    enabled: !!ownerShop,
+  });
 
   const createMut = useMutation({
     mutationFn: api.create,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["coupons"] }); setForm(EMPTY_FORM); setShowForm(false); toast({ title: "Kuponi u krijua!" }); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["coupons", shopId] }); setForm(EMPTY_FORM); setShowForm(false); toast({ title: "Kuponi u krijua!" }); },
     onError: (e: any) => toast({ title: "Gabim", description: e.message, variant: "destructive" }),
   });
 
   const toggleMut = useMutation({
     mutationFn: ({ id, isActive }: any) => api.toggle(id, isActive),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["coupons"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["coupons", shopId] }),
   });
 
   const removeMut = useMutation({
     mutationFn: api.remove,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["coupons"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["coupons", shopId] }),
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     createMut.mutate({
-      shopId: SHOP_ID,
+      shopId,
       code: form.code,
       description: form.description || null,
       discountType: form.discountType,
@@ -134,7 +140,7 @@ export default function DashboardCoupons() {
         </Card>
       )}
 
-      {isLoading ? (
+      {shopLoading || isLoading ? (
         <div className="text-muted-foreground text-sm">Duke ngarkuar...</div>
       ) : !Array.isArray(coupons) || coupons.length === 0 ? (
         <Card className="bg-card border-border">

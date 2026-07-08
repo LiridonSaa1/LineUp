@@ -4,6 +4,7 @@ import {
   useGetBarbershop
 } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth";
+import { useOwnerShop } from "@/hooks/use-owner-shop";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar, Euro, Users, Package } from "lucide-react";
@@ -12,19 +13,20 @@ import { Link } from "wouter";
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const shopId = 1;
+  const { data: ownerShop, isLoading: shopLoading } = useOwnerShop();
+  const shopId = ownerShop?.id ?? 0;
 
   const { data: stats, isLoading } = useGetOwnerStats(
     { shopId },
-    { query: { enabled: !!user } }
+    { query: { enabled: !!user && !!ownerShop } as any }
   );
 
   const { data: activity } = useGetRecentActivity(
     { shopId, limit: 5 },
-    { query: { enabled: !!user } }
+    { query: { enabled: !!user && !!ownerShop } as any }
   );
 
-  if (isLoading) {
+  if (shopLoading || isLoading) {
     return <div className="space-y-4"><Skeleton className="h-32 w-full" /><Skeleton className="h-64 w-full" /></div>;
   }
 

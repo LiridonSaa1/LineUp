@@ -7,25 +7,26 @@ import {
   Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
 import { TrendingUp, Euro, Calendar, Users } from "lucide-react";
-
-const SHOP_ID = 1; // TODO: derive from auth context
+import { useOwnerShop } from "@/hooks/use-owner-shop";
 
 export default function DashboardStats() {
   const { user } = useAuth();
+  const { data: ownerShop, isLoading: shopLoading } = useOwnerShop();
+  const shopId = ownerShop?.id ?? 0;
 
   const { data: stats, isLoading: statsLoading } = useGetOwnerStats(
-    { shopId: SHOP_ID },
-    { query: { enabled: !!user } }
+    { shopId },
+    { query: { enabled: !!user && !!ownerShop } as any }
   );
 
   const { data: byDay } = useGetAppointmentsByDay(
-    { days: 30, shopId: SHOP_ID },
-    { query: { enabled: !!user } }
+    { days: 30, shopId },
+    { query: { enabled: !!user && !!ownerShop } as any }
   );
 
   const { data: byMonth } = useGetRevenueByMonth(
-    { months: 6, shopId: SHOP_ID },
-    { query: { enabled: !!user } }
+    { months: 6, shopId },
+    { query: { enabled: !!user && !!ownerShop } as any }
   );
 
   const dayData = Array.isArray(byDay) ? byDay : [];
@@ -47,7 +48,7 @@ export default function DashboardStats() {
 
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {statsLoading
+        {shopLoading || statsLoading
           ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28" />)
           : kpis.map(({ label, value, icon: Icon, color }) => (
             <Card key={label} className="bg-card border-border">

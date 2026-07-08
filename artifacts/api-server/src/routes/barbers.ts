@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, barbersTable, barbershopsTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { requireAuth, type AuthRequest } from "../lib/auth";
 
 const router = Router();
@@ -8,6 +8,31 @@ const router = Router();
 function formatBarber(b: any) {
   return { ...b, rating: b.rating != null ? parseFloat(b.rating) : null };
 }
+
+function formatShop(shop: any) {
+  return {
+    ...shop,
+    rating: shop.rating != null ? parseFloat(shop.rating) : null,
+    latitude: shop.latitude != null ? parseFloat(shop.latitude) : null,
+    longitude: shop.longitude != null ? parseFloat(shop.longitude) : null,
+  };
+}
+
+router.get("/barbers", async (_req, res): Promise<void> => {
+  const rows = await db.select({
+    barber: barbersTable,
+    shop: barbershopsTable,
+  })
+    .from(barbersTable)
+    .innerJoin(barbershopsTable, eq(barbersTable.shopId, barbershopsTable.id))
+    .where(and(eq(barbersTable.isActive, true), eq(barbershopsTable.status, "active")))
+    .orderBy(desc(barbersTable.rating), desc(barbersTable.createdAt));
+
+  res.json(rows.map((row) => ({
+    ...formatBarber(row.barber),
+    shop: formatShop(row.shop),
+  })));
+});
 
 router.get("/barbershops/:shopId/barbers", async (req, res): Promise<void> => {
   const shopId = parseInt(Array.isArray(req.params.shopId) ? req.params.shopId[0] : req.params.shopId);
