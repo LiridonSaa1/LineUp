@@ -10,16 +10,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Store, Clock, MapPin, Phone, Save } from "lucide-react";
+import { useOwnerShop } from "@/hooks/use-owner-shop";
 
 export default function DashboardSettings() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const shopId = 1;
+  const { data: ownerShop, isLoading: shopLoading } = useOwnerShop();
+  const shopId = ownerShop?.id ?? 0;
   const [saving, setSaving] = useState(false);
 
   const { data: shop, isLoading } = useGetBarbershop(
-    { id: shopId },
-    { query: { enabled: !!user } }
+    shopId,
+    { query: { enabled: !!user && !!ownerShop } as any }
   );
 
   const [form, setForm] = useState({
@@ -45,6 +47,7 @@ export default function DashboardSettings() {
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
 
   const handleSave = async () => {
+    if (!ownerShop) return;
     setSaving(true);
     try {
       await fetch(`/api/barbershops/${shopId}`, {
@@ -63,7 +66,7 @@ export default function DashboardSettings() {
     }
   };
 
-  if (isLoading) return (
+  if (shopLoading || isLoading) return (
     <div className="space-y-4">
       <Skeleton className="h-8 w-48" />
       <Skeleton className="h-64 rounded-2xl" />

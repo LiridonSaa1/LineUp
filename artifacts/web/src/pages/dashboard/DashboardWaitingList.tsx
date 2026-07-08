@@ -5,8 +5,8 @@ import { Clock, Bell, Trash2, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { useOwnerShop } from "@/hooks/use-owner-shop";
 
-const SHOP_ID = 1;
 const token = () => localStorage.getItem("barber_token");
 
 const statusColors: Record<string, string> = {
@@ -23,15 +23,15 @@ const statusLabels: Record<string, string> = {
 };
 
 const api = {
-  list: async () => {
-    const r = await fetch(`/api/waiting-list?shopId=${SHOP_ID}`, { headers: { Authorization: `Bearer ${token()}` } });
+  list: async (shopId: number) => {
+    const r = await fetch(`/api/waiting-list?shopId=${shopId}`, { headers: { Authorization: `Bearer ${token()}` } });
     return r.json();
   },
-  notify: async (preferredDate: string) => {
+  notify: async (shopId: number, preferredDate: string) => {
     const r = await fetch("/api/waiting-list/notify", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
-      body: JSON.stringify({ shopId: SHOP_ID, preferredDate }),
+      body: JSON.stringify({ shopId, preferredDate }),
     });
     return r.json();
   },
@@ -43,18 +43,24 @@ const api = {
 export default function DashboardWaitingList() {
   const { toast } = useToast();
   const qc = useQueryClient();
+  const { data: ownerShop, isLoading: shopLoading } = useOwnerShop();
+  const shopId = ownerShop?.id ?? 0;
 
-  const { data = [], isLoading } = useQuery({ queryKey: ["waiting-list", SHOP_ID], queryFn: api.list });
+  const { data = [], isLoading } = useQuery({
+    queryKey: ["waiting-list", shopId],
+    queryFn: () => api.list(shopId),
+    enabled: !!ownerShop,
+  });
   const entries = Array.isArray(data) ? data : [];
 
   const notifyMut = useMutation({
-    mutationFn: api.notify,
-    onSuccess: (res) => { qc.invalidateQueries({ queryKey: ["waiting-list"] }); toast({ title: `${res.notified} klientë u njoftuan!` }); },
+    mutationFn: (preferredDate: string) => api.notify(shopId, preferredDate),
+    onSuccess: (res) => { qc.invalidateQueries({ queryKey: ["waiting-list", shopId] }); toast({ title: `${res.notified} klientë u njoftuan!` }); },
   });
 
   const removeMut = useMutation({
     mutationFn: api.remove,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["waiting-list"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["waiting-list", shopId] }),
   });
 
   // Group by preferredDate
@@ -80,7 +86,7 @@ export default function DashboardWaitingList() {
         )}
       </div>
 
-      {isLoading ? (
+      {shopLoading || isLoading ? (
         <div className="text-sm text-muted-foreground">Duke ngarkuar...</div>
       ) : entries.length === 0 ? (
         <Card className="bg-card border-border">

@@ -34,8 +34,9 @@ export function Navbar() {
   const logoutMutation = useLogout();
 
   const isHome = location === "/";
-  // Show dark pill when scrolled OR on non-home pages
-  const hasBg = scrolled || !isHome;
+  const usesOverlayNav = isHome || location === "/barbershops";
+  // Show dark pill when scrolled OR on pages without a hero behind the nav.
+  const hasBg = scrolled || !usesOverlayNav;
 
   useEffect(() => {
     const onScroll = () => {
@@ -158,6 +159,7 @@ export function Navbar() {
     `text-sm font-medium px-3 py-1.5 rounded-full whitespace-nowrap border border-transparent transition-all duration-200 nav-link-glass text-white ${
       isCurrent ? "is-active font-semibold" : "text-white/70 hover:text-white"
     }`;
+  const userRole = user?.role as string | undefined;
 
   return (
     <>
@@ -305,11 +307,11 @@ export function Navbar() {
                             {user.email}
                           </p>
                           <span className="inline-flex items-center mt-2 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-semibold uppercase tracking-wider">
-                            {user.role}
+                            {userRole}
                           </span>
                         </div>
                         <DropdownMenuSeparator className="bg-black/6 my-1" />
-                        {user.role === "admin" && (
+                        {userRole === "admin" && (
                           <DropdownMenuItem
                             asChild
                             className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5"
@@ -323,7 +325,7 @@ export function Navbar() {
                             </Link>
                           </DropdownMenuItem>
                         )}
-                        {user.role === "owner" && (
+                        {userRole === "owner" && (
                           <DropdownMenuItem
                             asChild
                             className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5"
@@ -337,7 +339,7 @@ export function Navbar() {
                             </Link>
                           </DropdownMenuItem>
                         )}
-                        {user.role === "barber" && (
+                        {userRole === "barber" && (
                           <DropdownMenuItem
                             asChild
                             className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5"
@@ -573,8 +575,8 @@ export function Navbar() {
         </div>
       </header>
 
-      {/* Spacer only on non-home pages */}
-      {!isHome && <div className="h-[124px]" />}
+      {/* Spacer only when the page content should start below the fixed nav. */}
+      {!usesOverlayNav && <div className="h-[124px]" />}
     </>
   );
 }

@@ -1,367 +1,252 @@
-import { useState, Suspense, lazy } from "react";
+import { Suspense, lazy, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useListBarbershops, useListProducts } from "@workspace/api-client-react";
+import { useQuery } from "@tanstack/react-query";
+import { useListProducts } from "@workspace/api-client-react";
+import ContactSection from "@/components/ContactSection";
+import type { BarberMapItem } from "@/components/map/GoogleBarbershopMap";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { KOSOVO_CITIES } from "@/lib/kosovo-cities";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import {
-  MapPin, Search, Star, Scissors, Clock,
-  ArrowRight, Phone, Mail, MessageSquare, User, Send, CheckCircle,
-  ShoppingBag, Package,
+  ArrowRight,
+  Clock,
+  MapPin,
+  Navigation,
+  Package,
+  Scissors,
+  Search,
+  ShoppingBag,
+  SlidersHorizontal,
+  Star,
 } from "lucide-react";
 
-const KosovoMap = lazy(() => import("@/components/map/KosovoMap"));
+const BarberDirectoryMap = lazy(() => import("@/components/map/GoogleBarbershopMap"));
 
+async function fetchBarbers(): Promise<BarberMapItem[]> {
+  const response = await fetch("/api/barbers");
+  if (!response.ok) throw new Error("Could not load barbers");
+  return response.json();
+}
 
-/* ─────────────────────────────────────────────────────── */
-/* Products Section                                        */
-/* ─────────────────────────────────────────────────────── */
-function ProductsSection() {
-  const { data: productsRes, isLoading } = useListProducts({ limit: 8 });
-  const products: any[] = Array.isArray(productsRes)
+function ProductsStrip() {
+  const { data: productsRes, isLoading } = useListProducts({ limit: 4 });
+  const products = Array.isArray(productsRes)
     ? productsRes
     : Array.isArray((productsRes as any)?.data)
       ? (productsRes as any).data
       : [];
 
-  if (!isLoading && !products.length) return null;
+  if (!isLoading && products.length === 0) return null;
 
   return (
-    <section className="py-16 border-t border-border/40">
-      <div className="container px-6 max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
+    <section className="border-t border-border bg-background py-10">
+      <div className="container mx-auto max-w-7xl px-4 sm:px-6">
+        <div className="mb-5 flex items-end justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-4 h-[2px] bg-primary rounded-full" />
-              <span className="text-xs font-bold text-primary tracking-widest uppercase">Dyqani</span>
-            </div>
-            <h2 className="text-2xl font-extrabold">Produkte grooming të zgjedhura</h2>
-            <p className="text-muted-foreground text-sm mt-1">Pompade, vajra, aksesorë premium</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-primary">Marketplace</p>
+            <h2 className="mt-1 text-xl font-extrabold">Produkte grooming të zgjedhura</h2>
           </div>
-          <Link href="/marketplace" className="hidden sm:flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary/80 group shrink-0">
-            Shiko të gjitha <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+          <Link href="/marketplace" className="hidden items-center gap-1 text-sm font-bold text-primary sm:flex">
+            Shiko të gjitha <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
 
-        {isLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {[1,2,3,4].map(i => (
-              <div key={i} className="rounded-2xl border border-border bg-card overflow-hidden">
-                <Skeleton className="h-44 w-full rounded-none" />
-                <div className="p-4 space-y-2">
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-1/3" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {products.map((p: any) => (
-              <Link key={p.id} href="/marketplace">
-                <div className="group rounded-2xl border border-border/50 bg-card overflow-hidden hover:border-primary/40 hover:shadow-lg hover:shadow-primary/8 transition-all duration-300 cursor-pointer">
-                  <div className="h-44 bg-muted overflow-hidden relative">
-                    {p.imageUrl ? (
-                      <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-zinc-800 to-zinc-900">
-                        <Package className="w-10 h-10 text-muted-foreground/20" />
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {isLoading
+            ? [1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-44 rounded-2xl" />)
+            : products.map((product: any) => (
+                <Link key={product.id} href="/marketplace">
+                  <div className="group overflow-hidden rounded-2xl border border-border bg-card transition hover:border-primary/40 hover:shadow-lg">
+                    <div className="flex h-32 items-center justify-center overflow-hidden bg-muted">
+                      {product.imageUrl ? (
+                        <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover transition group-hover:scale-105" />
+                      ) : (
+                        <Package className="h-8 w-8 text-muted-foreground/40" />
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <p className="truncate text-sm font-bold">{product.name}</p>
+                      <div className="mt-1 flex items-center justify-between">
+                        <span className="font-extrabold text-primary">€{Number(product.price).toFixed(2)}</span>
+                        <ShoppingBag className="h-4 w-4 text-muted-foreground" />
                       </div>
-                    )}
-                    {p.stock === 0 && (
-                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                        <span className="text-white text-xs font-bold">I shitur</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-4">
-                    <p className="font-semibold text-sm leading-tight truncate mb-1">{p.name}</p>
-                    <div className="flex items-center justify-between">
-                      <p className="font-extrabold text-primary text-base">€{Number(p.price).toFixed(2)}</p>
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <ShoppingBag className="w-3 h-3" /> Shto
-                      </span>
                     </div>
                   </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-
-        <div className="mt-6 text-center sm:hidden">
-          <Link href="/marketplace" className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
-            Shiko të gjitha produktet <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ─────────────────────────────────────────────────────── */
-/* Contact Section                                         */
-/* ─────────────────────────────────────────────────────── */
-function ContactSection() {
-  const [form, setForm] = useState({ name: "", email: "", phone: "", message: "" });
-  const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setStatus("loading");
-    try {
-      const res = await fetch("/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, subject: "Pyetje nga faqja Barbershops" }),
-      });
-      if (res.ok) { setStatus("done"); setForm({ name: "", email: "", phone: "", message: "" }); }
-      else setStatus("error");
-    } catch { setStatus("error"); }
-  };
-
-  return (
-    <section className="py-20 border-t border-border/40 bg-gradient-to-b from-background to-zinc-950/50">
-      <div className="container px-6 max-w-7xl mx-auto">
-        <div className="grid lg:grid-cols-2 gap-12 items-start">
-          {/* Left — info */}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-4 h-[2px] bg-primary rounded-full" />
-              <span className="text-xs font-bold text-primary tracking-widest uppercase">Kontakti</span>
-            </div>
-            <h2 className="text-3xl font-extrabold tracking-tight mb-4">
-              Keni pyetje?<br />
-              <span className="text-primary">Jemi këtu.</span>
-            </h2>
-            <p className="text-muted-foreground leading-relaxed mb-8">
-              Nëse dëshironi të regjistroni dyqanin tuaj, keni pyetje rreth platformës, ose nevojitet ndihmë — na kontaktoni drejtpërdrejt.
-            </p>
-            <div className="space-y-4">
-              {[
-                { icon: Mail, label: "Email", value: "info@trimkosova.com" },
-                { icon: Phone, label: "Telefon", value: "+383 44 000 000" },
-                { icon: MapPin, label: "Adresa", value: "Prishtinë, Kosovë" },
-              ].map(({ icon: Icon, label, value }) => (
-                <div key={label} className="flex items-center gap-4 group">
-                  <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
-                    <Icon className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{label}</p>
-                    <p className="font-semibold text-sm mt-0.5">{value}</p>
-                  </div>
-                </div>
+                </Link>
               ))}
-            </div>
-          </div>
-
-          {/* Right — form */}
-          <div className="bg-card border border-border/50 rounded-3xl p-8">
-            {status === "done" ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4">
-                  <CheckCircle className="w-8 h-8 text-emerald-500" />
-                </div>
-                <h3 className="font-extrabold text-xl mb-2">Mesazhi u dërgua!</h3>
-                <p className="text-muted-foreground text-sm">Do t'ju kontaktojmë sa më shpejt.</p>
-                <button
-                  onClick={() => setStatus("idle")}
-                  className="mt-6 text-sm text-primary font-semibold hover:underline"
-                >
-                  Dërgoni mesazh tjetër
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Emri *</label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        required
-                        placeholder="Emri juaj"
-                        className="pl-9 rounded-xl bg-background"
-                        value={form.name}
-                        onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Email *</label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        required
-                        type="email"
-                        placeholder="email@juaj.com"
-                        className="pl-9 rounded-xl bg-background"
-                        value={form.email}
-                        onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Telefon</label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="+383 ..."
-                      className="pl-9 rounded-xl bg-background"
-                      value={form.phone}
-                      onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Mesazhi *</label>
-                  <div className="relative">
-                    <MessageSquare className="absolute left-3 top-3.5 w-4 h-4 text-muted-foreground" />
-                    <textarea
-                      required
-                      rows={4}
-                      placeholder="Shkruani mesazhin tuaj..."
-                      className="w-full pl-9 pr-4 py-3 rounded-xl bg-background border border-input text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-0 transition-colors placeholder:text-muted-foreground"
-                      value={form.message}
-                      onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
-                    />
-                  </div>
-                </div>
-                {status === "error" && (
-                  <p className="text-destructive text-sm">Gabim! Provoni përsëri.</p>
-                )}
-                <Button
-                  type="submit"
-                  disabled={status === "loading"}
-                  className="w-full rounded-xl h-11 font-bold gap-2"
-                >
-                  {status === "loading" ? "Duke dërguar..." : (
-                    <><Send className="w-4 h-4" /> Dërgo Mesazhin</>
-                  )}
-                </Button>
-              </form>
-            )}
-          </div>
         </div>
       </div>
     </section>
   );
 }
 
-/* ─────────────────────────────────────────────────────── */
-/* Main Page                                               */
-/* ─────────────────────────────────────────────────────── */
 export default function BarbershopsList() {
   const searchParams = new URLSearchParams(window.location.search);
   const initialCity = searchParams.get("city") || "all";
-
+  const [, setLocation] = useLocation();
   const [city, setCity] = useState(initialCity);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [, setLocation] = useLocation();
+  const [selectedBarberId, setSelectedBarberId] = useState<number | null>(null);
 
-  const { data: shopsResponse, isLoading } = useListBarbershops({ status: "active", limit: 100 });
-
-  const shops = shopsResponse?.data ?? [];
-
-  const filtered = shops.filter((s) => {
-    const matchCity = city === "all" || s.city === city;
-    const q = debouncedSearch.toLowerCase();
-    const matchSearch = !q || s.name.toLowerCase().includes(q) || s.city.toLowerCase().includes(q) || s.address.toLowerCase().includes(q);
-    return matchCity && matchSearch;
+  const { data: barbers = [], isLoading } = useQuery({
+    queryKey: ["public-barbers"],
+    queryFn: fetchBarbers,
   });
 
-  const handleSearch = () => setDebouncedSearch(search);
+  const filtered = useMemo(() => {
+    const q = debouncedSearch.trim().toLowerCase();
+    return barbers.filter((barber) => {
+      const matchCity = city === "all" || barber.shop.city === city;
+      const matchSearch =
+        !q ||
+        barber.name.toLowerCase().includes(q) ||
+        barber.shop.name.toLowerCase().includes(q) ||
+        barber.shop.city.toLowerCase().includes(q) ||
+        barber.shop.address.toLowerCase().includes(q) ||
+        (barber.specialties ?? "").toLowerCase().includes(q);
+      return matchCity && matchSearch;
+    });
+  }, [barbers, city, debouncedSearch]);
+
+  const citiesWithBarbers = useMemo(
+    () => Array.from(new Set(barbers.map((barber) => barber.shop.city).filter(Boolean))).sort(),
+    [barbers],
+  );
+
+  const topRated = useMemo(
+    () => [...filtered].sort((a, b) => Number(b.rating ?? 0) - Number(a.rating ?? 0)).slice(0, 3),
+    [filtered],
+  );
+
+  const selectedBarber = filtered.find((barber) => barber.id === selectedBarberId) ?? null;
+  const runSearch = () => setDebouncedSearch(search);
+  const selectBarber = (barberId: number) => setSelectedBarberId(barberId);
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="min-h-screen bg-slate-50/60 dark:bg-background">
+      <section className="border-b border-border bg-background">
+        <div className="container mx-auto grid max-w-7xl gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[1fr_360px] lg:items-end">
+          <div>
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+              <Navigation className="h-3.5 w-3.5" />
+              Barber map directory
+            </div>
+            <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">Zgjidh berberin dhe shiko vendndodhjen</h1>
+            <p className="mt-3 max-w-2xl text-sm text-muted-foreground sm:text-base">
+              Shfleto të gjithë berberët aktivë, kliko një profil dhe harta të çon direkt te dyqani ku punon.
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-2 rounded-2xl border border-border bg-card p-3">
+            <div>
+              <p className="text-2xl font-extrabold">{isLoading ? "…" : barbers.length}</p>
+              <p className="text-[11px] font-medium text-muted-foreground">Berberë</p>
+            </div>
+            <div>
+              <p className="text-2xl font-extrabold">{isLoading ? "…" : citiesWithBarbers.length}</p>
+              <p className="text-[11px] font-medium text-muted-foreground">Qytete</p>
+            </div>
+            <div>
+              <p className="text-2xl font-extrabold">{isLoading ? "…" : filtered.length}</p>
+              <p className="text-[11px] font-medium text-muted-foreground">Rezultate</p>
+            </div>
+          </div>
+        </div>
+      </section>
 
-      {/* ── Hero search bar ─────────────────────────────────── */}
-      <div className="sticky top-[64px] z-30 bg-background/95 backdrop-blur-xl border-b border-border/50 shadow-sm">
-        <div className="container px-4 max-w-7xl mx-auto py-3">
-          <div className="flex flex-wrap gap-2 items-center">
-            {/* Search */}
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+      <div className="sticky top-[64px] z-30 border-b border-border/60 bg-background/95 shadow-sm backdrop-blur-xl">
+        <div className="container mx-auto max-w-7xl px-4 py-3 sm:px-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="hidden h-10 items-center gap-2 rounded-xl border border-border bg-card px-3 text-sm font-semibold sm:flex">
+              <SlidersHorizontal className="h-4 w-4 text-primary" />
+              Filtrat
+            </div>
+            <div className="relative min-w-[220px] flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Kërko dyqane, berberë, adresë..."
-                className="pl-9 h-10 rounded-xl bg-card"
+                placeholder="Kërko berber, dyqan, qytet ose specialitet..."
+                className="h-10 rounded-xl bg-card pl-9"
                 value={search}
-                onChange={e => setSearch(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && handleSearch()}
-                onBlur={handleSearch}
+                onChange={(event) => setSearch(event.target.value)}
+                onBlur={runSearch}
+                onKeyDown={(event) => event.key === "Enter" && runSearch()}
               />
             </div>
-            {/* City filter */}
-            <div className="relative w-[200px]">
-              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10 pointer-events-none" />
+            <div className="relative w-[210px]">
+              <MapPin className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Select value={city} onValueChange={setCity}>
-                <SelectTrigger className="pl-9 h-10 rounded-xl bg-card">
+                <SelectTrigger className="h-10 rounded-xl bg-card pl-9">
                   <SelectValue placeholder="Kudo në Kosovë" />
                 </SelectTrigger>
                 <SelectContent className="max-h-64 overflow-y-auto">
                   <SelectItem value="all">Kudo në Kosovë</SelectItem>
-                  {KOSOVO_CITIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  {KOSOVO_CITIES.map((cityName) => (
+                    <SelectItem key={cityName} value={cityName}>
+                      {cityName}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={handleSearch} className="h-10 px-5 rounded-xl gap-2 shrink-0">
-              <Search className="w-4 h-4" /> Kërko
+            <Button onClick={runSearch} className="h-10 shrink-0 rounded-xl px-5 font-bold">
+              Kërko
             </Button>
-            <span className="text-sm text-muted-foreground shrink-0">
-              {isLoading ? "…" : `${filtered.length} dyqane`}
-            </span>
           </div>
         </div>
       </div>
 
-
-      {/* ── Map + List ─────────────────────────────────────── */}
-      <section className="flex-1">
-        {/* On mobile: map top, list below. On lg+: side by side */}
-        <div className="flex flex-col lg:flex-row" style={{ minHeight: "640px" }}>
-
-          {/* Map — mobile: full width 420px tall; desktop: flex-1 min-w-[500px] */}
-          <div className="order-1 lg:order-2 lg:flex-1 lg:min-w-[500px] h-[420px] lg:h-auto border-b lg:border-b-0 lg:border-l border-border/40 relative">
-            <Suspense
-              fallback={
-                <div className="absolute inset-0 flex items-center justify-center bg-muted">
-                  <div className="flex flex-col items-center gap-3 text-muted-foreground">
-                    <MapPin className="w-10 h-10 animate-bounce" />
-                    <p className="text-sm font-medium">Po ngarkohet harta…</p>
+      <section className="px-0 py-0 lg:px-6 lg:py-6">
+        <div className="mx-auto flex max-w-[1500px] flex-col gap-4 lg:flex-row">
+          <div className="order-1 h-[430px] overflow-hidden border-b border-border bg-muted shadow-sm lg:sticky lg:top-[136px] lg:order-2 lg:h-[calc(100vh-210px)] lg:min-w-[520px] lg:flex-1 lg:rounded-3xl lg:border">
+            <div className="relative h-full w-full">
+              <Suspense
+                fallback={
+                  <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                    <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                      <MapPin className="h-10 w-10 animate-bounce" />
+                      <p className="text-sm font-medium">Po ngarkohet harta…</p>
+                    </div>
                   </div>
-                </div>
-              }
-            >
-              <KosovoMap
-                shops={shops}
-                selectedCity={city}
-                searchQuery={debouncedSearch}
-                onShopClick={id => setLocation(`/barbershops/${id}`)}
-              />
-            </Suspense>
+                }
+              >
+                <BarberDirectoryMap
+                  barbers={filtered}
+                  selectedBarberId={selectedBarberId}
+                  onSelectBarber={selectBarber}
+                  onBookBarber={(shopId) => setLocation(`/book/${shopId}`)}
+                />
+              </Suspense>
+            </div>
           </div>
 
-          {/* List — mobile: full width; desktop: fixed w-[400px] shrink-0, scrollable */}
-          <div className="order-2 lg:order-1 w-full lg:w-[400px] xl:w-[440px] lg:shrink-0 flex flex-col bg-background border-r-0 lg:border-r border-border/40 lg:overflow-y-auto lg:max-h-[calc(100vh-180px)] lg:sticky lg:top-[120px]">
-            <div className="p-4 border-b border-border/30 bg-card/50 backdrop-blur">
-              <h2 className="font-bold text-base">
-                {city === "all" ? "Të gjitha dyqanet" : `Dyqanet në ${city}`}
-              </h2>
-              <p className="text-xs text-muted-foreground mt-0.5">{filtered.length} gjetur</p>
+          <div className="order-2 flex w-full flex-col bg-background shadow-sm lg:sticky lg:top-[136px] lg:order-1 lg:max-h-[calc(100vh-210px)] lg:w-[460px] lg:shrink-0 lg:overflow-y-auto lg:rounded-3xl lg:border lg:border-border">
+            <div className="border-b border-border/40 bg-card/70 p-4 backdrop-blur lg:rounded-t-3xl">
+              <h2 className="text-base font-extrabold">{city === "all" ? "Të gjithë berberët" : `Berberët në ${city}`}</h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {selectedBarber ? `${selectedBarber.name} është zgjedhur në hartë` : `${filtered.length} berberë gjetur`}
+              </p>
+              {topRated.length > 0 && (
+                <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+                  {topRated.map((barber) => (
+                    <button
+                      key={barber.id}
+                      onClick={() => selectBarber(barber.id)}
+                      className="shrink-0 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-bold text-primary hover:bg-primary/15"
+                    >
+                      ★ {barber.name}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {isLoading ? (
-              <div className="p-4 space-y-3">
-                {[1,2,3,4].map(i => (
-                  <div key={i} className="flex gap-3 p-3 border border-border rounded-2xl">
-                    <Skeleton className="h-20 w-20 rounded-xl shrink-0" />
+              <div className="space-y-3 p-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="flex gap-3 rounded-2xl border border-border p-3">
+                    <Skeleton className="h-20 w-20 shrink-0 rounded-full" />
                     <div className="flex-1 space-y-2 py-1">
                       <Skeleton className="h-4 w-3/4" />
                       <Skeleton className="h-3 w-1/2" />
@@ -371,69 +256,91 @@ export default function BarbershopsList() {
                 ))}
               </div>
             ) : filtered.length === 0 ? (
-              <div className="flex flex-col items-center justify-center text-center py-16 px-4">
-                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-                  <Scissors className="w-8 h-8 text-muted-foreground/30" />
+              <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                  <Scissors className="h-8 w-8 text-muted-foreground/30" />
                 </div>
-                <h3 className="text-base font-bold mb-2">Nuk u gjetën dyqane</h3>
-                <p className="text-muted-foreground text-sm">Provoni të ndryshoni filtrat.</p>
-                <Button variant="outline" size="sm" className="mt-5 rounded-full" onClick={() => { setCity("all"); setDebouncedSearch(""); setSearch(""); }}>
+                <h3 className="mb-2 text-base font-bold">Nuk u gjetën berberë</h3>
+                <p className="text-sm text-muted-foreground">Provoni të ndryshoni filtrat.</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-5 rounded-full"
+                  onClick={() => {
+                    setCity("all");
+                    setDebouncedSearch("");
+                    setSearch("");
+                    setSelectedBarberId(null);
+                  }}
+                >
                   Fshij filtrat
                 </Button>
               </div>
             ) : (
-              <div className="p-3 space-y-2.5">
-                {filtered.map((shop) => (
-                  <Link key={shop.id} href={`/barbershops/${shop.id}`}>
-                    <div className="group flex gap-3 p-3 border border-border/50 bg-card rounded-2xl hover:border-primary/50 hover:shadow-md transition-all cursor-pointer">
-                      <div className="h-[72px] w-[72px] rounded-xl bg-muted overflow-hidden shrink-0">
-                        {shop.imageUrl ? (
-                          <img src={shop.imageUrl} alt={shop.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+              <div className="space-y-2.5 p-3">
+                {filtered.map((barber) => {
+                  const selected = barber.id === selectedBarberId;
+                  return (
+                    <button
+                      key={barber.id}
+                      type="button"
+                      onClick={() => selectBarber(barber.id)}
+                      className={`group flex w-full cursor-pointer gap-3 rounded-2xl border bg-card p-3 text-left transition-all hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10 ${
+                        selected ? "border-primary shadow-lg shadow-primary/10" : "border-border/50"
+                      }`}
+                    >
+                      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-primary/10">
+                        {barber.avatarUrl ? (
+                          <img src={barber.avatarUrl} alt={barber.name} className="h-full w-full object-cover" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-zinc-800 to-zinc-900">
-                            <Scissors className="w-6 h-6 text-muted-foreground/30" />
+                          <div className="flex h-full w-full items-center justify-center text-xl font-extrabold text-primary">
+                            {barber.name.charAt(0).toUpperCase()}
                           </div>
                         )}
                       </div>
-                      <div className="flex-1 flex flex-col justify-between py-0.5 min-w-0">
-                        <div>
-                          <div className="flex justify-between items-start gap-1">
-                            <h3 className="font-bold text-sm leading-tight truncate">{shop.name}</h3>
-                            {shop.rating != null && (
-                              <div className="flex items-center gap-0.5 text-xs font-bold shrink-0 text-primary">
-                                <Star className="w-3 h-3 fill-primary" />
-                                {Number(shop.rating).toFixed(1)}
-                              </div>
-                            )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <h3 className="truncate text-sm font-extrabold leading-tight">{barber.name}</h3>
+                            <p className="mt-0.5 truncate text-xs font-semibold text-primary">{barber.shop.name}</p>
                           </div>
-                          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5 truncate">
-                            <MapPin className="w-3 h-3 shrink-0" />
-                            <span className="truncate">{shop.address}, {shop.city}</span>
-                          </p>
+                          <div className="flex shrink-0 items-center gap-0.5 text-xs font-extrabold text-primary">
+                            <Star className="h-3 w-3 fill-primary" />
+                            {barber.rating != null ? Number(barber.rating).toFixed(1) : "New"}
+                          </div>
                         </div>
-                        <div className="flex items-center justify-between mt-1.5">
-                          {shop.openTime && (
-                            <span className="text-[11px] font-medium flex items-center gap-1 text-muted-foreground">
-                              <Clock className="w-3 h-3" />
-                              {shop.openTime} – {shop.closeTime}
+
+                        {barber.specialties ? (
+                          <p className="mt-2 line-clamp-1 text-xs text-muted-foreground">{barber.specialties}</p>
+                        ) : null}
+
+                        <p className="mt-2 flex items-center gap-1 truncate text-xs text-muted-foreground">
+                          <MapPin className="h-3 w-3 shrink-0" />
+                          <span className="truncate">{barber.shop.address}, {barber.shop.city}</span>
+                        </p>
+
+                        <div className="mt-2 flex items-center justify-between gap-2">
+                          {barber.shop.openTime ? (
+                            <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                              <Clock className="h-3 w-3" />
+                              {barber.shop.openTime} - {barber.shop.closeTime}
                             </span>
-                          )}
-                          <span className="text-[11px] font-semibold text-primary ml-auto">Rezervo →</span>
+                          ) : <span />}
+                          <span className="text-[11px] font-bold text-primary">
+                            {selected ? "Në hartë" : "Shiko në hartë"} →
+                          </span>
                         </div>
                       </div>
-                    </div>
-                  </Link>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
         </div>
       </section>
 
-      {/* ── Products ─────────────────────────────────────── */}
-      <ProductsSection />
-
-      {/* ── Contact ──────────────────────────────────────── */}
+      <ProductsStrip />
       <ContactSection />
     </div>
   );

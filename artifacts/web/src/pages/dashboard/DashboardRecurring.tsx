@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Plus, Trash2, Calendar, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useOwnerShop } from "@/hooks/use-owner-shop";
 
 const token = () => localStorage.getItem("barber_token");
 
@@ -46,11 +47,13 @@ const api = {
   },
 };
 
-const EMPTY_FORM = { shopId: "1", barberId: "", serviceId: "", frequency: "biweekly" as "weekly" | "biweekly" | "monthly", preferredTime: "10:00", startDate: "", endDate: "", notes: "" };
+const EMPTY_FORM = { barberId: "", serviceId: "", frequency: "biweekly" as "weekly" | "biweekly" | "monthly", preferredTime: "10:00", startDate: "", endDate: "", notes: "" };
 
 export default function DashboardRecurring() {
   const { toast } = useToast();
   const qc = useQueryClient();
+  const { data: ownerShop } = useOwnerShop();
+  const shopId = ownerShop?.id ?? 0;
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [previewId, setPreviewId] = useState<number | null>(null);
@@ -80,7 +83,7 @@ export default function DashboardRecurring() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createMut.mutate({ ...form, shopId: parseInt(form.shopId), barberId: parseInt(form.barberId), serviceId: parseInt(form.serviceId) });
+    createMut.mutate({ ...form, shopId, barberId: parseInt(form.barberId), serviceId: parseInt(form.serviceId) });
   };
 
   const rulesList = Array.isArray(rules) ? rules : [];
@@ -102,10 +105,6 @@ export default function DashboardRecurring() {
           <CardHeader><CardTitle>Rezervim Periodik i Ri</CardTitle></CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">ID Dyqanit *</label>
-                <Input type="number" required value={form.shopId} onChange={e => setForm(f => ({ ...f, shopId: e.target.value }))} />
-              </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">ID Berberit *</label>
                 <Input type="number" required value={form.barberId} onChange={e => setForm(f => ({ ...f, barberId: e.target.value }))} />

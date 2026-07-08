@@ -5,10 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { CalendarOff, Plus, Trash2, User, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/lib/auth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-
-const SHOP_ID = 1;
+import { useOwnerShop } from "@/hooks/use-owner-shop";
 
 async function fetchHolidays(shopId: number) {
   const r = await fetch(`/api/barbershops/${shopId}/holidays`, { credentials: "include" });
@@ -37,18 +35,21 @@ async function deleteHoliday(shopId: number, holidayId: number) {
 export default function DashboardHolidays() {
   const { toast } = useToast();
   const qc = useQueryClient();
+  const { data: ownerShop, isLoading: shopLoading } = useOwnerShop();
+  const shopId = ownerShop?.id ?? 0;
   const [form, setForm] = useState({ date: "", reason: "", barberId: "", isFullDay: true, startTime: "", endTime: "" });
   const [showForm, setShowForm] = useState(false);
 
   const { data: holidays = [], isLoading } = useQuery({
-    queryKey: ["holidays", SHOP_ID],
-    queryFn: () => fetchHolidays(SHOP_ID),
+    queryKey: ["holidays", shopId],
+    queryFn: () => fetchHolidays(shopId),
+    enabled: !!ownerShop,
   });
 
   const createMut = useMutation({
-    mutationFn: (payload: any) => createHoliday(SHOP_ID, payload),
+    mutationFn: (payload: any) => createHoliday(shopId, payload),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["holidays", SHOP_ID] });
+      qc.invalidateQueries({ queryKey: ["holidays", shopId] });
       setForm({ date: "", reason: "", barberId: "", isFullDay: true, startTime: "", endTime: "" });
       setShowForm(false);
       toast({ title: "Pushimi u shtua" });
@@ -57,8 +58,8 @@ export default function DashboardHolidays() {
   });
 
   const deleteMut = useMutation({
-    mutationFn: (id: number) => deleteHoliday(SHOP_ID, id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["holidays", SHOP_ID] }),
+    mutationFn: (id: number) => deleteHoliday(shopId, id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["holidays", shopId] }),
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -143,7 +144,7 @@ export default function DashboardHolidays() {
         </Card>
       )}
 
-      {isLoading ? (
+      {shopLoading || isLoading ? (
         <div className="text-muted-foreground text-sm">Duke ngarkuar...</div>
       ) : Object.keys(grouped).length === 0 ? (
         <Card className="bg-card border-border">

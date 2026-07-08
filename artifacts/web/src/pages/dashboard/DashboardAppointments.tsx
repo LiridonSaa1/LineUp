@@ -6,15 +6,19 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
+import { useOwnerShop } from "@/hooks/use-owner-shop";
 
 export default function DashboardAppointments() {
-  const shopId = 1; // Placeholder
+  const { data: ownerShop, isLoading: shopLoading } = useOwnerShop();
+  const shopId = ownerShop?.id ?? 0;
   const [status, setStatus] = useState<string>("all");
   
   const { data: appointmentsRes, isLoading, refetch } = useListAppointments({ 
     shopId,
     status: status !== "all" ? status : undefined,
     limit: 50 
+  }, {
+    query: { enabled: !!ownerShop } as any,
   });
   
   const updateMutation = useUpdateAppointment();
@@ -72,7 +76,7 @@ export default function DashboardAppointments() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
+            {shopLoading || isLoading ? (
               <TableRow><TableCell colSpan={6}><Skeleton className="h-12 w-full" /></TableCell></TableRow>
             ) : !appointmentsRes?.data.length ? (
               <TableRow>

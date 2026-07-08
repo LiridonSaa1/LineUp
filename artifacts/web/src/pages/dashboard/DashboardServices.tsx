@@ -7,11 +7,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Trash2 } from "lucide-react";
+import { useOwnerShop } from "@/hooks/use-owner-shop";
 
 export default function DashboardServices() {
-  const shopId = 1;
+  const { data: ownerShop, isLoading: shopLoading } = useOwnerShop();
+  const shopId = ownerShop?.id ?? 0;
   const { toast } = useToast();
-  const { data: servicesRes, isLoading, refetch } = useListServices(shopId);
+  const { data: servicesRes, isLoading, refetch } = useListServices(shopId, {
+    query: { enabled: !!ownerShop } as any,
+  });
+  const services = Array.isArray(servicesRes) ? servicesRes : [];
   const createMutation = useCreateService();
   const deleteMutation = useDeleteService();
 
@@ -23,6 +28,7 @@ export default function DashboardServices() {
   const handleCreate = async () => {
     try {
       await createMutation.mutateAsync({ 
+        shopId,
         data: { 
           name, 
           price: parseFloat(price), 
@@ -41,7 +47,7 @@ export default function DashboardServices() {
   const handleDelete = async (id: number) => {
     if (!confirm("Delete this service?")) return;
     try {
-      await deleteMutation.mutateAsync({ id });
+      await deleteMutation.mutateAsync({ shopId, serviceId: id });
       toast({ title: "Service deleted" });
       refetch();
     } catch (e) {
@@ -96,12 +102,12 @@ export default function DashboardServices() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
+            {shopLoading || isLoading ? (
               <TableRow><TableCell colSpan={4} className="h-24 text-center">Loading...</TableCell></TableRow>
-            ) : !servicesRes?.data.length ? (
+            ) : services.length === 0 ? (
               <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No services found.</TableCell></TableRow>
             ) : (
-              servicesRes.data.map(service => (
+              services.map(service => (
                 <TableRow key={service.id}>
                   <TableCell className="font-bold">{service.name}</TableCell>
                   <TableCell>{service.durationMinutes} min</TableCell>

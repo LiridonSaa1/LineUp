@@ -6,15 +6,17 @@ import { Input } from "@/components/ui/input";
 import { Users, Calendar, Search } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { useOwnerShop } from "@/hooks/use-owner-shop";
 
 export default function DashboardClients() {
   const { user } = useAuth();
   const [search, setSearch] = useState("");
-  const shopId = 1;
+  const { data: ownerShop, isLoading: shopLoading } = useOwnerShop();
+  const shopId = ownerShop?.id ?? 0;
 
   const { data: apptRes, isLoading } = useListAppointments(
     { shopId, limit: 500 },
-    { query: { enabled: !!user } }
+    { query: { enabled: !!user && !!ownerShop } as any }
   );
 
   const appointments = Array.isArray(apptRes) ? apptRes : apptRes?.data ?? [];
@@ -100,7 +102,7 @@ export default function DashboardClients() {
         />
       </div>
 
-      {isLoading ? (
+      {shopLoading || isLoading ? (
         <div className="space-y-3">{[1,2,3,4,5].map(i => <Skeleton key={i} className="h-20 rounded-2xl" />)}</div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 bg-card border border-border rounded-3xl">
