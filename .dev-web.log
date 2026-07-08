@@ -1,0 +1,247 @@
+
+  [32m[1mVITE[22m v7.3.3[39m  [2mready in [0m[1m1125[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.1.9:[1m5173[22m/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+[2m12:00:56 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=8[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:00:56 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbershops?status=active&limit=100[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:00:57 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=8[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:00:57 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbershops?status=active&limit=100[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:05:49 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/barbershops/BarbershopsList.tsx, /src/index.css[22m
+[2m12:05:50 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=4[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:05:50 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbershops?status=active&limit=100[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:05:51 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=4[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:05:51 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbershops?status=active&limit=100[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:06:56 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=4[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:06:56 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbershops?status=active&limit=100[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:13:56 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbershops?status=active&limit=100[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:13:56 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=4[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:27:17 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=4[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:27:17 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbershops?status=active&limit=100[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:27:18 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=4[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:27:18 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbershops?status=active&limit=100[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:32:22 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/map/GoogleBarbershopMap.tsx[22m
+[2m12:32:22 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/barbershops/BarbershopsList.tsx, /src/index.css[22m
+[2m12:32:24 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=4[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:32:24 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbershops?status=active&limit=100[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:39:02 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=4[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:39:02 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbershops?status=active&limit=100[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:39:03 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=4[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:39:03 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbershops?status=active&limit=100[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:42:23 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/map/GoogleBarbershopMap.tsx[22m
+[RUNTIME_ERROR]{"type":"runtime-error","timestamp":1783507344725,"name":"Error","message":"Cannot read properties of undefined (reading 'map')","stack":"    at C:/Users/Admin/OneDrive/Desktop/LineUp/artifacts/web/src/components/map/GoogleBarbershopMap.tsx:140:19\n\n\n\n    at GoogleBarbershopMap C:/Users/Admin/OneDrive/Desktop/LineUp/artifacts/web/src/components/map/GoogleBarbershopMap.tsx:139:19\n\n\n\n\n","loc":{"line":140,"column":19,"file":"C:/Users/Admin/OneDrive/Desktop/LineUp/artifacts/web/src/components/map/GoogleBarbershopMap.tsx"},"frame":"138|    const markerRefs = useRef<Map<number, L.Marker>>(new Map());\n139|    const markers = useMemo(\n140|      () => barbers.map((barber, index) => ({ barber, coords: getBarberCoords(barber, index) })),\n   |                    ^\n141|      [barbers],\n142|    );"}
+[2m12:43:45 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/barbershops/BarbershopsList.tsx, /src/index.css[22m
+[2m12:43:46 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbers[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:43:46 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=4[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:43:47 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbers[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:43:47 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=4[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:43:51 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=4[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:43:51 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbers[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:43:52 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbers[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:43:52 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=4[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:44:20 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/map/GoogleBarbershopMap.tsx[22m
+[2m12:46:26 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/map/GoogleBarbershopMap.tsx[22m
+[2m12:46:32 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/layout/Navbar.tsx[22m
+[2m12:47:14 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/layout/Navbar.tsx[22m
+[2m12:47:58 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/layout/Navbar.tsx[22m
+[2m12:48:02 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/layout/Navbar.tsx[22m
+[2m12:49:15 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=4[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:49:15 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbers[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:49:16 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbers[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:49:16 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=4[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:52:05 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/home/Home.tsx, /src/index.css[22m
+[2m12:52:09 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/barbershops/BarbershopsList.tsx, /src/index.css[22m
+[2m12:52:10 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbers[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:52:10 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=4[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:52:11 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbers[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:52:11 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=4[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m12:53:02 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/ContactSection.tsx[22m
+[2m12:53:12 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/ContactSection.tsx[22m
+[2m1:36:44 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=4[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m1:36:44 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbers[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m1:36:45 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbers[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m1:36:45 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=4[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m1:36:48 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=4[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m1:36:48 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbers[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m1:36:49 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbers[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m1:36:49 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=4[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m1:45:11 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=4[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m1:45:11 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbers[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m1:45:13 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbers[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m1:45:13 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=4[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m2:06:18 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=4[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m2:06:18 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbers[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m2:06:19 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbers[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m2:06:19 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=4[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m2:16:08 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=4[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m2:16:08 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbers[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m2:16:09 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbers[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m2:16:10 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=4[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m2:16:12 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/ads[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m2:16:12 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbershops/city-stats[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m2:16:12 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/stats/public[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m2:16:12 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=10[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m2:16:12 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbershops/top?limit=10[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m2:16:12 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbershops?status=active&limit=200[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m2:16:12 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbershops?limit=0[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m2:16:13 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=10[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m2:16:13 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbershops/top?limit=10[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m2:16:13 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbershops?status=active&limit=200[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m2:16:13 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbershops?limit=0[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m2:18:14 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbers[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m2:18:26 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbers[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m2:19:59 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbers[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m2:19:59 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=4[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m2:20:00 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/barbers[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
+[2m2:20:00 PM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/products?limit=4[39m
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16)
