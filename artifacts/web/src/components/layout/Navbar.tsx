@@ -34,7 +34,8 @@ export function Navbar() {
   const logoutMutation = useLogout();
 
   const isHome = location === "/";
-  const usesOverlayNav = isHome || location === "/barbershops";
+  const isBarbershopsPage = location === "/barbershops" || location.startsWith("/barbershops/");
+  const usesOverlayNav = isHome || isBarbershopsPage;
   // Show dark pill when scrolled OR on pages without a hero behind the nav.
   const hasBg = scrolled || !usesOverlayNav;
 
@@ -57,7 +58,7 @@ export function Navbar() {
     const sectionIds = [
       "si-funksionon",
       "vleresuar",
-      "pse-trim",
+      "pse-lineup",
       "shop",
       "disponueshem",
       "reklama",
@@ -202,7 +203,7 @@ export function Navbar() {
               {/* Always-visible: Barbershops */}
               <Link
                 href="/barbershops"
-                className={pageLinkCls(location === "/barbershops")}
+                className={pageLinkCls(isBarbershopsPage)}
               >
                 Barbershops
               </Link>
@@ -534,7 +535,7 @@ export function Navbar() {
               href="/barbershops"
               onClick={() => setMobileOpen(false)}
               className={`text-sm font-medium px-4 py-2.5 rounded-full border transition-all duration-200 nav-link-glass ${
-                location === "/barbershops"
+                isBarbershopsPage
                   ? "is-active font-semibold text-white border-white/15 bg-white/10"
                   : "text-white/70 hover:text-white border-transparent hover:bg-white/8"
               }`}

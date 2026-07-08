@@ -85,7 +85,7 @@ export default function Contact() {
   };
 
   const info = [
-    { icon: Mail,  label: "Email",         value: "info@trimkosova.com",          sub: "Përgjigje brenda 24 orëve" },
+    { icon: Mail,  label: "Email",         value: "info@lineup.com",          sub: "Përgjigje brenda 24 orëve" },
     { icon: Phone, label: "Telefon",        value: "+383 44 123 456",              sub: "E hënë – E premte, 09:00–18:00" },
     { icon: MapPin,label: "Adresa",         value: "Rr. Nëna Terezë, Prishtinë",  sub: "Kosovë, 10000" },
     { icon: Clock, label: "Orari i punës",  value: "E hënë – E premte",            sub: "09:00 – 18:00" },

@@ -7,7 +7,7 @@ async function seed() {
   const adminHash = await bcrypt.hash("admin123", 10);
   const [admin] = await db.insert(usersTable).values({
     name: "Admin User",
-    email: "admin@trimkosova.com",
+    email: "admin@lineup.com",
     passwordHash: adminHash,
     role: "admin",
     phone: "+38344000000",
@@ -17,7 +17,7 @@ async function seed() {
   const ownerHash = await bcrypt.hash("owner123", 10);
   const [owner] = await db.insert(usersTable).values({
     name: "Artan Krasniqi",
-    email: "artan@trimkosova.com",
+    email: "artan@lineup.com",
     passwordHash: ownerHash,
     role: "owner",
     phone: "+38344111222",
@@ -62,7 +62,7 @@ async function seed() {
       ],
     },
     {
-      name: "TRIM Prishtina",
+      name: "LineUp Prishtina",
       city: "Prishtina",
       address: "Rr. Bill Clinton Nr. 42",
       description: "Premium barber experience në zemër të Prishtinës. Prerje profesionale, rregullim mjekre dhe shërbime grooming.",
@@ -235,8 +235,8 @@ async function seed() {
 
   console.log("\n=== Seed Complete ===");
   console.log("Accounts:");
-  console.log("  Admin:  admin@trimkosova.com / admin123");
-  console.log("  Owner:  artan@trimkosova.com / owner123");
+  console.log("  Admin:  admin@lineup.com / admin123");
+  console.log("  Owner:  artan@lineup.com / owner123");
   console.log("  User:   besim@gmail.com / user123");
 }
 

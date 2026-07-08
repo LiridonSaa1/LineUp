@@ -16,6 +16,14 @@ function formatAppointment(a: any) {
   };
 }
 
+function shopCanTakeBookings(shop: any) {
+  return shop?.status === "active" && shop?.subscriptionStatus === "active";
+}
+
+function inactiveSubscriptionMessage() {
+  return "Ky barbershop nuk ka abonim aktiv. Rezervimet jane ndalur perkohesisht.";
+}
+
 router.get("/appointments", requireAuth, async (req: AuthRequest, res): Promise<void> => {
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 20;
@@ -23,6 +31,16 @@ router.get("/appointments", requireAuth, async (req: AuthRequest, res): Promise<
 
   const conditions = [];
   if (req.user!.role === "user") conditions.push(eq(appointmentsTable.userId, req.user!.id));
+  if (req.user!.role === "barber") {
+    const [barberRow] = await db
+      .select({ barber: barbersTable, shop: barbershopsTable })
+      .from(barbersTable)
+      .innerJoin(barbershopsTable, eq(barbersTable.shopId, barbershopsTable.id))
+      .where(eq((barbersTable as any).userId, req.user!.id));
+    if (!barberRow) { res.status(404).json({ error: "Barber profile not found" }); return; }
+    if (!shopCanTakeBookings(barberRow.shop)) { res.status(402).json({ error: inactiveSubscriptionMessage() }); return; }
+    conditions.push(eq(appointmentsTable.barberId, barberRow.barber.id));
+  }
   else if (req.query.userId) conditions.push(eq(appointmentsTable.userId, parseInt(req.query.userId as string)));
   if (req.query.shopId) conditions.push(eq(appointmentsTable.shopId, parseInt(req.query.shopId as string)));
   if (req.query.barberId) conditions.push(eq(appointmentsTable.barberId, parseInt(req.query.barberId as string)));
@@ -64,6 +82,12 @@ router.post("/appointments", requireAuth, async (req: AuthRequest, res): Promise
   }
   const [service] = await db.select().from(servicesTable).where(eq(servicesTable.id, serviceId));
   if (!service) { res.status(404).json({ error: "Service not found" }); return; }
+  const [shop] = await db.select().from(barbershopsTable).where(eq(barbershopsTable.id, shopId));
+  if (!shop) { res.status(404).json({ error: "Barbershop not found" }); return; }
+  if (!shopCanTakeBookings(shop)) { res.status(402).json({ error: inactiveSubscriptionMessage() }); return; }
+  const [barber] = await db.select().from(barbersTable).where(and(eq(barbersTable.id, barberId), eq(barbersTable.shopId, shopId), eq(barbersTable.isActive, true)));
+  if (!barber) { res.status(404).json({ error: "Barber not found for this shop" }); return; }
+  if (service.shopId !== shopId) { res.status(400).json({ error: "Service does not belong to this shop" }); return; }
 
   const otp = generateOtp();
   const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
@@ -142,6 +166,16 @@ router.get("/appointments/:id", requireAuth, async (req: AuthRequest, res): Prom
 router.patch("/appointments/:id", requireAuth, async (req: AuthRequest, res): Promise<void> => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   const { status, notes } = req.body;
+  const [existing] = await db.select({
+    appointment: appointmentsTable,
+    shop: barbershopsTable,
+  }).from(appointmentsTable)
+    .leftJoin(barbershopsTable, eq(appointmentsTable.shopId, barbershopsTable.id))
+    .where(eq(appointmentsTable.id, id));
+  if (!existing) { res.status(404).json({ error: "Not found" }); return; }
+  if (req.user!.role !== "admin" && !shopCanTakeBookings(existing.shop)) {
+    res.status(402).json({ error: inactiveSubscriptionMessage() }); return;
+  }
   const updateData: any = {};
   if (status) updateData.status = status;
   if (notes !== undefined) updateData.notes = notes;
@@ -166,6 +200,8 @@ router.post("/appointments/:id/confirm-otp", requireAuth, async (req: AuthReques
   const { otpCode } = req.body;
   const [appt] = await db.select().from(appointmentsTable).where(eq(appointmentsTable.id, id));
   if (!appt) { res.status(404).json({ error: "Not found" }); return; }
+  const [shop] = await db.select().from(barbershopsTable).where(eq(barbershopsTable.id, appt.shopId));
+  if (!shopCanTakeBookings(shop)) { res.status(402).json({ error: inactiveSubscriptionMessage() }); return; }
   if (appt.otpCode !== otpCode) { res.status(400).json({ error: "Invalid OTP" }); return; }
   if (appt.otpExpiresAt && new Date() > appt.otpExpiresAt) {
     res.status(400).json({ error: "OTP expired" }); return;
@@ -196,6 +232,10 @@ router.post("/appointments/:id/confirm-otp", requireAuth, async (req: AuthReques
 
 router.post("/appointments/:id/resend-otp", requireAuth, async (req, res): Promise<void> => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const [appt] = await db.select().from(appointmentsTable).where(eq(appointmentsTable.id, id));
+  if (!appt) { res.status(404).json({ error: "Not found" }); return; }
+  const [shop] = await db.select().from(barbershopsTable).where(eq(barbershopsTable.id, appt.shopId));
+  if (!shopCanTakeBookings(shop)) { res.status(402).json({ error: inactiveSubscriptionMessage() }); return; }
   const otp = generateOtp();
   const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
   await db.update(appointmentsTable).set({ otpCode: otp, otpExpiresAt }).where(eq(appointmentsTable.id, id));
@@ -210,6 +250,11 @@ router.get("/available-slots", async (req, res): Promise<void> => {
   if (!shopId || !barberId || !date) {
     res.status(400).json({ error: "shopId, barberId, and date are required" }); return;
   }
+  const [shop] = await db.select().from(barbershopsTable).where(eq(barbershopsTable.id, shopId));
+  if (!shop) { res.status(404).json({ error: "Barbershop not found" }); return; }
+  if (!shopCanTakeBookings(shop)) { res.status(402).json({ error: inactiveSubscriptionMessage() }); return; }
+  const [barber] = await db.select().from(barbersTable).where(and(eq(barbersTable.id, barberId), eq(barbersTable.shopId, shopId), eq(barbersTable.isActive, true)));
+  if (!barber) { res.status(404).json({ error: "Barber not found for this shop" }); return; }
   const dayStart = new Date(`${date}T00:00:00.000Z`);
   const dayEnd = new Date(`${date}T23:59:59.999Z`);
   const bookedAppts = await db.select({ scheduledAt: appointmentsTable.scheduledAt })

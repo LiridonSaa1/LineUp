@@ -1,4 +1,4 @@
-# TRIM — Barber Booking System
+# LineUp - Barber Booking System
 
 Kosovo's premium barbershop booking platform — find shops, book appointments with OTP confirmation, buy grooming products.
 
@@ -55,8 +55,8 @@ Kosovo's premium barbershop booking platform — find shops, book appointments w
 
 | Role  | Email                     | Password  |
 |-------|---------------------------|-----------|
-| Admin | admin@trimkosova.com      | admin123  |
-| Owner | artan@trimkosova.com      | owner123  |
+| Admin | admin@lineup.com      | admin123  |
+| Owner | artan@lineup.com      | owner123  |
 | User  | besim@gmail.com           | user123   |
 
 ## Pending integrations (add keys to activate)

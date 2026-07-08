@@ -19,8 +19,8 @@ router.post("/contact", async (req, res): Promise<void> => {
   }
 
   const subjectLine = subject
-    ? `[TRIM Contact] ${subject}`
-    : `[TRIM Contact] Mesazh nga ${name}`;
+    ? `[LineUp Contact] ${subject}`
+    : `[LineUp Contact] Mesazh nga ${name}`;
 
   const htmlContent = `
 <!DOCTYPE html>
@@ -33,7 +33,7 @@ router.post("/contact", async (req, res): Promise<void> => {
         <tr>
           <td style="background:linear-gradient(135deg,#1a1e2e 0%,#12151e 100%);padding:32px 40px;text-align:center;">
             <span style="font-size:24px;font-weight:800;color:#fff;letter-spacing:-0.5px;">
-              TRIM<span style="color:#e8a020;">.</span>
+              LineUp<span style="color:#e8a020;">.</span>
             </span>
             <p style="color:#8892a0;font-size:14px;margin:8px 0 0;">Mesazh i ri nga forma e kontaktit</p>
           </td>
@@ -71,7 +71,7 @@ router.post("/contact", async (req, res): Promise<void> => {
         </tr>
         <tr>
           <td style="padding:20px 40px 28px;border-top:1px solid #1e2330;text-align:center;">
-            <p style="color:#4a5568;font-size:12px;margin:0;">© ${new Date().getFullYear()} TRIM Kosovo · Forma e kontaktit</p>
+            <p style="color:#4a5568;font-size:12px;margin:0;">© ${new Date().getFullYear()} LineUp · Forma e kontaktit</p>
           </td>
         </tr>
       </table>
@@ -89,8 +89,8 @@ router.post("/contact", async (req, res): Promise<void> => {
         "api-key": BREVO_API_KEY,
       },
       body: JSON.stringify({
-        sender: { name: "TRIM Kosovo", email: "noreply@trimkosova.com" },
-        to: [{ name: "TRIM Support", email: "info@trimkosova.com" }],
+        sender: { name: "LineUp", email: "noreply@lineup.com" },
+        to: [{ name: "LineUp Support", email: "info@lineup.com" }],
         replyTo: { name, email },
         subject: subjectLine,
         htmlContent,

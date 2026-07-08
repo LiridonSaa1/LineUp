@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: trim-kosova
+    name: lineup
     runtime: node
     region: frankfurt
     plan: free

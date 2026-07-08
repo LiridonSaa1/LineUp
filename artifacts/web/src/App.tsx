@@ -1,4 +1,5 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { useEffect } from "react";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,6 +17,7 @@ import Login from "@/pages/auth/Login";
 import Register from "@/pages/auth/Register";
 import BarbershopsList from "@/pages/barbershops/BarbershopsList";
 import BarbershopDetail from "@/pages/barbershops/BarbershopDetail";
+import BarberDetail from "@/pages/barbershops/BarberDetail";
 import BookingWizard from "@/pages/book/BookingWizard";
 import Appointments from "@/pages/user/Appointments";
 import Profile from "@/pages/user/Profile";
@@ -38,7 +40,6 @@ import DashboardSettings from "@/pages/dashboard/DashboardSettings";
 import DashboardPayments from "@/pages/dashboard/DashboardPayments";
 import DashboardHolidays from "@/pages/dashboard/DashboardHolidays";
 import DashboardCoupons from "@/pages/dashboard/DashboardCoupons";
-import DashboardLoyalty from "@/pages/dashboard/DashboardLoyalty";
 import DashboardWaitingList from "@/pages/dashboard/DashboardWaitingList";
 import DashboardRecurring from "@/pages/dashboard/DashboardRecurring";
 
@@ -64,6 +65,17 @@ const queryClient = new QueryClient({
   },
 });
 
+function ScrollToTop() {
+  const [location] = useLocation();
+
+  useEffect(() => {
+    if (location.includes("#")) return;
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [location]);
+
+  return null;
+}
+
 function UserRouter() {
   return (
     <RootLayout>
@@ -71,6 +83,7 @@ function UserRouter() {
         <Route path="/" component={Home} />
         <Route path="/barbershops" component={BarbershopsList} />
         <Route path="/barbershops/:id" component={BarbershopDetail} />
+        <Route path="/barbers/:id" component={BarberDetail} />
         <Route path="/book/:shopId" component={BookingWizard} />
         <Route path="/me" component={UserDashboard} />
         <Route path="/appointments" component={Appointments} />
@@ -85,6 +98,59 @@ function UserRouter() {
   );
 }
 
+function DashboardRouter() {
+  return (
+    <DashboardLayout>
+      <Switch>
+        <Route path="/dashboard" component={Dashboard} />
+        <Route path="/dashboard/stats" component={DashboardStats} />
+        <Route path="/dashboard/appointments" component={DashboardAppointments} />
+        <Route path="/dashboard/barbers" component={DashboardBarbers} />
+        <Route path="/dashboard/services" component={DashboardServices} />
+        <Route path="/dashboard/products" component={DashboardProducts} />
+        <Route path="/dashboard/subscription" component={DashboardSubscription} />
+        <Route path="/dashboard/clients" component={DashboardClients} />
+        <Route path="/dashboard/settings" component={DashboardSettings} />
+        <Route path="/dashboard/payments" component={DashboardPayments} />
+        <Route path="/dashboard/holidays" component={DashboardHolidays} />
+        <Route path="/dashboard/coupons" component={DashboardCoupons} />
+        <Route path="/dashboard/waiting-list" component={DashboardWaitingList} />
+        <Route path="/dashboard/recurring" component={DashboardRecurring} />
+        <Route component={NotFound} />
+      </Switch>
+    </DashboardLayout>
+  );
+}
+
+function AdminRouter() {
+  return (
+    <AdminLayout>
+      <Switch>
+        <Route path="/admin" component={AdminDashboard} />
+        <Route path="/admin/barbershops" component={AdminBarbershops} />
+        <Route path="/admin/users" component={AdminUsers} />
+        <Route component={NotFound} />
+      </Switch>
+    </AdminLayout>
+  );
+}
+
+function BarberPanelRouter() {
+  return (
+    <BarberLayout>
+      <Switch>
+        <Route path="/barber" component={BarberDashboard} />
+        <Route path="/barber/appointments" component={BarberAppointments} />
+        <Route path="/barber/clients" component={BarberClients} />
+        <Route path="/barber/availability" component={BarberAvailability} />
+        <Route path="/barber/stats" component={BarberStats} />
+        <Route path="/barber/reviews" component={BarberReviews} />
+        <Route component={NotFound} />
+      </Switch>
+    </BarberLayout>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -92,57 +158,19 @@ function App() {
         <CartProvider>
         <TooltipProvider>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <ScrollToTop />
             <Switch>
               <Route path="/login" component={Login} />
               <Route path="/register" component={Register} />
 
-              <Route path="/dashboard*">
-                <DashboardLayout>
-                  <Switch>
-                    <Route path="/dashboard" component={Dashboard} />
-                    <Route path="/dashboard/stats" component={DashboardStats} />
-                    <Route path="/dashboard/appointments" component={DashboardAppointments} />
-                    <Route path="/dashboard/barbers" component={DashboardBarbers} />
-                    <Route path="/dashboard/services" component={DashboardServices} />
-                    <Route path="/dashboard/products" component={DashboardProducts} />
-                    <Route path="/dashboard/subscription" component={DashboardSubscription} />
-                    <Route path="/dashboard/clients" component={DashboardClients} />
-                    <Route path="/dashboard/settings" component={DashboardSettings} />
-                    <Route path="/dashboard/payments" component={DashboardPayments} />
-                    <Route path="/dashboard/holidays" component={DashboardHolidays} />
-                    <Route path="/dashboard/coupons" component={DashboardCoupons} />
-                    <Route path="/dashboard/loyalty" component={DashboardLoyalty} />
-                    <Route path="/dashboard/waiting-list" component={DashboardWaitingList} />
-                    <Route path="/dashboard/recurring" component={DashboardRecurring} />
-                    <Route component={NotFound} />
-                  </Switch>
-                </DashboardLayout>
-              </Route>
+              <Route path="/dashboard" component={DashboardRouter} />
+              <Route path="/dashboard/:rest*" component={DashboardRouter} />
 
-              <Route path="/admin*">
-                <AdminLayout>
-                  <Switch>
-                    <Route path="/admin" component={AdminDashboard} />
-                    <Route path="/admin/barbershops" component={AdminBarbershops} />
-                    <Route path="/admin/users" component={AdminUsers} />
-                    <Route component={NotFound} />
-                  </Switch>
-                </AdminLayout>
-              </Route>
+              <Route path="/admin" component={AdminRouter} />
+              <Route path="/admin/:rest*" component={AdminRouter} />
 
-              <Route path="/barber*">
-                <BarberLayout>
-                  <Switch>
-                    <Route path="/barber" component={BarberDashboard} />
-                    <Route path="/barber/appointments" component={BarberAppointments} />
-                    <Route path="/barber/clients" component={BarberClients} />
-                    <Route path="/barber/availability" component={BarberAvailability} />
-                    <Route path="/barber/stats" component={BarberStats} />
-                    <Route path="/barber/reviews" component={BarberReviews} />
-                    <Route component={NotFound} />
-                  </Switch>
-                </BarberLayout>
-              </Route>
+              <Route path="/barber" component={BarberPanelRouter} />
+              <Route path="/barber/:rest*" component={BarberPanelRouter} />
 
               <Route>
                 <UserRouter />

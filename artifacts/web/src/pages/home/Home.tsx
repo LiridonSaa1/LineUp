@@ -901,7 +901,7 @@ const bannerAds = [
     bg: "from-[#0a0a0a] via-[#0d1f0d] to-[#0a2a0a]",
     image:
       "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1200&q=80",
-    label: "TRIM PRIZREN",
+    label: "LINEUP PRIZREN",
     headline: "Hapim dyqanin tonë të ri!",
     sub: "Grand Opening · 30 ditë falas për pronarët",
     cta: "Partnero me ne",
@@ -2244,7 +2244,7 @@ export default function Home() {
       </section>
 
       {/* ── FEATURES ─────────────────────────────────────── */}
-      <section id="pse-trim" className="py-28 bg-zinc-950 relative overflow-hidden">
+      <section id="pse-lineup" className="py-28 bg-zinc-950 relative overflow-hidden">
         {/* Subtle grid pattern */}
         <div
           className="absolute inset-0 opacity-[0.04] pointer-events-none"
@@ -2498,7 +2498,7 @@ function ContactSection() {
   };
 
   const contactInfo = [
-    { icon: Mail,  label: "Email",    value: "info@trimkosova.com",     sub: "Brenda 24 orëve" },
+    { icon: Mail,  label: "Email",    value: "info@lineup.com",     sub: "Brenda 24 orëve" },
     { icon: Phone, label: "Telefon",  value: "+383 44 123 456",          sub: "E hënë–E premte, 09–18" },
     { icon: MapPin,label: "Adresa",   value: "Rr. Nëna Terezë, Prishtinë", sub: "Kosovë 10000" },
   ];
