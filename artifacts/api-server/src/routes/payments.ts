@@ -53,6 +53,10 @@ const SUBSCRIPTION_PACKAGES: Record<string, { maxBarbers: number; amountCents: n
   "8": { maxBarbers: 8, amountCents: 2000, name: "TRIM Business — 8 Punëtorë" },
 };
 
+function getSubscriptionPackage(packageId: unknown) {
+  return SUBSCRIPTION_PACKAGES[String(packageId)];
+}
+
 router.post("/payments/register-owner-subscription", async (req, res): Promise<void> => {
   const { ownerName, email, password, phone, businessName, city, address, packageId } = req.body;
   if (!ownerName || !email || !password || !businessName || !city || !address || !packageId) {
@@ -127,6 +131,7 @@ router.post("/payments/register-owner-subscription", async (req, res): Promise<v
         "metadata[ownerEmail]": email,
         "metadata[shopName]": businessName,
         "metadata[packageId]": String(packageId),
+        "metadata[maxBarbers]": pkg.maxBarbers.toString(),
         "metadata[amountEur]": (pkg.amountCents / 100).toFixed(2),
       }),
     });
@@ -161,7 +166,9 @@ router.post("/payments/register-owner-subscription", async (req, res): Promise<v
 });
 
 router.post("/payments/create-subscription", requireAuth, requireRole("owner"), async (req: AuthRequest, res): Promise<void> => {
-  const { shopId } = req.body;
+  const { shopId, packageId = "4" } = req.body;
+  const pkg = getSubscriptionPackage(packageId);
+  if (!pkg) { res.status(400).json({ error: "Paketa e zgjedhur nuk është e vlefshme" }); return; }
   const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
   if (!STRIPE_SECRET_KEY) {
     res.status(503).json({ error: "Stripe not configured. Please add STRIPE_SECRET_KEY to environment." }); return;
@@ -184,13 +191,17 @@ router.post("/payments/create-subscription", requireAuth, requireRole("owner"), 
       body: new URLSearchParams({
         mode: "subscription",
         "line_items[0][price_data][currency]": "eur",
-        "line_items[0][price_data][product_data][name]": "Barbershop Monthly Subscription",
+        "line_items[0][price_data][product_data][name]": pkg.name,
+        "line_items[0][price_data][product_data][description]": `${pkg.maxBarbers} punëtorë · ${shop.name}`,
         "line_items[0][price_data][recurring][interval]": "month",
-        "line_items[0][price_data][unit_amount]": "1000",
+        "line_items[0][price_data][unit_amount]": pkg.amountCents.toString(),
         "line_items[0][quantity]": "1",
         success_url: `${baseUrl}/dashboard/subscription?success=true`,
         cancel_url: `${baseUrl}/dashboard/subscription?cancelled=true`,
         "metadata[shopId]": shopId.toString(),
+        "metadata[packageId]": String(packageId),
+        "metadata[maxBarbers]": pkg.maxBarbers.toString(),
+        "metadata[amountEur]": (pkg.amountCents / 100).toFixed(2),
       }),
     });
     const stripeBody = await stripeRes.text();
@@ -205,6 +216,88 @@ router.post("/payments/create-subscription", requireAuth, requireRole("owner"), 
   } catch (err: any) {
     logger.error({ err }, "Unexpected error creating subscription");
     res.status(500).json({ error: err?.message ?? "Internal error" });
+  }
+});
+
+router.post("/payments/change-subscription", requireAuth, requireRole("owner"), async (req: AuthRequest, res): Promise<void> => {
+  const { shopId, packageId } = req.body;
+  const pkg = getSubscriptionPackage(packageId);
+  if (!pkg) { res.status(400).json({ error: "Paketa e zgjedhur nuk është e vlefshme" }); return; }
+
+  const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+  if (!STRIPE_SECRET_KEY) {
+    res.status(503).json({ error: "Stripe nuk është konfiguruar." }); return;
+  }
+
+  try {
+    const [shop] = await db.select().from(barbershopsTable).where(eq(barbershopsTable.id, shopId));
+    if (!shop) { res.status(404).json({ error: "Shop not found" }); return; }
+    if (shop.ownerId !== req.user!.id) { res.status(403).json({ error: "Forbidden" }); return; }
+    if (!shop.stripeSubscriptionId || shop.subscriptionStatus !== "active") {
+      res.status(400).json({ error: "Ky dyqan nuk ka subscription aktiv për ndryshim plani." }); return;
+    }
+
+    const subRes = await fetch(`https://api.stripe.com/v1/subscriptions/${shop.stripeSubscriptionId}`, {
+      headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}` },
+    });
+    const subBody = await subRes.text();
+    if (!subRes.ok) {
+      let err: any = {}; try { err = JSON.parse(subBody); } catch {}
+      res.status(500).json({ error: err?.error?.message ?? "Nuk u lexua subscription-i nga Stripe" }); return;
+    }
+    const subscription = JSON.parse(subBody);
+    const itemId = subscription.items?.data?.[0]?.id;
+    if (!itemId) { res.status(500).json({ error: "Subscription-i nuk ka item aktiv në Stripe" }); return; }
+
+    const priceRes = await fetch("https://api.stripe.com/v1/prices", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}`, "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        currency: "eur",
+        unit_amount: pkg.amountCents.toString(),
+        "recurring[interval]": "month",
+        "product_data[name]": pkg.name,
+        "product_data[metadata][packageId]": String(packageId),
+        "product_data[metadata][maxBarbers]": pkg.maxBarbers.toString(),
+      }),
+    });
+    const priceBody = await priceRes.text();
+    if (!priceRes.ok) {
+      let err: any = {}; try { err = JSON.parse(priceBody); } catch {}
+      res.status(500).json({ error: err?.error?.message ?? "Nuk u krijua çmimi në Stripe" }); return;
+    }
+    const price = JSON.parse(priceBody);
+
+    const updateRes = await fetch(`https://api.stripe.com/v1/subscriptions/${shop.stripeSubscriptionId}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}`, "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        "items[0][id]": itemId,
+        "items[0][price]": price.id,
+        proration_behavior: "create_prorations",
+        "metadata[shopId]": shop.id.toString(),
+        "metadata[packageId]": String(packageId),
+        "metadata[maxBarbers]": pkg.maxBarbers.toString(),
+        "metadata[amountEur]": (pkg.amountCents / 100).toFixed(2),
+      }),
+    });
+    const updateBody = await updateRes.text();
+    if (!updateRes.ok) {
+      let err: any = {}; try { err = JSON.parse(updateBody); } catch {}
+      res.status(500).json({ error: err?.error?.message ?? "Nuk u ndryshua subscription-i në Stripe" }); return;
+    }
+
+    await db.update(barbershopsTable).set({ maxBarbers: pkg.maxBarbers }).where(eq(barbershopsTable.id, shop.id));
+
+    res.json({
+      ok: true,
+      packageId: String(packageId),
+      maxBarbers: pkg.maxBarbers,
+      price: pkg.amountCents / 100,
+    });
+  } catch (err: any) {
+    logger.error({ err }, "Unexpected error changing subscription");
+    res.status(500).json({ error: err?.message ?? "Gabim i brendshëm" });
   }
 });
 

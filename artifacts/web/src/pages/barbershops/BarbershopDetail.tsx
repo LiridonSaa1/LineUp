@@ -83,7 +83,7 @@ export default function BarbershopDetail() {
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
 
-        <Button variant="ghost" size="icon" asChild className="absolute top-6 left-6 bg-white/70 backdrop-blur hover:bg-white/90 rounded-full shadow-md">
+        <Button variant="ghost" size="icon" asChild className="absolute left-6 top-28 bg-white/70 backdrop-blur hover:bg-white/90 rounded-full shadow-md md:top-32">
           <Link href="/barbershops"><ArrowLeft className="w-5 h-5" /></Link>
         </Button>
       </div>

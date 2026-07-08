@@ -90,11 +90,13 @@ const stripeWebhookHandler: RequestHandler = async (req, res): Promise<void> => 
 
         if (session.metadata?.shopId) {
           const shopId = parseInt(session.metadata.shopId);
+          const maxBarbers = session.metadata.maxBarbers ? parseInt(session.metadata.maxBarbers) : null;
           await db
             .update(barbershopsTable)
             .set({
               subscriptionStatus: "active",
               stripeSubscriptionId: session.subscription ?? null,
+              ...(Number.isFinite(maxBarbers) && maxBarbers ? { maxBarbers } : {}),
             })
             .where(eq(barbershopsTable.id, shopId));
 

@@ -281,10 +281,17 @@ export default function BarbershopsList() {
                 {filtered.map((barber) => {
                   const selected = barber.id === selectedBarberId;
                   return (
-                    <button
+                    <div
                       key={barber.id}
-                      type="button"
+                      role="button"
+                      tabIndex={0}
                       onClick={() => selectBarber(barber.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          selectBarber(barber.id);
+                        }
+                      }}
                       className={`group flex w-full cursor-pointer gap-3 rounded-2xl border bg-card p-3 text-left transition-all hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10 ${
                         selected ? "border-primary shadow-lg shadow-primary/10" : "border-border/50"
                       }`}
@@ -326,12 +333,16 @@ export default function BarbershopsList() {
                               {barber.shop.openTime} - {barber.shop.closeTime}
                             </span>
                           ) : <span />}
-                          <span className="text-[11px] font-bold text-primary">
-                            {selected ? "Në hartë" : "Shiko në hartë"} →
-                          </span>
+                          <Link
+                            href={`/barbers/${barber.id}`}
+                            onClick={(event) => event.stopPropagation()}
+                            className="rounded-full bg-primary/10 px-3 py-1 text-[11px] font-bold text-primary hover:bg-primary/15"
+                          >
+                            Detaje
+                          </Link>
                         </div>
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
               </div>

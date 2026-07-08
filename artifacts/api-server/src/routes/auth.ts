@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, usersTable, barbersTable, barbershopsTable } from "@workspace/db";
+import { eq, ilike } from "drizzle-orm";
 import { generateToken, hashPassword, comparePassword, requireAuth, type AuthRequest } from "../lib/auth";
 import { logger } from "../lib/logger";
 import { sendWelcomeEmail } from "../lib/email";
@@ -8,24 +8,67 @@ import { sendWelcomeEmail } from "../lib/email";
 const router = Router();
 
 router.post("/auth/register", async (req, res): Promise<void> => {
-  const { name, email, password, role, phone } = req.body;
+  const { name, email, password, role, phone, shopId, businessName, companyName, shopName, specialties, bio, avatarUrl } = req.body;
   if (!name || !email || !password) {
     res.status(400).json({ error: "name, email, and password are required" });
     return;
   }
+  const normalizedRole = role === "owner" ? "owner" : role === "barber" ? "barber" : "user";
   const [existing] = await db.select().from(usersTable).where(eq(usersTable.email, email));
   if (existing) {
     res.status(400).json({ error: "Email already in use" });
     return;
   }
+
+  let barberShop: typeof barbershopsTable.$inferSelect | null = null;
+  if (normalizedRole === "barber") {
+    if (shopId) {
+      const [shop] = await db.select().from(barbershopsTable).where(eq(barbershopsTable.id, parseInt(String(shopId))));
+      barberShop = shop ?? null;
+    } else {
+      const firmName = businessName ?? companyName ?? shopName;
+      if (firmName) {
+        const [shop] = await db.select().from(barbershopsTable).where(ilike(barbershopsTable.name, String(firmName))).limit(1);
+        barberShop = shop ?? null;
+      }
+    }
+
+    if (!barberShop) {
+      res.status(400).json({ error: "Barber registration requires a valid shopId or existing business name" });
+      return;
+    }
+  }
+
   const passwordHash = await hashPassword(password);
   const [user] = await db.insert(usersTable).values({
     name,
     email,
     passwordHash,
-    role: role === "owner" ? "owner" : "user",
+    role: normalizedRole,
     phone: phone ?? null,
+    avatarUrl: avatarUrl ?? null,
   }).returning();
+
+  let barber = null;
+  if (normalizedRole === "barber" && barberShop) {
+    try {
+      const [createdBarber] = await db.insert(barbersTable).values({
+        shopId: barberShop.id,
+        userId: user.id,
+        name,
+        bio: bio ?? null,
+        avatarUrl: avatarUrl ?? null,
+        specialties: specialties ?? null,
+      } as any).returning();
+      barber = createdBarber;
+    } catch (err) {
+      await db.delete(usersTable).where(eq(usersTable.id, user.id));
+      logger.error({ err, userId: user.id }, "Failed to create barber profile during registration");
+      res.status(500).json({ error: "Could not create barber profile" });
+      return;
+    }
+  }
+
   const token = generateToken({ id: user.id, email: user.email, role: user.role });
   req.log.info({ userId: user.id }, "User registered");
 
@@ -38,6 +81,7 @@ router.post("/auth/register", async (req, res): Promise<void> => {
       id: user.id, name: user.name, email: user.email, role: user.role,
       phone: user.phone, avatarUrl: user.avatarUrl, createdAt: user.createdAt,
     },
+    barber,
   });
 });
 
