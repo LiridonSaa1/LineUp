@@ -19,8 +19,8 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 const DEMO = [
-  { role: "Admin",  email: "admin@trimkosova.com", pass: "admin123", color: "#ef4444" },
-  { role: "Owner",  email: "artan@trimkosova.com", pass: "owner123", color: "#4f8ef7" },
+  { role: "Admin",  email: "admin@lineup.com", pass: "admin123", color: "#ef4444" },
+  { role: "Owner",  email: "artan@lineup.com", pass: "owner123", color: "#4f8ef7" },
   { role: "Klient", email: "besim@gmail.com",       pass: "user123",  color: "#22c55e" },
 ];
 

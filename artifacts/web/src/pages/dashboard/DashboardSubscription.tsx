@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useGetOwnerStats } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -73,6 +73,8 @@ export default function DashboardSubscription() {
   const { data: ownerShop, isLoading: shopLoading, refetch: refetchShop } = useOwnerShop();
   const shopId = ownerShop?.id ?? 0;
   const [busyPlan, setBusyPlan] = useState<string | null>(null);
+  const [confirmingSession, setConfirmingSession] = useState(false);
+  const [confirmAttempted, setConfirmAttempted] = useState(false);
 
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useGetOwnerStats(
     { shopId },
@@ -85,10 +87,40 @@ export default function DashboardSubscription() {
   }, [(ownerShop as any)?.maxBarbers]);
 
   const isSubscribed = stats?.subscriptionActive;
+  const rawSubscriptionStatus = String((ownerShop as any)?.subscriptionStatus ?? "inactive");
+  const subscriptionStatusLabel = isSubscribed
+    ? "Aktive"
+    : ["past_due", "unpaid", "canceled", "cancelled"].includes(rawSubscriptionStatus)
+      ? "I ndalur"
+      : "Ne pritje";
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get("session_id");
+    const success = params.get("success");
+    if (!sessionId || success !== "true" || confirmingSession || confirmAttempted) return;
+
+    setConfirmAttempted(true);
+    setConfirmingSession(true);
+    postJson("/api/payments/confirm-subscription-session", { sessionId })
+      .then(async () => {
+        toast({ title: "Abonimi u aktivizua", description: "Pagesa u konfirmua me sukses." });
+        await Promise.all([refetchShop(), refetchStats()]);
+        window.history.replaceState({}, "", window.location.pathname);
+      })
+      .catch((error: any) => {
+        toast({
+          variant: "destructive",
+          title: "Abonimi nuk u konfirmua",
+          description: error.message,
+        });
+      })
+      .finally(() => setConfirmingSession(false));
+  }, [confirmAttempted, confirmingSession, refetchShop, refetchStats, toast]);
 
   async function handlePlan(plan: Plan) {
     if (!ownerShop) return;
-    if (plan.id === currentPlan.id && isSubscribed) return;
+    if (plan.id === currentPlan.id) return;
 
     setBusyPlan(plan.id);
     try {
@@ -99,7 +131,7 @@ export default function DashboardSubscription() {
         });
         toast({
           title: "Plani u ndryshua",
-          description: `Tani jeni ne TRIM ${plan.label}.`,
+          description: `Tani jeni ne LineUp ${plan.label}.`,
         });
         await Promise.all([refetchShop(), refetchStats()]);
       } else {
@@ -153,7 +185,7 @@ export default function DashboardSubscription() {
                 </div>
                 <div>
                   <p className="text-sm font-bold">Plani aktual</p>
-                  <p className="text-2xl font-black">TRIM {currentPlan.label}</p>
+                  <p className="text-2xl font-black">LineUp {currentPlan.label}</p>
                 </div>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-2">
@@ -162,12 +194,19 @@ export default function DashboardSubscription() {
                   <p className="text-xs text-white/45">Punetore</p>
                 </div>
                 <div className="rounded-xl bg-white/[0.06] p-3">
-                  <p className={`text-xl font-black ${isSubscribed ? "text-emerald-300" : "text-white"}`}>
-                    {isSubscribed ? "Aktive" : "Jo aktive"}
+                  <p className={`text-xl font-black ${isSubscribed ? "text-emerald-300" : "text-amber-200"}`}>
+                    {confirmingSession ? "Duke konfirmuar..." : subscriptionStatusLabel}
                   </p>
                   <p className="text-xs text-white/45">Statusi</p>
                 </div>
               </div>
+              {!isSubscribed ? (
+                <p className="mt-3 text-xs leading-5 text-white/50">
+                  {subscriptionStatusLabel === "I ndalur"
+                    ? "Pagesa mujore nuk eshte aktive, prandaj rezervimet jane ndalur."
+                    : "Plani eshte zgjedhur, por aktivizohet pasi Stripe e konfirmon pagesen."}
+                </p>
+              ) : null}
             </div>
           </div>
         </div>
@@ -176,15 +215,14 @@ export default function DashboardSubscription() {
       <div className="grid gap-4 lg:grid-cols-4">
         {PACKAGES.map((plan) => {
           const isCurrent = plan.id === currentPlan.id;
-          const isActivePlan = isCurrent && !!isSubscribed;
-          const isUpgrade = plan.workers > currentPlan.workers;
+          const isSubscribedPlan = isCurrent;
           const isBusy = busyPlan === plan.id;
 
           return (
             <Card
               key={plan.id}
               className={`relative overflow-hidden rounded-3xl border bg-card shadow-sm transition hover:-translate-y-1 hover:shadow-xl ${
-                isActivePlan ? "border-emerald-500 shadow-emerald-500/10" : isCurrent ? "border-primary shadow-primary/10" : "border-border"
+                isSubscribedPlan ? "border-emerald-500 shadow-emerald-500/10" : "border-border"
               }`}
             >
               {plan.popular ? (
@@ -194,7 +232,7 @@ export default function DashboardSubscription() {
               ) : null}
               {isCurrent ? (
                 <div className="absolute left-4 top-4 rounded-full bg-emerald-500 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white">
-                  {isSubscribed ? "Aktive" : "Plani yt"}
+                  Plani yt
                 </div>
               ) : null}
 
@@ -203,7 +241,7 @@ export default function DashboardSubscription() {
                   <Users className="h-6 w-6" />
                 </div>
 
-                <h3 className="text-xl font-black">TRIM {plan.label}</h3>
+                <h3 className="text-xl font-black">LineUp {plan.label}</h3>
                 <p className="mt-1 text-sm text-muted-foreground">Deri {plan.workers} punetore</p>
 
                 <div className="my-6">
@@ -223,8 +261,8 @@ export default function DashboardSubscription() {
                 <div className="mt-auto">
                   <Button
                     className="h-11 w-full rounded-2xl font-black"
-                    variant={isActivePlan ? "outline" : "default"}
-                    disabled={isBusy || isActivePlan}
+                    variant={isSubscribedPlan ? "outline" : "default"}
+                    disabled={isBusy || isSubscribedPlan}
                     onClick={() => handlePlan(plan)}
                   >
                     {isBusy ? (
@@ -232,18 +270,16 @@ export default function DashboardSubscription() {
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Duke procesuar
                       </>
-                    ) : isActivePlan ? (
+                    ) : isSubscribedPlan ? (
                       <>
                         <ShieldCheck className="mr-2 h-4 w-4" />
-                        Aktive
-                      </>
-                    ) : isSubscribed ? (
-                      <>
-                        <Zap className="mr-2 h-4 w-4" />
-                        {isUpgrade ? "Upgrade" : "Downgrade"}
+                        Abonuar
                       </>
                     ) : (
-                      "Aktivizo"
+                      <>
+                        <Zap className="mr-2 h-4 w-4" />
+                        Upgrade
+                      </>
                     )}
                   </Button>
                 </div>

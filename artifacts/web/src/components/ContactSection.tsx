@@ -60,7 +60,7 @@ export default function ContactSection() {
   };
 
   const contactInfo = [
-    { icon: Mail, label: "Email", value: "info@trimkosova.com", sub: "Brenda 24 oreve" },
+    { icon: Mail, label: "Email", value: "info@lineup.com", sub: "Brenda 24 oreve" },
     { icon: Phone, label: "Telefon", value: "+383 44 123 456", sub: "E hene-E premte, 09-18" },
     { icon: MapPin, label: "Adresa", value: "Rr. Nena Tereze, Prishtine", sub: "Kosove 10000" },
   ];

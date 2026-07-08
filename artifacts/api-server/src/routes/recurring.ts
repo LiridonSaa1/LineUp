@@ -139,7 +139,7 @@ router.get("/appointments/export.ics", requireAuth, async (req: AuthRequest, res
     const end = new Date(start.getTime() + 30 * 60 * 1000);
     lines.push(
       "BEGIN:VEVENT",
-      `UID:lineup-appt-${row.appt.id}@trimkosova.com`,
+      `UID:lineup-appt-${row.appt.id}@lineup.com`,
       `DTSTAMP:${fmt(new Date())}`,
       `DTSTART:${fmt(start)}`,
       `DTEND:${fmt(end)}`,

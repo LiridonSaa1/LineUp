@@ -26,7 +26,7 @@ router.get("/barbershops/city-stats", async (_req, res): Promise<void> => {
       barbersTable,
       and(eq(barbersTable.shopId, barbershopsTable.id), eq(barbersTable.isActive, true))
     )
-    .where(eq(barbershopsTable.status, "active"))
+    .where(and(eq(barbershopsTable.status, "active"), eq(barbershopsTable.subscriptionStatus, "active")))
     .groupBy(barbershopsTable.city)
     .orderBy(sql`count(${barbersTable.id}) desc`);
 
@@ -45,6 +45,9 @@ router.get("/barbershops", async (req, res): Promise<void> => {
   if (city) conditions.push(eq(barbershopsTable.city, city));
   if (status) conditions.push(eq(barbershopsTable.status, status as any));
   else conditions.push(eq(barbershopsTable.status, "active"));
+  if (status !== "pending" && status !== "rejected" && status !== "suspended") {
+    conditions.push(eq(barbershopsTable.subscriptionStatus, "active"));
+  }
   if (search) conditions.push(ilike(barbershopsTable.name, `%${search}%`));
 
   const shops = await db.select().from(barbershopsTable)
@@ -63,8 +66,8 @@ router.get("/barbershops/top", async (req, res): Promise<void> => {
   const limit = parseInt(req.query.limit as string) || 6;
   const city = req.query.city as string | undefined;
   const cond = city
-    ? and(eq(barbershopsTable.status, "active"), eq(barbershopsTable.city, city))
-    : eq(barbershopsTable.status, "active");
+    ? and(eq(barbershopsTable.status, "active"), eq(barbershopsTable.subscriptionStatus, "active"), eq(barbershopsTable.city, city))
+    : and(eq(barbershopsTable.status, "active"), eq(barbershopsTable.subscriptionStatus, "active"));
 
   const shops = await db.select().from(barbershopsTable)
     .where(cond)
@@ -118,6 +121,9 @@ router.get("/barbershops/:id", async (req, res): Promise<void> => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   const [shop] = await db.select().from(barbershopsTable).where(eq(barbershopsTable.id, id));
   if (!shop) { res.status(404).json({ error: "Barbershop not found" }); return; }
+  if (shop.status !== "active" || shop.subscriptionStatus !== "active") {
+    res.status(402).json({ error: "Ky barbershop nuk ka abonim aktiv." }); return;
+  }
   res.json(formatShop(shop));
 });
 

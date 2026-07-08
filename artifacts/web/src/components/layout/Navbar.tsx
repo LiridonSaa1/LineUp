@@ -58,7 +58,7 @@ export function Navbar() {
     const sectionIds = [
       "si-funksionon",
       "vleresuar",
-      "pse-trim",
+      "pse-lineup",
       "shop",
       "disponueshem",
       "reklama",

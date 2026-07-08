@@ -47,10 +47,10 @@ router.get("/payments", requireAuth, requireRole("admin", "owner"), async (req: 
 });
 
 const SUBSCRIPTION_PACKAGES: Record<string, { maxBarbers: number; amountCents: number; name: string }> = {
-  "2": { maxBarbers: 2, amountCents: 500,  name: "TRIM Starter — 2 Punëtorë" },
-  "4": { maxBarbers: 4, amountCents: 1000, name: "TRIM Standard — 4 Punëtorë" },
-  "6": { maxBarbers: 6, amountCents: 1500, name: "TRIM Pro — 6 Punëtorë" },
-  "8": { maxBarbers: 8, amountCents: 2000, name: "TRIM Business — 8 Punëtorë" },
+  "2": { maxBarbers: 2, amountCents: 500,  name: "LineUp Starter — 2 Punëtorë" },
+  "4": { maxBarbers: 4, amountCents: 1000, name: "LineUp Standard — 4 Punëtorë" },
+  "6": { maxBarbers: 6, amountCents: 1500, name: "LineUp Pro — 6 Punëtorë" },
+  "8": { maxBarbers: 8, amountCents: 2000, name: "LineUp Business — 8 Punëtorë" },
 };
 
 function getSubscriptionPackage(packageId: unknown) {
@@ -125,7 +125,7 @@ router.post("/payments/register-owner-subscription", async (req, res): Promise<v
         "line_items[0][price_data][recurring][interval]": "month",
         "line_items[0][price_data][unit_amount]": pkg.amountCents.toString(),
         "line_items[0][quantity]": "1",
-        return_url: `${baseUrl}/dashboard?sub_success=true&session_id={CHECKOUT_SESSION_ID}`,
+        return_url: `${baseUrl}/dashboard/subscription?success=true&session_id={CHECKOUT_SESSION_ID}`,
         "metadata[shopId]": shop.id.toString(),
         "metadata[ownerName]": ownerName,
         "metadata[ownerEmail]": email,
@@ -196,12 +196,15 @@ router.post("/payments/create-subscription", requireAuth, requireRole("owner"), 
         "line_items[0][price_data][recurring][interval]": "month",
         "line_items[0][price_data][unit_amount]": pkg.amountCents.toString(),
         "line_items[0][quantity]": "1",
-        success_url: `${baseUrl}/dashboard/subscription?success=true`,
+        success_url: `${baseUrl}/dashboard/subscription?success=true&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${baseUrl}/dashboard/subscription?cancelled=true`,
         "metadata[shopId]": shopId.toString(),
         "metadata[packageId]": String(packageId),
         "metadata[maxBarbers]": pkg.maxBarbers.toString(),
         "metadata[amountEur]": (pkg.amountCents / 100).toFixed(2),
+        "subscription_data[metadata][shopId]": shop.id.toString(),
+        "subscription_data[metadata][packageId]": String(packageId),
+        "subscription_data[metadata][maxBarbers]": pkg.maxBarbers.toString(),
       }),
     });
     const stripeBody = await stripeRes.text();
@@ -216,6 +219,63 @@ router.post("/payments/create-subscription", requireAuth, requireRole("owner"), 
   } catch (err: any) {
     logger.error({ err }, "Unexpected error creating subscription");
     res.status(500).json({ error: err?.message ?? "Internal error" });
+  }
+});
+
+router.post("/payments/confirm-subscription-session", requireAuth, requireRole("owner"), async (req: AuthRequest, res): Promise<void> => {
+  const { sessionId } = req.body;
+  if (!sessionId) { res.status(400).json({ error: "sessionId is required" }); return; }
+
+  const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+  if (!STRIPE_SECRET_KEY) {
+    res.status(503).json({ error: "Stripe nuk eshte konfiguruar." }); return;
+  }
+
+  try {
+    const sessionRes = await fetch(`https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(String(sessionId))}`, {
+      headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}` },
+    });
+    const sessionBody = await sessionRes.text();
+    if (!sessionRes.ok) {
+      let err: any = {}; try { err = JSON.parse(sessionBody); } catch {}
+      res.status(500).json({ error: err?.error?.message ?? "Nuk u lexua sesioni nga Stripe" }); return;
+    }
+
+    const session = JSON.parse(sessionBody);
+    const shopId = session.metadata?.shopId ? parseInt(session.metadata.shopId) : null;
+    if (!shopId) { res.status(400).json({ error: "Sesioni nuk ka shopId" }); return; }
+
+    const [shop] = await db.select().from(barbershopsTable).where(eq(barbershopsTable.id, shopId));
+    if (!shop) { res.status(404).json({ error: "Shop not found" }); return; }
+    if (shop.ownerId !== req.user!.id) { res.status(403).json({ error: "Forbidden" }); return; }
+
+    if (session.status !== "complete" || !["paid", "no_payment_required"].includes(session.payment_status)) {
+      res.status(400).json({ error: "Pagesa ende nuk eshte konfirmuar nga Stripe." }); return;
+    }
+
+    const maxBarbers = session.metadata?.maxBarbers ? parseInt(session.metadata.maxBarbers) : null;
+    await db
+      .update(barbershopsTable)
+      .set({
+        subscriptionStatus: "active",
+        status: "active",
+        stripeSubscriptionId: session.subscription ?? shop.stripeSubscriptionId ?? null,
+        ...(Number.isFinite(maxBarbers) && maxBarbers ? { maxBarbers } : {}),
+      })
+      .where(eq(barbershopsTable.id, shop.id));
+
+    await db.insert(paymentsTable).values({
+      shopId: shop.id,
+      amount: ((session.amount_total ?? 0) / 100).toFixed(2),
+      type: "subscription",
+      status: "completed",
+      stripePaymentId: session.id,
+    }).onConflictDoNothing();
+
+    res.json({ ok: true, shopId: shop.id, subscriptionStatus: "active" });
+  } catch (err: any) {
+    logger.error({ err }, "Unexpected error confirming subscription session");
+    res.status(500).json({ error: err?.message ?? "Gabim i brendshem" });
   }
 });
 
@@ -279,6 +339,9 @@ router.post("/payments/change-subscription", requireAuth, requireRole("owner"), 
         "metadata[packageId]": String(packageId),
         "metadata[maxBarbers]": pkg.maxBarbers.toString(),
         "metadata[amountEur]": (pkg.amountCents / 100).toFixed(2),
+        "subscription_data[metadata][shopId]": shop.id.toString(),
+        "subscription_data[metadata][packageId]": String(packageId),
+        "subscription_data[metadata][maxBarbers]": pkg.maxBarbers.toString(),
       }),
     });
     const updateBody = await updateRes.text();

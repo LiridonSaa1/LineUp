@@ -25,7 +25,7 @@ router.get("/barbers", async (_req, res): Promise<void> => {
   })
     .from(barbersTable)
     .innerJoin(barbershopsTable, eq(barbersTable.shopId, barbershopsTable.id))
-    .where(and(eq(barbersTable.isActive, true), eq(barbershopsTable.status, "active")))
+    .where(and(eq(barbersTable.isActive, true), eq(barbershopsTable.status, "active"), eq(barbershopsTable.subscriptionStatus, "active")))
     .orderBy(desc(barbersTable.rating), desc(barbersTable.createdAt));
 
   res.json(rows.map((row) => ({

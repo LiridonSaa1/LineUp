@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
+import logoImg from "@assets/LINE_(2)_1782421072087.png";
 import {
   Calendar,
   CalendarOff,
@@ -85,9 +86,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <aside className="hidden w-72 shrink-0 flex-col border-r border-white/10 bg-slate-950 text-white lg:flex">
           <div className="border-b border-white/10 p-5">
             <Link href="/" className="flex items-center gap-3">
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-lg font-black text-white shadow-lg shadow-primary/25">
-                L
-              </span>
+              <img
+                src={logoImg}
+                alt="Line UP"
+                className="h-14 w-auto object-contain"
+                style={{ filter: "brightness(0) invert(1)" }}
+              />
               <span>
                 <span className="block text-xl font-black tracking-tight">Line UP</span>
                 <span className="text-xs font-bold uppercase tracking-[0.2em] text-white/45">Biznes</span>
@@ -155,9 +159,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="sticky top-0 z-30 border-b border-border bg-background/95 shadow-sm backdrop-blur-xl lg:hidden">
           <div className="flex items-center justify-between px-4 py-3">
             <Link href="/" className="flex items-center gap-2">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-sm font-black text-white">
-                L
-              </span>
+              <img src={logoImg} alt="Line UP" className="h-10 w-auto object-contain" />
               <span>
                 <span className="block text-base font-black leading-tight">Line UP</span>
                 <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Biznes</span>

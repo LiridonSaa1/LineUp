@@ -1,14 +1,14 @@
 import { pool } from "@workspace/db";
 
 const seedEmails = [
-  "admin@trimkosova.com",
-  "artan@trimkosova.com",
+  "admin@lineup.com",
+  "artan@lineup.com",
   "besim@gmail.com",
 ];
 
 const seedShopNames = [
   "The Barber Lab",
-  "TRIM Prishtina",
+  "LineUp Prishtina",
   "Gentlemen's Corner",
   "Classic Cuts Prizren",
   "Sharp Cuts Peja",

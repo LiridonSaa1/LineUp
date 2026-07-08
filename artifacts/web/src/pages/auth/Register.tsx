@@ -312,7 +312,7 @@ function OwnerForm() {
             style={{ color: "rgba(255,255,255,0.3)" }}>
             <Building2 className="w-3.5 h-3.5" /> Informata Bazë
           </div>
-          <IconInput id="bname"  icon={Building2} label="Emri i biznesit" placeholder="TRIM Prishtina"
+          <IconInput id="bname"  icon={Building2} label="Emri i biznesit" placeholder="LineUp Prishtina"
             value={w1("businessName")} onChange={v => f1.setValue("businessName", v)}
             error={f1.formState.errors.businessName?.message} />
           <IconInput id="oemail" icon={Mail}      label="Email" type="email" placeholder="biznesi@shembull.com"
@@ -369,7 +369,7 @@ function OwnerForm() {
                     style={{ background: `${pkg.color}22` }}>
                     <Users className="w-3.5 h-3.5" style={{ color: pkg.color }} />
                   </div>
-                  <p className="font-semibold text-white text-xs leading-tight">TRIM {pkg.label}</p>
+                  <p className="font-semibold text-white text-xs leading-tight">LineUp {pkg.label}</p>
                 </div>
 
                 {/* Price */}

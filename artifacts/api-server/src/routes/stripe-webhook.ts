@@ -4,6 +4,42 @@ import { db, paymentsTable, barbershopsTable, ordersTable } from "@workspace/db"
 import { eq } from "drizzle-orm";
 import { logger } from "../lib/logger";
 
+function isStripeSubscriptionActive(status: string | null | undefined) {
+  return status === "active" || status === "trialing";
+}
+
+async function updateShopSubscriptionState({
+  shopId,
+  stripeSubscriptionId,
+  subscriptionStatus,
+  maxBarbers,
+}: {
+  shopId?: number | null;
+  stripeSubscriptionId?: string | null;
+  subscriptionStatus: string;
+  maxBarbers?: number | null;
+}) {
+  const active = isStripeSubscriptionActive(subscriptionStatus);
+  const updateData: any = {
+    subscriptionStatus,
+    status: active ? "active" : "suspended",
+    ...(stripeSubscriptionId ? { stripeSubscriptionId } : {}),
+    ...(Number.isFinite(maxBarbers) && maxBarbers ? { maxBarbers } : {}),
+  };
+
+  if (shopId) {
+    await db.update(barbershopsTable).set(updateData).where(eq(barbershopsTable.id, shopId));
+    return;
+  }
+
+  if (stripeSubscriptionId) {
+    await db
+      .update(barbershopsTable)
+      .set(updateData)
+      .where(eq(barbershopsTable.stripeSubscriptionId, stripeSubscriptionId));
+  }
+}
+
 function verifyStripeSignature(rawBody: Buffer, header: string, secret: string): boolean {
   const parts = header.split(",").reduce<Record<string, string[]>>((acc, part) => {
     const [key, ...rest] = part.split("=");
@@ -95,6 +131,7 @@ const stripeWebhookHandler: RequestHandler = async (req, res): Promise<void> => 
             .update(barbershopsTable)
             .set({
               subscriptionStatus: "active",
+              status: "active",
               stripeSubscriptionId: session.subscription ?? null,
               ...(Number.isFinite(maxBarbers) && maxBarbers ? { maxBarbers } : {}),
             })
@@ -132,6 +169,67 @@ const stripeWebhookHandler: RequestHandler = async (req, res): Promise<void> => 
           );
         }
 
+        break;
+      }
+
+      case "customer.subscription.created":
+      case "customer.subscription.updated": {
+        const subscription = event.data.object;
+        const shopId = subscription.metadata?.shopId ? parseInt(subscription.metadata.shopId) : null;
+        const maxBarbers = subscription.metadata?.maxBarbers ? parseInt(subscription.metadata.maxBarbers) : null;
+
+        await updateShopSubscriptionState({
+          shopId,
+          stripeSubscriptionId: subscription.id,
+          subscriptionStatus: subscription.status,
+          maxBarbers,
+        });
+
+        logger.info({ shopId, subscriptionId: subscription.id, status: subscription.status }, "Stripe subscription state synced");
+        break;
+      }
+
+      case "customer.subscription.deleted": {
+        const subscription = event.data.object;
+        const shopId = subscription.metadata?.shopId ? parseInt(subscription.metadata.shopId) : null;
+
+        await updateShopSubscriptionState({
+          shopId,
+          stripeSubscriptionId: subscription.id,
+          subscriptionStatus: "canceled",
+        });
+
+        logger.info({ shopId, subscriptionId: subscription.id }, "Stripe subscription canceled");
+        break;
+      }
+
+      case "invoice.payment_succeeded": {
+        const invoice = event.data.object;
+        const subscriptionId = typeof invoice.subscription === "string" ? invoice.subscription : null;
+
+        if (subscriptionId) {
+          await updateShopSubscriptionState({
+            stripeSubscriptionId: subscriptionId,
+            subscriptionStatus: "active",
+          });
+        }
+
+        logger.info({ subscriptionId, invoiceId: invoice.id }, "Stripe invoice payment succeeded");
+        break;
+      }
+
+      case "invoice.payment_failed": {
+        const invoice = event.data.object;
+        const subscriptionId = typeof invoice.subscription === "string" ? invoice.subscription : null;
+
+        if (subscriptionId) {
+          await updateShopSubscriptionState({
+            stripeSubscriptionId: subscriptionId,
+            subscriptionStatus: "past_due",
+          });
+        }
+
+        logger.warn({ subscriptionId, invoiceId: invoice.id }, "Stripe invoice payment failed");
         break;
       }
 

@@ -3,6 +3,7 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard, Store, Users, LogOut } from "lucide-react";
 import { useLogout } from "@workspace/api-client-react";
+import logoImg from "@assets/LINE_(2)_1782421072087.png";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -38,8 +39,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       {/* ── Desktop Sidebar ── */}
       <aside className="hidden md:flex md:w-64 bg-card border-r border-border shrink-0 flex-col sticky top-0 md:h-screen z-20">
         <div className="p-6">
-          <Link href="/" className="inline-block">
-            <span className="text-2xl font-bold tracking-tighter text-primary">Line UP</span>
+          <Link href="/" className="flex items-center gap-3">
+            <img src={logoImg} alt="Line UP" className="h-12 w-auto object-contain" />
             <span className="ml-2 text-sm font-medium text-destructive uppercase tracking-wider">Admin</span>
           </Link>
         </div>
@@ -69,8 +70,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       {/* ── Mobile Top Bar ── */}
       <div className="md:hidden sticky top-0 z-20 bg-card border-b border-border">
         <div className="flex items-center justify-between px-4 py-3">
-          <Link href="/" className="inline-block">
-            <span className="text-lg font-bold tracking-tighter text-primary">Line UP</span>
+          <Link href="/" className="flex items-center gap-2">
+            <img src={logoImg} alt="Line UP" className="h-9 w-auto object-contain" />
             <span className="ml-1.5 text-xs font-medium text-destructive uppercase tracking-wider">Admin</span>
           </Link>
           <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg h-8 px-2" onClick={handleLogout}>
