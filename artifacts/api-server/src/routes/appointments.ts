@@ -6,6 +6,7 @@ import {
 import { eq, and, sql, gte, lte, desc } from "drizzle-orm";
 import { requireAuth, generateOtp, type AuthRequest } from "../lib/auth";
 import { sendOtpEmail, sendBookingConfirmedEmail } from "../lib/email";
+import { sendOtpSms } from "../lib/sms";
 
 const router = Router();
 
@@ -134,6 +135,9 @@ router.post("/appointments", requireAuth, async (req: AuthRequest, res): Promise
       serviceName: service.name,
       barberName: barberRow.name,
     }).catch(() => {});
+    if (userRow.phone) {
+      sendOtpSms({ to: userRow.phone, otp, shopName: shopRow.name }).catch(() => {});
+    }
   }
 
   res.status(201).json(formatAppointment(appt));
@@ -208,6 +212,9 @@ router.post("/appointments/batch", requireAuth, async (req: AuthRequest, res): P
       serviceName: orderedServices.map(s => s.name).join(", "),
       barberName: barber.name,
     }).catch(() => {});
+    if (userRow.phone) {
+      sendOtpSms({ to: userRow.phone, otp, shopName: shop.name }).catch(() => {});
+    }
   }
 
   res.status(201).json({ data: created.map(formatAppointment), total: created.length });

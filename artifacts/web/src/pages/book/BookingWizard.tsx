@@ -127,7 +127,7 @@ export default function BookingWizard() {
       setOtpError(null);
       toast({
         title: "Kodi u dërgua!",
-        description: "Kontrolloni emailin tuaj për kodin e verifikimit (OTP).",
+        description: "Kontrolloni emailin ose SMS-in tuaj për kodin e verifikimit (OTP).",
       });
     } catch (error: any) {
       toast({
