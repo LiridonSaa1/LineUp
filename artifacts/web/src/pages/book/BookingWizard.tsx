@@ -58,6 +58,7 @@ export default function BookingWizard() {
   const [authFields, setAuthFields] = useState({ firstName: "", lastName: "", email: "", phone: "", password: "" });
   const [loginFields, setLoginFields] = useState({ email: "", password: "" });
   const [pendingAppointmentIds, setPendingAppointmentIds] = useState<number[] | null>(null);
+  const [otpChannel, setOtpChannel] = useState<"sms" | "email">("email");
   const [otpCode, setOtpCode] = useState("");
   const [otpError, setOtpError] = useState<string | null>(null);
 
@@ -124,10 +125,14 @@ export default function BookingWizard() {
       });
       const created = Array.isArray(result) ? result : result?.data ?? [];
       setPendingAppointmentIds(created.map((a: any) => a.id));
+      const channel = created[0]?.otpChannel ?? "email";
+      setOtpChannel(channel);
       setOtpError(null);
       toast({
         title: "Kodi u dërgua!",
-        description: "Kontrolloni emailin ose SMS-in tuaj për kodin e verifikimit (OTP).",
+        description: channel === "sms"
+          ? "Kontrollo SMS-in tuaj për kodin e verifikimit (OTP)."
+          : "Kontrollo emailin tuaj për kodin e verifikimit (OTP).",
       });
     } catch (error: any) {
       toast({
@@ -159,7 +164,10 @@ export default function BookingWizard() {
     if (!pendingAppointmentIds?.[0]) return;
     try {
       await resendOtp.mutateAsync({ id: pendingAppointmentIds[0] });
-      toast({ title: "Kodi u ridërgua", description: "Kontrolloni emailin tuaj." });
+      toast({
+        title: "Kodi u ridërgua",
+        description: otpChannel === "sms" ? "Kontrollo SMS-in tuaj." : "Kontrollo emailin tuaj.",
+      });
     } catch {
       toast({ variant: "destructive", title: "Dështoi ridërgimi i kodit" });
     }
@@ -576,7 +584,9 @@ export default function BookingWizard() {
                     <ShieldCheck className="w-5 h-5" /> Verifikoni Rezervimin
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Ju dërguam një kod verifikimi (OTP) 6-shifror në emailin tuaj. Vendoseni më poshtë për të konfirmuar rezervimin.
+                    {otpChannel === "sms"
+                      ? "Ju dërguam kodin e verifikimit (OTP) 6-shifror me SMS. Vendoseni më poshtë për të konfirmuar rezervimin."
+                      : "Ju dërguam kodin e verifikimit (OTP) 6-shifror në emailin tuaj. Vendoseni më poshtë për të konfirmuar rezervimin."}
                   </p>
                   <InputOTP maxLength={6} value={otpCode} onChange={setOtpCode}>
                     <InputOTPGroup>
@@ -616,7 +626,9 @@ export default function BookingWizard() {
               ) : user ? (
                 <>
                   <div className="p-4 bg-muted text-sm text-muted-foreground rounded-2xl text-center border border-border">
-                    Do të merrni një kod verifikimi (OTP) me email menjëherë pas rezervimit.
+                    {user?.phone
+                      ? "Do të merrni kodin e verifikimit (OTP) me SMS menjëherë pas rezervimit."
+                      : "Do të merrni kodin e verifikimit (OTP) me email menjëherë pas rezervimit."}
                   </div>
                   <div className="flex gap-3 mt-4">
                     <Button

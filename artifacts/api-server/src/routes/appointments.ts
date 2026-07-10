@@ -6,7 +6,7 @@ import {
 import { eq, and, sql, gte, lte, desc } from "drizzle-orm";
 import { requireAuth, generateOtp, type AuthRequest } from "../lib/auth";
 import { sendOtpEmail, sendBookingConfirmedEmail } from "../lib/email";
-import { sendVerificationSms, checkVerificationSms } from "../lib/sms";
+import { sendOtpSms } from "../lib/sms";
 
 const router = Router();
 
@@ -92,7 +92,7 @@ router.post("/appointments", requireAuth, async (req: AuthRequest, res): Promise
 
   const [userRow] = await db.select().from(usersTable).where(eq(usersTable.id, req.user!.id));
   const useSms = Boolean(userRow?.phone);
-  const otp = useSms ? null : generateOtp();
+  const otp = generateOtp();
   const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
   const [appt] = await db.insert(appointmentsTable).values({
@@ -110,9 +110,7 @@ router.post("/appointments", requireAuth, async (req: AuthRequest, res): Promise
   await db.insert(notificationsTable).values({
     userId: req.user!.id,
     title: "Appointment Booked",
-    message: useSms
-      ? `Your appointment is booked for ${new Date(scheduledAt).toLocaleString()}. OTP sent via SMS.`
-      : `Your appointment is booked for ${new Date(scheduledAt).toLocaleString()}. OTP: ${otp}`,
+    message: `Your appointment is booked for ${new Date(scheduledAt).toLocaleString()}. OTP: ${otp}`,
     type: "booking_confirmed",
     relatedId: appt.id,
     relatedType: "appointment",
@@ -127,16 +125,16 @@ router.post("/appointments", requireAuth, async (req: AuthRequest, res): Promise
 
   req.log.info({ appointmentId: appt.id, channel: appt.otpChannel }, "Appointment booked, OTP generated");
 
-  // Send OTP via SMS (Twilio Verify) or email (fire-and-forget)
+  // Send OTP via SMS or email (fire-and-forget)
   const [shopRow] = await db.select().from(barbershopsTable).where(eq(barbershopsTable.id, shopId));
   const [barberRow] = await db.select().from(barbersTable).where(eq(barbersTable.id, barberId));
   if (userRow && shopRow && barberRow) {
     if (useSms && userRow.phone) {
-      sendVerificationSms(userRow.phone).catch(() => {});
+      sendOtpSms(userRow.phone, otp).catch(() => {});
     } else {
       sendOtpEmail({
         to: { email: userRow.email, name: userRow.name },
-        otp: otp!,
+        otp,
         shopName: shopRow.name,
         scheduledAt: appt.scheduledAt,
         serviceName: service.name,
@@ -171,7 +169,7 @@ router.post("/appointments/batch", requireAuth, async (req: AuthRequest, res): P
 
   const [userRow] = await db.select().from(usersTable).where(eq(usersTable.id, req.user!.id));
   const useSms = Boolean(userRow?.phone);
-  const otp = useSms ? null : generateOtp();
+  const otp = generateOtp();
   const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
   let cursor = new Date(scheduledAt);
   const created: (typeof appointmentsTable.$inferSelect)[] = [];
@@ -202,9 +200,7 @@ router.post("/appointments/batch", requireAuth, async (req: AuthRequest, res): P
   await db.insert(notificationsTable).values({
     userId: req.user!.id,
     title: "Appointment Booked",
-    message: useSms
-      ? `Your appointment(s) are booked starting ${new Date(scheduledAt).toLocaleString()}. OTP sent via SMS.`
-      : `Your appointment(s) are booked starting ${new Date(scheduledAt).toLocaleString()}. OTP: ${otp}`,
+    message: `Your appointment(s) are booked starting ${new Date(scheduledAt).toLocaleString()}. OTP: ${otp}`,
     type: "booking_confirmed",
     relatedId: created[0].id,
     relatedType: "appointment",
@@ -214,11 +210,11 @@ router.post("/appointments/batch", requireAuth, async (req: AuthRequest, res): P
 
   if (userRow) {
     if (useSms && userRow.phone) {
-      sendVerificationSms(userRow.phone).catch(() => {});
+      sendOtpSms(userRow.phone, otp).catch(() => {});
     } else {
       sendOtpEmail({
         to: { email: userRow.email, name: userRow.name },
-        otp: otp!,
+        otp,
         shopName: shop.name,
         scheduledAt: created[0].scheduledAt,
         serviceName: orderedServices.map(s => s.name).join(", "),
@@ -294,16 +290,9 @@ router.post("/appointments/:id/confirm-otp", requireAuth, async (req: AuthReques
   const [shop] = await db.select().from(barbershopsTable).where(eq(barbershopsTable.id, appt.shopId));
   if (!shopCanTakeBookings(shop)) { res.status(402).json({ error: inactiveSubscriptionMessage() }); return; }
 
-  if (appt.otpChannel === "sms") {
-    const [apptUser] = await db.select().from(usersTable).where(eq(usersTable.id, appt.userId));
-    if (!apptUser?.phone) { res.status(400).json({ error: "Invalid OTP" }); return; }
-    const valid = await checkVerificationSms(apptUser.phone, otpCode);
-    if (!valid) { res.status(400).json({ error: "Invalid OTP" }); return; }
-  } else {
-    if (appt.otpCode !== otpCode) { res.status(400).json({ error: "Invalid OTP" }); return; }
-    if (appt.otpExpiresAt && new Date() > appt.otpExpiresAt) {
-      res.status(400).json({ error: "OTP expired" }); return;
-    }
+  if (appt.otpCode !== otpCode) { res.status(400).json({ error: "Invalid OTP" }); return; }
+  if (appt.otpExpiresAt && new Date() > appt.otpExpiresAt) {
+    res.status(400).json({ error: "OTP expired" }); return;
   }
   const [updated] = await db.update(appointmentsTable)
     .set({ status: "confirmed", otpCode: null, otpExpiresAt: null })
@@ -336,34 +325,31 @@ router.post("/appointments/:id/resend-otp", requireAuth, async (req, res): Promi
   const [shop] = await db.select().from(barbershopsTable).where(eq(barbershopsTable.id, appt.shopId));
   if (!shopCanTakeBookings(shop)) { res.status(402).json({ error: inactiveSubscriptionMessage() }); return; }
 
-  if (appt.otpChannel === "sms") {
-    const [apptUser] = await db.select().from(usersTable).where(eq(usersTable.id, appt.userId));
-    if (apptUser?.phone) {
-      await sendVerificationSms(apptUser.phone);
-    }
-    req.log.info({ appointmentId: id }, "OTP resent via SMS");
-    res.json({ message: "OTP resent successfully" });
-    return;
-  }
-
   const otp = generateOtp();
   const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
   await db.update(appointmentsTable).set({ otpCode: otp, otpExpiresAt }).where(eq(appointmentsTable.id, id));
+
   const [apptUser] = await db.select().from(usersTable).where(eq(usersTable.id, appt.userId));
   const [apptShop] = await db.select().from(barbershopsTable).where(eq(barbershopsTable.id, appt.shopId));
   const [apptBarber] = await db.select().from(barbersTable).where(eq(barbersTable.id, appt.barberId));
   const [apptService] = await db.select().from(servicesTable).where(eq(servicesTable.id, appt.serviceId));
+
   if (apptUser && apptShop && apptBarber && apptService) {
-    sendOtpEmail({
-      to: { email: apptUser.email, name: apptUser.name },
-      otp,
-      shopName: apptShop.name,
-      scheduledAt: appt.scheduledAt,
-      serviceName: apptService.name,
-      barberName: apptBarber.name,
-    }).catch(() => {});
+    if (appt.otpChannel === "sms" && apptUser.phone) {
+      sendOtpSms(apptUser.phone, otp).catch(() => {});
+      req.log.info({ appointmentId: id }, "OTP resent via SMS");
+    } else {
+      sendOtpEmail({
+        to: { email: apptUser.email, name: apptUser.name },
+        otp,
+        shopName: apptShop.name,
+        scheduledAt: appt.scheduledAt,
+        serviceName: apptService.name,
+        barberName: apptBarber.name,
+      }).catch(() => {});
+      req.log.info({ appointmentId: id }, "OTP resent via email");
+    }
   }
-  req.log.info({ appointmentId: id, otp }, "OTP resent via email");
   res.json({ message: "OTP resent successfully" });
 });
 
