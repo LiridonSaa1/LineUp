@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRoute, Link, useLocation } from "wouter";
+import { useRoute, useLocation } from "wouter";
 import {
   useGetBarbershop, getGetBarbershopQueryKey,
   useListBarbers,
@@ -27,7 +27,7 @@ export default function BookingWizard() {
 
   const [step, setStep] = useState(1);
   const [selectedBarberId, setSelectedBarberId] = useState<number | null>(null);
-  const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null);
+  const [selectedServiceIds, setSelectedServiceIds] = useState<number[]>([]);
 
   const today = startOfToday();
   const [selectedDate, setSelectedDate] = useState<Date>(today);
@@ -48,27 +48,43 @@ export default function BookingWizard() {
   const createAppointment = useCreateAppointment();
 
   const handleNextStep1 = () => {
-    if (selectedBarberId && selectedServiceId) setStep(2);
+    if (selectedBarberId && selectedServiceIds.length > 0) setStep(2);
   };
 
   const handleNextStep2 = () => {
     if (selectedSlot) setStep(3);
   };
 
+  const toggleService = (serviceId: number) => {
+    setSelectedServiceIds((prev) =>
+      prev.includes(serviceId) ? prev.filter((id) => id !== serviceId) : [...prev, serviceId]
+    );
+  };
+
   const handleConfirm = async () => {
-    if (!selectedBarberId || !selectedServiceId || !selectedSlot) return;
+    if (!selectedBarberId || selectedServiceIds.length === 0 || !selectedSlot) return;
 
     try {
-      const scheduledAt = `${formattedDate}T${selectedSlot}:00Z`;
+      const [hours, minutes] = selectedSlot.split(':').map(Number);
+      let cursorMinutes = hours * 60 + minutes;
 
-      await createAppointment.mutateAsync({
-        data: {
-          shopId,
-          barberId: selectedBarberId,
-          serviceId: selectedServiceId,
-          scheduledAt
-        }
-      });
+      // Backend appointments are one-service-each, so back-to-back slots are booked sequentially for every selected service.
+      for (const service of selectedServices) {
+        const slotHours = Math.floor(cursorMinutes / 60);
+        const slotMins = cursorMinutes % 60;
+        const scheduledAt = `${formattedDate}T${String(slotHours).padStart(2, '0')}:${String(slotMins).padStart(2, '0')}:00Z`;
+
+        await createAppointment.mutateAsync({
+          data: {
+            shopId,
+            barberId: selectedBarberId,
+            serviceId: service.id,
+            scheduledAt
+          }
+        });
+
+        cursorMinutes += service.durationMinutes;
+      }
 
       toast({
         title: "Takimi u kërkua!",
@@ -91,7 +107,9 @@ export default function BookingWizard() {
   const barbersList = Array.isArray(barbersRes) ? barbersRes : (barbersRes as any)?.data ?? [];
   const servicesList = Array.isArray(servicesRes) ? servicesRes : (servicesRes as any)?.data ?? [];
   const selectedBarber = barbersList.find((b: any) => b.id === selectedBarberId);
-  const selectedService = servicesList.find((s: any) => s.id === selectedServiceId);
+  const selectedServices: any[] = servicesList.filter((s: any) => selectedServiceIds.includes(s.id));
+  const totalPrice = selectedServices.reduce((sum: number, s: any) => sum + Number(s.price), 0);
+  const totalDuration = selectedServices.reduce((sum: number, s: any) => sum + Number(s.durationMinutes), 0);
 
   const stepLabels = ['Shërbimi & Berberi', 'Data & Ora', 'Konfirmo'];
 
@@ -183,12 +201,7 @@ export default function BookingWizard() {
                         <Card
                           key={barber.id}
                           className={`relative p-4 cursor-pointer transition-all rounded-2xl flex items-center gap-4 ${selected ? 'border-primary ring-1 ring-primary bg-primary/5 shadow-md shadow-primary/10' : 'hover:border-primary/50 hover:shadow-md'}`}
-                          onClick={() => {
-                            setSelectedBarberId(barber.id);
-                            if (selectedServiceId && !servicesList.some((s: any) => s.id === selectedServiceId)) {
-                              setSelectedServiceId(null);
-                            }
-                          }}
+                          onClick={() => setSelectedBarberId(barber.id)}
                         >
                           {selected && (
                             <div className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
@@ -217,26 +230,29 @@ export default function BookingWizard() {
 
               {selectedBarberId && (
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                    <Scissors className="w-5 h-5 text-primary" /> Zgjidhni Shërbimin
-                  </h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold flex items-center gap-2">
+                      <Scissors className="w-5 h-5 text-primary" /> Zgjidhni Shërbimin
+                    </h3>
+                    <span className="text-xs font-medium text-muted-foreground">Mund të zgjidhni disa</span>
+                  </div>
                   {servicesLoading ? <Skeleton className="h-24 w-full" /> : (
                     <div className="grid sm:grid-cols-2 gap-4">
                       {servicesList.map((service: any) => {
-                        const selected = selectedServiceId === service.id;
+                        const selected = selectedServiceIds.includes(service.id);
                         return (
                           <Card
                             key={service.id}
                             className={`relative p-4 cursor-pointer transition-all rounded-2xl ${selected ? 'border-primary ring-1 ring-primary bg-primary/5 shadow-md shadow-primary/10' : 'hover:border-primary/50 hover:shadow-md'}`}
-                            onClick={() => setSelectedServiceId(service.id)}
+                            onClick={() => toggleService(service.id)}
                           >
-                            {selected && (
-                              <div className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                                <Check className="h-3 w-3" />
-                              </div>
-                            )}
-                            <div className="flex justify-between items-start mb-2 pr-6">
+                            <div className="flex justify-between items-start mb-2 pr-2">
                               <div className="font-bold">{service.name}</div>
+                              <div
+                                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-all ${selected ? 'border-primary bg-primary text-primary-foreground' : 'border-border'}`}
+                              >
+                                {selected && <Check className="h-3.5 w-3.5" />}
+                              </div>
                             </div>
                             <div className="flex items-center justify-between">
                               <div className="text-sm text-muted-foreground flex items-center gap-1">
@@ -247,6 +263,15 @@ export default function BookingWizard() {
                           </Card>
                         );
                       })}
+                    </div>
+                  )}
+
+                  {selectedServices.length > 0 && (
+                    <div className="mt-4 flex items-center justify-between rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3">
+                      <div className="text-sm font-medium text-muted-foreground">
+                        {selectedServices.length} {selectedServices.length === 1 ? 'shërbim' : 'shërbime'} · {totalDuration} min
+                      </div>
+                      <div className="font-extrabold text-primary">€{totalPrice}</div>
                     </div>
                   )}
                 </div>
@@ -262,7 +287,7 @@ export default function BookingWizard() {
                 </Button>
                 <Button
                   className="flex-1 h-14 text-base font-bold rounded-full"
-                  disabled={!selectedBarberId || !selectedServiceId}
+                  disabled={!selectedBarberId || selectedServiceIds.length === 0}
                   onClick={handleNextStep1}
                 >
                   Vazhdo te Data & Ora
@@ -359,14 +384,26 @@ export default function BookingWizard() {
               </div>
 
               <div className="bg-secondary/30 rounded-2xl p-6 border border-border space-y-6">
-                <div className="flex justify-between items-center pb-6 border-b border-border/50">
-                  <div>
-                    <div className="text-sm text-muted-foreground mb-1">Shërbimi</div>
-                    <div className="font-bold text-lg">{selectedService?.name}</div>
+                <div className="pb-6 border-b border-border/50">
+                  <div className="text-sm text-muted-foreground mb-3">
+                    Shërbimet ({selectedServices.length})
                   </div>
-                  <div className="text-right">
-                    <div className="text-sm text-muted-foreground mb-1">Çmimi</div>
-                    <div className="font-bold text-lg text-primary">€{selectedService?.price}</div>
+                  <div className="space-y-2">
+                    {selectedServices.map((service: any) => (
+                      <div key={service.id} className="flex justify-between items-center">
+                        <div className="font-bold">{service.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {service.durationMinutes} min · <span className="font-bold text-primary">€{service.price}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex justify-between items-center mt-4 pt-4 border-t border-border/50">
+                    <div className="font-bold">Totali</div>
+                    <div className="text-right">
+                      <div className="font-bold text-lg text-primary">€{totalPrice}</div>
+                      <div className="text-xs text-muted-foreground">{totalDuration} min gjithsej</div>
+                    </div>
                   </div>
                 </div>
 
@@ -374,10 +411,6 @@ export default function BookingWizard() {
                   <div>
                     <div className="text-sm text-muted-foreground mb-1">Berberi</div>
                     <div className="font-bold text-lg">{selectedBarber?.name}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm text-muted-foreground mb-1">Kohëzgjatja</div>
-                    <div className="font-bold text-lg">{selectedService?.durationMinutes} min</div>
                   </div>
                 </div>
 
