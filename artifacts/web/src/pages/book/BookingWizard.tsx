@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Clock, Scissors, Calendar, CheckCircle2, MapPin, Star, Check, PartyPopper } from "lucide-react";
+import { ArrowLeft, Clock, Scissors, Calendar, CheckCircle2, MapPin, Star, Check, PartyPopper, ChevronLeft, ChevronRight } from "lucide-react";
 import { format, addDays, startOfToday, startOfMonth, endOfMonth, isBefore } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
@@ -40,6 +40,8 @@ export default function BookingWizard() {
   const today = startOfToday();
   const [selectedDate, setSelectedDate] = useState<Date>(today);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const dateSliderRef = useRef<HTMLDivElement>(null);
+  const todayTileRef = useRef<HTMLButtonElement>(null);
 
   const { data: shop } = useGetBarbershop(shopId, {
     query: { enabled: !!shopId, queryKey: getGetBarbershopQueryKey(shopId) }
@@ -59,6 +61,17 @@ export default function BookingWizard() {
   );
 
   const createAppointment = useCreateAppointment();
+
+  // Slider defaults to today's position instead of the 1st of the month whenever the date step opens.
+  useEffect(() => {
+    if (step === 2) {
+      todayTileRef.current?.scrollIntoView({ behavior: "auto", inline: "start", block: "nearest" });
+    }
+  }, [step]);
+
+  const scrollDateSlider = (direction: 1 | -1) => {
+    dateSliderRef.current?.scrollBy({ left: direction * 240, behavior: "smooth" });
+  };
 
   const handleNextStep1 = () => {
     if (selectedBarberId && selectedServiceIds.length > 0) setStep(2);
@@ -328,38 +341,58 @@ export default function BookingWizard() {
                 <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                   <Calendar className="w-5 h-5 text-primary" /> Zgjidhni Datën
                 </h3>
-                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                  {dates.map((date, i) => {
-                    const dateKey = format(date, 'yyyy-MM-dd');
-                    const isPast = isBefore(date, today);
-                    const holidayReason = holidayByDate.get(dateKey);
-                    const isDisabled = isPast || !!holidayReason;
-                    const isSelected = formattedDate === dateKey;
-                    return (
-                      <button
-                        key={i}
-                        disabled={isDisabled}
-                        title={holidayReason ? holidayReason : isPast ? "Data ka kaluar" : undefined}
-                        onClick={() => { setSelectedDate(date); setSelectedSlot(null); }}
-                        className={`flex flex-col items-center justify-center p-3 rounded-2xl min-w-[80px] max-w-[110px] shrink-0 border transition-all ${
-                          isDisabled
-                            ? 'border-border/50 bg-secondary/40 text-muted-foreground/50 cursor-not-allowed'
-                            : isSelected
-                              ? 'border-primary bg-primary text-white shadow-md shadow-primary/20'
-                              : 'border-border bg-card hover:border-primary/50'
-                        }`}
-                      >
-                        <span className="text-xs font-medium opacity-80">{format(date, 'EEE')}</span>
-                        <span className="text-xl font-bold mt-1">{format(date, 'd')}</span>
-                        <span className="text-xs mt-0.5 opacity-80">{format(date, 'MMM')}</span>
-                        {holidayReason && (
-                          <span className="mt-1 flex items-center gap-0.5 text-[10px] font-bold text-destructive/80">
-                            <PartyPopper className="h-2.5 w-2.5" /> {holidayReason}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
+                <div className="relative flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => scrollDateSlider(-1)}
+                    className="hidden sm:flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-card hover:border-primary/50 hover:text-primary"
+                    aria-label="Datat e mëparshme"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <div ref={dateSliderRef} className="flex gap-2 overflow-x-auto pb-2 scroll-smooth scrollbar-hide">
+                    {dates.map((date, i) => {
+                      const dateKey = format(date, 'yyyy-MM-dd');
+                      const isToday = dateKey === format(today, 'yyyy-MM-dd');
+                      const isPast = isBefore(date, today);
+                      const holidayReason = holidayByDate.get(dateKey);
+                      const isDisabled = isPast || !!holidayReason;
+                      const isSelected = formattedDate === dateKey;
+                      return (
+                        <button
+                          key={i}
+                          ref={isToday ? todayTileRef : undefined}
+                          disabled={isDisabled}
+                          title={holidayReason ? holidayReason : isPast ? "Data ka kaluar" : undefined}
+                          onClick={() => { setSelectedDate(date); setSelectedSlot(null); }}
+                          className={`flex flex-col items-center justify-center p-3 rounded-2xl min-w-[80px] max-w-[110px] shrink-0 border transition-all ${
+                            isDisabled
+                              ? 'border-border/50 bg-secondary/40 text-muted-foreground/50 cursor-not-allowed'
+                              : isSelected
+                                ? 'border-primary bg-primary text-white shadow-md shadow-primary/20'
+                                : 'border-border bg-card hover:border-primary/50'
+                          }`}
+                        >
+                          <span className="text-xs font-medium opacity-80">{format(date, 'EEE')}</span>
+                          <span className="text-xl font-bold mt-1">{format(date, 'd')}</span>
+                          <span className="text-xs mt-0.5 opacity-80">{format(date, 'MMM')}</span>
+                          {holidayReason && (
+                            <span className="mt-1 flex items-center gap-0.5 text-[10px] font-bold text-destructive/80">
+                              <PartyPopper className="h-2.5 w-2.5" /> {holidayReason}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => scrollDateSlider(1)}
+                    className="hidden sm:flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-card hover:border-primary/50 hover:text-primary"
+                    aria-label="Datat e ardhshme"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
 
