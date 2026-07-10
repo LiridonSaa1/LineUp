@@ -290,20 +290,37 @@ router.post("/appointments/:id/confirm-otp", requireAuth, async (req: AuthReques
   const [shop] = await db.select().from(barbershopsTable).where(eq(barbershopsTable.id, appt.shopId));
   if (!shopCanTakeBookings(shop)) { res.status(402).json({ error: inactiveSubscriptionMessage() }); return; }
 
+  // If already confirmed (e.g. sibling in a batch was confirmed first), return it immediately.
+  if (appt.status === "confirmed") {
+    res.json(formatAppointment(appt)); return;
+  }
+
   if (appt.otpChannel === "sms") {
     const [apptUser] = await db.select().from(usersTable).where(eq(usersTable.id, appt.userId));
     if (!apptUser?.phone) { res.status(400).json({ error: "Invalid OTP" }); return; }
     const valid = await checkVerificationSms(apptUser.phone, otpCode);
     if (!valid) { res.status(400).json({ error: "Invalid OTP" }); return; }
+
+    // Twilio Verify is consumed on first check — confirm ALL pending_otp SMS
+    // appointments for this user so batch siblings don't fail on their check.
+    await db.update(appointmentsTable)
+      .set({ status: "confirmed", otpCode: null, otpExpiresAt: null })
+      .where(and(
+        eq(appointmentsTable.userId, appt.userId),
+        eq(appointmentsTable.status, "pending_otp"),
+        eq(appointmentsTable.otpChannel, "sms"),
+      ));
   } else {
     if (appt.otpCode !== otpCode) { res.status(400).json({ error: "Invalid OTP" }); return; }
     if (appt.otpExpiresAt && new Date() > appt.otpExpiresAt) {
       res.status(400).json({ error: "OTP expired" }); return;
     }
+    await db.update(appointmentsTable)
+      .set({ status: "confirmed", otpCode: null, otpExpiresAt: null })
+      .where(eq(appointmentsTable.id, id));
   }
-  const [updated] = await db.update(appointmentsTable)
-    .set({ status: "confirmed", otpCode: null, otpExpiresAt: null })
-    .where(eq(appointmentsTable.id, id)).returning();
+
+  const [updated] = await db.select().from(appointmentsTable).where(eq(appointmentsTable.id, id));
   await db.insert(activityLogTable).values({ type: "appointment_confirmed", description: "Appointment confirmed", userId: appt.userId, shopId: appt.shopId });
 
   // Send booking confirmed email (fire-and-forget)
