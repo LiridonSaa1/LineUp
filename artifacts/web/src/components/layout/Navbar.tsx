@@ -35,7 +35,8 @@ export function Navbar() {
 
   const isHome = location === "/";
   const isBarbershopsPage = location === "/barbershops" || location.startsWith("/barbershops/");
-  const usesOverlayNav = isHome || isBarbershopsPage;
+  const isBookPage = location.startsWith("/book/");
+  const usesOverlayNav = isHome || isBarbershopsPage || isBookPage;
   // Show dark pill when scrolled OR on pages without a hero behind the nav.
   const hasBg = scrolled || !usesOverlayNav;
 

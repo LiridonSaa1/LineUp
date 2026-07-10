@@ -682,7 +682,7 @@ function ShopCard({ shop, index }: { shop: any; index: number }) {
   const rs = rankStyles[index];
 
   return (
-    <Link href={`/barbershops/${shop.id}`}>
+    <Link href={`/book/${shop.id}`}>
       <div
         ref={ref}
         className={`group cursor-pointer relative overflow-hidden transition-all duration-500

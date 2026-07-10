@@ -32,8 +32,8 @@ export default function BookingWizard() {
   const { data: shop } = useGetBarbershop(shopId, {
     query: { enabled: !!shopId, queryKey: getGetBarbershopQueryKey(shopId) }
   });
-  const { data: barbersRes, isLoading: barbersLoading } = useListBarbers({ shopId });
-  const { data: servicesRes, isLoading: servicesLoading } = useListServices({ shopId });
+  const { data: barbersRes, isLoading: barbersLoading } = useListBarbers(shopId, { query: { enabled: !!shopId } });
+  const { data: servicesRes, isLoading: servicesLoading } = useListServices(shopId, { query: { enabled: !!shopId } });
 
   const formattedDate = format(selectedDate, 'yyyy-MM-dd');
   const { data: slotsRes, isLoading: slotsLoading } = useGetAvailableSlots(
@@ -84,42 +84,56 @@ export default function BookingWizard() {
 
   const dates = Array.from({ length: 7 }, (_, i) => addDays(today, i));
 
-  const selectedBarber = barbersRes?.data.find(b => b.id === selectedBarberId);
-  const selectedService = servicesRes?.data.find(s => s.id === selectedServiceId);
+  const barbersList = Array.isArray(barbersRes) ? barbersRes : (barbersRes as any)?.data ?? [];
+  const servicesList = Array.isArray(servicesRes) ? servicesRes : (servicesRes as any)?.data ?? [];
+  const selectedBarber = barbersList.find((b: any) => b.id === selectedBarberId);
+  const selectedService = servicesList.find((s: any) => s.id === selectedServiceId);
 
   const stepLabels = ['Shërbimi & Berberi', 'Data & Ora', 'Konfirmo'];
 
   return (
-    <div className="bg-background min-h-[calc(100vh-64px)] py-8 px-4">
-      <div className="container max-w-3xl mx-auto">
-        <div className="mb-8">
+    <div className="bg-background min-h-screen pb-8">
+      {/* Dark hero — matches /barbershops so the floating nav stays readable at the top and collapses into its pill on scroll */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800 pb-10 pt-32 px-4">
+        {shop?.imageUrl && (
+          <img
+            src={shop.imageUrl}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full object-cover opacity-25"
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/70 to-zinc-900/40" />
+        <div className="container relative z-10 max-w-3xl mx-auto">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => step > 1 ? setStep(step - 1) : setLocation(`/barbershops/${shopId}`)}
-            className="mb-4 text-muted-foreground hover:text-foreground rounded-full"
+            className="mb-4 text-white/70 hover:bg-white/10 hover:text-white rounded-full"
           >
             <ArrowLeft className="mr-2 h-4 w-4" /> Kthehu
           </Button>
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-bold tracking-tight">Rezervo Takim</h1>
-            <div className="text-sm font-medium text-muted-foreground">{shop?.name}</div>
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-3xl font-bold tracking-tight text-white">Rezervo Takim</h1>
+            <div className="text-sm font-medium text-white/70">{shop?.name}</div>
           </div>
 
           {/* Progress Bar */}
-          <div className="flex items-center gap-2 mb-8">
+          <div className="flex items-center gap-2">
             {[1, 2, 3].map(i => (
               <div key={i} className="flex-1">
-                <div className={`h-1.5 rounded-full transition-all ${step >= i ? 'bg-primary' : 'bg-muted'}`} />
-                <div className={`text-xs mt-2 font-medium ${step >= i ? 'text-primary' : 'text-muted-foreground'}`}>
+                <div className={`h-1.5 rounded-full transition-all ${step >= i ? 'bg-primary' : 'bg-white/15'}`} />
+                <div className={`text-xs mt-2 font-medium ${step >= i ? 'text-primary' : 'text-white/50'}`}>
                   {stepLabels[i - 1]}
                 </div>
               </div>
             ))}
           </div>
         </div>
+      </div>
 
-        <div className="bg-card border border-border shadow-sm rounded-3xl p-6 md:p-8">
+      <div className="container max-w-3xl mx-auto px-4 -mt-6 relative z-10">
+        <div className="bg-card border border-border shadow-xl rounded-3xl p-6 md:p-8">
           {step === 1 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div>
@@ -128,7 +142,7 @@ export default function BookingWizard() {
                 </h3>
                 {servicesLoading ? <Skeleton className="h-24 w-full" /> : (
                   <div className="grid sm:grid-cols-2 gap-4">
-                    {servicesRes?.data.map(service => (
+                    {servicesList.map((service: any) => (
                       <Card
                         key={service.id}
                         className={`p-4 cursor-pointer transition-all rounded-2xl ${selectedServiceId === service.id ? 'border-primary ring-1 ring-primary bg-primary/5' : 'hover:border-primary/50 hover:shadow-md'}`}
@@ -153,7 +167,7 @@ export default function BookingWizard() {
                 </h3>
                 {barbersLoading ? <Skeleton className="h-24 w-full" /> : (
                   <div className="grid sm:grid-cols-2 gap-4">
-                    {barbersRes?.data.filter(b => b.isActive).map(barber => (
+                    {barbersList.filter((b: any) => b.isActive).map((barber: any) => (
                       <Card
                         key={barber.id}
                         className={`p-4 cursor-pointer transition-all rounded-2xl flex items-center gap-4 ${selectedBarberId === barber.id ? 'border-primary ring-1 ring-primary bg-primary/5' : 'hover:border-primary/50 hover:shadow-md'}`}
