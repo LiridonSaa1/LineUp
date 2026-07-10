@@ -6,7 +6,7 @@ import {
 import { eq, and, sql, gte, lte, desc } from "drizzle-orm";
 import { requireAuth, generateOtp, type AuthRequest } from "../lib/auth";
 import { sendOtpEmail, sendBookingConfirmedEmail } from "../lib/email";
-import { sendOtpSms } from "../lib/sms";
+import { sendVerificationSms, checkVerificationSms } from "../lib/sms";
 
 const router = Router();
 
@@ -130,7 +130,7 @@ router.post("/appointments", requireAuth, async (req: AuthRequest, res): Promise
   const [barberRow] = await db.select().from(barbersTable).where(eq(barbersTable.id, barberId));
   if (userRow && shopRow && barberRow) {
     if (useSms && userRow.phone) {
-      sendOtpSms(userRow.phone, otp).catch(() => {});
+      sendVerificationSms(userRow.phone).catch(() => {});
     } else {
       sendOtpEmail({
         to: { email: userRow.email, name: userRow.name },
@@ -210,7 +210,7 @@ router.post("/appointments/batch", requireAuth, async (req: AuthRequest, res): P
 
   if (userRow) {
     if (useSms && userRow.phone) {
-      sendOtpSms(userRow.phone, otp).catch(() => {});
+      sendVerificationSms(userRow.phone).catch(() => {});
     } else {
       sendOtpEmail({
         to: { email: userRow.email, name: userRow.name },
@@ -290,9 +290,16 @@ router.post("/appointments/:id/confirm-otp", requireAuth, async (req: AuthReques
   const [shop] = await db.select().from(barbershopsTable).where(eq(barbershopsTable.id, appt.shopId));
   if (!shopCanTakeBookings(shop)) { res.status(402).json({ error: inactiveSubscriptionMessage() }); return; }
 
-  if (appt.otpCode !== otpCode) { res.status(400).json({ error: "Invalid OTP" }); return; }
-  if (appt.otpExpiresAt && new Date() > appt.otpExpiresAt) {
-    res.status(400).json({ error: "OTP expired" }); return;
+  if (appt.otpChannel === "sms") {
+    const [apptUser] = await db.select().from(usersTable).where(eq(usersTable.id, appt.userId));
+    if (!apptUser?.phone) { res.status(400).json({ error: "Invalid OTP" }); return; }
+    const valid = await checkVerificationSms(apptUser.phone, otpCode);
+    if (!valid) { res.status(400).json({ error: "Invalid OTP" }); return; }
+  } else {
+    if (appt.otpCode !== otpCode) { res.status(400).json({ error: "Invalid OTP" }); return; }
+    if (appt.otpExpiresAt && new Date() > appt.otpExpiresAt) {
+      res.status(400).json({ error: "OTP expired" }); return;
+    }
   }
   const [updated] = await db.update(appointmentsTable)
     .set({ status: "confirmed", otpCode: null, otpExpiresAt: null })
@@ -336,7 +343,7 @@ router.post("/appointments/:id/resend-otp", requireAuth, async (req, res): Promi
 
   if (apptUser && apptShop && apptBarber && apptService) {
     if (appt.otpChannel === "sms" && apptUser.phone) {
-      sendOtpSms(apptUser.phone, otp).catch(() => {});
+      sendVerificationSms(apptUser.phone).catch(() => {});
       req.log.info({ appointmentId: id }, "OTP resent via SMS");
     } else {
       sendOtpEmail({
