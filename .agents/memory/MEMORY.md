@@ -5,3 +5,4 @@
 - [Drizzle push non-TTY](drizzle-push-tty.md) — drizzle-kit push fails in non-TTY shells when schema conflicts exist; use generate then apply SQL manually per-statement, skipping "already exists" errors
 - [Legacy schema drift on re-import](legacy-schema-drift.md) — cross-check unexpected DB columns against schema+migrations before dropping; also watch for orphan migration files not in the journal
 - [DB pool resilience & health checks](db-pool-resilience.md) — why Supabase data looked "intermittent"; always add `pool.on("error")`; check `GET /api/healthz/db` first
+- [Render vs Replit deploy](render-vs-replit-deploy.md) — external git-linked hosts don't auto-receive this workspace's fixes; verify with a canary endpoint before assuming a fix is live
