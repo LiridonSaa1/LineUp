@@ -8,6 +8,7 @@
     "seed": "tsx ./src/seed.ts",
     "clear:all": "tsx ./src/clear-all-data.ts",
     "clear:demo": "tsx ./src/clear-demo.ts",
+    "check:db": "tsx ./src/check-db.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
