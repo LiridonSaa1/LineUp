@@ -347,51 +347,6 @@ export default function BarbershopsList() {
                           </div>
                         </div>
                       </div>
-
-                      <div className="flex flex-wrap gap-2 border-t border-border/40 bg-muted/30 p-3">
-                        {shopBarbers.map((barber) => {
-                          const selected = barber.id === selectedBarberId;
-                          return (
-                            <div
-                              key={barber.id}
-                              role="button"
-                              tabIndex={0}
-                              onClick={() => selectBarber(barber.id)}
-                              onKeyDown={(event) => {
-                                if (event.key === "Enter" || event.key === " ") {
-                                  event.preventDefault();
-                                  selectBarber(barber.id);
-                                }
-                              }}
-                              className={`flex cursor-pointer items-center gap-2 rounded-full border bg-card py-1 pl-1 pr-3 transition hover:border-primary/50 ${
-                                selected ? "border-primary shadow-sm shadow-primary/10" : "border-border/50"
-                              }`}
-                            >
-                              <div className="h-7 w-7 shrink-0 overflow-hidden rounded-full bg-primary/10">
-                                {barber.avatarUrl ? (
-                                  <img src={barber.avatarUrl} alt={barber.name} className="h-full w-full object-cover" />
-                                ) : (
-                                  <div className="flex h-full w-full items-center justify-center text-[11px] font-extrabold text-primary">
-                                    {barber.name.charAt(0).toUpperCase()}
-                                  </div>
-                                )}
-                              </div>
-                              <span className="text-xs font-semibold">{barber.name}</span>
-                              <span className="flex items-center gap-0.5 text-[11px] font-extrabold text-primary">
-                                <Star className="h-2.5 w-2.5 fill-primary" />
-                                {barber.rating != null ? Number(barber.rating).toFixed(1) : "New"}
-                              </span>
-                              <Link
-                                href={`/barbers/${barber.id}`}
-                                onClick={(event) => event.stopPropagation()}
-                                className="text-[11px] font-bold text-primary underline-offset-2 hover:underline"
-                              >
-                                Detaje
-                              </Link>
-                            </div>
-                          );
-                        })}
-                      </div>
                     </div>
                   );
                 })}
