@@ -173,41 +173,6 @@ export default function BookingWizard() {
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div>
                 <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                  <Scissors className="w-5 h-5 text-primary" /> Zgjidhni Shërbimin
-                </h3>
-                {servicesLoading ? <Skeleton className="h-24 w-full" /> : (
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    {servicesList.map((service: any) => {
-                      const selected = selectedServiceId === service.id;
-                      return (
-                        <Card
-                          key={service.id}
-                          className={`relative p-4 cursor-pointer transition-all rounded-2xl ${selected ? 'border-primary ring-1 ring-primary bg-primary/5 shadow-md shadow-primary/10' : 'hover:border-primary/50 hover:shadow-md'}`}
-                          onClick={() => setSelectedServiceId(service.id)}
-                        >
-                          {selected && (
-                            <div className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                              <Check className="h-3 w-3" />
-                            </div>
-                          )}
-                          <div className="flex justify-between items-start mb-2 pr-6">
-                            <div className="font-bold">{service.name}</div>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <div className="text-sm text-muted-foreground flex items-center gap-1">
-                              <Clock className="w-3 h-3" /> {service.durationMinutes} min
-                            </div>
-                            <div className="font-extrabold text-primary">€{service.price}</div>
-                          </div>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                   <Scissors className="w-5 h-5 text-primary" /> Zgjidhni Berberin
                 </h3>
                 {barbersLoading ? <Skeleton className="h-24 w-full" /> : (
@@ -218,7 +183,12 @@ export default function BookingWizard() {
                         <Card
                           key={barber.id}
                           className={`relative p-4 cursor-pointer transition-all rounded-2xl flex items-center gap-4 ${selected ? 'border-primary ring-1 ring-primary bg-primary/5 shadow-md shadow-primary/10' : 'hover:border-primary/50 hover:shadow-md'}`}
-                          onClick={() => setSelectedBarberId(barber.id)}
+                          onClick={() => {
+                            setSelectedBarberId(barber.id);
+                            if (selectedServiceId && !servicesList.some((s: any) => s.id === selectedServiceId)) {
+                              setSelectedServiceId(null);
+                            }
+                          }}
                         >
                           {selected && (
                             <div className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
@@ -245,13 +215,59 @@ export default function BookingWizard() {
                 )}
               </div>
 
-              <Button
-                className="w-full h-14 text-base font-bold rounded-full mt-8"
-                disabled={!selectedBarberId || !selectedServiceId}
-                onClick={handleNextStep1}
-              >
-                Vazhdo te Data & Ora
-              </Button>
+              {selectedBarberId && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                    <Scissors className="w-5 h-5 text-primary" /> Zgjidhni Shërbimin
+                  </h3>
+                  {servicesLoading ? <Skeleton className="h-24 w-full" /> : (
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      {servicesList.map((service: any) => {
+                        const selected = selectedServiceId === service.id;
+                        return (
+                          <Card
+                            key={service.id}
+                            className={`relative p-4 cursor-pointer transition-all rounded-2xl ${selected ? 'border-primary ring-1 ring-primary bg-primary/5 shadow-md shadow-primary/10' : 'hover:border-primary/50 hover:shadow-md'}`}
+                            onClick={() => setSelectedServiceId(service.id)}
+                          >
+                            {selected && (
+                              <div className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                                <Check className="h-3 w-3" />
+                              </div>
+                            )}
+                            <div className="flex justify-between items-start mb-2 pr-6">
+                              <div className="font-bold">{service.name}</div>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <div className="text-sm text-muted-foreground flex items-center gap-1">
+                                <Clock className="w-3 h-3" /> {service.durationMinutes} min
+                              </div>
+                              <div className="font-extrabold text-primary">€{service.price}</div>
+                            </div>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex gap-3 mt-8">
+                <Button
+                  variant="outline"
+                  className="h-14 rounded-full px-6 font-bold"
+                  onClick={() => setLocation(`/barbershops/${shopId}`)}
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" /> Kthehu
+                </Button>
+                <Button
+                  className="flex-1 h-14 text-base font-bold rounded-full"
+                  disabled={!selectedBarberId || !selectedServiceId}
+                  onClick={handleNextStep1}
+                >
+                  Vazhdo te Data & Ora
+                </Button>
+              </div>
             </div>
           )}
 
@@ -313,13 +329,22 @@ export default function BookingWizard() {
                 )}
               </div>
 
-              <Button
-                className="w-full h-14 text-base font-bold rounded-full mt-8"
-                disabled={!selectedSlot}
-                onClick={handleNextStep2}
-              >
-                Shiko Rezervimin
-              </Button>
+              <div className="flex gap-3 mt-8">
+                <Button
+                  variant="outline"
+                  className="h-14 rounded-full px-6 font-bold"
+                  onClick={() => setStep(1)}
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" /> Kthehu
+                </Button>
+                <Button
+                  className="flex-1 h-14 text-base font-bold rounded-full"
+                  disabled={!selectedSlot}
+                  onClick={handleNextStep2}
+                >
+                  Shiko Rezervimin
+                </Button>
+              </div>
             </div>
           )}
 
@@ -372,13 +397,23 @@ export default function BookingWizard() {
                 Do të merrni një konfirmim menjëherë pas rezervimit.
               </div>
 
-              <Button
-                className="w-full h-14 text-base font-bold rounded-full mt-4"
-                onClick={handleConfirm}
-                disabled={createAppointment.isPending}
-              >
-                {createAppointment.isPending ? "Duke konfirmuar..." : "Konfirmo Rezervimin"}
-              </Button>
+              <div className="flex gap-3 mt-4">
+                <Button
+                  variant="outline"
+                  className="h-14 rounded-full px-6 font-bold"
+                  onClick={() => setStep(2)}
+                  disabled={createAppointment.isPending}
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" /> Kthehu
+                </Button>
+                <Button
+                  className="flex-1 h-14 text-base font-bold rounded-full"
+                  onClick={handleConfirm}
+                  disabled={createAppointment.isPending}
+                >
+                  {createAppointment.isPending ? "Duke konfirmuar..." : "Konfirmo Rezervimin"}
+                </Button>
+              </div>
             </div>
           )}
         </div>
