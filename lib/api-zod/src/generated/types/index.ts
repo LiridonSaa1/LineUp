@@ -28,6 +28,8 @@ export * from './barbershopStatus';
 export * from './barbershopUpdate';
 export * from './barbershopUpdateGender';
 export * from './barberUpdate';
+export * from './barberUpdateWeeklySchedule';
+export * from './barberWeeklySchedule';
 export * from './checkoutInput';
 export * from './dashboardStats';
 export * from './dayCount';

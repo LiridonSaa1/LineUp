@@ -123,13 +123,14 @@ router.patch("/barbershops/:shopId/barbers/:barberId", requireAuth, async (req: 
   if (req.user!.role !== "admin" && shop.ownerId !== req.user!.id) {
     res.status(403).json({ error: "Forbidden" }); return;
   }
-  const { name, bio, avatarUrl, specialties, isActive } = req.body;
+  const { name, bio, avatarUrl, specialties, isActive, weeklySchedule } = req.body;
   const updateData: any = {};
   if (name) updateData.name = name;
   if (bio !== undefined) updateData.bio = bio;
   if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
   if (specialties !== undefined) updateData.specialties = specialties;
   if (isActive !== undefined) updateData.isActive = isActive;
+  if (weeklySchedule !== undefined) updateData.weeklySchedule = weeklySchedule;
   const [barber] = await db.update(barbersTable).set(updateData).where(and(eq(barbersTable.id, barberId), eq(barbersTable.shopId, shopId))).returning();
   if (!barber) { res.status(404).json({ error: "Barber not found" }); return; }
   res.json(formatBarber(barber));

@@ -1521,6 +1521,9 @@ components:
           type: ["number", "null"]
         isActive:
           type: boolean
+        weeklySchedule:
+          type: ["object", "null"]
+          additionalProperties: true
         createdAt:
           type: string
           format: date-time
@@ -1552,6 +1555,9 @@ components:
           type: ["string", "null"]
         isActive:
           type: boolean
+        weeklySchedule:
+          type: ["object", "null"]
+          additionalProperties: true
 
     # SERVICE
     Service:

@@ -422,14 +422,17 @@ export default function BookingWizard() {
                       const isToday = dateKey === format(today, 'yyyy-MM-dd');
                       const isPast = isBefore(date, today);
                       const holidayReason = holidayByDate.get(dateKey);
-                      const isDisabled = isPast || !!holidayReason;
+                      const dayKeys = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+                      const daySchedule = selectedBarber?.weeklySchedule?.[dayKeys[date.getDay()]];
+                      const isDayOff = daySchedule ? !daySchedule.active : false;
+                      const isDisabled = isPast || !!holidayReason || isDayOff;
                       const isSelected = formattedDate === dateKey;
                       return (
                         <button
                           key={i}
                           ref={isToday ? todayTileRef : undefined}
                           disabled={isDisabled}
-                          title={holidayReason ? holidayReason : isPast ? "Data ka kaluar" : undefined}
+                          title={holidayReason ? holidayReason : isPast ? "Data ka kaluar" : isDayOff ? "Berberi nuk punon këtë ditë" : undefined}
                           onClick={() => { setSelectedDate(date); setSelectedSlot(null); }}
                           className={`flex flex-col items-center justify-center p-3 rounded-2xl min-w-[80px] max-w-[110px] shrink-0 border transition-all ${
                             isDisabled

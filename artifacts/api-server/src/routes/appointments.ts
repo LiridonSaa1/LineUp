@@ -393,12 +393,24 @@ router.get("/available-slots", async (req, res): Promise<void> => {
   const now = new Date();
   const isToday = date === now.toISOString().slice(0, 10);
   const nowMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+
+  const dayKeys = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+  const dayKey = dayKeys[dayStart.getUTCDay()];
+  const schedule = (barber as any).weeklySchedule?.[dayKey];
+  const daySchedule = schedule ?? { active: true, start: "09:00", end: "19:00" };
+
   const slots = [];
-  for (let h = 9; h < 19; h++) {
-    for (const m of [0, 30]) {
+  if (daySchedule.active) {
+    const [startH, startM] = daySchedule.start.split(":").map(Number);
+    const [endH, endM] = daySchedule.end.split(":").map(Number);
+    const startMinutes = startH * 60 + startM;
+    const endMinutes = endH * 60 + endM;
+    for (let mins = startMinutes; mins < endMinutes; mins += 30) {
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
       const timeStr = `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
       if (bookedTimes.has(timeStr)) continue;
-      if (isToday && h * 60 + m <= nowMinutes) continue;
+      if (isToday && mins <= nowMinutes) continue;
       slots.push(timeStr);
     }
   }

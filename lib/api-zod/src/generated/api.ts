@@ -448,6 +448,7 @@ export const ListBarbersResponseItem = zod.object({
   "specialties": zod.string().nullish(),
   "rating": zod.number().nullish(),
   "isActive": zod.boolean().optional(),
+  "weeklySchedule": zod.record(zod.string(), zod.unknown()).nullish(),
   "createdAt": zod.coerce.date()
 })
 export const ListBarbersResponse = zod.array(ListBarbersResponseItem)
@@ -489,6 +490,7 @@ export const GetBarberResponse = zod.object({
   "specialties": zod.string().nullish(),
   "rating": zod.number().nullish(),
   "isActive": zod.boolean().optional(),
+  "weeklySchedule": zod.record(zod.string(), zod.unknown()).nullish(),
   "createdAt": zod.coerce.date()
 })
 
@@ -506,7 +508,8 @@ export const UpdateBarberBody = zod.object({
   "bio": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
   "specialties": zod.string().nullish(),
-  "isActive": zod.boolean().optional()
+  "isActive": zod.boolean().optional(),
+  "weeklySchedule": zod.record(zod.string(), zod.unknown()).nullish()
 })
 
 export const UpdateBarberResponse = zod.object({
@@ -518,6 +521,7 @@ export const UpdateBarberResponse = zod.object({
   "specialties": zod.string().nullish(),
   "rating": zod.number().nullish(),
   "isActive": zod.boolean().optional(),
+  "weeklySchedule": zod.record(zod.string(), zod.unknown()).nullish(),
   "createdAt": zod.coerce.date()
 })
 
@@ -674,6 +678,7 @@ export const ListAppointmentsResponse = zod.object({
   "specialties": zod.string().nullish(),
   "rating": zod.number().nullish(),
   "isActive": zod.boolean().optional(),
+  "weeklySchedule": zod.record(zod.string(), zod.unknown()).nullish(),
   "createdAt": zod.coerce.date()
 }).optional(),
   "service": zod.object({
@@ -777,6 +782,7 @@ export const GetAppointmentResponse = zod.object({
   "specialties": zod.string().nullish(),
   "rating": zod.number().nullish(),
   "isActive": zod.boolean().optional(),
+  "weeklySchedule": zod.record(zod.string(), zod.unknown()).nullish(),
   "createdAt": zod.coerce.date()
 }).optional(),
   "service": zod.object({
@@ -856,6 +862,7 @@ export const UpdateAppointmentResponse = zod.object({
   "specialties": zod.string().nullish(),
   "rating": zod.number().nullish(),
   "isActive": zod.boolean().optional(),
+  "weeklySchedule": zod.record(zod.string(), zod.unknown()).nullish(),
   "createdAt": zod.coerce.date()
 }).optional(),
   "service": zod.object({
@@ -947,6 +954,7 @@ export const ConfirmAppointmentOtpResponse = zod.object({
   "specialties": zod.string().nullish(),
   "rating": zod.number().nullish(),
   "isActive": zod.boolean().optional(),
+  "weeklySchedule": zod.record(zod.string(), zod.unknown()).nullish(),
   "createdAt": zod.coerce.date()
 }).optional(),
   "service": zod.object({

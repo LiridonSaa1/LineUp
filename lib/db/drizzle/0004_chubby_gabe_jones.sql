@@ -1,0 +1,1 @@
+ALTER TABLE "barbers" ADD COLUMN "weekly_schedule" jsonb;

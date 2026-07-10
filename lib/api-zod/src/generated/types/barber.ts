@@ -5,6 +5,7 @@
  * Barber Booking System API for Kosovo
  * OpenAPI spec version: 0.1.0
  */
+import type { BarberWeeklySchedule } from './barberWeeklySchedule';
 
 export interface Barber {
   id: number;
@@ -19,5 +20,7 @@ export interface Barber {
   /** @nullable */
   rating?: number | null;
   isActive?: boolean;
+  /** @nullable */
+  weeklySchedule?: BarberWeeklySchedule;
   createdAt: Date;
 }

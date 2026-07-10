@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, numeric, boolean, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, numeric, boolean, uniqueIndex, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { barbershopsTable } from "./barbershops";
@@ -14,6 +14,7 @@ export const barbersTable = pgTable("barbers", {
   specialties: text("specialties"),
   rating: numeric("rating", { precision: 3, scale: 2 }),
   isActive: boolean("is_active").notNull().default(true),
+  weeklySchedule: jsonb("weekly_schedule").$type<Record<string, { active: boolean; start: string; end: string }>>(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => ({

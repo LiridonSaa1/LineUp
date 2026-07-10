@@ -221,6 +221,11 @@ export interface BarbershopList {
   total: number;
 }
 
+/**
+ * @nullable
+ */
+export type BarberWeeklySchedule = { [key: string]: unknown } | null;
+
 export interface Barber {
   id: number;
   shopId: number;
@@ -234,6 +239,8 @@ export interface Barber {
   /** @nullable */
   rating?: number | null;
   isActive?: boolean;
+  /** @nullable */
+  weeklySchedule?: BarberWeeklySchedule;
   createdAt: string;
 }
 
@@ -248,6 +255,11 @@ export interface BarberInput {
   specialties?: string | null;
 }
 
+/**
+ * @nullable
+ */
+export type BarberUpdateWeeklySchedule = { [key: string]: unknown } | null;
+
 export interface BarberUpdate {
   name?: string;
   /** @nullable */
@@ -257,6 +269,8 @@ export interface BarberUpdate {
   /** @nullable */
   specialties?: string | null;
   isActive?: boolean;
+  /** @nullable */
+  weeklySchedule?: BarberUpdateWeeklySchedule;
 }
 
 export interface Service {
