@@ -1,0 +1,1 @@
+ALTER TABLE "appointments" ADD COLUMN "otp_channel" text DEFAULT 'email' NOT NULL;

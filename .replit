@@ -52,3 +52,4 @@ externalPort = 80
 [userenv.shared]
 PORT = "8080"
 NODE_ENV = "development"
+TWILIO_VERIFY_SERVICE_SID = "VA424e26776a462af1c4cf94a60fdc4595"

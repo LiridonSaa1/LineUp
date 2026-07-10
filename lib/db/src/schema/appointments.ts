@@ -24,6 +24,7 @@ export const appointmentsTable = pgTable("appointments", {
   status: appointmentStatusEnum("status").notNull().default("pending_otp"),
   otpCode: text("otp_code"),
   otpExpiresAt: timestamp("otp_expires_at", { withTimezone: true }),
+  otpChannel: text("otp_channel").notNull().default("email"),
   notes: text("notes"),
   totalPrice: numeric("total_price", { precision: 10, scale: 2 }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
