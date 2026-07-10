@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useRoute, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import {
   useGetBarbershop, getGetBarbershopQueryKey,
   useListBarbers,
@@ -11,9 +12,16 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Clock, Scissors, Calendar, CheckCircle2, MapPin, Star, Check } from "lucide-react";
-import { format, addDays, startOfToday } from "date-fns";
+import { ArrowLeft, Clock, Scissors, Calendar, CheckCircle2, MapPin, Star, Check, PartyPopper } from "lucide-react";
+import { format, addDays, startOfToday, startOfMonth, endOfMonth, isBefore } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+
+// Public, unauthenticated holidays lookup used to disable dates in the date slider.
+async function fetchShopHolidays(shopId: number) {
+  const r = await fetch(`/api/barbershops/${shopId}/holidays`, { credentials: "include" });
+  if (!r.ok) return [];
+  return r.json();
+}
 
 // Shown when a barbershop has no imageUrl yet, so the booking header never looks empty.
 const FALLBACK_SHOP_IMAGE =
@@ -38,6 +46,11 @@ export default function BookingWizard() {
   });
   const { data: barbersRes, isLoading: barbersLoading } = useListBarbers(shopId, { query: { enabled: !!shopId } });
   const { data: servicesRes, isLoading: servicesLoading } = useListServices(shopId, { query: { enabled: !!shopId } });
+  const { data: holidaysRes } = useQuery({
+    queryKey: ["shop-holidays", shopId],
+    queryFn: () => fetchShopHolidays(shopId),
+    enabled: !!shopId,
+  });
 
   const formattedDate = format(selectedDate, 'yyyy-MM-dd');
   const { data: slotsRes, isLoading: slotsLoading } = useGetAvailableSlots(
@@ -102,7 +115,20 @@ export default function BookingWizard() {
 
   if (!shopId) return <div>Dyqani nuk u gjet</div>;
 
-  const dates = Array.from({ length: 7 }, (_, i) => addDays(today, i));
+  // Slider covers the whole current month so past days and holidays are visible (disabled) alongside bookable ones.
+  const monthStart = startOfMonth(today);
+  const monthEnd = endOfMonth(today);
+  const dayCount = Math.round((monthEnd.getTime() - monthStart.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+  const dates = Array.from({ length: dayCount }, (_, i) => addDays(monthStart, i));
+
+  const holidaysList = Array.isArray(holidaysRes) ? holidaysRes : [];
+  const relevantHolidays = holidaysList.filter(
+    (h: any) => h.isFullDay && (h.barberId == null || h.barberId === selectedBarberId)
+  );
+  const holidayByDate = new Map<string, string>();
+  for (const h of relevantHolidays) {
+    holidayByDate.set(h.date, h.reason || "Pushim");
+  }
 
   const barbersList = Array.isArray(barbersRes) ? barbersRes : (barbersRes as any)?.data ?? [];
   const servicesList = Array.isArray(servicesRes) ? servicesRes : (servicesRes as any)?.data ?? [];
@@ -303,21 +329,37 @@ export default function BookingWizard() {
                   <Calendar className="w-5 h-5 text-primary" /> Zgjidhni Datën
                 </h3>
                 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                  {dates.map((date, i) => (
-                    <button
-                      key={i}
-                      onClick={() => { setSelectedDate(date); setSelectedSlot(null); }}
-                      className={`flex flex-col items-center justify-center p-3 rounded-2xl min-w-[80px] shrink-0 border transition-all ${
-                        formattedDate === format(date, 'yyyy-MM-dd')
-                          ? 'border-primary bg-primary text-white shadow-md shadow-primary/20'
-                          : 'border-border bg-card hover:border-primary/50'
-                      }`}
-                    >
-                      <span className="text-xs font-medium opacity-80">{format(date, 'EEE')}</span>
-                      <span className="text-xl font-bold mt-1">{format(date, 'd')}</span>
-                      <span className="text-xs mt-0.5 opacity-80">{format(date, 'MMM')}</span>
-                    </button>
-                  ))}
+                  {dates.map((date, i) => {
+                    const dateKey = format(date, 'yyyy-MM-dd');
+                    const isPast = isBefore(date, today);
+                    const holidayReason = holidayByDate.get(dateKey);
+                    const isDisabled = isPast || !!holidayReason;
+                    const isSelected = formattedDate === dateKey;
+                    return (
+                      <button
+                        key={i}
+                        disabled={isDisabled}
+                        title={holidayReason ? holidayReason : isPast ? "Data ka kaluar" : undefined}
+                        onClick={() => { setSelectedDate(date); setSelectedSlot(null); }}
+                        className={`flex flex-col items-center justify-center p-3 rounded-2xl min-w-[80px] max-w-[110px] shrink-0 border transition-all ${
+                          isDisabled
+                            ? 'border-border/50 bg-secondary/40 text-muted-foreground/50 cursor-not-allowed'
+                            : isSelected
+                              ? 'border-primary bg-primary text-white shadow-md shadow-primary/20'
+                              : 'border-border bg-card hover:border-primary/50'
+                        }`}
+                      >
+                        <span className="text-xs font-medium opacity-80">{format(date, 'EEE')}</span>
+                        <span className="text-xl font-bold mt-1">{format(date, 'd')}</span>
+                        <span className="text-xs mt-0.5 opacity-80">{format(date, 'MMM')}</span>
+                        {holidayReason && (
+                          <span className="mt-1 flex items-center gap-0.5 text-[10px] font-bold text-destructive/80">
+                            <PartyPopper className="h-2.5 w-2.5" /> {holidayReason}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
