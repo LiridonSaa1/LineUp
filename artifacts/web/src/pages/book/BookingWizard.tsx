@@ -6,15 +6,23 @@ import {
   useListBarbers,
   useListServices,
   useGetAvailableSlots,
-  useCreateAppointment
+  useCreateAppointmentBatch,
+  useConfirmAppointmentOtp,
+  useResendAppointmentOtp,
+  useLogin,
+  useRegister,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Clock, Scissors, Calendar, CheckCircle2, MapPin, Star, Check, PartyPopper, ChevronLeft, ChevronRight } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { ArrowLeft, Clock, Scissors, Calendar, CheckCircle2, MapPin, Star, Check, PartyPopper, ChevronLeft, ChevronRight, LogIn, UserPlus, ShieldCheck } from "lucide-react";
 import { format, addDays, startOfToday, startOfMonth, endOfMonth, isBefore } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
 
 // Public, unauthenticated holidays lookup used to disable dates in the date slider.
 async function fetchShopHolidays(shopId: number) {
@@ -32,6 +40,7 @@ export default function BookingWizard() {
   const shopId = params?.shopId ? parseInt(params.shopId) : 0;
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user, login } = useAuth();
 
   const [step, setStep] = useState(1);
   const [selectedBarberId, setSelectedBarberId] = useState<number | null>(null);
@@ -42,6 +51,15 @@ export default function BookingWizard() {
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const dateSliderRef = useRef<HTMLDivElement>(null);
   const todayTileRef = useRef<HTMLButtonElement>(null);
+
+  // Auth-gated confirm step: if the visitor has no account we collect the missing details inline
+  // and then verify the booking via a one-time code sent to their email, instead of bouncing them away.
+  const [authMode, setAuthMode] = useState<"login" | "register">("register");
+  const [authFields, setAuthFields] = useState({ firstName: "", lastName: "", email: "", phone: "", password: "" });
+  const [loginFields, setLoginFields] = useState({ email: "", password: "" });
+  const [pendingAppointmentIds, setPendingAppointmentIds] = useState<number[] | null>(null);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpError, setOtpError] = useState<string | null>(null);
 
   const { data: shop } = useGetBarbershop(shopId, {
     query: { enabled: !!shopId, queryKey: getGetBarbershopQueryKey(shopId) }
@@ -60,7 +78,11 @@ export default function BookingWizard() {
     { query: { enabled: !!shopId && !!selectedBarberId && step === 2 } }
   );
 
-  const createAppointment = useCreateAppointment();
+  const createAppointmentBatch = useCreateAppointmentBatch();
+  const confirmOtp = useConfirmAppointmentOtp();
+  const resendOtp = useResendAppointmentOtp();
+  const loginMutation = useLogin();
+  const registerMutation = useRegister();
 
   // Slider defaults to today's position instead of the 1st of the month whenever the date step opens.
   useEffect(() => {
@@ -91,38 +113,82 @@ export default function BookingWizard() {
     if (!selectedBarberId || selectedServiceIds.length === 0 || !selectedSlot) return;
 
     try {
-      const [hours, minutes] = selectedSlot.split(':').map(Number);
-      let cursorMinutes = hours * 60 + minutes;
-
-      // Backend appointments are one-service-each, so back-to-back slots are booked sequentially for every selected service.
-      for (const service of selectedServices) {
-        const slotHours = Math.floor(cursorMinutes / 60);
-        const slotMins = cursorMinutes % 60;
-        const scheduledAt = `${formattedDate}T${String(slotHours).padStart(2, '0')}:${String(slotMins).padStart(2, '0')}:00Z`;
-
-        await createAppointment.mutateAsync({
-          data: {
-            shopId,
-            barberId: selectedBarberId,
-            serviceId: service.id,
-            scheduledAt
-          }
-        });
-
-        cursorMinutes += service.durationMinutes;
-      }
-
-      toast({
-        title: "Takimi u kërkua!",
-        description: "Kontrolloni listën e takimeve tuaja për statusin.",
+      const scheduledAt = `${formattedDate}T${selectedSlot}:00Z`;
+      const result: any = await createAppointmentBatch.mutateAsync({
+        data: {
+          shopId,
+          barberId: selectedBarberId,
+          serviceIds: selectedServiceIds,
+          scheduledAt,
+        }
       });
-      setLocation("/appointments");
+      const created = Array.isArray(result) ? result : result?.data ?? [];
+      setPendingAppointmentIds(created.map((a: any) => a.id));
+      setOtpError(null);
+      toast({
+        title: "Kodi u dërgua!",
+        description: "Kontrolloni emailin tuaj për kodin e verifikimit (OTP).",
+      });
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Rezervimi dështoi",
         description: error.message || "Nuk u krijua takimi.",
       });
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!pendingAppointmentIds || otpCode.length !== 6) return;
+    setOtpError(null);
+    try {
+      for (const id of pendingAppointmentIds) {
+        await confirmOtp.mutateAsync({ id, data: { otpCode } });
+      }
+      toast({
+        title: "Rezervimi u konfirmua!",
+        description: "Takimi juaj është konfirmuar me sukses.",
+      });
+      setLocation("/appointments");
+    } catch (error: any) {
+      setOtpError(error?.message || "Kodi OTP është i pasaktë ose ka skaduar.");
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (!pendingAppointmentIds?.[0]) return;
+    try {
+      await resendOtp.mutateAsync({ id: pendingAppointmentIds[0] });
+      toast({ title: "Kodi u ridërgua", description: "Kontrolloni emailin tuaj." });
+    } catch {
+      toast({ variant: "destructive", title: "Dështoi ridërgimi i kodit" });
+    }
+  };
+
+  const handleLoginSubmit = async () => {
+    try {
+      const res: any = await loginMutation.mutateAsync({ data: loginFields });
+      login(res.token, res.user);
+      toast({ title: `Mirë se erdhe, ${res.user.name}!` });
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Hyrja dështoi", description: error.message || "Email ose fjalëkalim i pasaktë." });
+    }
+  };
+
+  const handleRegisterSubmit = async () => {
+    const { firstName, lastName, email, phone, password } = authFields;
+    if (!firstName || !lastName || !email || !phone || !password) {
+      toast({ variant: "destructive", title: "Plotësoni të gjitha fushat" });
+      return;
+    }
+    try {
+      const res: any = await registerMutation.mutateAsync({
+        data: { name: `${firstName} ${lastName}`, email, phone, password, role: "user" },
+      });
+      login(res.token, res.user);
+      toast({ title: `Mirë se erdhe, ${res.user.name}!` });
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Regjistrimi dështoi", description: error.message || "Provoni përsëri." });
     }
   };
 
@@ -501,27 +567,162 @@ export default function BookingWizard() {
                 </div>
               </div>
 
-              <div className="p-4 bg-muted text-sm text-muted-foreground rounded-2xl text-center border border-border">
-                Do të merrni një konfirmim menjëherë pas rezervimit.
-              </div>
+              {pendingAppointmentIds ? (
+                <div className="bg-secondary/30 rounded-2xl p-6 border border-border space-y-4">
+                  <div className="flex items-center gap-2 text-primary font-bold">
+                    <ShieldCheck className="w-5 h-5" /> Verifikoni Rezervimin
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Ju dërguam një kod verifikimi (OTP) 6-shifror në emailin tuaj. Vendoseni më poshtë për të konfirmuar rezervimin.
+                  </p>
+                  <InputOTP maxLength={6} value={otpCode} onChange={setOtpCode}>
+                    <InputOTPGroup>
+                      {[0, 1, 2, 3, 4, 5].map((i) => (
+                        <InputOTPSlot key={i} index={i} />
+                      ))}
+                    </InputOTPGroup>
+                  </InputOTP>
+                  {otpError && <p className="text-sm text-destructive font-medium">{otpError}</p>}
+                  <div className="flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={handleResendOtp}
+                      disabled={resendOtp.isPending}
+                      className="text-sm font-semibold text-primary hover:underline"
+                    >
+                      {resendOtp.isPending ? "Duke ridërguar..." : "Ridërgo kodin"}
+                    </button>
+                  </div>
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      className="h-14 rounded-full px-6 font-bold"
+                      onClick={() => { setPendingAppointmentIds(null); setOtpCode(""); setOtpError(null); }}
+                    >
+                      <ArrowLeft className="mr-2 h-4 w-4" /> Kthehu
+                    </Button>
+                    <Button
+                      className="flex-1 h-14 text-base font-bold rounded-full"
+                      onClick={handleVerifyOtp}
+                      disabled={confirmOtp.isPending || otpCode.length !== 6}
+                    >
+                      {confirmOtp.isPending ? "Duke verifikuar..." : "Verifiko & Konfirmo"}
+                    </Button>
+                  </div>
+                </div>
+              ) : user ? (
+                <>
+                  <div className="p-4 bg-muted text-sm text-muted-foreground rounded-2xl text-center border border-border">
+                    Do të merrni një kod verifikimi (OTP) me email menjëherë pas rezervimit.
+                  </div>
+                  <div className="flex gap-3 mt-4">
+                    <Button
+                      variant="outline"
+                      className="h-14 rounded-full px-6 font-bold"
+                      onClick={() => setStep(2)}
+                      disabled={createAppointmentBatch.isPending}
+                    >
+                      <ArrowLeft className="mr-2 h-4 w-4" /> Kthehu
+                    </Button>
+                    <Button
+                      className="flex-1 h-14 text-base font-bold rounded-full"
+                      onClick={handleConfirm}
+                      disabled={createAppointmentBatch.isPending}
+                    >
+                      {createAppointmentBatch.isPending ? "Duke konfirmuar..." : "Konfirmo Rezervimin"}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="bg-secondary/30 rounded-2xl p-6 border border-border space-y-4">
+                  <p className="text-sm text-muted-foreground text-center">
+                    Për të përfunduar rezervimin duhet të hyni në llogari ose të regjistroheni.
+                  </p>
+                  <div className="flex rounded-full bg-secondary p-1">
+                    <button
+                      type="button"
+                      onClick={() => setAuthMode("login")}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full text-sm font-bold transition-all ${authMode === "login" ? "bg-card shadow text-primary" : "text-muted-foreground"}`}
+                    >
+                      <LogIn className="w-4 h-4" /> Hyr
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAuthMode("register")}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full text-sm font-bold transition-all ${authMode === "register" ? "bg-card shadow text-primary" : "text-muted-foreground"}`}
+                    >
+                      <UserPlus className="w-4 h-4" /> Regjistrohu
+                    </button>
+                  </div>
 
-              <div className="flex gap-3 mt-4">
-                <Button
-                  variant="outline"
-                  className="h-14 rounded-full px-6 font-bold"
-                  onClick={() => setStep(2)}
-                  disabled={createAppointment.isPending}
-                >
-                  <ArrowLeft className="mr-2 h-4 w-4" /> Kthehu
-                </Button>
-                <Button
-                  className="flex-1 h-14 text-base font-bold rounded-full"
-                  onClick={handleConfirm}
-                  disabled={createAppointment.isPending}
-                >
-                  {createAppointment.isPending ? "Duke konfirmuar..." : "Konfirmo Rezervimin"}
-                </Button>
-              </div>
+                  {authMode === "login" ? (
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="login-email">Email</Label>
+                        <Input id="login-email" type="email" value={loginFields.email}
+                          onChange={(e) => setLoginFields((f) => ({ ...f, email: e.target.value }))} />
+                      </div>
+                      <div>
+                        <Label htmlFor="login-password">Fjalëkalimi</Label>
+                        <Input id="login-password" type="password" value={loginFields.password}
+                          onChange={(e) => setLoginFields((f) => ({ ...f, password: e.target.value }))} />
+                      </div>
+                      <Button
+                        className="w-full h-12 rounded-full font-bold"
+                        onClick={handleLoginSubmit}
+                        disabled={loginMutation.isPending}
+                      >
+                        {loginMutation.isPending ? "Duke hyrë..." : "Hyr"}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label htmlFor="reg-firstname">Emri</Label>
+                          <Input id="reg-firstname" value={authFields.firstName}
+                            onChange={(e) => setAuthFields((f) => ({ ...f, firstName: e.target.value }))} />
+                        </div>
+                        <div>
+                          <Label htmlFor="reg-lastname">Mbiemri</Label>
+                          <Input id="reg-lastname" value={authFields.lastName}
+                            onChange={(e) => setAuthFields((f) => ({ ...f, lastName: e.target.value }))} />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="reg-email">Email</Label>
+                        <Input id="reg-email" type="email" value={authFields.email}
+                          onChange={(e) => setAuthFields((f) => ({ ...f, email: e.target.value }))} />
+                      </div>
+                      <div>
+                        <Label htmlFor="reg-phone">Numri i Telefonit</Label>
+                        <Input id="reg-phone" type="tel" value={authFields.phone}
+                          onChange={(e) => setAuthFields((f) => ({ ...f, phone: e.target.value }))} />
+                      </div>
+                      <div>
+                        <Label htmlFor="reg-password">Fjalëkalimi</Label>
+                        <Input id="reg-password" type="password" value={authFields.password}
+                          onChange={(e) => setAuthFields((f) => ({ ...f, password: e.target.value }))} />
+                      </div>
+                      <Button
+                        className="w-full h-12 rounded-full font-bold"
+                        onClick={handleRegisterSubmit}
+                        disabled={registerMutation.isPending}
+                      >
+                        {registerMutation.isPending ? "Duke regjistruar..." : "Regjistrohu"}
+                      </Button>
+                    </div>
+                  )}
+
+                  <Button
+                    variant="outline"
+                    className="w-full h-12 rounded-full font-bold"
+                    onClick={() => setStep(2)}
+                  >
+                    <ArrowLeft className="mr-2 h-4 w-4" /> Kthehu
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </div>

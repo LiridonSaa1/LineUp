@@ -245,6 +245,35 @@ export const ListTopBarbershopsResponse = zod.array(ListTopBarbershopsResponseIt
 
 
 /**
+ * @summary Get current owner's barbershop
+ */
+export const GetMyBarbershopResponse = zod.object({
+  "id": zod.number(),
+  "ownerId": zod.number(),
+  "name": zod.string(),
+  "city": zod.string(),
+  "address": zod.string(),
+  "description": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "imageUrl": zod.string().nullish(),
+  "status": zod.enum(['pending', 'active', 'rejected', 'suspended']),
+  "subdomain": zod.string().nullish(),
+  "rating": zod.number().nullish(),
+  "totalReviews": zod.number().optional(),
+  "latitude": zod.number().nullish(),
+  "longitude": zod.number().nullish(),
+  "openTime": zod.string().nullish(),
+  "closeTime": zod.string().nullish(),
+  "businessNumber": zod.string().nullish(),
+  "gender": zod.union([zod.literal('male'),zod.literal('female'),zod.literal('both'),zod.literal(null)]).nullish(),
+  "stripeConnectAccountId": zod.string().nullish(),
+  "iban": zod.string().nullish(),
+  "photos": zod.array(zod.string()).optional(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
  * @summary Get barbershop
  */
 export const GetBarbershopParams = zod.object({
@@ -669,6 +698,21 @@ export const CreateAppointmentBody = zod.object({
   "shopId": zod.number(),
   "barberId": zod.number(),
   "serviceId": zod.number(),
+  "scheduledAt": zod.coerce.date(),
+  "notes": zod.string().nullish()
+})
+
+
+/**
+ * @summary Book multiple services back-to-back with a single shared OTP
+ */
+
+
+
+export const CreateAppointmentBatchBody = zod.object({
+  "shopId": zod.number(),
+  "barberId": zod.number(),
+  "serviceIds": zod.array(zod.number()).min(1),
   "scheduledAt": zod.coerce.date(),
   "notes": zod.string().nullish()
 })

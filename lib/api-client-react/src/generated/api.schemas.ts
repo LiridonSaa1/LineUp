@@ -328,6 +328,16 @@ export interface AppointmentInput {
   notes?: string | null;
 }
 
+export interface AppointmentBatchInput {
+  shopId: number;
+  barberId: number;
+  /** @minItems 1 */
+  serviceIds: number[];
+  scheduledAt: string;
+  /** @nullable */
+  notes?: string | null;
+}
+
 export type AppointmentUpdateStatus = typeof AppointmentUpdateStatus[keyof typeof AppointmentUpdateStatus];
 
 

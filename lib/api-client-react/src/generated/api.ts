@@ -22,6 +22,7 @@ import type {
 import type {
   ActivityItem,
   Appointment,
+  AppointmentBatchInput,
   AppointmentInput,
   AppointmentList,
   AppointmentUpdate,
@@ -985,6 +986,83 @@ export function useListTopBarbershops<TData = Awaited<ReturnType<typeof listTopB
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListTopBarbershopsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetMyBarbershopUrl = () => {
+
+
+
+
+  return `/api/barbershops/mine`
+}
+
+/**
+ * @summary Get current owner's barbershop
+ */
+export const getMyBarbershop = async ( options?: RequestInit): Promise<Barbershop> => {
+
+  return customFetch<Barbershop>(getGetMyBarbershopUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMyBarbershopQueryKey = () => {
+    return [
+    `/api/barbershops/mine`
+    ] as const;
+    }
+
+
+export const getGetMyBarbershopQueryOptions = <TData = Awaited<ReturnType<typeof getMyBarbershop>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyBarbershop>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMyBarbershopQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyBarbershop>>> = ({ signal }) => getMyBarbershop({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyBarbershop>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMyBarbershopQueryResult = NonNullable<Awaited<ReturnType<typeof getMyBarbershop>>>
+export type GetMyBarbershopQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get current owner's barbershop
+ */
+
+export function useGetMyBarbershop<TData = Awaited<ReturnType<typeof getMyBarbershop>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyBarbershop>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMyBarbershopQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -2181,6 +2259,77 @@ export const useCreateAppointment = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCreateAppointmentMutationOptions(options));
+    }
+
+export const getCreateAppointmentBatchUrl = () => {
+
+
+
+
+  return `/api/appointments/batch`
+}
+
+/**
+ * @summary Book multiple services back-to-back with a single shared OTP
+ */
+export const createAppointmentBatch = async (appointmentBatchInput: AppointmentBatchInput, options?: RequestInit): Promise<AppointmentList> => {
+
+  return customFetch<AppointmentList>(getCreateAppointmentBatchUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      appointmentBatchInput,)
+  }
+);}
+
+
+
+
+export const getCreateAppointmentBatchMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAppointmentBatch>>, TError,{data: BodyType<AppointmentBatchInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAppointmentBatch>>, TError,{data: BodyType<AppointmentBatchInput>}, TContext> => {
+
+const mutationKey = ['createAppointmentBatch'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAppointmentBatch>>, {data: BodyType<AppointmentBatchInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAppointmentBatch(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAppointmentBatchMutationResult = NonNullable<Awaited<ReturnType<typeof createAppointmentBatch>>>
+    export type CreateAppointmentBatchMutationBody = BodyType<AppointmentBatchInput>
+    export type CreateAppointmentBatchMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Book multiple services back-to-back with a single shared OTP
+ */
+export const useCreateAppointmentBatch = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAppointmentBatch>>, TError,{data: BodyType<AppointmentBatchInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAppointmentBatch>>,
+        TError,
+        {data: BodyType<AppointmentBatchInput>},
+        TContext
+      > => {
+      return useMutation(getCreateAppointmentBatchMutationOptions(options));
     }
 
 export const getGetAppointmentUrl = (id: number,) => {

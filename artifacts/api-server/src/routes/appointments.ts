@@ -139,6 +139,80 @@ router.post("/appointments", requireAuth, async (req: AuthRequest, res): Promise
   res.status(201).json(formatAppointment(appt));
 });
 
+// Books several services back-to-back for the same barber/date under a single shared OTP,
+// so the customer only has to check one email / enter one code to confirm the whole booking.
+router.post("/appointments/batch", requireAuth, async (req: AuthRequest, res): Promise<void> => {
+  const { shopId, barberId, serviceIds, scheduledAt, notes } = req.body;
+  if (!shopId || !barberId || !Array.isArray(serviceIds) || serviceIds.length === 0 || !scheduledAt) {
+    res.status(400).json({ error: "shopId, barberId, serviceIds, and scheduledAt are required" }); return;
+  }
+
+  const [shop] = await db.select().from(barbershopsTable).where(eq(barbershopsTable.id, shopId));
+  if (!shop) { res.status(404).json({ error: "Barbershop not found" }); return; }
+  if (!shopCanTakeBookings(shop)) { res.status(402).json({ error: inactiveSubscriptionMessage() }); return; }
+  const [barber] = await db.select().from(barbersTable).where(and(eq(barbersTable.id, barberId), eq(barbersTable.shopId, shopId), eq(barbersTable.isActive, true)));
+  if (!barber) { res.status(404).json({ error: "Barber not found for this shop" }); return; }
+
+  const services = await db.select().from(servicesTable).where(eq(servicesTable.shopId, shopId));
+  const servicesById = new Map(services.map(s => [s.id, s]));
+  const orderedServices = serviceIds.map((id: number) => servicesById.get(id)).filter(Boolean) as typeof services;
+  if (orderedServices.length !== serviceIds.length) {
+    res.status(404).json({ error: "One or more services not found for this shop" }); return;
+  }
+
+  const otp = generateOtp();
+  const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
+  let cursor = new Date(scheduledAt);
+  const created: (typeof appointmentsTable.$inferSelect)[] = [];
+
+  for (const service of orderedServices) {
+    const [appt] = await db.insert(appointmentsTable).values({
+      userId: req.user!.id,
+      shopId, barberId, serviceId: service.id,
+      scheduledAt: new Date(cursor),
+      status: "pending_otp",
+      otpCode: otp,
+      otpExpiresAt,
+      notes: notes ?? null,
+      totalPrice: service.price,
+    }).returning();
+    created.push(appt);
+    cursor = new Date(cursor.getTime() + (service.durationMinutes ?? 30) * 60 * 1000);
+
+    await db.insert(activityLogTable).values({
+      type: "appointment_booked",
+      description: `New appointment booked`,
+      userId: req.user!.id,
+      shopId,
+    });
+  }
+
+  await db.insert(notificationsTable).values({
+    userId: req.user!.id,
+    title: "Appointment Booked",
+    message: `Your appointment(s) are booked starting ${new Date(scheduledAt).toLocaleString()}. OTP: ${otp}`,
+    type: "booking_confirmed",
+    relatedId: created[0].id,
+    relatedType: "appointment",
+  });
+
+  req.log.info({ appointmentIds: created.map(a => a.id), otp }, "Batch appointments booked, shared OTP generated");
+
+  const [userRow] = await db.select().from(usersTable).where(eq(usersTable.id, req.user!.id));
+  if (userRow) {
+    sendOtpEmail({
+      to: { email: userRow.email, name: userRow.name },
+      otp,
+      shopName: shop.name,
+      scheduledAt: created[0].scheduledAt,
+      serviceName: orderedServices.map(s => s.name).join(", "),
+      barberName: barber.name,
+    }).catch(() => {});
+  }
+
+  res.status(201).json({ data: created.map(formatAppointment), total: created.length });
+});
+
 router.get("/appointments/:id", requireAuth, async (req: AuthRequest, res): Promise<void> => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   const [row] = await db.select({

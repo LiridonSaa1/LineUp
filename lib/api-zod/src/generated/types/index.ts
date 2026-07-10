@@ -9,6 +9,7 @@
 export * from './activityItem';
 export * from './activityItemType';
 export * from './appointment';
+export * from './appointmentBatchInput';
 export * from './appointmentInput';
 export * from './appointmentList';
 export * from './appointmentStatus';

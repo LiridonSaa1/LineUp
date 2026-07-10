@@ -661,6 +661,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/Appointment"
 
+  /appointments/batch:
+    post:
+      operationId: createAppointmentBatch
+      tags: [appointments]
+      summary: Book multiple services back-to-back with a single shared OTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppointmentBatchInput"
+      responses:
+        "201":
+          description: Booked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentList"
+
   /appointments/{id}:
     get:
       operationId: getAppointment
@@ -1630,6 +1649,25 @@ components:
           type: integer
         serviceId:
           type: integer
+        scheduledAt:
+          type: string
+          format: date-time
+        notes:
+          type: ["string", "null"]
+
+    AppointmentBatchInput:
+      type: object
+      required: [shopId, barberId, serviceIds, scheduledAt]
+      properties:
+        shopId:
+          type: integer
+        barberId:
+          type: integer
+        serviceIds:
+          type: array
+          items:
+            type: integer
+          minItems: 1
         scheduledAt:
           type: string
           format: date-time
