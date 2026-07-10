@@ -390,11 +390,16 @@ router.get("/available-slots", async (req, res): Promise<void> => {
       sql`${appointmentsTable.status} NOT IN ('cancelled')`,
     ));
   const bookedTimes = new Set(bookedAppts.map(a => a.scheduledAt.toISOString().slice(11, 16)));
+  const now = new Date();
+  const isToday = date === now.toISOString().slice(0, 10);
+  const nowMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
   const slots = [];
   for (let h = 9; h < 19; h++) {
     for (const m of [0, 30]) {
       const timeStr = `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
-      if (!bookedTimes.has(timeStr)) slots.push(timeStr);
+      if (bookedTimes.has(timeStr)) continue;
+      if (isToday && h * 60 + m <= nowMinutes) continue;
+      slots.push(timeStr);
     }
   }
   res.json({ date, slots });
