@@ -1,0 +1,88 @@
+9:24:24 PM [vite] http proxy error: /api/products?limit=10
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+9:24:24 PM [vite] http proxy error: /api/ads
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+9:24:24 PM [vite] http proxy error: /api/barbershops/top?limit=10
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+9:24:24 PM [vite] http proxy error: /api/barbershops/city-stats
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+9:24:24 PM [vite] http proxy error: /api/stats/public
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+9:24:24 PM [vite] http proxy error: /api/barbershops?limit=0
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+9:24:24 PM [vite] http proxy error: /api/barbershops?status=active&limit=200
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+9:24:25 PM [vite] http proxy error: /api/products?limit=10
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+9:24:25 PM [vite] http proxy error: /api/barbershops/top?limit=10
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+9:24:25 PM [vite] http proxy error: /api/barbershops?limit=0
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+9:24:25 PM [vite] http proxy error: /api/barbershops?status=active&limit=200
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+9:24:28 PM [vite] http proxy error: /api/products?limit=10
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+9:24:28 PM [vite] http proxy error: /api/stats/public
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+9:24:28 PM [vite] http proxy error: /api/barbershops?status=active&limit=200
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+9:24:29 PM [vite] http proxy error: /api/barbershops/city-stats
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+9:24:29 PM [vite] http proxy error: /api/ads
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+9:24:29 PM [vite] http proxy error: /api/barbershops?limit=0
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+9:24:29 PM [vite] http proxy error: /api/barbershops/top?limit=10
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+9:24:30 PM [vite] http proxy error: /api/products?limit=10
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+9:24:30 PM [vite] http proxy error: /api/barbershops?status=active&limit=200
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+9:24:30 PM [vite] http proxy error: /api/barbershops/top?limit=10
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+9:24:30 PM [vite] http proxy error: /api/barbershops?limit=0
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
