@@ -37,10 +37,65 @@ export const pool = new Pool({
 // data loading looked "intermittent": the API server was silently dying and
 // restarting every time the pooler dropped a connection. Log and swallow
 // instead; the pool automatically replaces the broken client on next use.
+let lastPoolError: { message: string; at: string } | null = null;
+
 pool.on("error", (err) => {
+  lastPoolError = { message: err.message, at: new Date().toISOString() };
   console.error("[db] idle client error (pool will recover):", err.message);
 });
 
+pool.on("connect", () => {
+  console.log("[db] new connection established to Supabase pool");
+});
+
 export const db = drizzle(pool, { schema });
+
+export interface DbStatus {
+  connected: boolean;
+  latencyMs: number | null;
+  lastPoolError: { message: string; at: string } | null;
+  poolSize: number;
+  idleCount: number;
+  waitingCount: number;
+}
+
+// Lightweight connectivity probe used by the /healthz/db endpoint and by the
+// periodic self-check below. Runs a trivial query through the pool so it
+// exercises the exact same connection path the app uses.
+export async function checkDbConnection(): Promise<DbStatus> {
+  const start = Date.now();
+  try {
+    await pool.query("select 1");
+    return {
+      connected: true,
+      latencyMs: Date.now() - start,
+      lastPoolError,
+      poolSize: pool.totalCount,
+      idleCount: pool.idleCount,
+      waitingCount: pool.waitingCount,
+    };
+  } catch (err) {
+    return {
+      connected: false,
+      latencyMs: null,
+      lastPoolError: { message: err instanceof Error ? err.message : String(err), at: new Date().toISOString() },
+      poolSize: pool.totalCount,
+      idleCount: pool.idleCount,
+      waitingCount: pool.waitingCount,
+    };
+  }
+}
+
+// Periodic background probe: if Supabase connectivity degrades or drops, this
+// logs it loudly right away instead of only surfacing as a failed request
+// later. Runs every 30s and is intentionally silent on success.
+const DB_PROBE_INTERVAL_MS = 30_000;
+setInterval(() => {
+  checkDbConnection().then((status) => {
+    if (!status.connected) {
+      console.error("[db] connectivity probe FAILED:", status.lastPoolError?.message);
+    }
+  });
+}, DB_PROBE_INTERVAL_MS).unref();
 
 export * from "./schema";

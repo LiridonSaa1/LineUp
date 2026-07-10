@@ -4,3 +4,4 @@
 - [Supabase DB connection](supabase-db.md) — must use Transaction Pooler URL (pooler.supabase.com:6543), not direct (db.supabase.co:5432); direct host is ENOTFOUND from Replit
 - [Drizzle push non-TTY](drizzle-push-tty.md) — drizzle-kit push fails in non-TTY shells when schema conflicts exist; use generate then apply SQL manually per-statement, skipping "already exists" errors
 - [Legacy schema drift on re-import](legacy-schema-drift.md) — cross-check unexpected DB columns against schema+migrations before dropping; also watch for orphan migration files not in the journal
+- [DB pool resilience & health checks](db-pool-resilience.md) — why Supabase data looked "intermittent"; always add `pool.on("error")`; check `GET /api/healthz/db` first
