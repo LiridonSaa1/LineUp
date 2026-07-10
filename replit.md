@@ -4,13 +4,13 @@ Kosovo's premium barbershop booking platform — find shops, book appointments w
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 8080)
+- The project runs as three Replit artifacts: **API Server** (`artifacts/api-server`, port 8080), **Barber Booking System** web frontend (`artifacts/web`), and a **Canvas** component preview server (`artifacts/mockup-sandbox`) — each has its own managed workflow; restart via the workflow name, don't hand-edit run commands.
 - `pnpm --filter @workspace/scripts run seed` — seed the database with demo data
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string (auto-provisioned by Replit)
+- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only; fails non-interactively if there's a data-loss prompt — see Gotchas)
+- Required env: `SUPABASE_DB_URL` (Transaction Pooler URL) — Postgres connection string. Also uses `SUPABASE_URL`/`SUPABASE_ANON_KEY`/`SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_*`, and `BREVO_*` secrets when configured.
 
 ## Stack
 
@@ -75,6 +75,7 @@ _Populate as you build — explicit user instructions worth remembering across s
 - Available-slots endpoint is a query-param only route: `/api/available-slots?shopId=&barberId=&date=`
 - Always run `pnpm --filter @workspace/db run push` after schema changes
 - `ListTopBarbershopsResponse` is an array (not `{ data: [] }`) — use `Array.isArray()` guard when consuming
+- `pnpm --filter @workspace/db run push` prompts interactively (TTY-only) when it detects a data-loss statement; in the Replit shell it just errors out. Run `drizzle-kit generate` instead and apply the resulting SQL manually against `SUPABASE_DB_URL`.
 
 ## Pointers
 
