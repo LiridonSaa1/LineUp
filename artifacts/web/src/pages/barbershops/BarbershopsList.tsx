@@ -121,6 +121,16 @@ export default function BarbershopsList() {
     [filtered],
   );
 
+  const shopGroups = useMemo(() => {
+    const groups = new Map<number, { shop: BarberMapItem["shop"]; barbers: BarberMapItem[] }>();
+    for (const barber of filtered) {
+      const existing = groups.get(barber.shop.id);
+      if (existing) existing.barbers.push(barber);
+      else groups.set(barber.shop.id, { shop: barber.shop, barbers: [barber] });
+    }
+    return Array.from(groups.values()).sort((a, b) => Number(b.shop.rating ?? 0) - Number(a.shop.rating ?? 0));
+  }, [filtered]);
+
   const selectedBarber = filtered.find((barber) => barber.id === selectedBarberId) ?? null;
   const runSearch = () => setDebouncedSearch(search);
   const selectBarber = (barberId: number) => setSelectedBarberId(barberId);
@@ -277,70 +287,110 @@ export default function BarbershopsList() {
                 </Button>
               </div>
             ) : (
-              <div className="space-y-2.5 p-3">
-                {filtered.map((barber) => {
-                  const selected = barber.id === selectedBarberId;
+              <div className="space-y-3 p-3">
+                {shopGroups.map(({ shop, barbers: shopBarbers }) => {
+                  const shopSelected = shopBarbers.some((barber) => barber.id === selectedBarberId);
                   return (
                     <div
-                      key={barber.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => selectBarber(barber.id)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          selectBarber(barber.id);
-                        }
-                      }}
-                      className={`group flex w-full cursor-pointer gap-3 rounded-2xl border bg-card p-3 text-left transition-all hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10 ${
-                        selected ? "border-primary shadow-lg shadow-primary/10" : "border-border/50"
+                      key={shop.id}
+                      className={`overflow-hidden rounded-2xl border bg-card transition-all ${
+                        shopSelected ? "border-primary shadow-lg shadow-primary/10" : "border-border/50"
                       }`}
                     >
-                      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-primary/10">
-                        {barber.avatarUrl ? (
-                          <img src={barber.avatarUrl} alt={barber.name} className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-xl font-extrabold text-primary">
-                            {barber.name.charAt(0).toUpperCase()}
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => selectBarber(shopBarbers[0].id)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            selectBarber(shopBarbers[0].id);
+                          }
+                        }}
+                        className="flex w-full cursor-pointer gap-3 p-3 text-left hover:bg-primary/5"
+                      >
+                        <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-primary/10">
+                          {shop.imageUrl ? (
+                            <img src={shop.imageUrl} alt={shop.name} className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-lg font-extrabold text-primary">
+                              {shop.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <h3 className="truncate text-sm font-extrabold leading-tight">{shop.name}</h3>
+                            <div className="flex shrink-0 items-center gap-0.5 text-xs font-extrabold text-primary">
+                              <Star className="h-3 w-3 fill-primary" />
+                              {shop.rating != null ? Number(shop.rating).toFixed(1) : "New"}
+                            </div>
                           </div>
-                        )}
+                          <p className="mt-1 flex items-center gap-1 truncate text-xs text-muted-foreground">
+                            <MapPin className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{shop.address}, {shop.city}</span>
+                          </p>
+                          <div className="mt-1 flex items-center justify-between gap-2">
+                            {shop.openTime ? (
+                              <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                                <Clock className="h-3 w-3" />
+                                {shop.openTime} - {shop.closeTime}
+                              </span>
+                            ) : <span />}
+                            <Link
+                              href={`/barbershops/${shop.id}`}
+                              onClick={(event) => event.stopPropagation()}
+                              className="rounded-full bg-primary/10 px-3 py-1 text-[11px] font-bold text-primary hover:bg-primary/15"
+                            >
+                              Shiko dyqanin
+                            </Link>
+                          </div>
+                        </div>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <h3 className="truncate text-sm font-extrabold leading-tight">{barber.name}</h3>
-                            <p className="mt-0.5 truncate text-xs font-semibold text-primary">{barber.shop.name}</p>
-                          </div>
-                          <div className="flex shrink-0 items-center gap-0.5 text-xs font-extrabold text-primary">
-                            <Star className="h-3 w-3 fill-primary" />
-                            {barber.rating != null ? Number(barber.rating).toFixed(1) : "New"}
-                          </div>
-                        </div>
 
-                        {barber.specialties ? (
-                          <p className="mt-2 line-clamp-1 text-xs text-muted-foreground">{barber.specialties}</p>
-                        ) : null}
-
-                        <p className="mt-2 flex items-center gap-1 truncate text-xs text-muted-foreground">
-                          <MapPin className="h-3 w-3 shrink-0" />
-                          <span className="truncate">{barber.shop.address}, {barber.shop.city}</span>
-                        </p>
-
-                        <div className="mt-2 flex items-center justify-between gap-2">
-                          {barber.shop.openTime ? (
-                            <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
-                              <Clock className="h-3 w-3" />
-                              {barber.shop.openTime} - {barber.shop.closeTime}
-                            </span>
-                          ) : <span />}
-                          <Link
-                            href={`/barbers/${barber.id}`}
-                            onClick={(event) => event.stopPropagation()}
-                            className="rounded-full bg-primary/10 px-3 py-1 text-[11px] font-bold text-primary hover:bg-primary/15"
-                          >
-                            Detaje
-                          </Link>
-                        </div>
+                      <div className="flex flex-wrap gap-2 border-t border-border/40 bg-muted/30 p-3">
+                        {shopBarbers.map((barber) => {
+                          const selected = barber.id === selectedBarberId;
+                          return (
+                            <div
+                              key={barber.id}
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => selectBarber(barber.id)}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter" || event.key === " ") {
+                                  event.preventDefault();
+                                  selectBarber(barber.id);
+                                }
+                              }}
+                              className={`flex cursor-pointer items-center gap-2 rounded-full border bg-card py-1 pl-1 pr-3 transition hover:border-primary/50 ${
+                                selected ? "border-primary shadow-sm shadow-primary/10" : "border-border/50"
+                              }`}
+                            >
+                              <div className="h-7 w-7 shrink-0 overflow-hidden rounded-full bg-primary/10">
+                                {barber.avatarUrl ? (
+                                  <img src={barber.avatarUrl} alt={barber.name} className="h-full w-full object-cover" />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center text-[11px] font-extrabold text-primary">
+                                    {barber.name.charAt(0).toUpperCase()}
+                                  </div>
+                                )}
+                              </div>
+                              <span className="text-xs font-semibold">{barber.name}</span>
+                              <span className="flex items-center gap-0.5 text-[11px] font-extrabold text-primary">
+                                <Star className="h-2.5 w-2.5 fill-primary" />
+                                {barber.rating != null ? Number(barber.rating).toFixed(1) : "New"}
+                              </span>
+                              <Link
+                                href={`/barbers/${barber.id}`}
+                                onClick={(event) => event.stopPropagation()}
+                                className="text-[11px] font-bold text-primary underline-offset-2 hover:underline"
+                              >
+                                Detaje
+                              </Link>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   );
