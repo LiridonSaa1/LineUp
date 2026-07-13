@@ -54,6 +54,14 @@ import barberCutout from "@assets/bearded-handsome-barber-holding-comb-and-sciss
 import brushImg from "@assets/download_1782414907276.png";
 import razorImg from "@assets/download_1782414908403.png";
 
+/* ── Owner subscription packages (mirrors Register.tsx) ────── */
+const OWNER_PACKAGES = [
+  { id: "2", label: "Starter",  workers: 2, price: 5,  color: "#4f8ef7" },
+  { id: "4", label: "Standard", workers: 4, price: 10, color: "#7c3aed", popular: true },
+  { id: "6", label: "Pro",      workers: 6, price: 15, color: "#059669" },
+  { id: "8", label: "Business", workers: 8, price: 20, color: "#d97706" },
+];
+
 /* ── SVG Barber Tool icons ───────────────────────────────── */
 const ScissorsSVG = ({
   size = 64,
@@ -2442,10 +2450,40 @@ export default function Home() {
             rezervimet, ekipin, produktet dhe të ardhurat — të gjitha në një panel.
           </p>
 
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto mb-10 text-left">
+            {OWNER_PACKAGES.map(pkg => (
+              <div
+                key={pkg.id}
+                className="relative rounded-2xl p-4 flex flex-col bg-white/[0.05] border border-white/12 backdrop-blur-sm transition-transform hover:-translate-y-1"
+              >
+                {pkg.popular && (
+                  <span
+                    className="absolute -top-2.5 left-4 text-[10px] font-bold px-2 py-0.5 rounded-full text-white"
+                    style={{ background: pkg.color }}
+                  >
+                    ★ MË E KËRKUARA
+                  </span>
+                )}
+                <div className="flex items-center gap-2 mb-3">
+                  <div
+                    className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                    style={{ background: `${pkg.color}26` }}
+                  >
+                    <Users className="w-3.5 h-3.5" style={{ color: pkg.color }} />
+                  </div>
+                  <p className="font-semibold text-white text-sm leading-tight">{pkg.label}</p>
+                </div>
+                <div className="mb-1.5">
+                  <span className="text-2xl font-extrabold text-white">{pkg.price}€</span>
+                  <span className="text-xs text-white/40 ml-1">/muaj</span>
+                </div>
+                <p className="text-xs text-white/50">Deri {pkg.workers} punëtorë</p>
+              </div>
+            ))}
+          </div>
+
           <div className="flex justify-center mb-10">
             <div className="inline-flex items-center gap-3 bg-white/6 border border-white/12 px-6 py-3 rounded-full text-sm font-medium">
-              <span className="text-primary font-bold">10€/muaj</span>
-              <span className="text-white/25">·</span>
               <span className="text-white/50">0.50€ për takim</span>
               <span className="text-white/25">·</span>
               <span className="text-emerald-400 font-medium">30 ditët e para falas</span>
