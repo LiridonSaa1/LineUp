@@ -1,9 +1,9 @@
 import { Router } from "express";
 import {
   db, appointmentsTable, barbershopsTable, barbersTable,
-  servicesTable, usersTable, notificationsTable, activityLogTable,
+  servicesTable, usersTable, notificationsTable, activityLogTable, holidaysTable,
 } from "@workspace/db";
-import { eq, and, sql, gte, lte, desc } from "drizzle-orm";
+import { eq, and, sql, gte, lte, desc, inArray } from "drizzle-orm";
 import { requireAuth, generateOtp, type AuthRequest } from "../lib/auth";
 import { sendOtpEmail, sendBookingConfirmedEmail } from "../lib/email";
 
@@ -76,31 +76,46 @@ router.get("/appointments", requireAuth, async (req: AuthRequest, res): Promise<
 });
 
 router.post("/appointments", requireAuth, async (req: AuthRequest, res): Promise<void> => {
-  const { shopId, barberId, serviceId, scheduledAt, notes } = req.body;
-  if (!shopId || !barberId || !serviceId || !scheduledAt) {
-    res.status(400).json({ error: "shopId, barberId, serviceId, and scheduledAt are required" }); return;
+  const { shopId, barberId, serviceId, serviceIds, scheduledAt, notes } = req.body;
+  const selectedServiceIds = Array.isArray(serviceIds)
+    ? serviceIds.map((id) => parseInt(id, 10)).filter((id) => Number.isFinite(id))
+    : serviceId
+      ? [parseInt(serviceId, 10)]
+      : [];
+
+  if (!shopId || !barberId || selectedServiceIds.length === 0 || !scheduledAt) {
+    res.status(400).json({ error: "shopId, barberId, serviceId/serviceIds, and scheduledAt are required" }); return;
   }
-  const [service] = await db.select().from(servicesTable).where(eq(servicesTable.id, serviceId));
-  if (!service) { res.status(404).json({ error: "Service not found" }); return; }
+  const uniqueServiceIds = [...new Set(selectedServiceIds)];
+  const serviceRows = await db.select().from(servicesTable).where(inArray(servicesTable.id, uniqueServiceIds));
+  if (serviceRows.length !== uniqueServiceIds.length) { res.status(404).json({ error: "One or more services were not found" }); return; }
+  const servicesById = new Map(serviceRows.map((service) => [service.id, service]));
+  const selectedServices = selectedServiceIds.map((id) => servicesById.get(id)).filter(Boolean) as typeof serviceRows;
+  const [service] = selectedServices;
+  const totalPrice = selectedServices.reduce((sum, item) => sum + parseFloat(item.price as string), 0);
   const [shop] = await db.select().from(barbershopsTable).where(eq(barbershopsTable.id, shopId));
   if (!shop) { res.status(404).json({ error: "Barbershop not found" }); return; }
   if (!shopCanTakeBookings(shop)) { res.status(402).json({ error: inactiveSubscriptionMessage() }); return; }
   const [barber] = await db.select().from(barbersTable).where(and(eq(barbersTable.id, barberId), eq(barbersTable.shopId, shopId), eq(barbersTable.isActive, true)));
   if (!barber) { res.status(404).json({ error: "Barber not found for this shop" }); return; }
-  if (service.shopId !== shopId) { res.status(400).json({ error: "Service does not belong to this shop" }); return; }
+  if (selectedServices.some((item) => item.shopId !== shopId)) { res.status(400).json({ error: "One or more services do not belong to this shop" }); return; }
 
   const otp = generateOtp();
   const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
+  const packageNote = selectedServices.length > 1
+    ? `Sherbimet e zgjedhura: ${selectedServices.map((item) => item.name).join(", ")}`
+    : null;
+  const appointmentNotes = [notes, packageNote].filter(Boolean).join("\n") || null;
 
   const [appt] = await db.insert(appointmentsTable).values({
     userId: req.user!.id,
-    shopId, barberId, serviceId,
+    shopId, barberId, serviceId: service.id,
     scheduledAt: new Date(scheduledAt),
     status: "pending_otp",
     otpCode: otp,
     otpExpiresAt,
-    notes: notes ?? null,
-    totalPrice: service.price,
+    notes: appointmentNotes,
+    totalPrice: totalPrice.toFixed(2),
   }).returning();
 
   await db.insert(notificationsTable).values({
@@ -131,7 +146,7 @@ router.post("/appointments", requireAuth, async (req: AuthRequest, res): Promise
       otp,
       shopName: shopRow.name,
       scheduledAt: appt.scheduledAt,
-      serviceName: service.name,
+      serviceName: selectedServices.map((item) => item.name).join(", "),
       barberName: barberRow.name,
     }).catch(() => {});
   }
@@ -255,6 +270,13 @@ router.get("/available-slots", async (req, res): Promise<void> => {
   if (!shopCanTakeBookings(shop)) { res.status(402).json({ error: inactiveSubscriptionMessage() }); return; }
   const [barber] = await db.select().from(barbersTable).where(and(eq(barbersTable.id, barberId), eq(barbersTable.shopId, shopId), eq(barbersTable.isActive, true)));
   if (!barber) { res.status(404).json({ error: "Barber not found for this shop" }); return; }
+  const holidays = await db.select().from(holidaysTable).where(and(eq(holidaysTable.shopId, shopId), eq(holidaysTable.date, date)));
+  const relevantHolidays = holidays.filter((holiday) => !holiday.barberId || holiday.barberId === barberId);
+  const fullDayHoliday = relevantHolidays.find((holiday) => holiday.isFullDay);
+  if (fullDayHoliday) {
+    res.json({ date, slots: [], unavailableReason: fullDayHoliday.reason || "Pushim" });
+    return;
+  }
   const dayStart = new Date(`${date}T00:00:00.000Z`);
   const dayEnd = new Date(`${date}T23:59:59.999Z`);
   const bookedAppts = await db.select({ scheduledAt: appointmentsTable.scheduledAt })
@@ -270,7 +292,10 @@ router.get("/available-slots", async (req, res): Promise<void> => {
   for (let h = 9; h < 19; h++) {
     for (const m of [0, 30]) {
       const timeStr = `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
-      if (!bookedTimes.has(timeStr)) slots.push(timeStr);
+      const isHolidayTime = relevantHolidays.some((holiday) =>
+        !holiday.isFullDay && holiday.startTime && holiday.endTime && timeStr >= holiday.startTime && timeStr < holiday.endTime
+      );
+      if (!bookedTimes.has(timeStr) && !isHolidayTime) slots.push(timeStr);
     }
   }
   res.json({ date, slots });

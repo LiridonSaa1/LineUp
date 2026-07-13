@@ -2,10 +2,12 @@ import { pgTable, text, serial, timestamp, integer, numeric } from "drizzle-orm/
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { barbershopsTable } from "./barbershops";
+import { barbersTable } from "./barbers";
 
 export const servicesTable = pgTable("services", {
   id: serial("id").primaryKey(),
   shopId: integer("shop_id").notNull().references(() => barbershopsTable.id, { onDelete: "cascade" }),
+  barberId: integer("barber_id").references(() => barbersTable.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   description: text("description"),
   price: numeric("price", { precision: 10, scale: 2 }).notNull(),

@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { useListServices, useCreateService, useDeleteService } from "@workspace/api-client-react";
+import { useListBarbers, useListServices, useCreateService, useDeleteService } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -16,7 +17,12 @@ export default function DashboardServices() {
   const { data: servicesRes, isLoading, refetch } = useListServices(shopId, {
     query: { enabled: !!ownerShop } as any,
   });
+  const { data: barbersRes } = useListBarbers(shopId, {
+    query: { enabled: !!ownerShop } as any,
+  });
   const services = Array.isArray(servicesRes) ? servicesRes : [];
+  const barbers = Array.isArray(barbersRes) ? barbersRes : [];
+  const barberById = new Map(barbers.map((barber) => [barber.id, barber.name]));
   const createMutation = useCreateService();
   const deleteMutation = useDeleteService();
 
@@ -24,6 +30,7 @@ export default function DashboardServices() {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [duration, setDuration] = useState("");
+  const [barberId, setBarberId] = useState("shop");
 
   const handleCreate = async () => {
     try {
@@ -32,12 +39,13 @@ export default function DashboardServices() {
         data: { 
           name, 
           price: parseFloat(price), 
-          durationMinutes: parseInt(duration) 
-        } 
+          durationMinutes: parseInt(duration),
+          barberId: barberId === "shop" ? null : parseInt(barberId),
+        } as any,
       });
       toast({ title: "Service added" });
       setIsOpen(false);
-      setName(""); setPrice(""); setDuration("");
+      setName(""); setPrice(""); setDuration(""); setBarberId("shop");
       refetch();
     } catch (e) {
       toast({ variant: "destructive", title: "Error adding service" });
@@ -73,6 +81,22 @@ export default function DashboardServices() {
                 <Label>Service Name</Label>
                 <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Haircut & Beard" />
               </div>
+              <div className="space-y-2">
+                <Label>Cmimorja</Label>
+                <Select value={barberId} onValueChange={setBarberId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Zgjidh per ke vlen sherbimi" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="shop">Per gjithe dyqanin</SelectItem>
+                    {barbers.map((barber) => (
+                      <SelectItem key={barber.id} value={String(barber.id)}>
+                        Vetem {barber.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Price (€)</Label>
@@ -96,6 +120,7 @@ export default function DashboardServices() {
           <TableHeader>
             <TableRow>
               <TableHead>Service Name</TableHead>
+              <TableHead>Cmimorja</TableHead>
               <TableHead>Duration</TableHead>
               <TableHead>Price</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -103,13 +128,14 @@ export default function DashboardServices() {
           </TableHeader>
           <TableBody>
             {shopLoading || isLoading ? (
-              <TableRow><TableCell colSpan={4} className="h-24 text-center">Loading...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="h-24 text-center">Loading...</TableCell></TableRow>
             ) : services.length === 0 ? (
-              <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No services found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No services found.</TableCell></TableRow>
             ) : (
               services.map(service => (
                 <TableRow key={service.id}>
                   <TableCell className="font-bold">{service.name}</TableCell>
+                  <TableCell>{(service as any).barberId ? barberById.get((service as any).barberId) ?? "Berber" : "Gjithe dyqani"}</TableCell>
                   <TableCell>{service.durationMinutes} min</TableCell>
                   <TableCell className="text-primary font-bold">€{service.price}</TableCell>
                   <TableCell className="text-right">

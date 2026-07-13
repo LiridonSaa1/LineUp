@@ -279,6 +279,59 @@ router.post("/payments/confirm-subscription-session", requireAuth, requireRole("
   }
 });
 
+router.post("/payments/sync-subscription", requireAuth, requireRole("owner"), async (req: AuthRequest, res): Promise<void> => {
+  const { shopId } = req.body;
+  if (!shopId) { res.status(400).json({ error: "shopId is required" }); return; }
+
+  const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+  if (!STRIPE_SECRET_KEY) {
+    res.status(503).json({ error: "Stripe nuk eshte konfiguruar." }); return;
+  }
+
+  try {
+    const [shop] = await db.select().from(barbershopsTable).where(eq(barbershopsTable.id, parseInt(String(shopId))));
+    if (!shop) { res.status(404).json({ error: "Shop not found" }); return; }
+    if (shop.ownerId !== req.user!.id) { res.status(403).json({ error: "Forbidden" }); return; }
+    if (!shop.stripeCustomerId) { res.status(400).json({ error: "Ky dyqan nuk ka Stripe customer." }); return; }
+
+    const subscriptionsRes = await fetch(
+      `https://api.stripe.com/v1/subscriptions?customer=${encodeURIComponent(shop.stripeCustomerId)}&status=all&limit=10`,
+      { headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}` } },
+    );
+    const subscriptionsBody = await subscriptionsRes.text();
+    if (!subscriptionsRes.ok) {
+      let err: any = {}; try { err = JSON.parse(subscriptionsBody); } catch {}
+      res.status(500).json({ error: err?.error?.message ?? "Nuk u lexuan subscription-et nga Stripe" }); return;
+    }
+
+    const subscriptions = JSON.parse(subscriptionsBody);
+    const subscription = subscriptions.data?.find((item: any) => ["active", "trialing"].includes(item.status)) ?? subscriptions.data?.[0];
+    if (!subscription) { res.status(404).json({ error: "Nuk u gjet subscription ne Stripe." }); return; }
+
+    const active = ["active", "trialing"].includes(subscription.status);
+    const maxBarbers = subscription.metadata?.maxBarbers ? parseInt(subscription.metadata.maxBarbers) : null;
+    await db
+      .update(barbershopsTable)
+      .set({
+        subscriptionStatus: subscription.status,
+        status: active ? "active" : "suspended",
+        stripeSubscriptionId: subscription.id,
+        ...(Number.isFinite(maxBarbers) && maxBarbers ? { maxBarbers } : {}),
+      })
+      .where(eq(barbershopsTable.id, shop.id));
+
+    res.json({
+      ok: true,
+      shopId: shop.id,
+      subscriptionStatus: subscription.status,
+      stripeSubscriptionId: subscription.id,
+    });
+  } catch (err: any) {
+    logger.error({ err }, "Unexpected error syncing subscription");
+    res.status(500).json({ error: err?.message ?? "Gabim i brendshem" });
+  }
+});
+
 router.post("/payments/change-subscription", requireAuth, requireRole("owner"), async (req: AuthRequest, res): Promise<void> => {
   const { shopId, packageId } = req.body;
   const pkg = getSubscriptionPackage(packageId);

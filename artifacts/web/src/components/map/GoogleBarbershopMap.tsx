@@ -249,7 +249,7 @@ export default function GoogleBarbershopMap({
                   onClick={() => onBookBarber(barber.shop.id)}
                   className="mt-3 w-full rounded-lg bg-blue-600 px-4 py-2 text-xs font-extrabold text-white hover:bg-blue-700"
                 >
-                  Rezervo me këtë barber
+                  Rezervo ne kete dyqan
                 </button>
               </div>
             </Popup>

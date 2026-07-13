@@ -531,3 +531,12 @@
   transform: scale(0.97);
   background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.06) 100%);
 }
+
+.date-slider {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  overscroll-behavior-inline: contain;
+}
+.date-slider::-webkit-scrollbar {
+  display: none;
+}

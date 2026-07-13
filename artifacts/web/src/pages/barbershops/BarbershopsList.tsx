@@ -15,8 +15,8 @@ import {
   MapPin,
   Navigation,
   Package,
-  Scissors,
   Search,
+  Scissors,
   ShoppingBag,
   SlidersHorizontal,
   Star,
@@ -24,10 +24,26 @@ import {
 
 const BarberDirectoryMap = lazy(() => import("@/components/map/GoogleBarbershopMap"));
 
-async function fetchBarbers(): Promise<BarberMapItem[]> {
-  const response = await fetch("/api/barbers");
-  if (!response.ok) throw new Error("Could not load barbers");
-  return response.json();
+interface BarbershopListItem {
+  id: number;
+  name: string;
+  city: string;
+  address: string;
+  description?: string | null;
+  phone?: string | null;
+  imageUrl?: string | null;
+  rating?: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  openTime?: string | null;
+  closeTime?: string | null;
+}
+
+async function fetchBarbershops(): Promise<BarbershopListItem[]> {
+  const response = await fetch("/api/barbershops?status=active&limit=200");
+  if (!response.ok) throw new Error("Could not load barbershops");
+  const data = await response.json();
+  return Array.isArray(data?.data) ? data.data : [];
 }
 
 function ProductsStrip() {
@@ -46,10 +62,10 @@ function ProductsStrip() {
         <div className="mb-5 flex items-end justify-between gap-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-widest text-primary">Marketplace</p>
-            <h2 className="mt-1 text-xl font-extrabold">Produkte grooming të zgjedhura</h2>
+            <h2 className="mt-1 text-xl font-extrabold">Produkte grooming te zgjedhura</h2>
           </div>
           <Link href="/marketplace" className="hidden items-center gap-1 text-sm font-bold text-primary sm:flex">
-            Shiko të gjitha <ArrowRight className="h-4 w-4" />
+            Shiko te gjitha <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
 
@@ -69,7 +85,7 @@ function ProductsStrip() {
                     <div className="p-3">
                       <p className="truncate text-sm font-bold">{product.name}</p>
                       <div className="mt-1 flex items-center justify-between">
-                        <span className="font-extrabold text-primary">€{Number(product.price).toFixed(2)}</span>
+                        <span className="font-extrabold text-primary">EUR {Number(product.price).toFixed(2)}</span>
                         <ShoppingBag className="h-4 w-4 text-muted-foreground" />
                       </div>
                     </div>
@@ -89,31 +105,30 @@ export default function BarbershopsList() {
   const [city, setCity] = useState(initialCity);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [selectedBarberId, setSelectedBarberId] = useState<number | null>(null);
+  const [selectedShopId, setSelectedShopId] = useState<number | null>(null);
 
-  const { data: barbers = [], isLoading } = useQuery({
-    queryKey: ["public-barbers"],
-    queryFn: fetchBarbers,
+  const { data: shops = [], isLoading } = useQuery({
+    queryKey: ["public-barbershops"],
+    queryFn: fetchBarbershops,
   });
 
   const filtered = useMemo(() => {
     const q = debouncedSearch.trim().toLowerCase();
-    return barbers.filter((barber) => {
-      const matchCity = city === "all" || barber.shop.city === city;
+    return shops.filter((shop) => {
+      const matchCity = city === "all" || shop.city === city;
       const matchSearch =
         !q ||
-        barber.name.toLowerCase().includes(q) ||
-        barber.shop.name.toLowerCase().includes(q) ||
-        barber.shop.city.toLowerCase().includes(q) ||
-        barber.shop.address.toLowerCase().includes(q) ||
-        (barber.specialties ?? "").toLowerCase().includes(q);
+        shop.name.toLowerCase().includes(q) ||
+        shop.city.toLowerCase().includes(q) ||
+        shop.address.toLowerCase().includes(q) ||
+        (shop.description ?? "").toLowerCase().includes(q);
       return matchCity && matchSearch;
     });
-  }, [barbers, city, debouncedSearch]);
+  }, [shops, city, debouncedSearch]);
 
-  const citiesWithBarbers = useMemo(
-    () => Array.from(new Set(barbers.map((barber) => barber.shop.city).filter(Boolean))).sort(),
-    [barbers],
+  const citiesWithShops = useMemo(
+    () => Array.from(new Set(shops.map((shop) => shop.city).filter(Boolean))).sort(),
+    [shops],
   );
 
   const topRated = useMemo(
@@ -121,9 +136,28 @@ export default function BarbershopsList() {
     [filtered],
   );
 
-  const selectedBarber = filtered.find((barber) => barber.id === selectedBarberId) ?? null;
+  const mapItems = useMemo<BarberMapItem[]>(() => filtered.map((shop) => ({
+    id: shop.id,
+    name: shop.name,
+    avatarUrl: shop.imageUrl,
+    specialties: shop.description,
+    rating: shop.rating,
+    shop: {
+      id: shop.id,
+      name: shop.name,
+      city: shop.city,
+      address: shop.address,
+      imageUrl: shop.imageUrl,
+      rating: shop.rating,
+      latitude: shop.latitude,
+      longitude: shop.longitude,
+      openTime: shop.openTime,
+      closeTime: shop.closeTime,
+    },
+  })), [filtered]);
+
+  const selectedShop = filtered.find((shop) => shop.id === selectedShopId) ?? null;
   const runSearch = () => setDebouncedSearch(search);
-  const selectBarber = (barberId: number) => setSelectedBarberId(barberId);
 
   return (
     <div className="min-h-screen bg-slate-50/60 dark:bg-background">
@@ -132,24 +166,24 @@ export default function BarbershopsList() {
           <div>
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
               <Navigation className="h-3.5 w-3.5" />
-              Barber map directory
+              Barber shop map directory
             </div>
-            <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">Zgjidh berberin dhe shiko vendndodhjen</h1>
+            <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">Zgjidh barber shop dhe shiko vendndodhjen</h1>
             <p className="mt-3 max-w-2xl text-sm text-muted-foreground sm:text-base">
-              Shfleto të gjithë berberët aktivë, kliko një profil dhe harta të çon direkt te dyqani ku punon.
+              Shfleto barber shop-et aktive, kliko nje dyqan dhe brenda tij shiko punetoret/berberet.
             </p>
           </div>
           <div className="grid grid-cols-3 gap-2 rounded-2xl border border-border bg-card p-3">
             <div>
-              <p className="text-2xl font-extrabold">{isLoading ? "…" : barbers.length}</p>
-              <p className="text-[11px] font-medium text-muted-foreground">Berberë</p>
+              <p className="text-2xl font-extrabold">{isLoading ? "..." : shops.length}</p>
+              <p className="text-[11px] font-medium text-muted-foreground">Dyqane</p>
             </div>
             <div>
-              <p className="text-2xl font-extrabold">{isLoading ? "…" : citiesWithBarbers.length}</p>
+              <p className="text-2xl font-extrabold">{isLoading ? "..." : citiesWithShops.length}</p>
               <p className="text-[11px] font-medium text-muted-foreground">Qytete</p>
             </div>
             <div>
-              <p className="text-2xl font-extrabold">{isLoading ? "…" : filtered.length}</p>
+              <p className="text-2xl font-extrabold">{isLoading ? "..." : filtered.length}</p>
               <p className="text-[11px] font-medium text-muted-foreground">Rezultate</p>
             </div>
           </div>
@@ -166,7 +200,7 @@ export default function BarbershopsList() {
             <div className="relative min-w-[220px] flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Kërko berber, dyqan, qytet ose specialitet..."
+                placeholder="Kerko barber shop, qytet ose adrese..."
                 className="h-10 rounded-xl bg-card pl-9"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
@@ -178,10 +212,10 @@ export default function BarbershopsList() {
               <MapPin className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Select value={city} onValueChange={setCity}>
                 <SelectTrigger className="h-10 rounded-xl bg-card pl-9">
-                  <SelectValue placeholder="Kudo në Kosovë" />
+                  <SelectValue placeholder="Kudo ne Kosove" />
                 </SelectTrigger>
                 <SelectContent className="max-h-64 overflow-y-auto">
-                  <SelectItem value="all">Kudo në Kosovë</SelectItem>
+                  <SelectItem value="all">Kudo ne Kosove</SelectItem>
                   {KOSOVO_CITIES.map((cityName) => (
                     <SelectItem key={cityName} value={cityName}>
                       {cityName}
@@ -191,7 +225,7 @@ export default function BarbershopsList() {
               </Select>
             </div>
             <Button onClick={runSearch} className="h-10 shrink-0 rounded-xl px-5 font-bold">
-              Kërko
+              Kerko
             </Button>
           </div>
         </div>
@@ -206,15 +240,15 @@ export default function BarbershopsList() {
                   <div className="absolute inset-0 flex items-center justify-center bg-muted">
                     <div className="flex flex-col items-center gap-3 text-muted-foreground">
                       <MapPin className="h-10 w-10 animate-bounce" />
-                      <p className="text-sm font-medium">Po ngarkohet harta…</p>
+                      <p className="text-sm font-medium">Po ngarkohet harta...</p>
                     </div>
                   </div>
                 }
               >
                 <BarberDirectoryMap
-                  barbers={filtered}
-                  selectedBarberId={selectedBarberId}
-                  onSelectBarber={selectBarber}
+                  barbers={mapItems}
+                  selectedBarberId={selectedShopId}
+                  onSelectBarber={setSelectedShopId}
                   onBookBarber={(shopId) => setLocation(`/book/${shopId}`)}
                 />
               </Suspense>
@@ -223,19 +257,19 @@ export default function BarbershopsList() {
 
           <div className="order-2 flex w-full flex-col bg-background shadow-sm lg:sticky lg:top-[136px] lg:order-1 lg:max-h-[calc(100vh-210px)] lg:w-[460px] lg:shrink-0 lg:overflow-y-auto lg:rounded-3xl lg:border lg:border-border">
             <div className="border-b border-border/40 bg-card/70 p-4 backdrop-blur lg:rounded-t-3xl">
-              <h2 className="text-base font-extrabold">{city === "all" ? "Të gjithë berberët" : `Berberët në ${city}`}</h2>
+              <h2 className="text-base font-extrabold">{city === "all" ? "Te gjitha barber shop-et" : `Barber shop-et ne ${city}`}</h2>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                {selectedBarber ? `${selectedBarber.name} është zgjedhur në hartë` : `${filtered.length} berberë gjetur`}
+                {selectedShop ? `${selectedShop.name} eshte zgjedhur ne harte` : `${filtered.length} dyqane gjetur`}
               </p>
               {topRated.length > 0 && (
                 <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-                  {topRated.map((barber) => (
+                  {topRated.map((shop) => (
                     <button
-                      key={barber.id}
-                      onClick={() => selectBarber(barber.id)}
+                      key={shop.id}
+                      onClick={() => setSelectedShopId(shop.id)}
                       className="shrink-0 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-bold text-primary hover:bg-primary/15"
                     >
-                      ★ {barber.name}
+                      * {shop.name}
                     </button>
                   ))}
                 </div>
@@ -246,7 +280,7 @@ export default function BarbershopsList() {
               <div className="space-y-3 p-4">
                 {[1, 2, 3, 4].map((i) => (
                   <div key={i} className="flex gap-3 rounded-2xl border border-border p-3">
-                    <Skeleton className="h-20 w-20 shrink-0 rounded-full" />
+                    <Skeleton className="h-20 w-20 shrink-0 rounded-2xl" />
                     <div className="flex-1 space-y-2 py-1">
                       <Skeleton className="h-4 w-3/4" />
                       <Skeleton className="h-3 w-1/2" />
@@ -260,8 +294,8 @@ export default function BarbershopsList() {
                 <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
                   <Scissors className="h-8 w-8 text-muted-foreground/30" />
                 </div>
-                <h3 className="mb-2 text-base font-bold">Nuk u gjetën berberë</h3>
-                <p className="text-sm text-muted-foreground">Provoni të ndryshoni filtrat.</p>
+                <h3 className="mb-2 text-base font-bold">Nuk u gjet asnje barber shop</h3>
+                <p className="text-sm text-muted-foreground">Provoni te ndryshoni filtrat.</p>
                 <Button
                   variant="outline"
                   size="sm"
@@ -270,7 +304,7 @@ export default function BarbershopsList() {
                     setCity("all");
                     setDebouncedSearch("");
                     setSearch("");
-                    setSelectedBarberId(null);
+                    setSelectedShopId(null);
                   }}
                 >
                   Fshij filtrat
@@ -278,67 +312,67 @@ export default function BarbershopsList() {
               </div>
             ) : (
               <div className="space-y-2.5 p-3">
-                {filtered.map((barber) => {
-                  const selected = barber.id === selectedBarberId;
+                {filtered.map((shop) => {
+                  const selected = shop.id === selectedShopId;
                   return (
                     <div
-                      key={barber.id}
+                      key={shop.id}
                       role="button"
                       tabIndex={0}
-                      onClick={() => selectBarber(barber.id)}
+                      onClick={() => setLocation(`/book/${shop.id}`)}
                       onKeyDown={(event) => {
                         if (event.key === "Enter" || event.key === " ") {
                           event.preventDefault();
-                          selectBarber(barber.id);
+                          setLocation(`/book/${shop.id}`);
                         }
                       }}
                       className={`group flex w-full cursor-pointer gap-3 rounded-2xl border bg-card p-3 text-left transition-all hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10 ${
                         selected ? "border-primary shadow-lg shadow-primary/10" : "border-border/50"
                       }`}
                     >
-                      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-primary/10">
-                        {barber.avatarUrl ? (
-                          <img src={barber.avatarUrl} alt={barber.name} className="h-full w-full object-cover" />
+                      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-primary/10">
+                        {shop.imageUrl ? (
+                          <img src={shop.imageUrl} alt={shop.name} className="h-full w-full object-cover" />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center text-xl font-extrabold text-primary">
-                            {barber.name.charAt(0).toUpperCase()}
+                            {shop.name.charAt(0).toUpperCase()}
                           </div>
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <h3 className="truncate text-sm font-extrabold leading-tight">{barber.name}</h3>
-                            <p className="mt-0.5 truncate text-xs font-semibold text-primary">{barber.shop.name}</p>
+                            <h3 className="truncate text-sm font-extrabold leading-tight">{shop.name}</h3>
+                            <p className="mt-0.5 truncate text-xs font-semibold text-primary">{shop.city}</p>
                           </div>
                           <div className="flex shrink-0 items-center gap-0.5 text-xs font-extrabold text-primary">
                             <Star className="h-3 w-3 fill-primary" />
-                            {barber.rating != null ? Number(barber.rating).toFixed(1) : "New"}
+                            {shop.rating != null ? Number(shop.rating).toFixed(1) : "New"}
                           </div>
                         </div>
 
-                        {barber.specialties ? (
-                          <p className="mt-2 line-clamp-1 text-xs text-muted-foreground">{barber.specialties}</p>
+                        {shop.description ? (
+                          <p className="mt-2 line-clamp-1 text-xs text-muted-foreground">{shop.description}</p>
                         ) : null}
 
                         <p className="mt-2 flex items-center gap-1 truncate text-xs text-muted-foreground">
                           <MapPin className="h-3 w-3 shrink-0" />
-                          <span className="truncate">{barber.shop.address}, {barber.shop.city}</span>
+                          <span className="truncate">{shop.address}, {shop.city}</span>
                         </p>
 
                         <div className="mt-2 flex items-center justify-between gap-2">
-                          {barber.shop.openTime ? (
+                          {shop.openTime ? (
                             <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
                               <Clock className="h-3 w-3" />
-                              {barber.shop.openTime} - {barber.shop.closeTime}
+                              {shop.openTime} - {shop.closeTime}
                             </span>
                           ) : <span />}
                           <Link
-                            href={`/barbers/${barber.id}`}
+                            href={`/book/${shop.id}`}
                             onClick={(event) => event.stopPropagation()}
                             className="rounded-full bg-primary/10 px-3 py-1 text-[11px] font-bold text-primary hover:bg-primary/15"
                           >
-                            Detaje
+                            Rezervo
                           </Link>
                         </div>
                       </div>

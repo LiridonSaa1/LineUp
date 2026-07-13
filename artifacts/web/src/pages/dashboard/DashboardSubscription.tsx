@@ -75,6 +75,7 @@ export default function DashboardSubscription() {
   const [busyPlan, setBusyPlan] = useState<string | null>(null);
   const [confirmingSession, setConfirmingSession] = useState(false);
   const [confirmAttempted, setConfirmAttempted] = useState(false);
+  const [syncAttempted, setSyncAttempted] = useState(false);
 
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useGetOwnerStats(
     { shopId },
@@ -117,6 +118,19 @@ export default function DashboardSubscription() {
       })
       .finally(() => setConfirmingSession(false));
   }, [confirmAttempted, confirmingSession, refetchShop, refetchStats, toast]);
+
+  useEffect(() => {
+    if (!ownerShop || isSubscribed || syncAttempted || confirmingSession) return;
+
+    setSyncAttempted(true);
+    postJson("/api/payments/sync-subscription", { shopId: ownerShop.id })
+      .then(async () => {
+        await Promise.all([refetchShop(), refetchStats()]);
+      })
+      .catch(() => {
+        // If Stripe has no active subscription yet, keep the local pending state.
+      });
+  }, [confirmingSession, isSubscribed, ownerShop, refetchShop, refetchStats, syncAttempted]);
 
   async function handlePlan(plan: Plan) {
     if (!ownerShop) return;

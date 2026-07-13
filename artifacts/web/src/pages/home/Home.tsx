@@ -681,8 +681,10 @@ function ShopCard({ shop, index }: { shop: any; index: number }) {
   ];
   const rs = rankStyles[index];
 
+  const cityBookingHref = `/barbershops?city=${encodeURIComponent(shop.city || "")}`;
+
   return (
-    <Link href={`/barbershops/${shop.id}`}>
+    <Link href={cityBookingHref}>
       <div
         ref={ref}
         className={`group cursor-pointer relative overflow-hidden transition-all duration-500
