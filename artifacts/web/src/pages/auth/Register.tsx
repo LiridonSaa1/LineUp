@@ -283,9 +283,19 @@ function OwnerForm() {
           packageId: pkg.id,
         }),
       });
-      const data = await res.json();
+      let data: any = null;
+      try {
+        data = await res.json();
+      } catch {
+        toast({
+          variant: "destructive",
+          title: "Gabim",
+          description: "Lidhja me serverin dështoi. Provo përsëri.",
+        });
+        return;
+      }
       if (!res.ok) {
-        toast({ variant: "destructive", title: "Gabim", description: data.error });
+        toast({ variant: "destructive", title: "Gabim", description: data?.error ?? "Ndodhi një gabim." });
         return;
       }
       // Login immediately — user will already be authenticated when Stripe
