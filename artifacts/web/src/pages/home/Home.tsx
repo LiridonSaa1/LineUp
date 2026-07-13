@@ -2482,14 +2482,6 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="flex justify-center mb-10">
-            <div className="inline-flex items-center gap-3 bg-white/6 border border-white/12 px-6 py-3 rounded-full text-sm font-medium">
-              <span className="text-white/50">0.50€ për takim</span>
-              <span className="text-white/25">·</span>
-              <span className="text-emerald-400 font-medium">30 ditët e para falas</span>
-            </div>
-          </div>
-
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/register"
