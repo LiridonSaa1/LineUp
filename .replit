@@ -3,6 +3,8 @@ modules = ["web", "bash", "nodejs-24", "python-3.11", "postgresql-16"]
 [deployment]
 router = "application"
 deploymentTarget = "autoscale"
+run = ["bash", "-c", "cd artifacts/api-server && NODE_ENV=production SERVE_STATIC=true node --enable-source-maps ./dist/index.mjs"]
+build = ["bash", "-c", "pnpm install --frozen-lockfile && BASE_PATH=/ pnpm --filter @workspace/web run build && pnpm --filter @workspace/api-server run build"]
 
 [deployment.postBuild]
 args = ["pnpm", "store", "prune"]
