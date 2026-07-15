@@ -60,6 +60,95 @@ const step1Schema = z.object({
 });
 type S1Values = z.infer<typeof step1Schema>;
 
+/* ── PhoneInput ──────────────────────────────────────────── */
+/**
+ * Locked +383 prefix, digits-only, auto-formats as +383 44 123 456.
+ * The stored value is always the full string e.g. "+383 44 123 456".
+ */
+function PhoneInput({ value, onChange, error }: {
+  value: string; onChange: (v: string) => void; error?: string;
+}) {
+  const [focused, setFocused] = useState(false);
+
+  // Extract just the local digits part from the stored full value
+  function toLocal(full: string): string {
+    const digits = full.replace(/^\+383\s*/, "").replace(/\D/g, "").slice(0, 8);
+    let out = "";
+    if (digits.length > 0) out += digits.slice(0, 2);
+    if (digits.length > 2) out += " " + digits.slice(2, 5);
+    if (digits.length > 5) out += " " + digits.slice(5, 8);
+    return out;
+  }
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = e.target.value.replace(/\D/g, "").slice(0, 8);
+    let formatted = "";
+    if (raw.length > 0) formatted += raw.slice(0, 2);
+    if (raw.length > 2) formatted += " " + raw.slice(2, 5);
+    if (raw.length > 5) formatted += " " + raw.slice(5, 8);
+    onChange(formatted.length > 0 ? "+383 " + formatted : "+383 ");
+  }
+
+  const localVal = toLocal(value);
+  const active = focused || localVal.length > 0;
+
+  return (
+    <div className="space-y-1.5">
+      <div className="relative rounded-[14px] transition-all duration-200"
+        style={{
+          background: focused ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.03)",
+          border: `1px solid ${focused ? "rgba(79,142,247,0.45)" : error ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.08)"}`,
+          boxShadow: focused ? "0 0 0 3px rgba(79,142,247,0.10), 0 4px 16px rgba(0,0,0,0.2)" : "none",
+        }}>
+        {/* Phone icon */}
+        <div className="absolute left-4 top-1/2 -translate-y-1/2">
+          <Phone className="w-4 h-4 transition-colors duration-200"
+            style={{ color: focused ? PRIMARY : "rgba(255,255,255,0.25)" }} />
+        </div>
+        {/* Floating label */}
+        <label className="absolute left-11 pointer-events-none select-none transition-all duration-200"
+          style={{
+            top: active ? "9px" : "50%",
+            transform: active ? "none" : "translateY(-50%)",
+            fontSize: active ? "10px" : "13px",
+            fontWeight: active ? 600 : 400,
+            letterSpacing: active ? "0.05em" : "0",
+            textTransform: active ? "uppercase" : "none",
+            color: active ? PRIMARY : "rgba(255,255,255,0.35)",
+          }}>
+          Telefoni
+        </label>
+        {/* Input row */}
+        <div className="flex items-end pl-11 pr-4" style={{ paddingTop: "26px", paddingBottom: "10px" }}>
+          {/* Locked prefix */}
+          <span className="text-sm font-medium select-none shrink-0 mr-0.5"
+            style={{ color: "rgba(255,255,255,0.45)", letterSpacing: "0.01em" }}>
+            +383
+          </span>
+          {/* Editable local part */}
+          <input
+            id="ophone"
+            type="text"
+            inputMode="numeric"
+            placeholder={focused ? "44 123 456" : ""}
+            value={localVal}
+            onChange={handleChange}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            onKeyDown={e => {
+              // block any non-digit, non-control key
+              if (e.key.length === 1 && !/\d/.test(e.key)) e.preventDefault();
+            }}
+            autoComplete="tel"
+            className="flex-1 bg-transparent outline-none text-sm text-white placeholder:text-white/20 min-w-0"
+          />
+        </div>
+      </div>
+      {error && <p className="text-xs pl-1" style={{ color: "#f87171" }}>{error}</p>}
+    </div>
+  );
+}
+
 /* ── IconInput ───────────────────────────────────────────── */
 function IconInput({
   id, icon: Icon, label, type = "text", placeholder,
@@ -275,7 +364,7 @@ function OwnerForm() {
 
   const f1 = useForm<S1Values>({
     resolver: zodResolver(step1Schema),
-    defaultValues: { businessName: "", email: "", phone: "", password: "", city: "", address: "" },
+    defaultValues: { businessName: "", email: "", phone: "+383 ", password: "", city: "", address: "" },
   });
   const w1 = (k: keyof S1Values) => (f1.watch(k) ?? "") as string;
 
@@ -342,8 +431,7 @@ function OwnerForm() {
           <IconInput id="oemail" icon={Mail}      label="Email" type="email" placeholder="biznesi@shembull.com"
             value={w1("email")} onChange={v => f1.setValue("email", v)}
             error={f1.formState.errors.email?.message} />
-          <IconInput id="ophone" icon={Phone}     label="Telefoni" type="tel" placeholder="+383 44 000 000"
-            value={w1("phone")} onChange={v => f1.setValue("phone", v)}
+          <PhoneInput value={w1("phone")} onChange={v => f1.setValue("phone", v, { shouldValidate: f1.formState.isSubmitted })}
             error={f1.formState.errors.phone?.message} />
           <IconInput id="opw"    icon={Lock}      label="Fjalëkalimi" type="password"
             value={w1("password")} onChange={v => f1.setValue("password", v)}
