@@ -7,6 +7,31 @@ import { sendWelcomeEmail } from "../lib/email";
 
 const router = Router();
 
+/**
+ * Derive the public base URL for Stripe return_url / success_url / cancel_url.
+ * Priority:
+ *   1. APP_URL env var (set this on Render/Fly/etc.)
+ *   2. x-forwarded-host + x-forwarded-proto request headers (works behind most reverse proxies)
+ *   3. REPLIT_DOMAINS (Replit dev / deployment)
+ *   4. Fallback to http://localhost
+ */
+function getBaseUrl(req: import("express").Request): string {
+  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, "");
+
+  const fwdHost = req.headers["x-forwarded-host"];
+  const host = (Array.isArray(fwdHost) ? fwdHost[0] : fwdHost) || req.headers.host;
+  if (host) {
+    const fwdProto = req.headers["x-forwarded-proto"];
+    const proto = Array.isArray(fwdProto) ? fwdProto[0] : (fwdProto ?? (host.includes("localhost") ? "http" : "https"));
+    return `${proto}://${host}`;
+  }
+
+  const replitDomain = process.env.REPLIT_DOMAINS?.split(",")[0];
+  if (replitDomain) return `https://${replitDomain}`;
+
+  return "http://localhost";
+}
+
 function formatPayment(p: any) {
   return { ...p, amount: parseFloat(p.amount) };
 }
@@ -108,9 +133,7 @@ router.post("/payments/register-owner-subscription", async (req, res): Promise<v
        The Subscriptions API no longer creates a payment_intent on invoices in
        newer API versions. Checkout Sessions always return a client_secret and
        handle subscription creation automatically on payment completion.        */
-    const domains = process.env.REPLIT_DOMAINS?.split(",")[0] ?? "localhost";
-    const protocol = domains.includes("localhost") ? "http" : "https";
-    const baseUrl = `${protocol}://${domains}`;
+    const baseUrl = getBaseUrl(req);
 
     const sessionRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {
       method: "POST",
@@ -178,9 +201,7 @@ router.post("/payments/create-subscription", requireAuth, requireRole("owner"), 
     if (!shop) { res.status(404).json({ error: "Shop not found" }); return; }
     // Owners may only create a subscription for their own shop
     if (shop.ownerId !== req.user!.id) { res.status(403).json({ error: "Forbidden" }); return; }
-    const domains = process.env.REPLIT_DOMAINS?.split(",")[0] ?? "localhost";
-    const protocol = domains.includes("localhost") ? "http" : "https";
-    const baseUrl = `${protocol}://${domains}`;
+    const baseUrl = getBaseUrl(req);
 
     const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {
       method: "POST",
@@ -378,9 +399,7 @@ router.post("/payments/create-checkout", requireAuth, async (req: AuthRequest, r
     if (req.user!.role === "user" && order.userId !== req.user!.id) {
       res.status(403).json({ error: "Forbidden" }); return;
     }
-    const domains = process.env.REPLIT_DOMAINS?.split(",")[0] ?? "localhost";
-    const protocol = domains.includes("localhost") ? "http" : "https";
-    const baseUrl = `${protocol}://${domains}`;
+    const baseUrl = getBaseUrl(req);
 
     const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {
       method: "POST",
@@ -482,9 +501,7 @@ router.post("/payments/create-ad-checkout", async (req, res): Promise<void> => {
   const amountCents = AD_PACKAGE_PRICES[pkg];
   if (!amountCents) { res.status(400).json({ error: "Invalid package" }); return; }
   try {
-    const domains = process.env.REPLIT_DOMAINS?.split(",")[0] ?? "localhost";
-    const protocol = domains.includes("localhost") ? "http" : "https";
-    const baseUrl = `${protocol}://${domains}`;
+    const baseUrl = getBaseUrl(req);
 
     const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {
       method: "POST",

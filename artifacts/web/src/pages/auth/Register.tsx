@@ -36,10 +36,24 @@ const PACKAGES: PkgOption[] = [
 ];
 
 /* ── Step 1 schema ───────────────────────────────────────── */
+/**
+ * Validates Kosovo phone numbers in any of these formats:
+ *   +383 44 123 456  /  +38344123456
+ *   00383 44 123 456
+ *   044 123 456  /  044123456
+ * Allowed mobile prefixes: 44, 45, 46, 48, 49
+ */
+function isValidKosovoPhone(raw: string): boolean {
+  const p = raw.trim().replace(/[\s\-().]/g, "");
+  return /^(\+383|00383|0)(4[4-9])\d{6}$/.test(p);
+}
+
 const step1Schema = z.object({
   businessName: z.string().min(2, "Emri i biznesit i detyrueshëm"),
   email:        z.string().email("Email i pavlefshëm"),
-  phone:        z.string().min(5, "Telefoni i detyrueshëm"),
+  phone:        z.string()
+    .min(1, "Telefoni i detyrueshëm")
+    .refine(isValidKosovoPhone, "Numri duhet të jetë kosovar (p.sh. +383 44 123 456 ose 044 123 456)"),
   password:     z.string().min(6, "Minimum 6 karaktere"),
   city:         z.string().min(1, "Qyteti i detyrueshëm"),
   address:      z.string().min(3, "Adresa e detyrueshme"),
