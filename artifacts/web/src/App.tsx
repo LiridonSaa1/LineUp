@@ -9,6 +9,7 @@ import { RootLayout } from "@/components/layout/RootLayout";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { BarberLayout } from "@/components/layout/BarberLayout";
+import { UserLayout } from "@/components/layout/UserLayout";
 
 // User Pages
 import Home from "@/pages/home/Home";
@@ -135,6 +136,21 @@ function AdminRouter() {
   );
 }
 
+function UserPanelRouter() {
+  return (
+    <UserLayout>
+      <Switch>
+        <Route path="/me" component={UserDashboard} />
+        <Route path="/appointments" component={Appointments} />
+        <Route path="/orders" component={Orders} />
+        <Route path="/notifications" component={Notifications} />
+        <Route path="/profile" component={Profile} />
+        <Route component={NotFound} />
+      </Switch>
+    </UserLayout>
+  );
+}
+
 function BarberPanelRouter() {
   return (
     <BarberLayout>
@@ -171,6 +187,12 @@ function App() {
 
               <Route path="/barber" component={BarberPanelRouter} />
               <Route path="/barber/:rest*" component={BarberPanelRouter} />
+
+              <Route path="/me" component={UserPanelRouter} />
+              <Route path="/appointments" component={UserPanelRouter} />
+              <Route path="/orders" component={UserPanelRouter} />
+              <Route path="/notifications" component={UserPanelRouter} />
+              <Route path="/profile" component={UserPanelRouter} />
 
               <Route>
                 <UserRouter />
