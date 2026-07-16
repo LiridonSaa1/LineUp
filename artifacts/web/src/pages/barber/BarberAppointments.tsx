@@ -18,6 +18,7 @@ import {
 import {
   format,
   parseISO,
+  addMinutes,
   startOfMonth,
   endOfMonth,
   startOfWeek,
@@ -86,6 +87,12 @@ function aptTopPercent(apt: Apt) {
 function aptHeightPercent(apt: Apt) {
   const dur = apt.service?.duration ?? 30;
   return (dur / ((HOUR_END - HOUR_START) * 60)) * 100;
+}
+
+function endTimeLabel(apt: Apt) {
+  const start = parseISO(apt.scheduledAt);
+  const dur = apt.service?.duration ?? 30;
+  return format(addMinutes(start, dur), "HH:mm");
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────
@@ -361,18 +368,17 @@ function WeekView({
                 {dayApts.map((apt) => {
                   const topPx = aptTopPercent(apt) * totalHeight / 100;
                   const heightPx = Math.max(aptHeightPercent(apt) * totalHeight / 100, 24);
-                  const cfg = statusCfg(apt.status);
                   return (
                     <div
                       key={apt.id}
                       onClick={() => onSelectApt(apt)}
-                      className="absolute left-0.5 right-0.5 rounded-lg px-1.5 py-1 cursor-pointer overflow-hidden border-l-2 border-primary bg-primary/10 hover:bg-primary/20 transition-colors"
+                      className="absolute left-0.5 right-0.5 rounded-lg px-1.5 py-1 cursor-pointer overflow-hidden bg-primary hover:brightness-110 transition-all shadow-sm"
                       style={{ top: topPx, height: heightPx }}
                     >
-                      <p className="text-[10px] font-bold leading-tight truncate">
-                        {format(parseISO(apt.scheduledAt), "HH:mm")}
+                      <p className="text-[10px] font-bold leading-tight truncate text-white">
+                        {format(parseISO(apt.scheduledAt), "HH:mm")} – {endTimeLabel(apt)}
                       </p>
-                      <p className="text-[10px] leading-tight truncate text-muted-foreground">
+                      <p className="text-[10px] leading-tight truncate text-white/80">
                         {apt.user?.name ?? "Klient"}
                       </p>
                     </div>
@@ -435,14 +441,18 @@ function DayView({
             <div
               key={apt.id}
               onClick={() => onSelectApt(apt)}
-              className="absolute left-2 right-2 rounded-xl px-3 py-2 cursor-pointer border-l-4 border-primary bg-primary/10 hover:bg-primary/15 transition-colors shadow-sm"
+              className="absolute left-2 right-2 rounded-xl px-3 py-2 cursor-pointer bg-primary hover:brightness-110 transition-all shadow-md"
               style={{ top: topPx, height: heightPx }}
             >
-              <p className="text-xs font-bold">{format(parseISO(apt.scheduledAt), "HH:mm")} — {apt.user?.name ?? "Klient"}</p>
-              {apt.service?.name && (
-                <p className="text-xs text-muted-foreground truncate">{apt.service.name}</p>
+              <p className="text-sm font-bold text-white leading-tight truncate">
+                {format(parseISO(apt.scheduledAt), "HH:mm")} – {endTimeLabel(apt)}
+              </p>
+              <p className="text-xs text-white/80 truncate mt-0.5">
+                {apt.user?.name ?? "Klient"}
+              </p>
+              {apt.service?.name && heightPx > 52 && (
+                <p className="text-[10px] text-white/60 truncate mt-0.5">{apt.service.name}</p>
               )}
-              <StatusBadge status={apt.status} />
             </div>
           );
         })}
