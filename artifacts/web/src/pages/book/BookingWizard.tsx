@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { KosovoPhoneInput } from "@/components/ui/kosovo-phone-input";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { ArrowLeft, Clock, Scissors, Calendar, CheckCircle2, MapPin, Star, Check, PartyPopper, ChevronLeft, ChevronRight, LogIn, UserPlus, ShieldCheck } from "lucide-react";
 import { format, addDays, startOfToday, startOfMonth, endOfMonth, isBefore } from "date-fns";
@@ -55,7 +56,7 @@ export default function BookingWizard() {
   // Auth-gated confirm step: if the visitor has no account we collect the missing details inline
   // and then verify the booking via a one-time code sent to their email, instead of bouncing them away.
   const [authMode, setAuthMode] = useState<"login" | "register">("register");
-  const [authFields, setAuthFields] = useState({ firstName: "", lastName: "", email: "", phone: "", password: "" });
+  const [authFields, setAuthFields] = useState({ firstName: "", lastName: "", email: "", phone: "+383 ", password: "" });
   const [loginFields, setLoginFields] = useState({ email: "", password: "" });
   const [pendingAppointmentIds, setPendingAppointmentIds] = useState<number[] | null>(null);
   const [otpChannel, setOtpChannel] = useState<"sms" | "email">("email");
@@ -711,8 +712,11 @@ export default function BookingWizard() {
                       </div>
                       <div>
                         <Label htmlFor="reg-phone">Numri i Telefonit</Label>
-                        <Input id="reg-phone" type="tel" value={authFields.phone}
-                          onChange={(e) => setAuthFields((f) => ({ ...f, phone: e.target.value }))} />
+                        <KosovoPhoneInput
+                          id="reg-phone"
+                          value={authFields.phone}
+                          onChange={(v) => setAuthFields((f) => ({ ...f, phone: v }))}
+                        />
                       </div>
                       <div>
                         <Label htmlFor="reg-password">Fjalëkalimi</Label>
