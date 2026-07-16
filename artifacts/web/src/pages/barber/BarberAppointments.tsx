@@ -49,9 +49,23 @@ type Apt = {
   id: number;
   scheduledAt: string;
   status: string;
-  user?: { name?: string };
-  service?: { name?: string; duration?: number };
+  otpCode?: string | null;
+  user?: { name?: string; phone?: string };
+  service?: { name?: string; duration?: number; durationMinutes?: number };
   [key: string]: any;
+};
+
+/** One calendar block = one or more appointments merged by shared otpCode */
+type GroupedApt = {
+  id: number;           // id of the anchor (first) appointment
+  ids: number[];        // all apt ids in the group
+  scheduledAt: string;  // start time of the first apt
+  status: string;
+  user?: Apt["user"];
+  totalDuration: number;       // sum of every service duration (minutes)
+  services: Array<{ name?: string; duration?: number }>;
+  serviceLabel: string;        // "Haircut, Beard trim"
+  raw: Apt[];                  // original apt objects (for status updates)
 };
 
 // ── Constants ──────────────────────────────────────────────────────────
@@ -74,25 +88,58 @@ function statusCfg(s: string) {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────
-function aptsForDay(apts: Apt[], day: Date) {
-  return apts.filter((a) => isSameDay(parseISO(a.scheduledAt), day));
+
+/** Merge appointments that share the same otpCode into one GroupedApt. */
+function groupApts(apts: Apt[]): GroupedApt[] {
+  const buckets = new Map<string, Apt[]>();
+  for (const apt of apts) {
+    // Key: shared otpCode when present, otherwise unique per apt
+    const key = apt.otpCode ? `otp:${apt.otpCode}` : `id:${apt.id}`;
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key)!.push(apt);
+  }
+
+  const groups: GroupedApt[] = [];
+  for (const bucket of buckets.values()) {
+    // Sort by scheduledAt so the first entry is the start time
+    bucket.sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
+    const first = bucket[0];
+    const services = bucket.map((a) => ({
+      name: a.service?.name,
+      duration: a.service?.durationMinutes ?? a.service?.duration ?? 30,
+    }));
+    const totalDuration = services.reduce((sum, s) => sum + (s.duration ?? 30), 0);
+    groups.push({
+      id: first.id,
+      ids: bucket.map((a) => a.id),
+      scheduledAt: first.scheduledAt,
+      status: first.status,
+      user: first.user,
+      totalDuration,
+      services,
+      serviceLabel: services.map((s) => s.name).filter(Boolean).join(", "),
+      raw: bucket,
+    });
+  }
+  return groups;
 }
 
-function aptTopPercent(apt: Apt) {
-  const d = parseISO(apt.scheduledAt);
+function groupsForDay(groups: GroupedApt[], day: Date) {
+  return groups.filter((g) => isSameDay(parseISO(g.scheduledAt), day));
+}
+
+function groupTopPercent(g: GroupedApt) {
+  const d = parseISO(g.scheduledAt);
   const mins = (getHours(d) - HOUR_START) * 60 + getMinutes(d);
   return (mins / ((HOUR_END - HOUR_START) * 60)) * 100;
 }
 
-function aptHeightPercent(apt: Apt) {
-  const dur = apt.service?.duration ?? 30;
-  return (dur / ((HOUR_END - HOUR_START) * 60)) * 100;
+function groupHeightPercent(g: GroupedApt) {
+  return (g.totalDuration / ((HOUR_END - HOUR_START) * 60)) * 100;
 }
 
-function endTimeLabel(apt: Apt) {
-  const start = parseISO(apt.scheduledAt);
-  const dur = apt.service?.duration ?? 30;
-  return format(addMinutes(start, dur), "HH:mm");
+function endTimeLabel(g: GroupedApt) {
+  return format(addMinutes(parseISO(g.scheduledAt), g.totalDuration), "HH:mm");
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────
@@ -102,19 +149,20 @@ function StatusBadge({ status }: { status: string }) {
   return <Badge className={`text-xs ${c.badge}`}>{c.label}</Badge>;
 }
 
-/** Appointment detail side panel */
+/** Appointment detail side panel — works with a GroupedApt */
 function DetailPanel({
-  apt,
+  group,
   onClose,
   onStatusChange,
   busy,
 }: {
-  apt: Apt;
+  group: GroupedApt;
   onClose: () => void;
-  onStatusChange: (id: number, status: string) => void;
+  onStatusChange: (ids: number[], status: string) => void;
   busy: boolean;
 }) {
-  const d = parseISO(apt.scheduledAt);
+  const d = parseISO(group.scheduledAt);
+  const endLabel = endTimeLabel(group);
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
       <div
@@ -125,11 +173,11 @@ function DetailPanel({
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center text-lg font-bold text-primary shrink-0">
-              {(apt.user?.name ?? "K").charAt(0)}
+              {(group.user?.name ?? "K").charAt(0)}
             </div>
             <div>
-              <p className="font-bold text-base leading-tight">{apt.user?.name ?? "Klient"}</p>
-              <StatusBadge status={apt.status} />
+              <p className="font-bold text-base leading-tight">{group.user?.name ?? "Klient"}</p>
+              <StatusBadge status={group.status} />
             </div>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground mt-0.5">
@@ -145,31 +193,42 @@ function DetailPanel({
           </div>
           <div className="flex items-center gap-2.5 text-muted-foreground">
             <Clock className="w-4 h-4 shrink-0 text-primary" />
-            <span>{format(d, "HH:mm")} {apt.service?.duration ? `· ${apt.service.duration} min` : ""}</span>
+            <span>
+              {format(d, "HH:mm")} – {endLabel}
+              <span className="ml-1.5 text-xs opacity-60">({group.totalDuration} min)</span>
+            </span>
           </div>
-          {apt.service?.name && (
-            <div className="flex items-center gap-2.5 text-muted-foreground">
-              <Scissors className="w-4 h-4 shrink-0 text-primary" />
-              <span>{apt.service.name}</span>
+          {/* Services list */}
+          {group.services.length > 0 && (
+            <div className="flex items-start gap-2.5 text-muted-foreground">
+              <Scissors className="w-4 h-4 shrink-0 text-primary mt-0.5" />
+              <div className="space-y-1">
+                {group.services.map((s, i) => (
+                  <p key={i}>
+                    {s.name ?? "Shërbim"}
+                    {s.duration ? <span className="opacity-50 ml-1 text-xs">({s.duration} min)</span> : null}
+                  </p>
+                ))}
+              </div>
             </div>
           )}
-          {apt.user?.phone && (
+          {group.user?.phone && (
             <div className="flex items-center gap-2.5 text-muted-foreground">
               <User className="w-4 h-4 shrink-0 text-primary" />
-              <span>{apt.user.phone}</span>
+              <span>{group.user.phone}</span>
             </div>
           )}
         </div>
 
         {/* Action buttons */}
-        {["confirmed", "pending_otp"].includes(apt.status) && (
+        {["confirmed", "pending_otp"].includes(group.status) && (
           <div className="flex gap-2 pt-1">
-            {apt.status === "confirmed" && (
+            {group.status === "confirmed" && (
               <Button
                 size="sm"
                 className="flex-1 rounded-xl text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
                 disabled={busy}
-                onClick={() => onStatusChange(apt.id, "completed")}
+                onClick={() => onStatusChange(group.ids, "completed")}
               >
                 <CheckCircle className="w-3.5 h-3.5 mr-1" /> Përfundo
               </Button>
@@ -179,7 +238,7 @@ function DetailPanel({
               variant="outline"
               className="flex-1 rounded-xl text-xs text-red-500 border-red-300 hover:bg-red-50"
               disabled={busy}
-              onClick={() => onStatusChange(apt.id, "no_show")}
+              onClick={() => onStatusChange(group.ids, "no_show")}
             >
               <XCircle className="w-3.5 h-3.5 mr-1" /> Nuk erdhi
             </Button>
@@ -193,14 +252,14 @@ function DetailPanel({
 // ── Month view ─────────────────────────────────────────────────────────
 function MonthView({
   current,
-  apts,
+  groups,
   onSelectDay,
-  onSelectApt,
+  onSelectGroup,
 }: {
   current: Date;
-  apts: Apt[];
+  groups: GroupedApt[];
   onSelectDay: (d: Date) => void;
-  onSelectApt: (a: Apt) => void;
+  onSelectGroup: (g: GroupedApt) => void;
 }) {
   const weeks = useMemo(() => {
     const start = startOfWeek(startOfMonth(current), { weekStartsOn: 1 });
@@ -227,7 +286,7 @@ function MonthView({
         {weeks.map((week, wi) => (
           <div key={wi} className="grid grid-cols-7 border-b border-border last:border-0">
             {week.map((day) => {
-              const dayApts = aptsForDay(apts, day);
+              const dayGroups = groupsForDay(groups, day);
               const inMonth = isSameMonth(day, current);
               const today = isToday(day);
               return (
@@ -238,39 +297,30 @@ function MonthView({
                     !inMonth ? "opacity-35" : ""
                   }`}
                 >
-                  {/* Day number */}
                   <div className="flex justify-end">
-                    <span
-                      className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full ${
-                        today
-                          ? "bg-primary text-white"
-                          : "text-foreground"
-                      }`}
-                    >
+                    <span className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full ${today ? "bg-primary text-white" : "text-foreground"}`}>
                       {format(day, "d")}
                     </span>
                   </div>
-
-                  {/* Appointment pills (max 3, then "+N") */}
                   <div className="flex flex-col gap-0.5 min-h-0">
-                    {dayApts.slice(0, 3).map((apt) => {
-                      const cfg = statusCfg(apt.status);
+                    {dayGroups.slice(0, 3).map((g) => {
+                      const cfg = statusCfg(g.status);
                       return (
                         <div
-                          key={apt.id}
-                          onClick={(e) => { e.stopPropagation(); onSelectApt(apt); }}
+                          key={g.id}
+                          onClick={(e) => { e.stopPropagation(); onSelectGroup(g); }}
                           className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-primary/10 hover:bg-primary/20 cursor-pointer transition-colors"
                         >
                           <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${cfg.dot}`} />
                           <span className="text-[10px] font-semibold truncate leading-tight">
-                            {format(parseISO(apt.scheduledAt), "HH:mm")} {apt.user?.name ?? "Klient"}
+                            {format(parseISO(g.scheduledAt), "HH:mm")} {g.user?.name ?? "Klient"}
                           </span>
                         </div>
                       );
                     })}
-                    {dayApts.length > 3 && (
+                    {dayGroups.length > 3 && (
                       <div className="text-[10px] font-bold text-muted-foreground px-1.5">
-                        +{dayApts.length - 3} të tjera
+                        +{dayGroups.length - 3} të tjera
                       </div>
                     )}
                   </div>
@@ -287,12 +337,12 @@ function MonthView({
 // ── Week view ──────────────────────────────────────────────────────────
 function WeekView({
   current,
-  apts,
-  onSelectApt,
+  groups,
+  onSelectGroup,
 }: {
   current: Date;
-  apts: Apt[];
-  onSelectApt: (a: Apt) => void;
+  groups: GroupedApt[];
+  onSelectGroup: (g: GroupedApt) => void;
 }) {
   const days = useMemo(
     () => eachDayOfInterval({
@@ -315,29 +365,21 @@ function WeekView({
 
   return (
     <div className="flex flex-1 min-h-0 overflow-hidden">
-      {/* Hour labels */}
       <div className="shrink-0 w-14 border-r border-border flex flex-col pt-10 overflow-y-auto" style={{ scrollbarWidth: "none" }}>
         {hours.map((h) => (
-          <div
-            key={h.toISOString()}
-            className="shrink-0 text-right pr-2 text-xs text-muted-foreground font-medium"
-            style={{ height: HOUR_HEIGHT }}
-          >
+          <div key={h.toISOString()} className="shrink-0 text-right pr-2 text-xs text-muted-foreground font-medium" style={{ height: HOUR_HEIGHT }}>
             {format(h, "HH:mm")}
           </div>
         ))}
       </div>
 
-      {/* Days grid */}
       <div className="flex-1 overflow-auto">
         {/* Day headers */}
         <div className="sticky top-0 z-10 grid bg-card border-b border-border" style={{ gridTemplateColumns: `repeat(7, minmax(0, 1fr))` }}>
           {days.map((d, i) => (
             <div key={i} className={`py-2 text-center border-r border-border last:border-0 ${isToday(d) ? "bg-primary/5" : ""}`}>
               <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-wide">{DAY_NAMES_SHORT[i]}</p>
-              <p className={`text-sm font-bold mt-0.5 w-7 h-7 mx-auto flex items-center justify-center rounded-full ${
-                isToday(d) ? "bg-primary text-white" : ""
-              }`}>
+              <p className={`text-sm font-bold mt-0.5 w-7 h-7 mx-auto flex items-center justify-center rounded-full ${isToday(d) ? "bg-primary text-white" : ""}`}>
                 {format(d, "d")}
               </p>
             </div>
@@ -346,40 +388,30 @@ function WeekView({
 
         {/* Time grid */}
         <div className="relative grid" style={{ gridTemplateColumns: `repeat(7, minmax(0, 1fr))`, height: totalHeight }}>
-          {/* Hour lines (background) */}
           {hours.map((h, hi) => (
-            <div
-              key={h.toISOString()}
-              className="absolute left-0 right-0 border-t border-border/50"
-              style={{ top: hi * HOUR_HEIGHT }}
-            />
+            <div key={h.toISOString()} className="absolute left-0 right-0 border-t border-border/50" style={{ top: hi * HOUR_HEIGHT }} />
           ))}
-
-          {/* Appointments per column */}
           {days.map((day, di) => {
-            const dayApts = aptsForDay(apts, day).filter(
-              (a) => getHours(parseISO(a.scheduledAt)) >= HOUR_START && getHours(parseISO(a.scheduledAt)) < HOUR_END,
+            const dayGroups = groupsForDay(groups, day).filter(
+              (g) => getHours(parseISO(g.scheduledAt)) >= HOUR_START && getHours(parseISO(g.scheduledAt)) < HOUR_END,
             );
             return (
-              <div
-                key={di}
-                className={`relative border-r border-border last:border-0 ${isToday(day) ? "bg-primary/[0.025]" : ""}`}
-              >
-                {dayApts.map((apt) => {
-                  const topPx = aptTopPercent(apt) * totalHeight / 100;
-                  const heightPx = Math.max(aptHeightPercent(apt) * totalHeight / 100, 24);
+              <div key={di} className={`relative border-r border-border last:border-0 ${isToday(day) ? "bg-primary/[0.025]" : ""}`}>
+                {dayGroups.map((g) => {
+                  const topPx = groupTopPercent(g) * totalHeight / 100;
+                  const heightPx = Math.max(groupHeightPercent(g) * totalHeight / 100, 24);
                   return (
                     <div
-                      key={apt.id}
-                      onClick={() => onSelectApt(apt)}
+                      key={g.id}
+                      onClick={() => onSelectGroup(g)}
                       className="absolute left-0.5 right-0.5 rounded-lg px-1.5 py-1 cursor-pointer overflow-hidden bg-primary hover:brightness-110 transition-all shadow-sm"
                       style={{ top: topPx, height: heightPx }}
                     >
                       <p className="text-[10px] font-bold leading-tight truncate text-white">
-                        {format(parseISO(apt.scheduledAt), "HH:mm")} – {endTimeLabel(apt)}
+                        {format(parseISO(g.scheduledAt), "HH:mm")} – {endTimeLabel(g)}
                       </p>
                       <p className="text-[10px] leading-tight truncate text-white/80">
-                        {apt.user?.name ?? "Klient"}
+                        {g.user?.name ?? "Klient"}
                       </p>
                     </div>
                   );
@@ -396,12 +428,12 @@ function WeekView({
 // ── Day view ───────────────────────────────────────────────────────────
 function DayView({
   current,
-  apts,
-  onSelectApt,
+  groups,
+  onSelectGroup,
 }: {
   current: Date;
-  apts: Apt[];
-  onSelectApt: (a: Apt) => void;
+  groups: GroupedApt[];
+  onSelectGroup: (g: GroupedApt) => void;
 }) {
   const hours = useMemo(
     () =>
@@ -412,15 +444,14 @@ function DayView({
     [current],
   );
 
-  const dayApts = aptsForDay(apts, current).filter(
-    (a) => getHours(parseISO(a.scheduledAt)) >= HOUR_START && getHours(parseISO(a.scheduledAt)) < HOUR_END,
+  const dayGroups = groupsForDay(groups, current).filter(
+    (g) => getHours(parseISO(g.scheduledAt)) >= HOUR_START && getHours(parseISO(g.scheduledAt)) < HOUR_END,
   );
 
   const totalHeight = (HOUR_END - HOUR_START) * HOUR_HEIGHT;
 
   return (
     <div className="flex flex-1 min-h-0 overflow-auto">
-      {/* Hour labels */}
       <div className="shrink-0 w-14 flex flex-col border-r border-border">
         {hours.map((h) => (
           <div key={h.toISOString()} className="shrink-0 text-right pr-2 text-xs text-muted-foreground font-medium" style={{ height: HOUR_HEIGHT }}>
@@ -429,29 +460,28 @@ function DayView({
         ))}
       </div>
 
-      {/* Events column */}
       <div className="flex-1 relative" style={{ height: totalHeight }}>
         {hours.map((_, hi) => (
           <div key={hi} className="absolute left-0 right-0 border-t border-border/50" style={{ top: hi * HOUR_HEIGHT }} />
         ))}
-        {dayApts.map((apt) => {
-          const topPx = aptTopPercent(apt) * totalHeight / 100;
-          const heightPx = Math.max(aptHeightPercent(apt) * totalHeight / 100, 36);
+        {dayGroups.map((g) => {
+          const topPx = groupTopPercent(g) * totalHeight / 100;
+          const heightPx = Math.max(groupHeightPercent(g) * totalHeight / 100, 36);
           return (
             <div
-              key={apt.id}
-              onClick={() => onSelectApt(apt)}
+              key={g.id}
+              onClick={() => onSelectGroup(g)}
               className="absolute left-2 right-2 rounded-xl px-3 py-2 cursor-pointer bg-primary hover:brightness-110 transition-all shadow-md"
               style={{ top: topPx, height: heightPx }}
             >
               <p className="text-sm font-bold text-white leading-tight truncate">
-                {format(parseISO(apt.scheduledAt), "HH:mm")} – {endTimeLabel(apt)}
+                {format(parseISO(g.scheduledAt), "HH:mm")} – {endTimeLabel(g)}
               </p>
               <p className="text-xs text-white/80 truncate mt-0.5">
-                {apt.user?.name ?? "Klient"}
+                {g.user?.name ?? "Klient"}
               </p>
-              {apt.service?.name && heightPx > 52 && (
-                <p className="text-[10px] text-white/60 truncate mt-0.5">{apt.service.name}</p>
+              {g.serviceLabel && heightPx > 52 && (
+                <p className="text-[10px] text-white/60 truncate mt-0.5">{g.serviceLabel}</p>
               )}
             </div>
           );
@@ -468,7 +498,7 @@ export default function BarberAppointments() {
 
   const [view, setView] = useState<ViewMode>("week");
   const [current, setCurrent] = useState(new Date());
-  const [selectedApt, setSelectedApt] = useState<Apt | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<GroupedApt | null>(null);
 
   const { data: apptRes, isLoading, refetch } = useListAppointments(
     { limit: 200 },
@@ -480,6 +510,8 @@ export default function BarberAppointments() {
     const raw = Array.isArray(apptRes) ? apptRes : (apptRes as any)?.data ?? [];
     return raw;
   }, [apptRes]);
+
+  const groups = useMemo(() => groupApts(apts), [apts]);
 
   // Navigation
   const goBack = () => {
@@ -493,7 +525,6 @@ export default function BarberAppointments() {
     else setCurrent((d) => addDays(d, 1));
   };
 
-  // Period label
   const periodLabel = useMemo(() => {
     if (view === "month") return format(current, "MMMM yyyy", { locale: sq });
     if (view === "week") {
@@ -504,20 +535,22 @@ export default function BarberAppointments() {
     return format(current, "EEEE, dd MMMM yyyy", { locale: sq });
   }, [view, current]);
 
-  const handleStatusChange = async (id: number, status: string) => {
+  // Update all appointments in the group at once
+  const handleStatusChange = async (ids: number[], status: string) => {
     try {
-      await updateMutation.mutateAsync({ id, data: { status: status as any } });
+      await Promise.all(
+        ids.map((id) => updateMutation.mutateAsync({ id, data: { status: status as any } }))
+      );
       toast({ title: "Statusi u përditësua" });
-      setSelectedApt(null);
+      setSelectedGroup(null);
       refetch();
     } catch {
       toast({ variant: "destructive", title: "Gabim", description: "Nuk u përditësua statusi" });
     }
   };
 
-  // Count for today label
-  const todayCount = aptsForDay(apts, new Date()).filter(
-    (a) => ["confirmed", "pending_otp"].includes(a.status),
+  const todayCount = groupsForDay(groups, new Date()).filter(
+    (g) => ["confirmed", "pending_otp"].includes(g.status),
   ).length;
 
   return (
@@ -538,7 +571,6 @@ export default function BarberAppointments() {
               </span>
             )}
           </Button>
-
           <div className="flex items-center">
             <button onClick={goBack} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
               <ChevronLeft className="w-4 h-4" />
@@ -551,17 +583,13 @@ export default function BarberAppointments() {
             </button>
           </div>
         </div>
-
-        {/* View switcher */}
         <div className="flex gap-1 rounded-xl border border-border bg-secondary/50 p-1 self-start sm:self-auto">
           {(["month", "week", "day"] as ViewMode[]).map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors capitalize ${
-                view === v
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
+                view === v ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {v === "month" ? "Muaji" : v === "week" ? "Java" : "Dita"}
@@ -582,33 +610,25 @@ export default function BarberAppointments() {
           {view === "month" && (
             <MonthView
               current={current}
-              apts={apts}
+              groups={groups}
               onSelectDay={(d) => { setCurrent(d); setView("day"); }}
-              onSelectApt={setSelectedApt}
+              onSelectGroup={setSelectedGroup}
             />
           )}
           {view === "week" && (
-            <WeekView
-              current={current}
-              apts={apts}
-              onSelectApt={setSelectedApt}
-            />
+            <WeekView current={current} groups={groups} onSelectGroup={setSelectedGroup} />
           )}
           {view === "day" && (
-            <DayView
-              current={current}
-              apts={apts}
-              onSelectApt={setSelectedApt}
-            />
+            <DayView current={current} groups={groups} onSelectGroup={setSelectedGroup} />
           )}
         </div>
       )}
 
       {/* ── Detail panel ── */}
-      {selectedApt && (
+      {selectedGroup && (
         <DetailPanel
-          apt={selectedApt}
-          onClose={() => setSelectedApt(null)}
+          group={selectedGroup}
+          onClose={() => setSelectedGroup(null)}
           onStatusChange={handleStatusChange}
           busy={updateMutation.isPending}
         />
