@@ -178,6 +178,16 @@ const stripeWebhookHandler: RequestHandler = async (req, res): Promise<void> => 
         const shopId = subscription.metadata?.shopId ? parseInt(subscription.metadata.shopId) : null;
         const maxBarbers = subscription.metadata?.maxBarbers ? parseInt(subscription.metadata.maxBarbers) : null;
 
+        // "incomplete" is a transient state that appears immediately after checkout
+        // before the first invoice payment is confirmed. Skipping it here prevents
+        // it from overwriting the "active" status already set by checkout.session.completed
+        // or confirm-subscription-session. invoice.payment_succeeded handles the
+        // transition to "active" once the payment clears.
+        if (subscription.status === "incomplete" || subscription.status === "incomplete_expired") {
+          logger.info({ shopId, subscriptionId: subscription.id, status: subscription.status }, "Stripe subscription incomplete — skipping DB write (handled by checkout.session.completed)");
+          break;
+        }
+
         await updateShopSubscriptionState({
           shopId,
           stripeSubscriptionId: subscription.id,

@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useGetOwnerStats } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useOwnerShop } from "@/hooks/use-owner-shop";
-import { Check, Crown, Loader2, ShieldCheck, Users, Zap } from "lucide-react";
+import { Check, Crown, Loader2, RefreshCw, ShieldCheck, Users, Zap } from "lucide-react";
 
 interface Plan {
   id: string;
@@ -70,11 +71,14 @@ async function postJson(path: string, body: unknown) {
 
 export default function DashboardSubscription() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { data: ownerShop, isLoading: shopLoading, refetch: refetchShop } = useOwnerShop();
   const shopId = ownerShop?.id ?? 0;
   const [busyPlan, setBusyPlan] = useState<string | null>(null);
   const [confirmingSession, setConfirmingSession] = useState(false);
   const [confirmAttempted, setConfirmAttempted] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useGetOwnerStats(
     { shopId },
@@ -94,6 +98,39 @@ export default function DashboardSubscription() {
       ? "I ndalur"
       : "Ne pritje";
 
+  // Force-invalidate react-query cache and refetch both shop + stats
+  async function forceRefresh() {
+    await queryClient.invalidateQueries();
+    await Promise.all([refetchShop(), refetchStats()]);
+  }
+
+  // Poll every 3 s while status is pending (after a successful Stripe redirect),
+  // for up to 30 s, then stop.
+  useEffect(() => {
+    if (isSubscribed || !confirmAttempted) return;
+    let attempts = 0;
+    pollRef.current = setInterval(async () => {
+      attempts++;
+      await forceRefresh();
+      if (attempts >= 10) {
+        clearInterval(pollRef.current!);
+        pollRef.current = null;
+      }
+    }, 3000);
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [confirmAttempted, isSubscribed]);
+
+  // Stop polling once subscription goes active
+  useEffect(() => {
+    if (isSubscribed && pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  }, [isSubscribed]);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get("session_id");
@@ -105,7 +142,7 @@ export default function DashboardSubscription() {
     postJson("/api/payments/confirm-subscription-session", { sessionId })
       .then(async () => {
         toast({ title: "Abonimi u aktivizua", description: "Pagesa u konfirmua me sukses." });
-        await Promise.all([refetchShop(), refetchStats()]);
+        await forceRefresh();
         window.history.replaceState({}, "", window.location.pathname);
       })
       .catch((error: any) => {
@@ -116,7 +153,8 @@ export default function DashboardSubscription() {
         });
       })
       .finally(() => setConfirmingSession(false));
-  }, [confirmAttempted, confirmingSession, refetchShop, refetchStats, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [confirmAttempted, confirmingSession]);
 
   async function handlePlan(plan: Plan) {
     if (!ownerShop) return;
@@ -194,9 +232,22 @@ export default function DashboardSubscription() {
                   <p className="text-xs text-white/45">Punetore</p>
                 </div>
                 <div className="rounded-xl bg-white/[0.06] p-3">
-                  <p className={`text-xl font-black ${isSubscribed ? "text-emerald-300" : "text-amber-200"}`}>
-                    {confirmingSession ? "Duke konfirmuar..." : subscriptionStatusLabel}
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <p className={`text-xl font-black ${isSubscribed ? "text-emerald-300" : "text-amber-200"}`}>
+                      {confirmingSession ? "Duke konfirmuar..." : subscriptionStatusLabel}
+                    </p>
+                    {!isSubscribed && !confirmingSession && (
+                      <button
+                        type="button"
+                        title="Rifresho statusin"
+                        disabled={refreshing}
+                        onClick={async () => { setRefreshing(true); await forceRefresh(); setRefreshing(false); }}
+                        className="ml-auto rounded-lg p-1 transition-colors hover:bg-white/10"
+                      >
+                        <RefreshCw className={`h-3.5 w-3.5 text-white/40 ${refreshing ? "animate-spin" : ""}`} />
+                      </button>
+                    )}
+                  </div>
                   <p className="text-xs text-white/45">Statusi</p>
                 </div>
               </div>

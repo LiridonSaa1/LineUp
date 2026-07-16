@@ -270,7 +270,10 @@ router.post("/payments/confirm-subscription-session", requireAuth, requireRole("
     if (!shop) { res.status(404).json({ error: "Shop not found" }); return; }
     if (shop.ownerId !== req.user!.id) { res.status(403).json({ error: "Forbidden" }); return; }
 
-    if (session.status !== "complete" || !["paid", "no_payment_required"].includes(session.payment_status)) {
+    // For subscription-mode sessions Stripe may return payment_status "no_payment_required"
+    // (first invoice handled via invoice.payment_succeeded) or "paid". Accept any
+    // completed session — the session.status === "complete" is the authoritative signal.
+    if (session.status !== "complete") {
       res.status(400).json({ error: "Pagesa ende nuk eshte konfirmuar nga Stripe." }); return;
     }
 
