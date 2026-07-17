@@ -17,7 +17,6 @@ import Contact from "@/pages/contact/Contact";
 import Login from "@/pages/auth/Login";
 import Register from "@/pages/auth/Register";
 import BarbershopsList from "@/pages/barbershops/BarbershopsList";
-import BarbershopDetail from "@/pages/barbershops/BarbershopDetail";
 import BarberDetail from "@/pages/barbershops/BarberDetail";
 import BookingWizard from "@/pages/book/BookingWizard";
 import Appointments from "@/pages/user/Appointments";
@@ -83,7 +82,6 @@ function UserRouter() {
       <Switch>
         <Route path="/" component={Home} />
         <Route path="/barbershops" component={BarbershopsList} />
-        <Route path="/barbershops/:id" component={BarbershopDetail} />
         <Route path="/barbers/:id" component={BarberDetail} />
         <Route path="/book/:shopId" component={BookingWizard} />
         <Route path="/me" component={UserDashboard} />
