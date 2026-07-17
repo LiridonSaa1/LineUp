@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import logoImg from "@assets/LINE_(2)_1782771053641.png";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { loadStripe } from "@stripe/stripe-js";
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
+import { APIProvider, useMapsLibrary } from "@vis.gl/react-google-maps";
 
 /* ── Constants ───────────────────────────────────────────── */
 import { KOSOVO_CITIES } from "@/lib/kosovo-cities";
@@ -210,6 +211,152 @@ function IconInput({
           </button>
         )}
       </div>
+      {error && <p className="text-xs pl-1" style={{ color: "#f87171" }}>{error}</p>}
+    </div>
+  );
+}
+
+/* ── AddressAutocompleteInput ────────────────────────────── */
+interface AddrSuggestion {
+  placeId: string;
+  mainText: string;
+  secondaryText: string;
+}
+
+function AddressAutocompleteInput({
+  city, value, onChange, error,
+}: {
+  city: string; value: string; onChange: (v: string) => void; error?: string;
+}) {
+  useMapsLibrary("places"); // ensure library is loaded
+  const [focused, setFocused]         = useState(false);
+  const [suggestions, setSuggestions] = useState<AddrSuggestion[]>([]);
+  const [open, setOpen]               = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const debounceRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sessionRef   = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    function onDown(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, []);
+
+  const fetchSuggestions = useCallback(async (text: string) => {
+    if (text.trim().length < 2) { setSuggestions([]); setOpen(false); return; }
+    try {
+      const places = (window as any).google?.maps?.places;
+      if (!places?.AutocompleteSuggestion) return;
+
+      // Create a new session token if needed
+      if (!sessionRef.current) {
+        sessionRef.current = new places.AutocompleteSessionToken();
+      }
+
+      const query = city ? `${text}, ${city}` : text;
+      const { suggestions: raw } = await places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
+        input: query,
+        sessionToken: sessionRef.current,
+        includedRegionCodes: ["xk"],
+        types: ["address"],
+      });
+
+      const mapped: AddrSuggestion[] = (raw ?? []).map((s: any) => ({
+        placeId: s.placePrediction?.placeId ?? s.placePrediction?.place ?? Math.random().toString(),
+        mainText: s.placePrediction?.structuredFormat?.mainText?.text
+          ?? s.placePrediction?.text?.text
+          ?? "",
+        secondaryText: s.placePrediction?.structuredFormat?.secondaryText?.text ?? "",
+      }));
+      setSuggestions(mapped);
+      setOpen(mapped.length > 0);
+    } catch {
+      setSuggestions([]);
+      setOpen(false);
+    }
+  }, [city]);
+
+  function handleInput(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = e.target.value;
+    onChange(v);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchSuggestions(v), 300);
+  }
+
+  function pick(s: AddrSuggestion) {
+    onChange(s.mainText);
+    setSuggestions([]);
+    setOpen(false);
+    // Reset session token after selection
+    sessionRef.current = null;
+  }
+
+  const active = focused || value.length > 0;
+
+  return (
+    <div className="space-y-1.5" ref={containerRef}>
+      <div className="relative rounded-[14px] transition-all duration-200"
+        style={{
+          background: focused ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.03)",
+          border: `1px solid ${focused ? "rgba(79,142,247,0.45)" : error ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.08)"}`,
+          boxShadow: focused ? "0 0 0 3px rgba(79,142,247,0.10), 0 4px 16px rgba(0,0,0,0.2)" : "none",
+        }}>
+        <div className="absolute left-4 top-1/2 -translate-y-1/2">
+          <MapPin className="w-4 h-4 transition-colors duration-200"
+            style={{ color: focused ? PRIMARY : "rgba(255,255,255,0.25)" }} />
+        </div>
+        <label className="absolute left-11 pointer-events-none select-none transition-all duration-200"
+          style={{
+            top: active ? "9px" : "50%",
+            transform: active ? "none" : "translateY(-50%)",
+            fontSize: active ? "10px" : "13px",
+            fontWeight: active ? 600 : 400,
+            letterSpacing: active ? "0.05em" : "0",
+            textTransform: active ? "uppercase" : "none",
+            color: active ? PRIMARY : "rgba(255,255,255,0.35)",
+          }}>
+          Adresa
+        </label>
+        <input
+          type="text"
+          autoComplete="off"
+          placeholder={focused && city ? `Rr. në ${city}…` : focused ? "Rr. Garibaldi, Nr. 12" : ""}
+          value={value}
+          onChange={handleInput}
+          onFocus={() => { setFocused(true); if (value.length >= 2) fetchSuggestions(value); }}
+          onBlur={() => setFocused(false)}
+          className="w-full bg-transparent outline-none text-sm text-white placeholder:text-white/20 pl-11 pr-4"
+          style={{ paddingTop: "26px", paddingBottom: "10px" }}
+        />
+      </div>
+
+      {/* Suggestions dropdown */}
+      {open && suggestions.length > 0 && (
+        <div className="rounded-[14px] overflow-hidden"
+          style={{ background: "#12151e", border: "1px solid rgba(79,142,247,0.25)", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
+          {suggestions.map(s => (
+            <button key={s.placeId} type="button"
+              onMouseDown={e => { e.preventDefault(); pick(s); }}
+              className="w-full flex items-start gap-3 px-4 py-3 text-left transition-all duration-150 hover:bg-white/5">
+              <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: "rgba(79,142,247,0.7)" }} />
+              <div className="min-w-0">
+                <p className="text-sm font-medium truncate" style={{ color: "rgba(255,255,255,0.85)" }}>
+                  {s.mainText}
+                </p>
+                {s.secondaryText && (
+                  <p className="text-[11px] truncate" style={{ color: "rgba(255,255,255,0.35)" }}>
+                    {s.secondaryText}
+                  </p>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
       {error && <p className="text-xs pl-1" style={{ color: "#f87171" }}>{error}</p>}
     </div>
   );
@@ -469,10 +616,12 @@ function OwnerForm() {
             </div>
           </div>
 
-          <CityDropdown value={w1("city")} onChange={v => f1.setValue("city", v)}
+          <CityDropdown value={w1("city")} onChange={v => { f1.setValue("city", v); f1.setValue("address", ""); }}
             error={f1.formState.errors.city?.message} />
-          <IconInput id="addr" icon={MapPin} label="Adresa" placeholder="Rr. Garibaldi, Nr. 12"
-            value={w1("address")} onChange={v => f1.setValue("address", v)}
+          <AddressAutocompleteInput
+            city={w1("city")}
+            value={w1("address")}
+            onChange={v => f1.setValue("address", v, { shouldValidate: f1.formState.isSubmitted })}
             error={f1.formState.errors.address?.message} />
 
           <div className="pt-1">
@@ -585,9 +734,12 @@ function OwnerForm() {
   );
 }
 
+const GMAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string;
+
 /* ── Main page ───────────────────────────────────────────── */
 export default function Register() {
   return (
+    <APIProvider apiKey={GMAPS_KEY} libraries={["places"]}>
     <div className="min-h-screen flex overflow-hidden" style={{ background: "#080b12", fontFamily: "'Inter', sans-serif" }}>
 
       {/* ── Left brand panel ─────────────────────────────── */}
@@ -701,5 +853,6 @@ export default function Register() {
         </div>
       </div>
     </div>
+    </APIProvider>
   );
 }
