@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, barbersTable, barbershopsTable, usersTable } from "@workspace/db";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { hashPassword, requireAuth, type AuthRequest } from "../lib/auth";
+import { geocodeMissingShops } from "../lib/geocode";
 
 const router = Router();
 
@@ -28,10 +29,15 @@ router.get("/barbers", async (_req, res): Promise<void> => {
     .where(and(eq(barbersTable.isActive, true), eq(barbershopsTable.status, "active"), eq(barbershopsTable.subscriptionStatus, "active")))
     .orderBy(desc(barbersTable.rating), desc(barbersTable.createdAt));
 
-  res.json(rows.map((row) => ({
+  const result = rows.map((row) => ({
     ...formatBarber(row.barber),
     shop: formatShop(row.shop),
-  })));
+  }));
+
+  // Geocode any shops missing coordinates in the background; DB is updated for next request
+  geocodeMissingShops(result.map(r => r.shop));
+
+  res.json(result);
 });
 
 router.get("/barbershops/:shopId/barbers", async (req, res): Promise<void> => {
