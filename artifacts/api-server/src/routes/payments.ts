@@ -83,7 +83,7 @@ function getSubscriptionPackage(packageId: unknown) {
 }
 
 router.post("/payments/register-owner-subscription", async (req, res): Promise<void> => {
-  const { ownerName, email, password, phone, businessName, city, address, packageId } = req.body;
+  const { ownerName, email, password, phone, businessName, city, address, gender, packageId } = req.body;
   if (!ownerName || !email || !password || !businessName || !city || !address || !packageId) {
     res.status(400).json({ error: "Fushat e detyrueshme mungojnë" }); return;
   }
@@ -109,7 +109,7 @@ router.post("/payments/register-owner-subscription", async (req, res): Promise<v
     const subdomain = businessName.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
     const [shop] = await db.insert(barbershopsTable).values({
       ownerId: user.id, name: businessName, city, address,
-      phone: phone ?? null, subdomain, status: "pending", gender: "both",
+      phone: phone ?? null, subdomain, status: "pending", gender: (gender === "male" || gender === "female" || gender === "both") ? gender : "both",
       maxBarbers: pkg.maxBarbers,
     }).returning();
 

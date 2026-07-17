@@ -57,6 +57,7 @@ const step1Schema = z.object({
   password:     z.string().min(6, "Minimum 6 karaktere"),
   city:         z.string().min(1, "Qyteti i detyrueshëm"),
   address:      z.string().min(3, "Adresa e detyrueshme"),
+  gender:       z.enum(["male", "female", "both"]),
 });
 type S1Values = z.infer<typeof step1Schema>;
 
@@ -90,7 +91,8 @@ function PhoneInput({ value, onChange, error }: {
   }
 
   const localVal = toLocal(value);
-  const active = focused || localVal.length > 0;
+  // Label always floated because "+383" prefix is permanently visible
+  const active = true;
 
   return (
     <div className="space-y-1.5">
@@ -350,6 +352,7 @@ function OwnerForm() {
   const { toast }         = useToast();
 
   const [s1, setS1]             = useState<S1Values | null>(null);
+
   const [selectedPkg, setPkg]   = useState<PkgOption | null>(null);
   const [clientSecret, setCS]   = useState<string>("");
   const [loadingPay, setLoadPay]= useState(false);
@@ -364,7 +367,7 @@ function OwnerForm() {
 
   const f1 = useForm<S1Values>({
     resolver: zodResolver(step1Schema),
-    defaultValues: { businessName: "", email: "", phone: "+383 ", password: "", city: "", address: "" },
+    defaultValues: { businessName: "", email: "", phone: "+383 ", password: "", city: "", address: "", gender: "both" },
   });
   const w1 = (k: keyof S1Values) => (f1.watch(k) ?? "") as string;
 
@@ -383,6 +386,7 @@ function OwnerForm() {
           businessName: s1.businessName,
           city: s1.city,
           address: s1.address,
+          gender: s1.gender,
           packageId: pkg.id,
         }),
       });
@@ -437,10 +441,34 @@ function OwnerForm() {
             value={w1("password")} onChange={v => f1.setValue("password", v)}
             error={f1.formState.errors.password?.message} />
 
-          <div className="text-xs font-semibold uppercase tracking-widest mt-4 mb-1 flex items-center gap-2"
-            style={{ color: "rgba(255,255,255,0.3)" }}>
-            <MapPin className="w-3.5 h-3.5" /> Lokacioni
+          {/* ── Gender selector ──────────────────────────── */}
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-widest mb-2"
+              style={{ color: "rgba(255,255,255,0.3)" }}>Gjinia e klientëve</p>
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { value: "male",   label: "Meshkuj" },
+                { value: "female", label: "Femra" },
+                { value: "both",   label: "Të dyja" },
+              ] as const).map(opt => {
+                const selected = f1.watch("gender") === opt.value;
+                return (
+                  <button key={opt.value} type="button"
+                    onClick={() => f1.setValue("gender", opt.value, { shouldValidate: true })}
+                    className="rounded-[12px] py-2.5 text-xs font-semibold transition-all duration-200"
+                    style={{
+                      background: selected ? "rgba(79,142,247,0.18)" : "rgba(255,255,255,0.03)",
+                      border: `1.5px solid ${selected ? "rgba(79,142,247,0.55)" : "rgba(255,255,255,0.08)"}`,
+                      color: selected ? "#4f8ef7" : "rgba(255,255,255,0.45)",
+                      boxShadow: selected ? "0 0 0 3px rgba(79,142,247,0.10)" : "none",
+                    }}>
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
+
           <CityDropdown value={w1("city")} onChange={v => f1.setValue("city", v)}
             error={f1.formState.errors.city?.message} />
           <IconInput id="addr" icon={MapPin} label="Adresa" placeholder="Rr. Garibaldi, Nr. 12"
