@@ -401,20 +401,19 @@ router.get("/available-slots", async (req, res): Promise<void> => {
     ));
   const bookedTimes = new Set(bookedAppts.map(a => a.scheduledAt.toISOString().slice(11, 16)));
   const now = new Date();
-  // Use Kosovo local time (Europe/Pristina = UTC+2 in summer, UTC+1 in winter)
-  const kosovoFormatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Pristina",
+  // Use Kosovo local time (same zone as Europe/Berlin: CET=UTC+1, CEST=UTC+2)
+  const tz = "Europe/Berlin";
+  const kosovoDateStr = new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz,
     year: "numeric", month: "2-digit", day: "2-digit",
-  });
-  const kosovoTimeFormatter = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Europe/Pristina",
+  }).format(now); // "YYYY-MM-DD"
+  const kosovoTimeParts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: tz,
     hour: "2-digit", minute: "2-digit", hour12: false,
-  });
-  const kosovoDate = kosovoFormatter.format(now); // "YYYY-MM-DD"
-  const kosovoTimeParts = kosovoTimeFormatter.formatToParts(now);
+  }).formatToParts(now);
   const kosovoHour = Number(kosovoTimeParts.find(p => p.type === "hour")!.value);
   const kosovoMinute = Number(kosovoTimeParts.find(p => p.type === "minute")!.value);
-  const isToday = date === kosovoDate;
+  const isToday = date === kosovoDateStr;
   const nowMinutes = kosovoHour * 60 + kosovoMinute;
 
   const dayKeys = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
