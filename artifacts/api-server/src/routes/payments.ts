@@ -416,7 +416,7 @@ router.post("/payments/create-checkout", requireAuth, async (req: AuthRequest, r
         "line_items[0][price_data][product_data][name]": `Order #${orderId}`,
         "line_items[0][price_data][unit_amount]": Math.round(parseFloat(order.totalAmount) * 100).toString(),
         "line_items[0][quantity]": "1",
-        success_url: `${baseUrl}/orders?success=true`,
+        success_url: `${baseUrl}/orders?success=true&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${baseUrl}/orders`,
         "metadata[orderId]": orderId.toString(),
       }),
@@ -433,6 +433,49 @@ router.post("/payments/create-checkout", requireAuth, async (req: AuthRequest, r
   } catch (err: any) {
     logger.error({ err }, "Unexpected error creating checkout");
     res.status(500).json({ error: err?.message ?? "Internal error" });
+  }
+});
+
+router.post("/payments/confirm-order-session", requireAuth, async (req: AuthRequest, res): Promise<void> => {
+  const { sessionId } = req.body;
+  if (!sessionId) { res.status(400).json({ error: "sessionId is required" }); return; }
+
+  const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+  if (!STRIPE_SECRET_KEY) { res.status(503).json({ error: "Stripe nuk eshte konfiguruar." }); return; }
+
+  try {
+    const sessionRes = await fetch(`https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(String(sessionId))}`, {
+      headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}` },
+    });
+    const sessionBody = await sessionRes.text();
+    if (!sessionRes.ok) {
+      let err: any = {}; try { err = JSON.parse(sessionBody); } catch {}
+      res.status(500).json({ error: err?.error?.message ?? "Nuk u lexua sesioni nga Stripe" }); return;
+    }
+
+    const session = JSON.parse(sessionBody);
+    if (session.status !== "complete" || session.payment_status !== "paid") {
+      res.status(400).json({ error: "Pagesa ende nuk eshte konfirmuar nga Stripe." }); return;
+    }
+
+    const orderId = session.metadata?.orderId ? parseInt(session.metadata.orderId) : null;
+    if (!orderId) { res.status(400).json({ error: "Sesioni nuk ka orderId" }); return; }
+
+    const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId));
+    if (!order) { res.status(404).json({ error: "Order not found" }); return; }
+    if (req.user!.role === "user" && order.userId !== req.user!.id) {
+      res.status(403).json({ error: "Forbidden" }); return;
+    }
+
+    await db.update(ordersTable)
+      .set({ status: "paid", stripeSessionId: session.id })
+      .where(eq(ordersTable.id, orderId));
+
+    logger.info({ orderId }, "confirm-order-session → order marked paid");
+    res.json({ ok: true, orderId, status: "paid" });
+  } catch (err: any) {
+    logger.error({ err }, "Unexpected error confirming order session");
+    res.status(500).json({ error: err?.message ?? "Gabim i brendshem" });
   }
 });
 
