@@ -262,8 +262,13 @@ function AddressAutocompleteInput({
           languageCode: "sq",
         }),
       });
-      if (!res.ok) { setSuggestions([]); setOpen(false); return; }
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        console.error("[Places autocomplete] HTTP", res.status, errBody);
+        setSuggestions([]); setOpen(false); return;
+      }
       const data = await res.json();
+      console.log("[Places autocomplete] raw response:", data);
       const raw: any[] = data.suggestions ?? [];
       const mapped: AddrSuggestion[] = raw
         .filter(s => s.placePrediction)
@@ -276,7 +281,8 @@ function AddressAutocompleteInput({
         .filter(s => s.mainText);
       setSuggestions(mapped);
       setOpen(mapped.length > 0);
-    } catch {
+    } catch (err) {
+      console.error("[Places autocomplete] fetch threw:", err);
       setSuggestions([]);
       setOpen(false);
     }
