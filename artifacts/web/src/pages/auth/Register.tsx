@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { loadStripe } from "@stripe/stripe-js";
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
-import { APIProvider, useMapsLibrary } from "@vis.gl/react-google-maps";
+import { APIProvider } from "@vis.gl/react-google-maps";
 
 /* ── Constants ───────────────────────────────────────────── */
 import { KOSOVO_CITIES } from "@/lib/kosovo-cities";
@@ -217,6 +217,8 @@ function IconInput({
 }
 
 /* ── AddressAutocompleteInput ────────────────────────────── */
+const PLACES_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string;
+
 interface AddrSuggestion {
   placeId: string;
   mainText: string;
@@ -228,13 +230,11 @@ function AddressAutocompleteInput({
 }: {
   city: string; value: string; onChange: (v: string) => void; error?: string;
 }) {
-  useMapsLibrary("places"); // ensure library is loaded
   const [focused, setFocused]         = useState(false);
   const [suggestions, setSuggestions] = useState<AddrSuggestion[]>([]);
   const [open, setOpen]               = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const debounceRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const sessionRef   = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
 
   // Close on outside click
   useEffect(() => {
@@ -248,29 +248,32 @@ function AddressAutocompleteInput({
   const fetchSuggestions = useCallback(async (text: string) => {
     if (text.trim().length < 2) { setSuggestions([]); setOpen(false); return; }
     try {
-      const places = (window as any).google?.maps?.places;
-      if (!places?.AutocompleteSuggestion) return;
-
-      // Create a new session token if needed
-      if (!sessionRef.current) {
-        sessionRef.current = new places.AutocompleteSessionToken();
-      }
-
-      const query = city ? `${text}, ${city}` : text;
-      const { suggestions: raw } = await places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
-        input: query,
-        sessionToken: sessionRef.current,
-        includedRegionCodes: ["xk"],
-        types: ["address"],
+      // Use the city name to bias results toward the selected city
+      const input = city ? `${text}, ${city}, Kosovë` : `${text}, Kosovë`;
+      const res = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": PLACES_API_KEY,
+        },
+        body: JSON.stringify({
+          input,
+          includedRegionCodes: ["xk"],
+          languageCode: "sq",
+        }),
       });
-
-      const mapped: AddrSuggestion[] = (raw ?? []).map((s: any) => ({
-        placeId: s.placePrediction?.placeId ?? s.placePrediction?.place ?? Math.random().toString(),
-        mainText: s.placePrediction?.structuredFormat?.mainText?.text
-          ?? s.placePrediction?.text?.text
-          ?? "",
-        secondaryText: s.placePrediction?.structuredFormat?.secondaryText?.text ?? "",
-      }));
+      if (!res.ok) { setSuggestions([]); setOpen(false); return; }
+      const data = await res.json();
+      const raw: any[] = data.suggestions ?? [];
+      const mapped: AddrSuggestion[] = raw
+        .filter(s => s.placePrediction)
+        .map(s => ({
+          placeId: s.placePrediction.placeId ?? "",
+          mainText: s.placePrediction.structuredFormat?.mainText?.text
+            ?? s.placePrediction.text?.text ?? "",
+          secondaryText: s.placePrediction.structuredFormat?.secondaryText?.text ?? "",
+        }))
+        .filter(s => s.mainText);
       setSuggestions(mapped);
       setOpen(mapped.length > 0);
     } catch {
@@ -283,15 +286,13 @@ function AddressAutocompleteInput({
     const v = e.target.value;
     onChange(v);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => fetchSuggestions(v), 300);
+    debounceRef.current = setTimeout(() => fetchSuggestions(v), 350);
   }
 
   function pick(s: AddrSuggestion) {
     onChange(s.mainText);
     setSuggestions([]);
     setOpen(false);
-    // Reset session token after selection
-    sessionRef.current = null;
   }
 
   const active = focused || value.length > 0;
