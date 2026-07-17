@@ -241,7 +241,7 @@ export default function BookingWizard() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => step > 1 ? setStep(step - 1) : setLocation(`/barbershops/${shopId}`)}
+            onClick={() => step > 1 ? setStep(step - 1) : setLocation(`/barbershops`)}
             className="mb-4 text-white/70 hover:bg-white/10 hover:text-white rounded-full"
           >
             <ArrowLeft className="mr-2 h-4 w-4" /> Kthehu
