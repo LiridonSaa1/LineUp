@@ -217,8 +217,6 @@ function IconInput({
 }
 
 /* ── AddressAutocompleteInput ────────────────────────────── */
-const PLACES_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string;
-
 interface AddrSuggestion {
   placeId: string;
   mainText: string;
@@ -248,43 +246,29 @@ function AddressAutocompleteInput({
   const fetchSuggestions = useCallback(async (text: string) => {
     if (text.trim().length < 2) { setSuggestions([]); setOpen(false); return; }
     try {
-      // Use the city name to bias results toward the selected city
       const input = city ? `${text}, ${city}, Kosovë` : `${text}, Kosovë`;
       const res = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Goog-Api-Key": PLACES_API_KEY,
+          "X-Goog-Api-Key": import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string,
         },
-        body: JSON.stringify({
-          input,
-          includedRegionCodes: ["xk"],
-          languageCode: "sq",
-        }),
+        body: JSON.stringify({ input, includedRegionCodes: ["xk"], languageCode: "sq" }),
       });
-      if (!res.ok) {
-        const errBody = await res.json().catch(() => ({}));
-        console.error("[Places autocomplete] HTTP", res.status, errBody);
-        setSuggestions([]); setOpen(false); return;
-      }
+      if (!res.ok) { setSuggestions([]); setOpen(false); return; }
       const data = await res.json();
-      console.log("[Places autocomplete] raw response:", data);
-      const raw: any[] = data.suggestions ?? [];
-      const mapped: AddrSuggestion[] = raw
-        .filter(s => s.placePrediction)
-        .map(s => ({
+      const mapped: AddrSuggestion[] = (data.suggestions ?? [])
+        .filter((s: any) => s.placePrediction)
+        .map((s: any) => ({
           placeId: s.placePrediction.placeId ?? "",
-          mainText: s.placePrediction.structuredFormat?.mainText?.text
-            ?? s.placePrediction.text?.text ?? "",
+          mainText: s.placePrediction.structuredFormat?.mainText?.text ?? s.placePrediction.text?.text ?? "",
           secondaryText: s.placePrediction.structuredFormat?.secondaryText?.text ?? "",
         }))
-        .filter(s => s.mainText);
+        .filter((s: any) => s.mainText);
       setSuggestions(mapped);
       setOpen(mapped.length > 0);
-    } catch (err) {
-      console.error("[Places autocomplete] fetch threw:", err);
-      setSuggestions([]);
-      setOpen(false);
+    } catch {
+      setSuggestions([]); setOpen(false);
     }
   }, [city]);
 
