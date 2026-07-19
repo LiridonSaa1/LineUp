@@ -302,8 +302,10 @@ export default function BarbershopsList() {
                   return (
                     <div
                       key={shop.id}
-                      className={`overflow-hidden rounded-2xl border bg-card transition-all ${
-                        shopSelected ? "border-primary shadow-lg shadow-primary/10" : "border-border/50"
+                      className={`overflow-hidden rounded-2xl border bg-card transition-all duration-300 hover:shadow-md ${
+                        shopSelected
+                          ? "border-primary shadow-lg shadow-primary/10 ring-1 ring-primary/20"
+                          : "border-border/50 hover:border-border-hover"
                       }`}
                     >
                       <div
@@ -316,7 +318,7 @@ export default function BarbershopsList() {
                             selectBarber(shopBarbers[0].id);
                           }
                         }}
-                        className="flex w-full cursor-pointer gap-3 p-3 text-left hover:bg-primary/5"
+                        className="flex w-full cursor-pointer gap-3 p-3.5 text-left hover:bg-primary/[0.02] transition-colors"
                       >
                         <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-primary/10">
                           {shop.imageUrl ? (
@@ -349,10 +351,59 @@ export default function BarbershopsList() {
                             <button
                               type="button"
                               onClick={(event) => { event.stopPropagation(); setLocation(`/book/${shop.id}`); }}
-                              className="rounded-full bg-primary/10 px-3 py-1 text-[11px] font-bold text-primary hover:bg-primary/15"
+                              className="rounded-full bg-primary/10 px-3 py-1 text-[11px] font-bold text-primary hover:bg-primary/15 transition-all"
                             >
                               Rezervo →
                             </button>
+                          </div>
+
+                          {/* Redesigned bottom section showing barbers list */}
+                          <div className="mt-3.5 pt-3 border-t border-border/40 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-muted-foreground/80 font-semibold tracking-wider uppercase">Stafi:</span>
+                              <div className="flex -space-x-1.5 overflow-hidden">
+                                {shopBarbers.map((barber) => {
+                                  const isBarberSelected = selectedBarberId === barber.id;
+                                  return (
+                                    <div
+                                      key={barber.id}
+                                      role="button"
+                                      tabIndex={0}
+                                      className={`relative inline-block h-6.5 w-6.5 rounded-full ring-2 transition-all hover:scale-110 hover:z-20 cursor-pointer overflow-hidden ${
+                                        isBarberSelected ? 'ring-primary' : 'ring-background'
+                                      }`}
+                                      title={`${barber.name} - ${barber.specialties || 'Barber'}`}
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        selectBarber(barber.id);
+                                      }}
+                                      onKeyDown={(event) => {
+                                        if (event.key === "Enter" || event.key === " ") {
+                                          event.preventDefault();
+                                          event.stopPropagation();
+                                          selectBarber(barber.id);
+                                        }
+                                      }}
+                                    >
+                                      {barber.avatarUrl ? (
+                                        <img src={barber.avatarUrl} alt={barber.name} className="h-full w-full object-cover" />
+                                      ) : (
+                                        <div className="flex h-full w-full items-center justify-center bg-primary/10 text-[9px] font-bold text-primary">
+                                          {barber.name.charAt(0).toUpperCase()}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {/* Show selected barber name */}
+                            {shopSelected && (
+                              <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold truncate max-w-[140px] animate-fade-in">
+                                {shopBarbers.find((b) => b.id === selectedBarberId)?.name}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
