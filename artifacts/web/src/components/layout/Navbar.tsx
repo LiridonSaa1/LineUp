@@ -355,54 +355,58 @@ export function Navbar() {
                             </Link>
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuItem
-                          asChild
-                          className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-primary/10 focus:bg-primary/10"
-                        >
-                          <Link
-                            href="/me"
-                            className="flex items-center w-full gap-2.5"
-                          >
-                            <LayoutDashboard className="h-4 w-4 text-primary" />
-                            <span className="font-semibold text-primary">Paneli Im</span>
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          asChild
-                          className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5"
-                        >
-                          <Link
-                            href="/appointments"
-                            className="flex items-center w-full gap-2.5"
-                          >
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
-                            <span>Takimet e Mia</span>
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          asChild
-                          className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5"
-                        >
-                          <Link
-                            href="/orders"
-                            className="flex items-center w-full gap-2.5"
-                          >
-                            <ShoppingBag className="h-4 w-4 text-muted-foreground" />
-                            <span>Porositë e Mia</span>
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          asChild
-                          className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5"
-                        >
-                          <Link
-                            href="/profile"
-                            className="flex items-center w-full gap-2.5"
-                          >
-                            <User className="h-4 w-4 text-muted-foreground" />
-                            <span>Cilësimet e Profilit</span>
-                          </Link>
-                        </DropdownMenuItem>
+                        {userRole !== "barber" && (
+                          <>
+                            <DropdownMenuItem
+                              asChild
+                              className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-primary/10 focus:bg-primary/10"
+                            >
+                              <Link
+                                href="/me"
+                                className="flex items-center w-full gap-2.5"
+                              >
+                                <LayoutDashboard className="h-4 w-4 text-primary" />
+                                <span className="font-semibold text-primary">Paneli Im</span>
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              asChild
+                              className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5"
+                            >
+                              <Link
+                                href="/appointments"
+                                className="flex items-center w-full gap-2.5"
+                              >
+                                <Calendar className="h-4 w-4 text-muted-foreground" />
+                                <span>Takimet e Mia</span>
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              asChild
+                              className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5"
+                            >
+                              <Link
+                                href="/orders"
+                                className="flex items-center w-full gap-2.5"
+                              >
+                                <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+                                <span>Porositë e Mia</span>
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              asChild
+                              className="rounded-xl px-3 py-2.5 cursor-pointer hover:bg-black/5 focus:bg-black/5"
+                            >
+                              <Link
+                                href="/profile"
+                                className="flex items-center w-full gap-2.5"
+                              >
+                                <User className="h-4 w-4 text-muted-foreground" />
+                                <span>Cilësimet e Profilit</span>
+                              </Link>
+                            </DropdownMenuItem>
+                          </>
+                        )}
                         <DropdownMenuSeparator className="bg-black/6 my-1" />
                         <DropdownMenuItem
                           onClick={handleLogout}
