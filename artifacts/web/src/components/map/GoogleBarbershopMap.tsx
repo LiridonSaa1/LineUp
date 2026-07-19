@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { APIProvider, Map, AdvancedMarker, InfoWindow } from "@vis.gl/react-google-maps";
+import { APIProvider, Map, AdvancedMarker, InfoWindow, useMap } from "@vis.gl/react-google-maps";
 const MapComponent = Map as any;
 import { Clock, MapPin, Star } from "lucide-react";
 
@@ -77,9 +77,32 @@ interface Props {
 
 const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string;
 
+function MapControl({
+  selectedCoords,
+  selectedShopId,
+  setOpenShopId,
+}: {
+  selectedCoords: { lat: number; lng: number } | null;
+  selectedShopId: number | null;
+  setOpenShopId: (id: number | null) => void;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (map && selectedCoords) {
+      map.panTo(selectedCoords);
+      map.setZoom(16);
+      if (selectedShopId !== null) {
+        setOpenShopId(selectedShopId);
+      }
+    }
+  }, [map, selectedCoords, selectedShopId, setOpenShopId]);
+
+  return null;
+}
+
 export default function GoogleBarbershopMap({ barbers, selectedBarberId, onSelectBarber, onBookBarber }: Props) {
   const [openShopId, setOpenShopId] = useState<number | null>(null);
-  const mapRef = useRef<google.maps.Map | null>(null);
 
   // Build unique shop groups with coords
   const shopGroups: Array<{ shop: BarberMapItem["shop"]; coords: { lat: number; lng: number } }> = [];
@@ -92,17 +115,6 @@ export default function GoogleBarbershopMap({ barbers, selectedBarberId, onSelec
   });
 
   const selectedBarber = barbers.find(b => b.id === selectedBarberId) ?? null;
-
-  useEffect(() => {
-    if (!selectedBarber || !mapRef.current) return;
-    const group = shopGroups.find(g => g.shop.id === selectedBarber.shop.id);
-    if (group) {
-      mapRef.current.panTo(group.coords);
-      mapRef.current.setZoom(15);
-      setOpenShopId(selectedBarber.shop.id);
-    }
-  }, [selectedBarberId]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const selectedShopId = selectedBarber?.shop.id ?? null;
 
   return (
@@ -113,8 +125,12 @@ export default function GoogleBarbershopMap({ barbers, selectedBarberId, onSelec
         mapId="barber-directory"
         gestureHandling="greedy"
         style={{ width: "100%", height: "100%" }}
-        ref={(map: any) => { mapRef.current = map; }}
       >
+        <MapControl
+          selectedCoords={selectedBarber ? getShopCoords(selectedBarber.shop, barbers.indexOf(selectedBarber)) : null}
+          selectedShopId={selectedShopId}
+          setOpenShopId={setOpenShopId}
+        />
         {shopGroups.map(({ shop, coords }) => {
           const isSelected = shop.id === selectedShopId;
           return (
