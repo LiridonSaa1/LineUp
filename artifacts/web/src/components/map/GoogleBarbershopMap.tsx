@@ -125,6 +125,7 @@ export default function GoogleBarbershopMap({ barbers, selectedBarberId, onSelec
         mapId="barber-directory"
         gestureHandling="greedy"
         style={{ width: "100%", height: "100%" }}
+        defaultMapTypeId="satellite"
       >
         <MapControl
           selectedCoords={selectedBarber ? getShopCoords(selectedBarber.shop, barbers.indexOf(selectedBarber)) : null}
