@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { APIProvider, Map, AdvancedMarker, InfoWindow } from "@vis.gl/react-google-maps";
+const MapComponent = Map as any;
 import { Clock, MapPin, Star } from "lucide-react";
 
 export interface BarberMapItem {
@@ -106,13 +107,13 @@ export default function GoogleBarbershopMap({ barbers, selectedBarberId, onSelec
 
   return (
     <APIProvider apiKey={API_KEY}>
-      <Map
+      <MapComponent
         defaultCenter={KOSOVO_CENTER}
         defaultZoom={9}
         mapId="barber-directory"
         gestureHandling="greedy"
         style={{ width: "100%", height: "100%" }}
-        ref={(map: google.maps.Map | null) => { mapRef.current = map; }}
+        ref={(map: any) => { mapRef.current = map; }}
       >
         {shopGroups.map(({ shop, coords }) => {
           const isSelected = shop.id === selectedShopId;
@@ -169,7 +170,7 @@ export default function GoogleBarbershopMap({ barbers, selectedBarberId, onSelec
             </InfoWindow>
           );
         })()}
-      </Map>
+      </MapComponent>
     </APIProvider>
   );
 }

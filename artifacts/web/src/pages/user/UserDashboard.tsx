@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import { useAuth } from "@/lib/auth";
 import { useListAppointments } from "@workspace/api-client-react";
 import { Link } from "wouter";
@@ -19,7 +19,7 @@ import {
 import { format, parseISO, isToday, isTomorrow, isAfter } from "date-fns";
 import { sq } from "date-fns/locale";
 
-const STATUS_BADGE: Record<string, JSX.Element> = {
+const STATUS_BADGE: Record<string, React.ReactNode> = {
   confirmed: (
     <Badge className="bg-primary hover:bg-primary text-white text-xs">
       Konfirmuar
@@ -64,7 +64,7 @@ export default function UserDashboard() {
 
   const { data: apptRes, isLoading } = useListAppointments(
     { limit: 50 },
-    { query: { enabled: !!user } },
+    { query: { enabled: !!user } as any },
   );
 
   const appointments = useMemo(() => {

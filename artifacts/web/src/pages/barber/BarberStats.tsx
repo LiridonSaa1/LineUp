@@ -8,7 +8,7 @@ import { format, parseISO, startOfMonth, isAfter } from "date-fns";
 
 export default function BarberStats() {
   const { user } = useAuth();
-  const { data: apptRes, isLoading } = useListAppointments({ limit: 500 }, { query: { enabled: !!user } });
+  const { data: apptRes, isLoading } = useListAppointments({ limit: 500 }, { query: { enabled: !!user } as any });
   const appointments = Array.isArray(apptRes) ? apptRes : apptRes?.data ?? [];
 
   const stats = useMemo(() => {

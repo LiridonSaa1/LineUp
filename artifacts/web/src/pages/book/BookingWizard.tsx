@@ -66,8 +66,8 @@ export default function BookingWizard() {
   const { data: shop } = useGetBarbershop(shopId, {
     query: { enabled: !!shopId, queryKey: getGetBarbershopQueryKey(shopId) }
   });
-  const { data: barbersRes, isLoading: barbersLoading } = useListBarbers(shopId, { query: { enabled: !!shopId } });
-  const { data: servicesRes, isLoading: servicesLoading } = useListServices(shopId, { query: { enabled: !!shopId } });
+  const { data: barbersRes, isLoading: barbersLoading } = useListBarbers(shopId, { query: { enabled: !!shopId } as any });
+  const { data: servicesRes, isLoading: servicesLoading } = useListServices(shopId, { query: { enabled: !!shopId } as any });
   const { data: holidaysRes } = useQuery({
     queryKey: ["shop-holidays", shopId],
     queryFn: () => fetchShopHolidays(shopId),
@@ -77,7 +77,7 @@ export default function BookingWizard() {
   const formattedDate = format(selectedDate, 'yyyy-MM-dd');
   const { data: slotsRes, isLoading: slotsLoading } = useGetAvailableSlots(
     { shopId, barberId: selectedBarberId || 0, date: formattedDate },
-    { query: { enabled: !!shopId && !!selectedBarberId && step === 2 } }
+    { query: { enabled: !!shopId && !!selectedBarberId && step === 2 } as any }
   );
 
   const createAppointmentBatch = useCreateAppointmentBatch();

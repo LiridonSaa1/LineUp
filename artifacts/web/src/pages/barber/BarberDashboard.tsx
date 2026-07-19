@@ -13,7 +13,7 @@ export default function BarberDashboard() {
 
   const { data: apptRes, isLoading } = useListAppointments(
     { limit: 50 },
-    { query: { enabled: !!user } }
+    { query: { enabled: !!user } as any }
   );
 
   const appointments = Array.isArray(apptRes) ? apptRes : apptRes?.data ?? [];

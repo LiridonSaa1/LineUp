@@ -1326,7 +1326,7 @@ components:
           type: string
         role:
           type: string
-          enum: [admin, owner, user]
+          enum: [admin, owner, barber, user]
         phone:
           type: ["string", "null"]
         avatarUrl:

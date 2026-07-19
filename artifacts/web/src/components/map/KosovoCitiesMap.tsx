@@ -51,10 +51,19 @@ export default function KosovoCitiesMap() {
       .catch(() => {});
   }, []);
 
+  const normalizeCityName = (name: string): string => {
+    const n = name.toLowerCase().trim();
+    if (n === "prishtinë" || n === "prishtina") return "prishtina";
+    if (n === "mitrovicë" || n === "mitrovica") return "mitrovica";
+    if (n === "gjakovë" || n === "gjakova") return "gjakova";
+    if (n === "pejë" || n === "peja") return "peja";
+    return n;
+  };
+
   // Cities with active accounts in DB drive everything — no hardcoded "covered" list
-  const activeCityNames = new Set(cityStats.map(s => s.city.toLowerCase()));
+  const activeCityNames = new Set(cityStats.map(s => normalizeCityName(s.city)));
   const isCoveredFromDB = (displayName: string | null) =>
-    displayName ? activeCityNames.has(displayName.toLowerCase()) : false;
+    displayName ? activeCityNames.has(normalizeCityName(displayName)) : false;
 
   // Sidebar: show only cities that have active accounts, sorted by barber count
   const displayCities = cityStats
@@ -65,7 +74,7 @@ export default function KosovoCitiesMap() {
   const totalCities  = cityStats.length;
 
   const hoveredCity = displayCities.find((c) => {
-    const m = MUNICIPALITIES.find(m => m.displayName === c.name);
+    const m = MUNICIPALITIES.find(m => m.displayName && normalizeCityName(m.displayName) === normalizeCityName(c.name));
     return m?.shapeName === hovered;
   });
 
@@ -222,7 +231,7 @@ export default function KosovoCitiesMap() {
             </div>
           )}
           {displayCities.map((city) => {
-            const muni     = MUNICIPALITIES.find(m => m.displayName === city.name);
+            const muni     = MUNICIPALITIES.find(m => m.displayName && normalizeCityName(m.displayName) === normalizeCityName(city.name));
             const isActive = hovered === muni?.shapeName;
 
             return (

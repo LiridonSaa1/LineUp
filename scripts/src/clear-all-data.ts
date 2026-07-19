@@ -27,7 +27,7 @@ function q(table: string) {
   return `"${table.replace(/"/g, '""')}"`;
 }
 
-async function countRows(client: Awaited<ReturnType<typeof pool.connect>>) {
+async function countRows(client: any) {
   const counts: Record<string, number> = {};
   for (const table of tables) {
     const result = await client.query(`select count(*)::int as count from public.${q(table)}`);

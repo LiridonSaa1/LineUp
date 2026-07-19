@@ -61,7 +61,7 @@ router.post("/ads", async (req, res): Promise<void> => {
 });
 
 router.patch("/ads/:id/status", requireAuth, requireRole("admin"), async (req: AuthRequest, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(req.params.id as string);
   const { status } = req.body;
   if (!["pending", "active", "expired", "rejected"].includes(status)) {
     res.status(400).json({ error: "Invalid status" });

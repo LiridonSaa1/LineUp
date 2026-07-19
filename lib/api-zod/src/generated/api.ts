@@ -48,7 +48,7 @@ export const LoginResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "email": zod.string(),
-  "role": zod.enum(['admin', 'owner', 'user']),
+  "role": zod.enum(['admin', 'owner', 'barber', 'user']),
   "phone": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
   "createdAt": zod.coerce.date()
@@ -63,7 +63,7 @@ export const GetMeResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "email": zod.string(),
-  "role": zod.enum(['admin', 'owner', 'user']),
+  "role": zod.enum(['admin', 'owner', 'barber', 'user']),
   "phone": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
   "createdAt": zod.coerce.date()
@@ -84,7 +84,7 @@ export const ListUsersResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "email": zod.string(),
-  "role": zod.enum(['admin', 'owner', 'user']),
+  "role": zod.enum(['admin', 'owner', 'barber', 'user']),
   "phone": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
   "createdAt": zod.coerce.date()
@@ -104,7 +104,7 @@ export const GetUserResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "email": zod.string(),
-  "role": zod.enum(['admin', 'owner', 'user']),
+  "role": zod.enum(['admin', 'owner', 'barber', 'user']),
   "phone": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
   "createdAt": zod.coerce.date()
@@ -128,7 +128,7 @@ export const UpdateUserResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "email": zod.string(),
-  "role": zod.enum(['admin', 'owner', 'user']),
+  "role": zod.enum(['admin', 'owner', 'barber', 'user']),
   "phone": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
   "createdAt": zod.coerce.date()
@@ -640,7 +640,7 @@ export const ListAppointmentsResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "email": zod.string(),
-  "role": zod.enum(['admin', 'owner', 'user']),
+  "role": zod.enum(['admin', 'owner', 'barber', 'user']),
   "phone": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
   "createdAt": zod.coerce.date()
@@ -744,7 +744,7 @@ export const GetAppointmentResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "email": zod.string(),
-  "role": zod.enum(['admin', 'owner', 'user']),
+  "role": zod.enum(['admin', 'owner', 'barber', 'user']),
   "phone": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
   "createdAt": zod.coerce.date()
@@ -824,7 +824,7 @@ export const UpdateAppointmentResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "email": zod.string(),
-  "role": zod.enum(['admin', 'owner', 'user']),
+  "role": zod.enum(['admin', 'owner', 'barber', 'user']),
   "phone": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
   "createdAt": zod.coerce.date()
@@ -916,7 +916,7 @@ export const ConfirmAppointmentOtpResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "email": zod.string(),
-  "role": zod.enum(['admin', 'owner', 'user']),
+  "role": zod.enum(['admin', 'owner', 'barber', 'user']),
   "phone": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
   "createdAt": zod.coerce.date()
@@ -1147,7 +1147,7 @@ export const ListOrdersResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "email": zod.string(),
-  "role": zod.enum(['admin', 'owner', 'user']),
+  "role": zod.enum(['admin', 'owner', 'barber', 'user']),
   "phone": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
   "createdAt": zod.coerce.date()
@@ -1208,7 +1208,7 @@ export const GetOrderResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "email": zod.string(),
-  "role": zod.enum(['admin', 'owner', 'user']),
+  "role": zod.enum(['admin', 'owner', 'barber', 'user']),
   "phone": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
   "createdAt": zod.coerce.date()
@@ -1257,7 +1257,7 @@ export const UpdateOrderResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "email": zod.string(),
-  "role": zod.enum(['admin', 'owner', 'user']),
+  "role": zod.enum(['admin', 'owner', 'barber', 'user']),
   "phone": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
   "createdAt": zod.coerce.date()

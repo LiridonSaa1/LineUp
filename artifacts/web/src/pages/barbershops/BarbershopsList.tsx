@@ -82,6 +82,15 @@ function ProductsStrip() {
   );
 }
 
+function normalizeCityName(name: string): string {
+  const n = name.toLowerCase().trim();
+  if (n === "prishtinë" || n === "prishtina") return "prishtina";
+  if (n === "mitrovicë" || n === "mitrovica") return "mitrovica";
+  if (n === "gjakovë" || n === "gjakova") return "gjakova";
+  if (n === "pejë" || n === "peja") return "peja";
+  return n;
+}
+
 export default function BarbershopsList() {
   const searchParams = new URLSearchParams(window.location.search);
   const initialCity = searchParams.get("city") || "all";
@@ -99,7 +108,7 @@ export default function BarbershopsList() {
   const filtered = useMemo(() => {
     const q = debouncedSearch.trim().toLowerCase();
     return barbers.filter((barber) => {
-      const matchCity = city === "all" || barber.shop.city === city;
+      const matchCity = city === "all" || normalizeCityName(barber.shop.city) === normalizeCityName(city);
       const matchSearch =
         !q ||
         barber.name.toLowerCase().includes(q) ||

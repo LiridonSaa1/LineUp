@@ -502,7 +502,7 @@ export default function BarberAppointments() {
 
   const { data: apptRes, isLoading, refetch } = useListAppointments(
     { limit: 200 },
-    { query: { enabled: !!user } },
+    { query: { enabled: !!user } as any },
   );
   const updateMutation = useUpdateAppointment();
 
