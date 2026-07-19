@@ -573,20 +573,25 @@ function FeatureCard({
   return (
     <div
       ref={ref}
-      className={`group relative flex flex-col gap-4 p-6 rounded-2xl border border-white/8 bg-white/[0.03]
-        hover:bg-white/[0.06] hover:border-primary/35 transition-all duration-400
+      className={`group relative flex flex-col gap-5 p-7 rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-transparent backdrop-blur-md
+        hover:border-primary/45 transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(79,142,247,0.08)]
         ${inView ? `animate-fade-up ${delay}` : "opacity-0 translate-y-6"}`}
     >
-      <span className="absolute top-4 right-5 text-5xl font-black text-white/[0.05] select-none leading-none pointer-events-none">
+      {/* Glow highlight on hover */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl pointer-events-none" />
+
+      <span className="absolute top-4 right-5 text-5xl font-black text-white/[0.02] group-hover:text-primary/[0.08] transition-colors duration-500 select-none leading-none pointer-events-none">
         {num}
       </span>
-      <div className="w-11 h-11 rounded-xl bg-primary/15 border border-primary/20 flex items-center justify-center
-        group-hover:bg-primary/25 group-hover:scale-110 transition-all duration-300">
-        <Icon className="w-5 h-5 text-primary" />
+      
+      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/25 flex items-center justify-center
+        group-hover:from-primary/30 group-hover:to-primary/10 group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(79,142,247,0.25)] transition-all duration-300">
+        <Icon className="w-5.5 h-5.5 text-primary" />
       </div>
-      <div>
-        <h3 className="text-base font-bold text-white mb-2">{title}</h3>
-        <p className="text-sm text-white/50 leading-relaxed">{desc}</p>
+
+      <div className="relative z-10">
+        <h3 className="text-base font-extrabold text-white mb-2 group-hover:text-primary transition-colors duration-300">{title}</h3>
+        <p className="text-sm text-white/55 group-hover:text-white/75 transition-colors duration-300 leading-relaxed">{desc}</p>
       </div>
     </div>
   );
@@ -1842,6 +1847,7 @@ function GroomingProductGrid() {
 export default function Home() {
   const [, setLocation] = useLocation();
   const [city, setCity] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const statsRef = useRef<HTMLDivElement>(null);
   const [publicStats, setPublicStats] = useState<{
     activeShops: number;
@@ -1880,25 +1886,34 @@ export default function Home() {
   ).sort() as string[];
 
   const handleSearch = () => {
-    setLocation(city !== "all" ? `/barbershops?city=${city}` : "/barbershops");
+    const params = new URLSearchParams();
+    if (city !== "all") params.set("city", city);
+    if (searchQuery.trim()) params.set("search", searchQuery.trim());
+    const qs = params.toString();
+    setLocation(qs ? `/barbershops?${qs}` : "/barbershops");
   };
 
   return (
     <div className="flex flex-col">
       {/* ── HERO ─────────────────────────────────────────── */}
-      <section className="relative min-h-screen flex items-center overflow-hidden">
+      <section className="relative min-h-screen flex items-center overflow-hidden bg-[#080b12]">
         {/* Barber tools photo — dark, full bleed */}
         <div className="absolute inset-0 pointer-events-none">
           <img
             src={barberToolsBg}
             alt=""
-            className="w-full h-full object-cover scale-105"
+            className="w-full h-full object-cover scale-105 opacity-80"
           />
           {/* dark overlay so text stays readable */}
-          <div className="absolute inset-0 bg-black/62" />
+          <div className="absolute inset-0 bg-black/70" />
           {/* subtle blue tint at bottom */}
-          <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-tr from-primary/15 via-transparent to-transparent" />
         </div>
+
+        {/* Floating background glowing particles */}
+        <div className="absolute top-[20%] left-[10%] w-24 h-24 rounded-full bg-primary/10 blur-xl animate-particle-1 pointer-events-none" />
+        <div className="absolute top-[60%] left-[45%] w-32 h-32 rounded-full bg-blue-500/10 blur-2xl animate-particle-2 pointer-events-none" />
+        <div className="absolute bottom-[15%] left-[20%] w-16 h-16 rounded-full bg-primary/15 blur-lg animate-particle-3 pointer-events-none" />
 
         <div className="container px-4 sm:px-6 max-w-7xl mx-auto relative z-10 pt-24 sm:pt-28 pb-16 sm:pb-20">
           <div className="max-w-4xl">
@@ -1923,11 +1938,27 @@ export default function Home() {
 
             {/* Search bar */}
             <div className="mt-10 animate-fade-up delay-300">
-              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-2 flex flex-row gap-2 max-w-xl shadow-lg shadow-black/30">
-                <div className="flex-1 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/8">
+              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-2 flex flex-col sm:flex-row gap-2 max-w-2xl shadow-lg shadow-black/30">
+                {/* Text Search Input */}
+                <div className="flex-1 flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white/5 focus-within:bg-white/10 border border-transparent focus-within:border-white/10 transition-all">
+                  <Search className="text-white/40 w-4 h-4 shrink-0" />
+                  <input
+                    type="text"
+                    placeholder="Kërko për berberi, berber ose shërbim..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSearch();
+                    }}
+                    className="w-full bg-transparent border-0 outline-none text-white text-sm placeholder:text-white/40 focus:ring-0"
+                  />
+                </div>
+
+                {/* City Dropdown Selector */}
+                <div className="sm:w-48 flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/5 focus-within:bg-white/10 border border-transparent focus-within:border-white/10 transition-all">
                   <MapPin className="text-primary w-4 h-4 shrink-0" />
                   <Select value={city} onValueChange={setCity}>
-                    <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 px-0 text-sm h-auto text-white [&>span]:text-white/80 [&>svg]:text-white/50">
+                    <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 px-0 text-sm h-auto text-white [&>span]:text-white/80 [&>svg]:text-white/50 w-full">
                       <SelectValue placeholder="Zgjidhni qytetin…" />
                     </SelectTrigger>
                     <SelectContent className="rounded-2xl max-h-60 overflow-y-auto">
@@ -1940,14 +1971,14 @@ export default function Home() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Search Action Button */}
                 <button
                   onClick={handleSearch}
-                  className="search-expand-btn rounded-xl flex items-center justify-center bg-primary text-white font-bold shadow-md shadow-primary/40 transition-all duration-300 ease-out hover:shadow-xl hover:shadow-primary/50 active:scale-95"
+                  className="rounded-xl px-6 py-2.5 flex items-center justify-center bg-primary text-white font-bold shadow-md shadow-primary/40 transition-all duration-300 hover:shadow-xl hover:shadow-primary/50 hover:scale-[1.02] active:scale-95 shrink-0"
                 >
-                  <Search className="w-4 h-4 shrink-0 transition-transform duration-300" />
-                  <span className="search-expand-text  text-sm whitespace-nowrap overflow-hidden">
-                    Kërko
-                  </span>
+                  <Search className="w-4 h-4 shrink-0 mr-1.5" />
+                  <span className="text-sm">Kërko</span>
                 </button>
               </div>
             </div>
@@ -2275,6 +2306,10 @@ export default function Home() {
         {/* Top glow bar */}
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/35 to-transparent" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-40 bg-primary/8 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Animated glowing neon orbs in background */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-[100px] animate-pulse pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-violet-600/5 rounded-full blur-[120px] animate-pulse pointer-events-none" />
 
         <div className="container px-6 max-w-7xl mx-auto relative z-10">
           <div className="text-center max-w-2xl mx-auto mb-16">

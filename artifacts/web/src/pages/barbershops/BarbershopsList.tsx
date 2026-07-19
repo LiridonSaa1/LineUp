@@ -94,10 +94,11 @@ function normalizeCityName(name: string): string {
 export default function BarbershopsList() {
   const searchParams = new URLSearchParams(window.location.search);
   const initialCity = searchParams.get("city") || "all";
+  const initialSearch = searchParams.get("search") || "";
   const [, setLocation] = useLocation();
   const [city, setCity] = useState(initialCity);
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [search, setSearch] = useState(initialSearch);
+  const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
   const [selectedBarberId, setSelectedBarberId] = useState<number | null>(null);
 
   const { data: barbers = [], isLoading } = useQuery({
