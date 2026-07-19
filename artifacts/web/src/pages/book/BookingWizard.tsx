@@ -395,7 +395,7 @@ export default function BookingWizard() {
                 <Button
                   variant="outline"
                   className="h-14 rounded-full px-6 font-bold"
-                  onClick={() => setLocation(`/barbershops/${shopId}`)}
+                  onClick={() => setLocation(`/barbershops`)}
                 >
                   <ArrowLeft className="mr-2 h-4 w-4" /> Kthehu
                 </Button>
