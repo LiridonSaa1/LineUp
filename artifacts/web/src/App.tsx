@@ -11,7 +11,6 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
 import { BarberLayout } from "@/components/layout/BarberLayout";
 import { UserLayout } from "@/components/layout/UserLayout";
 
-// User Pages
 import Home from "@/pages/home/Home";
 import Contact from "@/pages/contact/Contact";
 import Login from "@/pages/auth/Login";
@@ -26,6 +25,17 @@ import Orders from "@/pages/user/Orders";
 import Notifications from "@/pages/user/Notifications";
 import UserDashboard from "@/pages/user/UserDashboard";
 import NotFound from "@/pages/not-found";
+
+// Mobile App Pages
+import { useIsMobileApp } from "@/hooks/useIsMobileApp";
+import MobileAppShell from "@/components/layout/MobileAppShell";
+import MobileHome from "@/pages/mobile/MobileHome";
+import MobileBarberProfile from "@/pages/mobile/MobileBarberProfile";
+import MobileAppointments from "@/pages/mobile/MobileAppointments";
+import MobileProfile from "@/pages/mobile/MobileProfile";
+import MobileOffers from "@/pages/mobile/MobileOffers";
+import MobileNotifications from "@/pages/mobile/MobileNotifications";
+import MobileSettings from "@/pages/mobile/MobileSettings";
 
 // Owner Dashboard Pages
 import Dashboard from "@/pages/dashboard/Dashboard";
@@ -77,6 +87,29 @@ function ScrollToTop() {
 }
 
 function UserRouter() {
+  const isMobileApp = useIsMobileApp();
+
+  if (isMobileApp) {
+    return (
+      <MobileAppShell>
+        <Switch>
+          <Route path="/" component={MobileHome} />
+          <Route path="/barbershops" component={BarbershopsList} />
+          <Route path="/barbers/:id" component={MobileBarberProfile} />
+          <Route path="/book/:shopId" component={BookingWizard} />
+          <Route path="/appointments" component={MobileAppointments} />
+          <Route path="/offers" component={MobileOffers} />
+          <Route path="/notifications" component={MobileNotifications} />
+          <Route path="/profile" component={MobileProfile} />
+          <Route path="/settings" component={MobileSettings} />
+          <Route path="/marketplace" component={Marketplace} />
+          <Route path="/contact" component={Contact} />
+          <Route component={NotFound} />
+        </Switch>
+      </MobileAppShell>
+    );
+  }
+
   return (
     <RootLayout>
       <Switch>

@@ -166,7 +166,7 @@ export function Navbar() {
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-40 transition-all duration-500 ${hasBg ? "py-2" : "py-3"}`}
+        className={`hidden md:block fixed top-0 left-0 right-0 z-40 transition-all duration-500 ${hasBg ? "py-2" : "py-3"}`}
       >
         <div
           className={`mx-auto transition-all duration-500 ${hasBg ? "max-w-7xl px-4" : "max-w-[1400px] px-6"}`}

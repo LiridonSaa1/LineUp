@@ -1,4 +1,5 @@
 import { Navbar } from "./Navbar";
+import MobileBottomNavbar from "./MobileBottomNavbar";
 import { Link, useLocation } from "wouter";
 import { KOSOVO_CITIES } from "@/lib/kosovo-cities";
 import { useState, useEffect } from "react";
@@ -90,10 +91,12 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground selection:bg-primary/30">
       <Navbar />
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 flex flex-col pb-20 md:pb-0">
         <PageHero path={path} />
         {children}
       </main>
+
+      <MobileBottomNavbar />
 
       {/* ── Ad Banner ── */}
       <div className="relative overflow-hidden" style={{ background: "linear-gradient(90deg, #0a0f20 0%, #0d1a4a 25%, #1a2580 50%, #0d1a4a 75%, #0a0f20 100%)" }}>

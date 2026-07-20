@@ -1,0 +1,14 @@
+{
+	"appId": "com.lineup.app",
+	"appName": "LineUp",
+	"webDir": "dist/public",
+	"server": {
+		"androidScheme": "https"
+	},
+	"plugins": {
+		"CapacitorHttp": {
+			"enabled": true
+		}
+	},
+	"packageClassList": []
+}

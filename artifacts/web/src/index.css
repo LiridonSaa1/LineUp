@@ -121,7 +121,7 @@
   --sidebar-accent-foreground: 224 71% 4%;
   --sidebar-ring: 38 78% 50%;
 
-  --app-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --app-font-sans: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --app-font-serif: Georgia, serif;
   --app-font-mono: 'SF Mono', Menlo, monospace;
   --radius: 0.875rem;
@@ -530,4 +530,31 @@
 .liquid-glass:active {
   transform: scale(0.97);
   background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.06) 100%);
+}
+
+/* ─── App Specific Utilities ─── */
+.glass-app {
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-app-pill {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glow-blue {
+  box-shadow: 0 0 30px -5px rgba(37, 99, 235, 0.35);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

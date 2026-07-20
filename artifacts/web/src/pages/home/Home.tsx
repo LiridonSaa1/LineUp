@@ -1983,6 +1983,33 @@ export default function Home() {
               </div>
             </div>
 
+            {/* Mobile Instant City & Service Chips */}
+            <div className="mt-6 flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar md:hidden">
+              <button
+                onClick={() => { setCity("all"); setSearchQuery(""); }}
+                className={`px-3.5 py-2 rounded-xl text-xs font-extrabold whitespace-nowrap border transition-all ${
+                  city === "all"
+                    ? "bg-primary text-white border-primary shadow-md shadow-primary/30"
+                    : "bg-white/5 text-white/70 border-white/10 hover:bg-white/10"
+                }`}
+              >
+                🔥 Të gjitha
+              </button>
+              {availableCities.map((cityName) => (
+                <button
+                  key={cityName}
+                  onClick={() => { setCity(cityName); setSearchQuery(""); }}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-extrabold whitespace-nowrap border transition-all ${
+                    city === cityName
+                      ? "bg-primary text-white border-primary shadow-md shadow-primary/30"
+                      : "bg-white/5 text-white/70 border-white/10 hover:bg-white/10"
+                  }`}
+                >
+                  📍 {cityName}
+                </button>
+              ))}
+            </div>
+
             {/* Trust pills */}
             <div className="mt-8 flex flex-wrap gap-3 animate-fade-up delay-400">
               {[
