@@ -12,35 +12,30 @@ export const HomeScreen = () => {
     <ScrollView className="flex-1 bg-[#050608]" showsVerticalScrollIndicator={false}>
 
       {/* ── PREMIUM HERO ─────────────────────────────────── */}
-      <View className="h-[95vh] relative justify-end pb-20">
+      <View className="pt-16 pb-12 relative">
         {/* Abstract Glows */}
         <View className="absolute top-[20%] right-[-20%] w-80 h-80 bg-[#3472ef] opacity-15 rounded-full blur-[120px]" />
         <View className="absolute bottom-[30%] left-[-20%] w-96 h-96 bg-purple-600 opacity-10 rounded-full blur-[140px]" />
 
         <View className="px-8">
           <Animated.View entering={FadeInUp.delay(300).duration(1000).springify()}>
-            <View className="flex-row items-center gap-2 border border-white/10 bg-white/5 px-5 py-2.5 rounded-full self-start mb-8">
+            <View className="flex-row items-center gap-2 border border-white/10 bg-white/5 px-5 py-2.5 rounded-full self-start mb-6">
               <Sparkles size={16} color="#fbbf24" />
               <Text className="text-white text-[10px] font-black uppercase tracking-widest">Ekskluzive në Kosovë</Text>
             </View>
 
-            <Text className="text-6xl font-black text-white leading-[0.9] mb-6 tracking-tighter">
+            <Text className="text-6xl font-black text-white leading-[0.9] mb-4 tracking-tighter">
               Stili yt{"\n"}
               <Text className="text-[#3472ef]">pa kompromis.</Text>
             </Text>
 
-            <Text className="text-lg text-white/40 font-medium mb-12 max-w-[280px] leading-6">
+            <Text className="text-base text-white/40 font-medium mb-8 max-w-[280px] leading-6">
               Gjej berberin e duhur dhe rezervo takimin tënd në çast me teknologji native.
             </Text>
           </Animated.View>
 
-          {/* Search Glass Box */}
-          <GlassCard intensity={30} className="p-1">
-            <View className="bg-white/5 px-6 py-5 rounded-[24px] flex-row items-center gap-4 mb-3">
-              <Search size={24} color="rgba(255,255,255,0.3)" />
-              <Text className="text-white/30 text-lg font-bold">Kërko berberi ose shërbim...</Text>
-            </View>
-
+          {/* Search Glass Box — City Selector only */}
+          <GlassCard intensity={30} className="p-2">
             <View className="flex-row gap-3">
               <View className="flex-1 bg-white/5 px-6 py-5 rounded-[24px] flex-row items-center gap-4">
                 <MapPin size={24} color="#3472ef" />
