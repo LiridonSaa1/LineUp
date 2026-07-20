@@ -18,23 +18,6 @@ export const HomeScreen = () => {
         <View className="absolute bottom-[30%] left-[-20%] w-96 h-96 bg-purple-600 opacity-10 rounded-full blur-[140px]" />
 
         <View className="px-8">
-          {/* Header */}
-          <View className="flex-row items-center justify-between mb-16">
-            <View className="flex-row items-center gap-4">
-              <View className="w-16 h-16 rounded-[28px] bg-zinc-900 border border-white/10 items-center justify-center shadow-2xl">
-                <Text className="text-white font-black text-2xl">V</Text>
-              </View>
-              <View>
-                <Text className="text-[#3472ef] text-[10px] font-black uppercase tracking-[0.3em] mb-1">Eksploro</Text>
-                <Text className="text-white text-xl font-black tracking-tight">Line UP Premium</Text>
-              </View>
-            </View>
-            <TouchableOpacity className="w-14 h-14 rounded-[22px] bg-white/5 border border-white/10 items-center justify-center shadow-xl">
-              <Bell size={28} color="white" />
-              <View className="absolute top-4 right-4 w-2 h-2 bg-[#3472ef] rounded-full" />
-            </TouchableOpacity>
-          </View>
-
           <Animated.View entering={FadeInUp.delay(300).duration(1000).springify()}>
             <View className="flex-row items-center gap-2 border border-white/10 bg-white/5 px-5 py-2.5 rounded-full self-start mb-8">
               <Sparkles size={16} color="#fbbf24" />
