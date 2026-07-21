@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, ActivityIndicator, Dimensions } from "react-native";
-import { Scissors, MapPin, Search, Bell, Sparkles, Star, Heart, Flame, Clock, SlidersHorizontal, ArrowUpRight, User } from "lucide-react-native";
+import { Scissors, MapPin, Search, Bell, Sparkles, Star, Heart, Flame, Clock, SlidersHorizontal, ArrowUpRight, User, ChevronDown, Check } from "lucide-react-native";
 import Animated, { FadeInUp, FadeInRight } from "react-native-reanimated";
 import { fetchFromAPI } from "@/config/api";
 
@@ -12,8 +12,12 @@ interface HomeScreenProps {
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop }) => {
   const [search, setSearch] = useState("");
+  const [selectedCity, setSelectedCity] = useState("Të gjitha");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [topShops, setTopShops] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const CITIES = ["Të gjitha", "Prishtinë", "Prizren", "Pejë", "Ferizaj", "Gjakovë", "Gjilan", "Mitrovicë"];
 
   useEffect(() => {
     async function loadData() {
@@ -43,11 +47,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop }) => {
     { label: "Make Up", icon: Clock, bg: "#F0FAED" },
   ];
 
+  const filteredShops = topShops.filter((shop) => {
+    const matchesCity = selectedCity === "Të gjitha" || shop.city === selectedCity;
+    const matchesQuery = !search || shop.name?.toLowerCase().includes(search.toLowerCase()) || shop.city?.toLowerCase().includes(search.toLowerCase());
+    return matchesCity && matchesQuery;
+  });
+
   return (
     <ScrollView className="flex-1 bg-[#F8F9FE]" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
 
       {/* ── PURPLE HEADER BANNER ───────────────────────────── */}
-      <View className="bg-[#7F3DFF] pt-14 pb-8 px-6 rounded-b-[40px]">
+      <View className="bg-[#7F3DFF] pt-14 pb-8 px-6 rounded-b-[40px] z-10">
         {/* User Info & Icons */}
         <View className="flex-row items-center justify-between mb-6">
           <View className="flex-row items-center gap-3">
@@ -78,7 +88,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop }) => {
           <View className="flex-row items-center gap-3 flex-1">
             <Search size={20} color="#8789A3" />
             <TextInput
-              placeholder="Search Salon, Specialist"
+              placeholder="Kërko berber, qytet..."
               placeholderTextColor="#8789A3"
               className="text-[#161719] font-bold text-sm flex-1"
               value={search}
@@ -89,6 +99,54 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop }) => {
             <SlidersHorizontal size={16} color="white" />
           </TouchableOpacity>
         </View>
+      </View>
+
+      {/* ── CITY DROPDOWN SELECTOR ─────────────────────────── */}
+      <View className="pt-6 px-6 relative z-20">
+        <TouchableOpacity
+          onPress={() => setDropdownOpen(!dropdownOpen)}
+          className="bg-white rounded-2xl border border-slate-200/80 px-5 py-3.5 flex-row justify-between items-center shadow-xs active:scale-98"
+        >
+          <View className="flex-row items-center gap-3">
+            <View className="w-8 h-8 rounded-full bg-[#7F3DFF]/10 items-center justify-center">
+              <MapPin size={18} color="#7F3DFF" />
+            </View>
+            <View>
+              <Text className="text-[#8789A3] text-[10px] font-black uppercase tracking-widest">Filtroni sipas qytetit</Text>
+              <Text className="text-[#161719] font-black text-sm">{selectedCity}</Text>
+            </View>
+          </View>
+
+          <View className="w-8 h-8 rounded-full bg-[#F2EDFF] items-center justify-center">
+            <ChevronDown size={18} color="#7F3DFF" />
+          </View>
+        </TouchableOpacity>
+
+        {/* Expandable Dropdown List */}
+        {dropdownOpen && (
+          <View className="mt-2 bg-white rounded-3xl border border-slate-200 p-2 shadow-xl">
+            {CITIES.map((city) => {
+              const isSelected = selectedCity === city;
+              return (
+                <TouchableOpacity
+                  key={city}
+                  onPress={() => {
+                    setSelectedCity(city);
+                    setDropdownOpen(false);
+                  }}
+                  className={`flex-row items-center justify-between px-4 py-3 rounded-2xl mb-1 ${
+                    isSelected ? "bg-[#7F3DFF] text-white" : "bg-transparent hover:bg-slate-50"
+                  }`}
+                >
+                  <Text className={`font-extrabold text-sm ${isSelected ? "text-white" : "text-[#161719]"}`}>
+                    📍 {city}
+                  </Text>
+                  {isSelected && <Check size={18} color="white" strokeWidth={3} />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
       </View>
 
       {/* ── SPECIAL OFFERS SLIDER ────────────────────────────── */}
@@ -159,7 +217,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop }) => {
         {loading ? (
           <ActivityIndicator size="large" color="#7F3DFF" className="my-8" />
         ) : (
-          topShops.map((shop, i) => (
+          filteredShops.map((shop, i) => (
             <TouchableOpacity 
               key={shop.id || i}
               onPress={() => onSelectShop(shop)}
