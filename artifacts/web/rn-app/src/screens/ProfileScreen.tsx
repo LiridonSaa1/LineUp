@@ -1,10 +1,25 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Switch } from "react-native";
 import { User, Settings, CreditCard, Bell, Shield, HelpCircle, LogOut, ChevronRight, Calendar } from "lucide-react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
+import { fetchFromAPI } from "@/config/api";
 
 export const ProfileScreen = () => {
+  const [stats, setStats] = useState<any>(null);
+
+  useEffect(() => {
+    async function loadStats() {
+      try {
+        const data = await fetchFromAPI("/api/stats/public");
+        if (data) setStats(data);
+      } catch (e) {
+        console.warn("Failed to fetch stats:", e);
+      }
+    }
+    loadStats();
+  }, []);
+
   return (
     <ScrollView className="flex-1 bg-[#050608]" showsVerticalScrollIndicator={false}>
       {/* Profile Header */}
@@ -21,16 +36,16 @@ export const ProfileScreen = () => {
         {/* Stats Row */}
         <View className="flex-row mt-12 gap-4">
           <View className="flex-1 bg-white/5 border border-white/10 rounded-3xl p-5 items-center">
-            <Text className="text-white font-black text-2xl">12</Text>
+            <Text className="text-white font-black text-2xl">{stats?.totalBarbershops || "15"}</Text>
+            <Text className="text-white/30 text-[8px] font-black uppercase tracking-widest mt-1">Berberi</Text>
+          </View>
+          <View className="flex-1 bg-white/5 border border-white/10 rounded-3xl p-5 items-center">
+            <Text className="text-white font-black text-2xl">{stats?.totalCities || "7"}</Text>
+            <Text className="text-white/30 text-[8px] font-black uppercase tracking-widest mt-1">Qytete</Text>
+          </View>
+          <View className="flex-1 bg-white/5 border border-white/10 rounded-3xl p-5 items-center">
+            <Text className="text-white font-black text-2xl">{stats?.totalAppointments || "450"}+</Text>
             <Text className="text-white/30 text-[8px] font-black uppercase tracking-widest mt-1">Takime</Text>
-          </View>
-          <View className="flex-1 bg-white/5 border border-white/10 rounded-3xl p-5 items-center">
-            <Text className="text-white font-black text-2xl">4</Text>
-            <Text className="text-white/30 text-[8px] font-black uppercase tracking-widest mt-1">Favorite</Text>
-          </View>
-          <View className="flex-1 bg-white/5 border border-white/10 rounded-3xl p-5 items-center">
-            <Text className="text-white font-black text-2xl">8</Text>
-            <Text className="text-white/30 text-[8px] font-black uppercase tracking-widest mt-1">Reviews</Text>
           </View>
         </View>
       </View>

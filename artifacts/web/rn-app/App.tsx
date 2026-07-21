@@ -2,11 +2,12 @@ import React from "react";
 import { StatusBar } from "expo-status-bar";
 import { View, TouchableOpacity, Text } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { Home, Search, ShoppingBag, User } from "lucide-react-native";
+import { Home, Search, Megaphone, User } from "lucide-react-native";
 import { BlurView } from "expo-blur";
 import { HomeScreen } from "./src/screens/HomeScreen";
 import { ExploreScreen } from "./src/screens/ExploreScreen";
 import { ProfileScreen } from "./src/screens/ProfileScreen";
+import { AdsScreen } from "./src/screens/AdsScreen";
 import "./global.css";
 
 export default function App() {
@@ -15,7 +16,7 @@ export default function App() {
   const tabs = [
     { label: 'Ballina', icon: Home },
     { label: 'Eksploro', icon: Search },
-    { label: 'Market', icon: ShoppingBag },
+    { label: 'Reklama', icon: Megaphone },
     { label: 'Profili', icon: User },
   ];
 
@@ -27,11 +28,7 @@ export default function App() {
         {/* Main Content Switcher */}
         {activeTab === 0 && <HomeScreen />}
         {activeTab === 1 && <ExploreScreen />}
-        {activeTab === 2 && (
-          <View className="flex-1 items-center justify-center">
-            <Text className="text-white/20 font-black text-2xl uppercase tracking-widest">Market Së Shpejti</Text>
-          </View>
-        )}
+        {activeTab === 2 && <AdsScreen />}
         {activeTab === 3 && <ProfileScreen />}
 
         {/* ── CUSTOM FLOATING BOTTOM BAR ────────────────────── */}
