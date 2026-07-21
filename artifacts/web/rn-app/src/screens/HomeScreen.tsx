@@ -1,37 +1,50 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, ActivityIndicator, Dimensions } from "react-native";
-import { Scissors, MapPin, Search, Bell, Sparkles, Star, Heart, Flame, Clock, SlidersHorizontal, ArrowUpRight, User, ChevronDown, Check } from "lucide-react-native";
-import Animated, { FadeInUp, FadeInRight } from "react-native-reanimated";
-import { fetchFromAPI } from "@/config/api";
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, Dimensions } from "react-native";
+import { Scissors, MapPin, Search, ChevronDown, Heart, Star, Grid, Eye, Waves, Hand, Sparkles, Smile, User, Syringe } from "lucide-react-native";
+import { BlurView } from 'expo-blur';
+import Animated, { FadeInUp, FadeIn } from "react-native-reanimated";
+import { supabase } from "@/config/supabase";
 
 const { width } = Dimensions.get("window");
 
 interface HomeScreenProps {
   onSelectShop: (shop: any) => void;
+  onOpenLocation: () => void;
+  selectedLocation?: string;
 }
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop }) => {
-  const [search, setSearch] = useState("");
-  const [selectedCity, setSelectedCity] = useState("Të gjitha");
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [topShops, setTopShops] = useState<any[]>([]);
+export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLocation, selectedLocation = "Current location" }) => {
   const [loading, setLoading] = useState(true);
+  const [recommendedShops, setRecommendedShops] = useState<any[]>([]);
 
-  const CITIES = ["Të gjitha", "Prishtinë", "Prizren", "Pejë", "Ferizaj", "Gjakovë", "Gjilan", "Mitrovicë"];
+  const CATEGORIES = [
+    { name: "All", icon: Grid },
+    { name: "Hair and styling", icon: Scissors },
+    { name: "Brows & lashes", icon: Eye },
+    { name: "Massage", icon: User },
+    { name: "Spa & sauna", icon: Waves },
+    { name: "Nails", icon: Hand },
+    { name: "Hair removal", icon: Sparkles },
+    { name: "Facials", icon: Smile },
+    { name: "Barbering", icon: Scissors },
+    { name: "Aesthetics", icon: Syringe },
+  ];
 
   useEffect(() => {
     async function loadData() {
       setLoading(true);
       try {
-        let response = await fetchFromAPI("/api/barbershops/top");
-        let list = Array.isArray(response) ? response : (response?.data || []);
-        if (list.length === 0) {
-          response = await fetchFromAPI("/api/barbershops");
-          list = Array.isArray(response) ? response : (response?.data || []);
-        }
-        setTopShops(list);
+        const { data: shopsData, error: shopsError } = await supabase
+          .from('barbershops')
+          .select('*')
+          .eq('status', 'active')
+          .order('rating', { ascending: false })
+          .limit(6);
+
+        if (shopsError) throw shopsError;
+        if (shopsData) setRecommendedShops(shopsData);
       } catch (e) {
-        console.warn("Failed to load top shops:", e);
+        console.warn("Failed to load home data:", e);
       } finally {
         setLoading(false);
       }
@@ -39,207 +52,144 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop }) => {
     loadData();
   }, []);
 
-  const SERVICES = [
-    { label: "Haircut", icon: Scissors, bg: "#F2EDFF" },
-    { label: "Shaving", icon: Sparkles, bg: "#EBF5FF" },
-    { label: "Styling", icon: User, bg: "#FFF4E5" },
-    { label: "Coloring", icon: Flame, bg: "#FDF0F5" },
-    { label: "Make Up", icon: Clock, bg: "#F0FAED" },
-  ];
-
-  const filteredShops = topShops.filter((shop) => {
-    const matchesCity = selectedCity === "Të gjitha" || shop.city === selectedCity;
-    const matchesQuery = !search || shop.name?.toLowerCase().includes(search.toLowerCase()) || shop.city?.toLowerCase().includes(search.toLowerCase());
-    return matchesCity && matchesQuery;
-  });
-
-  return (
-    <ScrollView className="flex-1 bg-[#F8F9FE]" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-
-      {/* ── PURPLE HEADER BANNER ───────────────────────────── */}
-      <View className="bg-[#7F3DFF] pt-14 pb-8 px-6 rounded-b-[40px] z-10">
-        {/* User Info & Icons */}
-        <View className="flex-row items-center justify-between mb-6">
-          <View className="flex-row items-center gap-3">
-            <View className="w-12 h-12 rounded-full bg-white/20 items-center justify-center border border-white/30 overflow-hidden">
-              <Image 
-                source={{ uri: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" }} 
-                className="w-full h-full object-cover" 
-              />
-            </View>
-            <View>
-              <Text className="text-white/70 text-xs font-semibold">Hello Jobby</Text>
-              <Text className="text-white text-lg font-black tracking-tight">Good Morning</Text>
-            </View>
-          </View>
-
-          <View className="flex-row items-center gap-3">
-            <TouchableOpacity className="w-11 h-11 rounded-full bg-white/15 items-center justify-center border border-white/20">
-              <Heart size={20} color="white" />
-            </TouchableOpacity>
-            <TouchableOpacity className="w-11 h-11 rounded-full bg-white items-center justify-center shadow-md">
-              <Bell size={20} color="#7F3DFF" />
-            </TouchableOpacity>
-          </View>
+  const renderShopCard = (item: any) => (
+    <TouchableOpacity
+      key={item.id}
+      onPress={() => onSelectShop(item)}
+      className="mr-4 mb-6"
+      style={{ width: width * 0.65 }}
+    >
+      <View className="relative rounded-3xl overflow-hidden mb-3">
+        <Image
+          source={{ uri: item.imageUrl || "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1000&auto=format&fit=crop&q=80" }}
+          className="w-full h-48 object-cover"
+        />
+        <View
+          className="absolute top-3 left-3 overflow-hidden rounded-full border border-white/60"
+          style={{ borderRadius: 100 }}
+        >
+          <BlurView intensity={80} tint="light" className="px-3 py-1 bg-white/50">
+            <Text className="text-black text-[10px] font-bold">Featured</Text>
+          </BlurView>
         </View>
-
-        {/* City Dropdown Search Bar inside Purple Header */}
-        <View className="relative z-30">
-          <TouchableOpacity
-            onPress={() => setDropdownOpen(!dropdownOpen)}
-            className="bg-white rounded-full px-5 py-3.5 flex-row items-center justify-between shadow-lg active:scale-98"
-          >
-            <View className="flex-row items-center gap-3 flex-1">
-              <MapPin size={20} color="#7F3DFF" />
-              <View className="flex-1">
-                <Text className="text-[#8789A3] text-[9px] font-black uppercase tracking-widest">Kërko sipas Qytetit</Text>
-                <Text className="text-[#161719] font-black text-sm">{selectedCity}</Text>
-              </View>
-            </View>
-
-            <View className="w-9 h-9 rounded-full bg-[#7F3DFF] items-center justify-center">
-              <ChevronDown size={18} color="white" />
-            </View>
-          </TouchableOpacity>
-
-          {/* Expandable Dropdown List inside Header */}
-          {dropdownOpen && (
-            <View className="absolute top-16 left-0 right-0 bg-white rounded-3xl border border-slate-200 p-2 shadow-2xl z-50">
-              {CITIES.map((city) => {
-                const isSelected = selectedCity === city;
-                return (
-                  <TouchableOpacity
-                    key={city}
-                    onPress={() => {
-                      setSelectedCity(city);
-                      setDropdownOpen(false);
-                    }}
-                    className={`flex-row items-center justify-between px-5 py-3.5 rounded-2xl mb-1 ${
-                      isSelected ? "bg-[#7F3DFF]" : "bg-transparent hover:bg-slate-50"
-                    }`}
-                  >
-                    <Text className={`font-extrabold text-sm ${isSelected ? "text-white" : "text-[#161719]"}`}>
-                      📍 {city}
-                    </Text>
-                    {isSelected && <Check size={18} color="white" strokeWidth={3} />}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          )}
-        </View>
-      </View>
-
-      {/* ── SPECIAL OFFERS SLIDER ────────────────────────────── */}
-      <View className="mt-8 px-6">
-        <View className="flex-row items-center justify-between mb-4">
-          <Text className="text-lg font-black text-[#161719]">Special Offers</Text>
-          <TouchableOpacity>
-            <Text className="text-xs font-black text-[#7F3DFF]">See All »</Text>
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity className="bg-[#7F3DFF] rounded-[32px] p-6 relative overflow-hidden flex-row items-center justify-between shadow-lg shadow-[#7F3DFF]/30">
-          <View className="flex-1 mr-4">
-            <View className="bg-white/20 px-3 py-1 rounded-full self-start mb-3">
-              <Text className="text-white text-[10px] font-black uppercase tracking-widest">Just For You</Text>
-            </View>
-            <Text className="text-white text-xl font-black mb-1 leading-tight">Get Special Discount</Text>
-            <Text className="text-white/80 text-xs font-extrabold mb-4">Up to <Text className="text-amber-300">40% Off</Text></Text>
-
-            <TouchableOpacity className="bg-white/20 px-5 py-2.5 rounded-full self-start flex-row items-center gap-2 border border-white/30">
-              <Text className="text-white text-xs font-extrabold">Book Now</Text>
-              <ArrowUpRight size={14} color="white" />
-            </TouchableOpacity>
-          </View>
-
-          <View className="w-28 h-28 rounded-full overflow-hidden border-2 border-white/30 shadow-md">
-            <Image 
-              source={{ uri: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400&auto=format&fit=crop&q=80" }} 
-              className="w-full h-full object-cover" 
-            />
-          </View>
+        <TouchableOpacity
+          className="absolute top-3 right-3 overflow-hidden rounded-full border border-white/60"
+          style={{ borderRadius: 100 }}
+        >
+          <BlurView intensity={60} tint="light" className="w-8 h-8 items-center justify-center bg-white/30">
+            <Heart size={18} color="white" fill="white" />
+          </BlurView>
         </TouchableOpacity>
       </View>
+      <View className="flex-row justify-between items-start">
+        <View className="flex-1 mr-2">
+          <Text className="text-lg font-bold text-[#161719]" numberOfLines={1}>{item.name}</Text>
+          <Text className="text-[#8789A3] text-sm mt-0.5" numberOfLines={1}>
+            {item.distance || ">50 km"} • {item.address || "Manastirski Livadi, Sofia"}
+          </Text>
+          <Text className="text-[#8789A3] text-sm mt-0.5">{item.category || "Beauty Salon"} • {item.reviews || "1866"} reviews</Text>
+        </View>
+        <View className="flex-row items-center bg-amber-50 px-2 py-1 rounded-lg">
+          <Star size={12} color="#fbbf24" fill="#fbbf24" />
+          <Text className="text-[#161719] font-bold text-xs ml-1">{parseFloat(item.rating || "5.0").toFixed(1)}</Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
 
-      {/* ── SERVICES ROW ────────────────────────────────────── */}
-      <View className="mt-8 px-6">
-        <View className="flex-row items-center justify-between mb-4">
-          <Text className="text-lg font-black text-[#161719]">Services</Text>
-          <TouchableOpacity>
-            <Text className="text-xs font-black text-[#7F3DFF]">See All »</Text>
-          </TouchableOpacity>
+  return (
+    <View className="flex-1 bg-[#EFF2F7]">
+      {/* Background Decorative Blobs */}
+      <View className="absolute top-[-50] left-[-50] w-64 h-64 bg-[#3473ef]/15 rounded-full blur-3xl" />
+      <View className="absolute top-[200] right-[-100] w-80 h-80 bg-[#f47458]/15 rounded-full blur-3xl" />
+
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+
+        {/* ── HEADER SECTION ───────────────────────────── */}
+        <View className="px-6 pt-14 pb-4">
+          <View
+            className="overflow-hidden border border-white/60 mb-8 shadow-sm"
+            style={{ borderRadius: 24, backgroundColor: 'rgba(255, 255, 255, 0.25)' }}
+          >
+            <BlurView intensity={30} tint="light" className="flex-row items-center px-4 py-3">
+              <MapPin size={20} color="#4f46e5" fill="#4f46e5" />
+              <TouchableOpacity
+                onPress={onOpenLocation}
+                className="flex-row items-center flex-1"
+              >
+                <Text className="text-base font-bold mx-2 text-[#161719]">{selectedLocation}</Text>
+                <ChevronDown size={18} color="#161719" strokeWidth={2.5} />
+              </TouchableOpacity>
+            </BlurView>
+          </View>
+
+          <View
+            className="overflow-hidden border border-white/70 shadow-xl shadow-black/5"
+            style={{ borderRadius: 100, backgroundColor: 'rgba(255, 255, 255, 0.3)' }}
+          >
+            <BlurView intensity={40} tint="light" className="flex-row items-center pl-5 pr-1.5 py-1.5">
+              <Search size={22} color="#161719" strokeWidth={2.5} />
+              <TextInput
+                placeholder="Search venues, treatments"
+                className="flex-1 ml-3 h-12 text-[16px] text-[#161719] font-bold"
+                placeholderTextColor="#6b7280"
+              />
+              <TouchableOpacity className="bg-black px-8 h-12 rounded-full items-center justify-center ml-2 shadow-sm">
+                <Text className="text-white font-bold text-base">Search</Text>
+              </TouchableOpacity>
+            </BlurView>
+          </View>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-4">
-          {SERVICES.map((srv, i) => {
-            const Icon = srv.icon;
+      {/* ── CATEGORIES GRID ──────────────────────────── */}
+      <View className="px-6 mt-4">
+        <View className="flex-row flex-wrap justify-between">
+          {CATEGORIES.map((cat, i) => {
+            const Icon = cat.icon;
             return (
-              <TouchableOpacity key={i} className="items-center mr-4">
-                <View style={{ backgroundColor: srv.bg }} className="w-16 h-16 rounded-full items-center justify-center mb-2 shadow-xs">
-                  <Icon size={24} color="#7F3DFF" strokeWidth={2.2} />
+              <View key={i} className="items-center mb-6" style={{ width: '18%' }}>
+                <View
+                  className="overflow-hidden border border-white/60 shadow-sm mb-2"
+                  style={{ borderRadius: 24, backgroundColor: 'rgba(255, 255, 255, 0.2)' }}
+                >
+                  <BlurView intensity={30} tint="light" className="w-16 h-16 items-center justify-center">
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      className="items-center justify-center w-full h-full"
+                    >
+                      <Icon size={30} color="#161719" strokeWidth={2.2} />
+                    </TouchableOpacity>
+                  </BlurView>
                 </View>
-                <Text className="text-[#161719] text-xs font-extrabold">{srv.label}</Text>
-              </TouchableOpacity>
+                <Text className="text-[10px] text-center font-bold text-[#161719] leading-3" numberOfLines={2}>{cat.name}</Text>
+              </View>
             );
           })}
+        </View>
+      </View>
+
+      {/* ── RECOMMENDED SECTION ──────────────────────── */}
+      <View className="mt-4">
+        <View className="flex-row items-center justify-between px-6 mb-4">
+          <Text className="text-2xl font-bold text-[#161719]">Recommended</Text>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="pl-6">
+          {recommendedShops.map(renderShopCard)}
         </ScrollView>
       </View>
 
-      {/* ── TOP RATED SALONS ─────────────────────────────────── */}
-      <View className="mt-8 px-6">
-        <View className="flex-row items-center justify-between mb-4">
-          <Text className="text-lg font-black text-[#161719]">Top Rated Salons</Text>
-          <TouchableOpacity>
-            <Text className="text-xs font-black text-[#7F3DFF]">See All »</Text>
-          </TouchableOpacity>
+      {/* ── NEW TO FRESHA SECTION ───────────────────── */}
+      <View className="mt-8">
+        <View className="flex-row items-center justify-between px-6 mb-4">
+          <Text className="text-2xl font-bold text-[#161719]">New to Fresha</Text>
         </View>
-
-        {loading ? (
-          <ActivityIndicator size="large" color="#7F3DFF" className="my-8" />
-        ) : (
-          filteredShops.map((shop, i) => (
-            <TouchableOpacity 
-              key={shop.id || i}
-              onPress={() => onSelectShop(shop)}
-              className="bg-white rounded-[32px] overflow-hidden mb-6 shadow-sm border border-slate-100 p-4"
-            >
-              <View className="h-44 rounded-2xl overflow-hidden relative bg-slate-100 mb-4">
-                <Image 
-                  source={{ uri: shop.imageUrl || "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800&auto=format&fit=crop&q=80" }} 
-                  className="w-full h-full object-cover" 
-                />
-                <TouchableOpacity className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white items-center justify-center shadow-md">
-                  <Heart size={18} color="#FF4757" fill="#FF4757" />
-                </TouchableOpacity>
-              </View>
-
-              <View className="flex-row justify-between items-start">
-                <View className="flex-1 mr-2">
-                  <Text className="text-lg font-black text-[#161719] mb-1">{shop.name}</Text>
-                  <Text className="text-[#8789A3] text-xs font-bold mb-2">{shop.address || "Tower Plaza, Sheikh Zayed Road"}</Text>
-                  <Text className="text-[#7F3DFF] text-base font-black">$200</Text>
-                </View>
-
-                <View className="items-end gap-3">
-                  <View className="bg-[#7F3DFF]/10 px-3 py-1 rounded-full flex-row items-center gap-1">
-                    <Star size={14} color="#7F3DFF" fill="#7F3DFF" />
-                    <Text className="text-[#7F3DFF] font-black text-xs">{shop.rating || "4.8"}</Text>
-                  </View>
-
-                  <TouchableOpacity 
-                    onPress={() => onSelectShop(shop)}
-                    className="w-10 h-10 rounded-full bg-[#7F3DFF] items-center justify-center shadow-md shadow-[#7F3DFF]/30"
-                  >
-                    <ArrowUpRight size={20} color="white" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))
-        )}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="pl-6">
+          {recommendedShops.slice().reverse().map(renderShopCard)}
+        </ScrollView>
       </View>
 
     </ScrollView>
-  );
+  </View>
+);
 };
+

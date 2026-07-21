@@ -1,103 +1,132 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator } from "react-native";
-import { Sparkles, Megaphone, Star, MapPin, Gift, PhoneCall, ArrowUpRight, Heart } from "lucide-react-native";
+import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, TextInput } from "react-native";
+import { ShoppingBag, Search, Star, MapPin, Tag, ShoppingCart, ArrowUpRight, Heart, Filter, Plus } from "lucide-react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { fetchFromAPI } from "@/config/api";
+import { supabase } from "@/config/supabase";
 
 export const AdsScreen = () => {
-  const [ads, setAds] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("Të gjitha");
+
+  const CATEGORIES = ["Të gjitha", "Styling", "Beard Care", "Shaving", "Hair Care"];
 
   useEffect(() => {
-    async function loadAds() {
+    async function loadProducts() {
       setLoading(true);
       try {
-        const response = await fetchFromAPI("/api/ads");
-        const list = Array.isArray(response) ? response : (response?.data || []);
-        if (list.length > 0) {
-          setAds(list);
-        }
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('is_available', true);
+
+        if (error) throw error;
+        setProducts(data || []);
       } catch (e) {
-        console.warn("Error fetching ads:", e);
+        console.warn("Error fetching products from Supabase:", e);
       } finally {
         setLoading(false);
       }
     }
-    loadAds();
+    loadProducts();
   }, []);
 
+  const filteredProducts = products.filter(p => {
+    const matchesCategory = category === "Të gjitha" || p.category === category;
+    const matchesSearch = !search || p.name?.toLowerCase().includes(search.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
   return (
-    <ScrollView className="flex-1 bg-[#F8F9FE]" showsVerticalScrollIndicator={false}>
+    <View className="flex-1 bg-[#F8F9FE]">
       {/* Top Header Banner */}
-      <View className="bg-[#7F3DFF] pt-14 pb-8 px-6 rounded-b-[40px]">
-        <View className="flex-row items-center gap-2 bg-white/20 px-4 py-1.5 rounded-full self-start mb-3 border border-white/30">
-          <Megaphone size={14} color="white" />
-          <Text className="text-white text-[10px] font-black uppercase tracking-widest">Sponsored & Deals</Text>
+      <View className="bg-[#3473ef] pt-14 pb-8 px-6 rounded-b-[40px] z-10">
+        <View className="flex-row items-center justify-between mb-6">
+          <View className="flex-row items-center gap-2 bg-white/20 px-4 py-1.5 rounded-full self-start border border-white/30">
+            <ShoppingBag size={14} color="white" />
+            <Text className="text-white text-[10px] font-black uppercase tracking-widest">Premium Marketplace</Text>
+          </View>
+          <TouchableOpacity className="w-10 h-10 rounded-full bg-white items-center justify-center">
+            <ShoppingCart size={18} color="#3473ef" />
+          </TouchableOpacity>
         </View>
-        <Text className="text-3xl font-black text-white tracking-tight mb-2">Special Discounts</Text>
-        <Text className="text-white/70 text-xs font-semibold">Get up to 40% discount on top rated salons.</Text>
+
+        <Text className="text-3xl font-black text-white tracking-tight mb-4">Grooming Shop</Text>
+
+        {/* Search Bar */}
+        <View className="bg-white rounded-2xl px-5 py-3 flex-row items-center gap-3 shadow-md">
+          <Search size={18} color="#8789A3" />
+          <TextInput
+            placeholder="Kërko produkte..."
+            placeholderTextColor="#8789A3"
+            className="flex-1 text-[#161719] font-bold text-sm"
+            value={search}
+            onChangeText={setSearch}
+          />
+          <TouchableOpacity className="bg-[#EBF2FF] p-2 rounded-xl">
+            <Filter size={16} color="#3473ef" />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Offers & Ads Cards */}
-      <View className="px-6 pt-6 pb-32">
-        {loading && ads.length === 0 ? (
-          <ActivityIndicator size="large" color="#7F3DFF" className="my-10" />
+      {/* Categories Horizontal Scroll */}
+      <View className="py-6">
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="px-6 flex-row">
+          {CATEGORIES.map((cat, i) => (
+            <TouchableOpacity
+              key={i}
+              onPress={() => setCategory(cat)}
+              className={`mr-3 px-6 py-3 rounded-2xl border ${
+                category === cat ? "bg-[#3473ef] border-[#3473ef]" : "bg-white border-slate-100"
+              }`}
+            >
+              <Text className={`font-black text-xs ${category === cat ? "text-white" : "text-[#8789A3]"}`}>
+                {cat}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* Products Grid-like List */}
+      <ScrollView className="flex-1 px-6" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+        {loading ? (
+          <ActivityIndicator size="large" color="#3473ef" className="my-10" />
+        ) : filteredProducts.length > 0 ? (
+          <View className="flex-row flex-wrap justify-between">
+            {filteredProducts.map((product, i) => (
+              <View key={product.id || i} className="bg-white rounded-3xl p-3 mb-6 shadow-sm border border-slate-100" style={{ width: "47%" }}>
+                <View className="h-32 bg-slate-50 rounded-2xl overflow-hidden mb-3 items-center justify-center">
+                  <Image
+                    source={{ uri: product.imageUrl || "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=400" }}
+                    className="w-full h-full object-contain"
+                  />
+                  <TouchableOpacity className="absolute top-2 right-2 w-7 h-7 bg-white/80 rounded-full items-center justify-center">
+                    <Heart size={12} color="#3473ef" />
+                  </TouchableOpacity>
+                </View>
+
+                <Text className="text-[#161719] font-black text-xs mb-1" numberOfLines={1}>{product.name}</Text>
+                <Text className="text-[#8789A3] text-[9px] font-bold mb-2 uppercase tracking-tighter">{product.category || "General"}</Text>
+
+                <View className="flex-row items-center justify-between mt-1">
+                  <Text className="text-[#3473ef] font-black text-sm">€{product.price}</Text>
+                  <TouchableOpacity className="bg-[#3473ef] w-8 h-8 rounded-full items-center justify-center">
+                    <Plus size={16} color="white" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </View>
         ) : (
-          (ads.length > 0 ? ads : [
-            {
-              title: "Barber Lab Prishtinë",
-              description: "20% Discount for Morning Appointments",
-              promoCode: "LINEUP20",
-              location: "Prishtinë, Rr. UÇK",
-              rating: "4.9",
-              tag: "Exclusive"
-            },
-            {
-              title: "Gentlemen's Club Pejë",
-              description: "Haircut + Free Face Mask",
-              promoCode: "FREEMASK",
-              location: "Pejë, Center",
-              rating: "4.8",
-              tag: "Top Deal"
-            }
-          ]).map((ad, i) => (
-            <View key={i} className="bg-white rounded-[32px] p-6 mb-6 shadow-sm border border-slate-100">
-              <View className="flex-row items-center justify-between mb-4">
-                <View className="bg-[#F2EDFF] px-4 py-1.5 rounded-full flex-row items-center gap-1.5">
-                  <Gift size={14} color="#7F3DFF" />
-                  <Text className="text-[#7F3DFF] text-[10px] font-black uppercase tracking-widest">{ad.tag || ad.badge || "Exclusive"}</Text>
-                </View>
-                <View className="flex-row items-center gap-1 bg-amber-50 px-3 py-1 rounded-full">
-                  <Star size={14} color="#FFC107" fill="#FFC107" />
-                  <Text className="text-[#161719] font-black text-xs">{ad.rating || "5.0"}</Text>
-                </View>
-              </View>
-
-              <Text className="text-[#161719] text-xl font-black mb-1">{ad.title || ad.salon}</Text>
-              <View className="flex-row items-center gap-1.5 mb-4">
-                <MapPin size={14} color="#7F3DFF" />
-                <Text className="text-[#8789A3] text-xs font-semibold">{ad.location || ad.city || "Kosovo"}</Text>
-              </View>
-
-              <View className="bg-[#F8F9FE] p-4 rounded-2xl border border-slate-100 mb-5 flex-row items-center justify-between">
-                <View className="flex-1 mr-2">
-                  <Text className="text-[#8789A3] text-[9px] font-black uppercase tracking-widest mb-0.5">Offer Detail</Text>
-                  <Text className="text-[#161719] text-sm font-extrabold">{ad.description || ad.offer}</Text>
-                </View>
-                {ad.promoCode || ad.code ? (
-                  <View className="bg-[#7F3DFF] px-3 py-1.5 rounded-xl shadow-xs">
-                    <Text className="text-white text-xs font-black">{ad.promoCode || ad.code}</Text>
-                  </View>
-                ) : null}
-              </View>
-
-              <TouchableOpacity className="bg-[#7F3DFF] py-3.5 rounded-full items-center shadow-md shadow-[#7F3DFF]/25 active:scale-98">
-                <Text className="text-white text-xs font-black uppercase tracking-widest">Claim Offer</Text>
-              </TouchableOpacity>
-            </View>
-          ))
+          <View className="items-center justify-center py-20">
+            <ShoppingBag size={48} color="#E2E8F0" />
+            <Text className="text-[#8789A3] font-bold mt-4">Nuk u gjetën produkte.</Text>
+          </View>
         )}
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };

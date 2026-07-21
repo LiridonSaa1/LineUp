@@ -1,0 +1,5 @@
+- [ ] Update City Dropdown in `HomeScreen.tsx` and `ExploreScreen.tsx` to show only 5 items before scrolling
+- [ ] Implement Auto-Play Shop Slider in `HomeScreen.tsx`
+- [ ] Reorder sections in `HomeScreen.tsx` as proposed
+- [ ] Add `FadeInUp` animations to all Home sections
+- [ ] Verify animations and layout

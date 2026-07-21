@@ -44,7 +44,7 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, on
           {/* Dots Indicator */}
           <View className="absolute bottom-6 left-0 right-0 flex-row justify-center gap-1.5 z-20">
             <View className="w-2 h-2 rounded-full bg-white opacity-40" />
-            <View className="w-5 h-2 rounded-full bg-[#7F3DFF]" />
+            <View className="w-5 h-2 rounded-full bg-[#3473ef]" />
             <View className="w-2 h-2 rounded-full bg-white opacity-40" />
             <View className="w-2 h-2 rounded-full bg-white opacity-40" />
           </View>
@@ -54,13 +54,13 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, on
         <View className="px-6 pt-6 pb-6">
           <View className="flex-row justify-between items-start mb-2">
             <Text className="text-2xl font-black text-[#161719] flex-1 mr-2">{shopName}</Text>
-            <View className="bg-[#7F3DFF] px-4 py-1.5 rounded-full">
+            <View className="bg-[#3473ef] px-4 py-1.5 rounded-full">
               <Text className="text-white text-xs font-black">Open</Text>
             </View>
           </View>
 
           <View className="flex-row items-center gap-1.5 mb-2">
-            <MapPin size={16} color="#7F3DFF" />
+            <MapPin size={16} color="#3473ef" />
             <Text className="text-[#8789A3] text-xs font-bold">{address}</Text>
           </View>
 
@@ -82,9 +82,9 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, on
               return (
                 <TouchableOpacity 
                   key={i} 
-                  className="flex-1 bg-[#F2EDFF] py-4 rounded-2xl items-center justify-center border border-[#7F3DFF]/10 active:scale-95"
+                  className="flex-1 bg-[#EBF2FF] py-4 rounded-2xl items-center justify-center border border-[#3473ef]/10 active:scale-95"
                 >
-                  <Icon size={20} color="#7F3DFF" strokeWidth={2.2} className="mb-1" />
+                  <Icon size={20} color="#3473ef" strokeWidth={2.2} className="mb-1" />
                   <Text className="text-[#161719] text-[11px] font-extrabold mt-1">{btn.label}</Text>
                 </TouchableOpacity>
               );
@@ -95,20 +95,20 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, on
           <View className="flex-row items-center justify-between mb-4">
             <Text className="text-lg font-black text-[#161719]">Our Recent Work</Text>
             <TouchableOpacity>
-              <Text className="text-xs font-black text-[#7F3DFF]">See All »</Text>
+              <Text className="text-xs font-black text-[#3473ef]">See All »</Text>
             </TouchableOpacity>
           </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-4">
-            {[
+            {(shop.photos && shop.photos.length > 0 ? shop.photos : [
               "https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=500&auto=format&fit=crop&q=80",
               "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=500&auto=format&fit=crop&q=80",
               "https://images.unsplash.com/photo-1517832606299-7ae9b720a186?w=500&auto=format&fit=crop&q=80",
-            ].map((img, idx) => (
+            ]).map((img: string, idx: number) => (
               <View key={idx} className="w-44 h-32 rounded-2xl overflow-hidden mr-4 relative bg-slate-200">
                 <Image source={{ uri: img }} className="w-full h-full object-cover" />
                 <TouchableOpacity className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-white/80 items-center justify-center">
-                  <Heart size={14} color="#7F3DFF" />
+                  <Heart size={14} color="#3473ef" />
                 </TouchableOpacity>
               </View>
             ))}
@@ -119,7 +119,7 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, on
 
       {/* Sticky Book Appointment Bottom Bar */}
       <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-5 z-30 shadow-[0_-10px_30px_rgba(0,0,0,0.06)]">
-        <TouchableOpacity className="bg-[#7F3DFF] py-4 rounded-full items-center justify-center shadow-lg shadow-[#7F3DFF]/30 active:scale-98">
+        <TouchableOpacity className="bg-[#3473ef] py-4 rounded-full items-center justify-center shadow-lg shadow-[#3473ef]/30 active:scale-98">
           <Text className="text-white text-base font-extrabold">Book Appointment</Text>
         </TouchableOpacity>
       </View>

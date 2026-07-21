@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, Switch, Image } from "react-n
 import { User, Settings, CreditCard, Bell, Shield, HelpCircle, LogOut, ChevronRight, Calendar, Heart, Award } from "lucide-react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { fetchFromAPI } from "@/config/api";
+import { supabase } from "@/config/supabase";
 
 export const ProfileScreen = () => {
   const [stats, setStats] = useState<any>(null);
@@ -10,10 +11,21 @@ export const ProfileScreen = () => {
   useEffect(() => {
     async function loadStats() {
       try {
-        const data = await fetchFromAPI("/api/stats/public");
-        if (data) setStats(data);
+        const [shops, cities, appointments] = await Promise.all([
+          supabase.from('barbershops').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+          supabase.from('barbershops').select('city').eq('status', 'active'),
+          supabase.from('appointments').select('*', { count: 'exact', head: true }).neq('status', 'cancelled')
+        ]);
+
+        const uniqueCities = new Set(cities.data?.map(s => s.city));
+
+        setStats({
+          activeShops: shops.count || 0,
+          citiesCount: uniqueCities.size || 0,
+          confirmedAppointments: appointments.count || 0
+        });
       } catch (e) {
-        console.warn("Failed to fetch stats:", e);
+        console.warn("Failed to fetch stats from Supabase:", e);
       }
     }
     loadStats();
@@ -22,7 +34,7 @@ export const ProfileScreen = () => {
   return (
     <ScrollView className="flex-1 bg-[#F8F9FE]" showsVerticalScrollIndicator={false}>
       {/* Top Purple Header Banner */}
-      <View className="bg-[#7F3DFF] pt-16 pb-12 px-6 rounded-b-[40px] items-center">
+      <View className="bg-[#3473ef] pt-16 pb-12 px-6 rounded-b-[40px] items-center">
         <View className="w-28 h-28 rounded-full bg-white p-1 shadow-xl mb-4 relative">
           <Image 
             source={{ uri: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80" }} 
@@ -41,17 +53,17 @@ export const ProfileScreen = () => {
       <View className="px-6 -mt-6">
         <View className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 flex-row justify-around">
           <View className="items-center">
-            <Text className="text-[#161719] font-black text-2xl">{stats?.totalBarbershops || "15"}</Text>
+            <Text className="text-[#161719] font-black text-2xl">{stats?.activeShops || "15"}</Text>
             <Text className="text-[#8789A3] text-[10px] font-extrabold uppercase mt-1">Salons</Text>
           </View>
           <View className="w-[1px] h-10 bg-slate-100 self-center" />
           <View className="items-center">
-            <Text className="text-[#161719] font-black text-2xl">{stats?.totalCities || "7"}</Text>
+            <Text className="text-[#161719] font-black text-2xl">{stats?.citiesCount || "7"}</Text>
             <Text className="text-[#8789A3] text-[10px] font-extrabold uppercase mt-1">Cities</Text>
           </View>
           <View className="w-[1px] h-10 bg-slate-100 self-center" />
           <View className="items-center">
-            <Text className="text-[#161719] font-black text-2xl">{stats?.totalAppointments || "450"}+</Text>
+            <Text className="text-[#161719] font-black text-2xl">{stats?.confirmedAppointments || "450"}+</Text>
             <Text className="text-[#8789A3] text-[10px] font-extrabold uppercase mt-1">Bookings</Text>
           </View>
         </View>
@@ -86,12 +98,12 @@ export const ProfileScreen = () => {
 
 const MenuButton = ({ icon: Icon, label, hasSwitch = false }: any) => (
   <TouchableOpacity className="flex-row items-center px-6 py-4.5 border-b border-slate-50">
-    <View className="w-10 h-10 rounded-full bg-[#F2EDFF] items-center justify-center mr-4">
-      <Icon size={18} color="#7F3DFF" />
+    <View className="w-10 h-10 rounded-full bg-[#EBF2FF] items-center justify-center mr-4">
+      <Icon size={18} color="#3473ef" />
     </View>
     <Text className="flex-1 text-[#161719] font-extrabold text-sm">{label}</Text>
     {hasSwitch ? (
-      <Switch trackColor={{ false: "#E2E8F0", true: "#7F3DFF" }} thumbColor="white" value={true} />
+      <Switch trackColor={{ false: "#E2E8F0", true: "#3473ef" }} thumbColor="white" value={true} />
     ) : (
       <ChevronRight size={18} color="#8789A3" />
     )}
