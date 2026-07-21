@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, ActivityIndicator } from "react-native";
-import { Search, MapPin, SlidersHorizontal, Star, Heart, ArrowLeft, Bell, ArrowUpRight } from "lucide-react-native";
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, ActivityIndicator, Modal } from "react-native";
+import { Search, MapPin, SlidersHorizontal, Star, Heart, ArrowLeft, Bell, ArrowUpRight, ChevronDown, Check } from "lucide-react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { fetchFromAPI } from "@/config/api";
 
@@ -11,6 +11,7 @@ interface ExploreScreenProps {
 export const ExploreScreen: React.FC<ExploreScreenProps> = ({ onSelectShop }) => {
   const [search, setSearch] = useState("");
   const [selectedCity, setSelectedCity] = useState("Të gjitha");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [shops, setShops] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -72,24 +73,52 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({ onSelectShop }) =>
         </View>
       </View>
 
-      {/* ── CITY FILTER PILLS ────────────────────────────── */}
-      <View className="py-6 px-6">
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-3">
-          {CITIES.map((city) => {
-            const isSelected = selectedCity === city;
-            return (
-              <TouchableOpacity
-                key={city}
-                onPress={() => setSelectedCity(city)}
-                className={`mr-3 px-6 py-3 rounded-full border ${isSelected ? 'bg-[#7F3DFF] border-[#7F3DFF]' : 'bg-[#F2EDFF] border-transparent'}`}
-              >
-                <Text className={`font-extrabold text-xs ${isSelected ? 'text-white' : 'text-[#8789A3]'}`}>
-                  📍 {city}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+      {/* ── CITY DROPDOWN SELECTOR ─────────────────────────── */}
+      <View className="pt-6 px-6 relative z-20">
+        <TouchableOpacity
+          onPress={() => setDropdownOpen(!dropdownOpen)}
+          className="bg-white rounded-2xl border border-slate-200/80 px-5 py-3.5 flex-row justify-between items-center shadow-xs active:scale-98"
+        >
+          <View className="flex-row items-center gap-3">
+            <View className="w-8 h-8 rounded-full bg-[#7F3DFF]/10 items-center justify-center">
+              <MapPin size={18} color="#7F3DFF" />
+            </View>
+            <View>
+              <Text className="text-[#8789A3] text-[10px] font-black uppercase tracking-widest">Qyteti i zgjedhur</Text>
+              <Text className="text-[#161719] font-black text-sm">{selectedCity}</Text>
+            </View>
+          </View>
+
+          <View className="w-8 h-8 rounded-full bg-[#F2EDFF] items-center justify-center">
+            <ChevronDown size={18} color="#7F3DFF" />
+          </View>
+        </TouchableOpacity>
+
+        {/* Expandable Dropdown List */}
+        {dropdownOpen && (
+          <View className="mt-2 bg-white rounded-3xl border border-slate-200 p-2 shadow-xl">
+            {CITIES.map((city) => {
+              const isSelected = selectedCity === city;
+              return (
+                <TouchableOpacity
+                  key={city}
+                  onPress={() => {
+                    setSelectedCity(city);
+                    setDropdownOpen(false);
+                  }}
+                  className={`flex-row items-center justify-between px-4 py-3 rounded-2xl mb-1 ${
+                    isSelected ? "bg-[#7F3DFF] text-white" : "bg-transparent hover:bg-slate-50"
+                  }`}
+                >
+                  <Text className={`font-extrabold text-sm ${isSelected ? "text-white" : "text-[#161719]"}`}>
+                    📍 {city}
+                  </Text>
+                  {isSelected && <Check size={18} color="white" strokeWidth={3} />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
       </View>
 
       {/* ── TOP RATED SALONS LIST ───────────────────────────── */}
