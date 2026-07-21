@@ -2,38 +2,45 @@ import React from "react";
 import { StatusBar } from "expo-status-bar";
 import { View, TouchableOpacity, Text } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { Home, Search, Megaphone, User } from "lucide-react-native";
-import { BlurView } from "expo-blur";
+import { Home, Search, ShoppingBag, User } from "lucide-react-native";
 import { HomeScreen } from "./src/screens/HomeScreen";
 import { ExploreScreen } from "./src/screens/ExploreScreen";
 import { ProfileScreen } from "./src/screens/ProfileScreen";
 import { AdsScreen } from "./src/screens/AdsScreen";
+import { BarberDetailScreen } from "./src/screens/BarberDetailScreen";
 import "./global.css";
 
 export default function App() {
   const [activeTab, setActiveTab] = React.useState(0);
+  const [selectedShop, setSelectedShop] = React.useState<any>(null);
 
   const tabs = [
-    { label: 'Ballina', icon: Home },
-    { label: 'Eksploro', icon: Search },
-    { label: 'Reklama', icon: Megaphone },
-    { label: 'Profili', icon: User },
+    { label: 'Home', icon: Home },
+    { label: 'Search', icon: Search },
+    { label: 'Shop', icon: ShoppingBag },
+    { label: 'Profile', icon: User },
   ];
 
   return (
     <SafeAreaProvider>
-      <View className="flex-1 bg-[#050608]">
+      <View className="flex-1 bg-[#F8F9FE]">
         <StatusBar style="light" />
 
-        {/* Main Content Switcher */}
-        {activeTab === 0 && <HomeScreen />}
-        {activeTab === 1 && <ExploreScreen />}
-        {activeTab === 2 && <AdsScreen />}
-        {activeTab === 3 && <ProfileScreen />}
+        {/* Detail Screen Modal or Main Content Switcher */}
+        {selectedShop ? (
+          <BarberDetailScreen shop={selectedShop} onBack={() => setSelectedShop(null)} />
+        ) : (
+          <>
+            {activeTab === 0 && <HomeScreen onSelectShop={(shop) => setSelectedShop(shop)} />}
+            {activeTab === 1 && <ExploreScreen onSelectShop={(shop) => setSelectedShop(shop)} />}
+            {activeTab === 2 && <AdsScreen />}
+            {activeTab === 3 && <ProfileScreen />}
+          </>
+        )}
 
-        {/* ── CUSTOM FLOATING BOTTOM BAR ────────────────────── */}
-        <View className="absolute bottom-10 left-8 right-10">
-          <BlurView intensity={80} tint="dark" className="flex-row h-24 items-center px-6 rounded-[40px] border border-white/10 overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.8)]">
+        {/* ── CLEAN PURPLE BOTTOM BAR ────────────────────── */}
+        {!selectedShop && (
+          <View className="bg-white border-t border-slate-100/80 pt-3 pb-6 px-8 flex-row items-center justify-around shadow-[0_-8px_30px_rgba(0,0,0,0.04)]">
             {tabs.map((tab, i) => {
               const isActive = activeTab === i;
               const Icon = tab.icon;
@@ -41,20 +48,17 @@ export default function App() {
                 <TouchableOpacity
                   key={i}
                   onPress={() => setActiveTab(i)}
-                  className="flex-1 items-center justify-center"
+                  className="items-center justify-center py-1"
                 >
-                  <View className="relative items-center justify-center p-2">
-                    <Icon size={isActive ? 28 : 24} color={isActive ? "#3472ef" : "rgba(255,255,255,0.3)"} strokeWidth={isActive ? 2.5 : 1.8} />
-                    {isActive && (
-                      <View className="absolute -bottom-4 w-1.5 h-1.5 bg-[#3472ef] rounded-full shadow-[0_0_10px_#3472ef]" />
-                    )}
+                  <View className={`w-10 h-10 rounded-full items-center justify-center mb-1 ${isActive ? 'bg-[#7F3DFF]/10' : 'bg-transparent'}`}>
+                    <Icon size={22} color={isActive ? "#7F3DFF" : "#8789A3"} strokeWidth={isActive ? 2.5 : 2} />
                   </View>
-                  <Text className={`text-[9px] font-black uppercase tracking-widest mt-2 ${isActive ? 'text-white' : 'text-white/20'}`}>{tab.label}</Text>
+                  <Text className={`text-[10px] font-extrabold ${isActive ? 'text-[#7F3DFF]' : 'text-[#8789A3]'}`}>{tab.label}</Text>
                 </TouchableOpacity>
               );
             })}
-          </BlurView>
-        </View>
+          </View>
+        )}
 
       </View>
     </SafeAreaProvider>

@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Switch } from "react-native";
-import { User, Settings, CreditCard, Bell, Shield, HelpCircle, LogOut, ChevronRight, Calendar } from "lucide-react-native";
+import { View, Text, ScrollView, TouchableOpacity, Switch, Image } from "react-native";
+import { User, Settings, CreditCard, Bell, Shield, HelpCircle, LogOut, ChevronRight, Calendar, Heart, Award } from "lucide-react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
-import { BlurView } from "expo-blur";
 import { fetchFromAPI } from "@/config/api";
 
 export const ProfileScreen = () => {
@@ -21,55 +20,64 @@ export const ProfileScreen = () => {
   }, []);
 
   return (
-    <ScrollView className="flex-1 bg-[#050608]" showsVerticalScrollIndicator={false}>
-      {/* Profile Header */}
-      <View className="pt-20 px-8 pb-10">
-        <Animated.View entering={FadeInUp.duration(800)} className="items-center">
-          <View className="w-32 h-32 rounded-[48px] bg-zinc-900 border-2 border-[#3472ef] items-center justify-center shadow-2xl shadow-[#3472ef]/20 mb-6">
-            <User size={64} color="white" />
-            <View className="absolute bottom-0 right-0 w-8 h-8 bg-emerald-500 rounded-full border-4 border-[#050608]" />
-          </View>
-          <Text className="text-3xl font-black text-white tracking-tight">Artan Berisha</Text>
-          <Text className="text-white/40 font-bold uppercase tracking-widest text-[10px] mt-2">Premium Member</Text>
-        </Animated.View>
+    <ScrollView className="flex-1 bg-[#F8F9FE]" showsVerticalScrollIndicator={false}>
+      {/* Top Purple Header Banner */}
+      <View className="bg-[#7F3DFF] pt-16 pb-12 px-6 rounded-b-[40px] items-center">
+        <View className="w-28 h-28 rounded-full bg-white p-1 shadow-xl mb-4 relative">
+          <Image 
+            source={{ uri: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80" }} 
+            className="w-full h-full rounded-full object-cover" 
+          />
+          <View className="absolute bottom-0 right-0 w-7 h-7 bg-emerald-500 rounded-full border-2 border-white items-center justify-center" />
+        </View>
 
-        {/* Stats Row */}
-        <View className="flex-row mt-12 gap-4">
-          <View className="flex-1 bg-white/5 border border-white/10 rounded-3xl p-5 items-center">
-            <Text className="text-white font-black text-2xl">{stats?.totalBarbershops || "15"}</Text>
-            <Text className="text-white/30 text-[8px] font-black uppercase tracking-widest mt-1">Berberi</Text>
+        <Text className="text-2xl font-black text-white tracking-tight">Artan Berisha</Text>
+        <View className="bg-white/20 px-4 py-1 rounded-full mt-2 border border-white/30">
+          <Text className="text-white font-extrabold text-[11px]">Premium Member</Text>
+        </View>
+      </View>
+
+      {/* Stats Row */}
+      <View className="px-6 -mt-6">
+        <View className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 flex-row justify-around">
+          <View className="items-center">
+            <Text className="text-[#161719] font-black text-2xl">{stats?.totalBarbershops || "15"}</Text>
+            <Text className="text-[#8789A3] text-[10px] font-extrabold uppercase mt-1">Salons</Text>
           </View>
-          <View className="flex-1 bg-white/5 border border-white/10 rounded-3xl p-5 items-center">
-            <Text className="text-white font-black text-2xl">{stats?.totalCities || "7"}</Text>
-            <Text className="text-white/30 text-[8px] font-black uppercase tracking-widest mt-1">Qytete</Text>
+          <View className="w-[1px] h-10 bg-slate-100 self-center" />
+          <View className="items-center">
+            <Text className="text-[#161719] font-black text-2xl">{stats?.totalCities || "7"}</Text>
+            <Text className="text-[#8789A3] text-[10px] font-extrabold uppercase mt-1">Cities</Text>
           </View>
-          <View className="flex-1 bg-white/5 border border-white/10 rounded-3xl p-5 items-center">
-            <Text className="text-white font-black text-2xl">{stats?.totalAppointments || "450"}+</Text>
-            <Text className="text-white/30 text-[8px] font-black uppercase tracking-widest mt-1">Takime</Text>
+          <View className="w-[1px] h-10 bg-slate-100 self-center" />
+          <View className="items-center">
+            <Text className="text-[#161719] font-black text-2xl">{stats?.totalAppointments || "450"}+</Text>
+            <Text className="text-[#8789A3] text-[10px] font-extrabold uppercase mt-1">Bookings</Text>
           </View>
         </View>
       </View>
 
-      {/* Menu Sections */}
-      <View className="px-8 pb-40">
-        <Text className="text-white/20 font-black text-[10px] uppercase tracking-[0.25em] mb-6">Llogaria</Text>
+      {/* Menu Options */}
+      <View className="px-6 pt-6 pb-32">
+        <Text className="text-[#8789A3] font-black text-xs uppercase tracking-widest mb-4">Account</Text>
 
-        <View className="bg-white/[0.02] border border-white/5 rounded-[40px] overflow-hidden">
-          <MenuButton icon={Calendar} label="Rezervimet e mia" />
-          <MenuButton icon={CreditCard} label="Metodat e pagesës" />
-          <MenuButton icon={Bell} label="Njoftimet" hasSwitch />
-          <MenuButton icon={Shield} label="Siguria & Privatësia" />
+        <View className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm mb-6">
+          <MenuButton icon={Calendar} label="My Appointments" />
+          <MenuButton icon={Heart} label="Saved Salons" />
+          <MenuButton icon={CreditCard} label="Payment Methods" />
+          <MenuButton icon={Bell} label="Notifications" hasSwitch />
+          <MenuButton icon={Shield} label="Privacy & Security" />
         </View>
 
-        <Text className="text-white/20 font-black text-[10px] uppercase tracking-[0.25em] mt-10 mb-6">Mbështetja</Text>
-        <View className="bg-white/[0.02] border border-white/5 rounded-[40px] overflow-hidden">
-          <MenuButton icon={HelpCircle} label="Qendra e ndihmës" />
-          <MenuButton icon={Settings} label="Cilësimet" />
+        <Text className="text-[#8789A3] font-black text-xs uppercase tracking-widest mb-4">Support</Text>
+        <View className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm mb-8">
+          <MenuButton icon={HelpCircle} label="Help Center" />
+          <MenuButton icon={Settings} label="Settings" />
         </View>
 
-        <TouchableOpacity className="mt-12 flex-row items-center justify-center gap-3 bg-rose-500/10 border border-rose-500/20 py-6 rounded-[32px]">
-          <LogOut size={20} color="#f43f5e" />
-          <Text className="text-rose-500 font-black uppercase tracking-widest text-xs">Dil nga Llogaria</Text>
+        <TouchableOpacity className="flex-row items-center justify-center gap-3 bg-rose-50 border border-rose-100 py-4 rounded-2xl active:scale-98">
+          <LogOut size={18} color="#FF4757" />
+          <Text className="text-[#FF4757] font-black uppercase tracking-widest text-xs">Log Out</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -77,15 +85,15 @@ export const ProfileScreen = () => {
 };
 
 const MenuButton = ({ icon: Icon, label, hasSwitch = false }: any) => (
-  <TouchableOpacity className="flex-row items-center px-8 py-6 border-b border-white/5">
-    <View className="w-10 h-10 rounded-2xl bg-white/5 items-center justify-center mr-4">
-      <Icon size={20} color="white" opacity={0.6} />
+  <TouchableOpacity className="flex-row items-center px-6 py-4.5 border-b border-slate-50">
+    <View className="w-10 h-10 rounded-full bg-[#F2EDFF] items-center justify-center mr-4">
+      <Icon size={18} color="#7F3DFF" />
     </View>
-    <Text className="flex-1 text-white font-bold text-base">{label}</Text>
+    <Text className="flex-1 text-[#161719] font-extrabold text-sm">{label}</Text>
     {hasSwitch ? (
-      <Switch trackColor={{ false: "#1f2937", true: "#3472ef" }} thumbColor="white" value={true} />
+      <Switch trackColor={{ false: "#E2E8F0", true: "#7F3DFF" }} thumbColor="white" value={true} />
     ) : (
-      <ChevronRight size={20} color="rgba(255,255,255,0.2)" />
+      <ChevronRight size={18} color="#8789A3" />
     )}
   </TouchableOpacity>
 );
