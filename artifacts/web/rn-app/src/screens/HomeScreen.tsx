@@ -83,70 +83,51 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop }) => {
           </View>
         </View>
 
-        {/* Search Bar inside Header */}
-        <View className="bg-white rounded-full px-5 py-3 flex-row items-center justify-between shadow-md">
-          <View className="flex-row items-center gap-3 flex-1">
-            <Search size={20} color="#8789A3" />
-            <TextInput
-              placeholder="Kërko berber, qytet..."
-              placeholderTextColor="#8789A3"
-              className="text-[#161719] font-bold text-sm flex-1"
-              value={search}
-              onChangeText={setSearch}
-            />
-          </View>
-          <TouchableOpacity className="w-9 h-9 rounded-full bg-[#7F3DFF] items-center justify-center">
-            <SlidersHorizontal size={16} color="white" />
+        {/* City Dropdown Search Bar inside Purple Header */}
+        <View className="relative z-30">
+          <TouchableOpacity
+            onPress={() => setDropdownOpen(!dropdownOpen)}
+            className="bg-white rounded-full px-5 py-3.5 flex-row items-center justify-between shadow-lg active:scale-98"
+          >
+            <View className="flex-row items-center gap-3 flex-1">
+              <MapPin size={20} color="#7F3DFF" />
+              <View className="flex-1">
+                <Text className="text-[#8789A3] text-[9px] font-black uppercase tracking-widest">Kërko sipas Qytetit</Text>
+                <Text className="text-[#161719] font-black text-sm">{selectedCity}</Text>
+              </View>
+            </View>
+
+            <View className="w-9 h-9 rounded-full bg-[#7F3DFF] items-center justify-center">
+              <ChevronDown size={18} color="white" />
+            </View>
           </TouchableOpacity>
+
+          {/* Expandable Dropdown List inside Header */}
+          {dropdownOpen && (
+            <View className="absolute top-16 left-0 right-0 bg-white rounded-3xl border border-slate-200 p-2 shadow-2xl z-50">
+              {CITIES.map((city) => {
+                const isSelected = selectedCity === city;
+                return (
+                  <TouchableOpacity
+                    key={city}
+                    onPress={() => {
+                      setSelectedCity(city);
+                      setDropdownOpen(false);
+                    }}
+                    className={`flex-row items-center justify-between px-5 py-3.5 rounded-2xl mb-1 ${
+                      isSelected ? "bg-[#7F3DFF]" : "bg-transparent hover:bg-slate-50"
+                    }`}
+                  >
+                    <Text className={`font-extrabold text-sm ${isSelected ? "text-white" : "text-[#161719]"}`}>
+                      📍 {city}
+                    </Text>
+                    {isSelected && <Check size={18} color="white" strokeWidth={3} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
         </View>
-      </View>
-
-      {/* ── CITY DROPDOWN SELECTOR ─────────────────────────── */}
-      <View className="pt-6 px-6 relative z-20">
-        <TouchableOpacity
-          onPress={() => setDropdownOpen(!dropdownOpen)}
-          className="bg-white rounded-2xl border border-slate-200/80 px-5 py-3.5 flex-row justify-between items-center shadow-xs active:scale-98"
-        >
-          <View className="flex-row items-center gap-3">
-            <View className="w-8 h-8 rounded-full bg-[#7F3DFF]/10 items-center justify-center">
-              <MapPin size={18} color="#7F3DFF" />
-            </View>
-            <View>
-              <Text className="text-[#8789A3] text-[10px] font-black uppercase tracking-widest">Filtroni sipas qytetit</Text>
-              <Text className="text-[#161719] font-black text-sm">{selectedCity}</Text>
-            </View>
-          </View>
-
-          <View className="w-8 h-8 rounded-full bg-[#F2EDFF] items-center justify-center">
-            <ChevronDown size={18} color="#7F3DFF" />
-          </View>
-        </TouchableOpacity>
-
-        {/* Expandable Dropdown List */}
-        {dropdownOpen && (
-          <View className="mt-2 bg-white rounded-3xl border border-slate-200 p-2 shadow-xl">
-            {CITIES.map((city) => {
-              const isSelected = selectedCity === city;
-              return (
-                <TouchableOpacity
-                  key={city}
-                  onPress={() => {
-                    setSelectedCity(city);
-                    setDropdownOpen(false);
-                  }}
-                  className={`flex-row items-center justify-between px-4 py-3 rounded-2xl mb-1 ${
-                    isSelected ? "bg-[#7F3DFF] text-white" : "bg-transparent hover:bg-slate-50"
-                  }`}
-                >
-                  <Text className={`font-extrabold text-sm ${isSelected ? "text-white" : "text-[#161719]"}`}>
-                    📍 {city}
-                  </Text>
-                  {isSelected && <Check size={18} color="white" strokeWidth={3} />}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
       </View>
 
       {/* ── SPECIAL OFFERS SLIDER ────────────────────────────── */}
