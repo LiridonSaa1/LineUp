@@ -10,11 +10,11 @@ interface ExploreScreenProps {
 
 export const ExploreScreen: React.FC<ExploreScreenProps> = ({ onSelectShop }) => {
   const [search, setSearch] = useState("");
-  const [selectedService, setSelectedService] = useState("All Service");
+  const [selectedCity, setSelectedCity] = useState("Të gjitha");
   const [shops, setShops] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const SERVICES = ["All Service", "Barber", "Hair Salon", "Massage", "Spa"];
+  const CITIES = ["Të gjitha", "Prishtinë", "Prizren", "Pejë", "Ferizaj", "Gjakovë", "Gjilan", "Mitrovicë"];
 
   useEffect(() => {
     async function loadShops() {
@@ -33,7 +33,9 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({ onSelectShop }) =>
   }, []);
 
   const filteredShops = shops.filter((shop) => {
-    return !search || shop.name?.toLowerCase().includes(search.toLowerCase()) || shop.city?.toLowerCase().includes(search.toLowerCase());
+    const matchesCity = selectedCity === "Të gjitha" || shop.city === selectedCity;
+    const matchesQuery = !search || shop.name?.toLowerCase().includes(search.toLowerCase()) || shop.city?.toLowerCase().includes(search.toLowerCase());
+    return matchesCity && matchesQuery;
   });
 
   return (
@@ -45,7 +47,7 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({ onSelectShop }) =>
             <ArrowLeft size={20} color="#161719" strokeWidth={2.5} />
           </TouchableOpacity>
 
-          <Text className="text-white text-xl font-black tracking-tight">Appointment</Text>
+          <Text className="text-white text-xl font-black tracking-tight">Eksploro Qytetet</Text>
 
           <TouchableOpacity className="w-11 h-11 rounded-full bg-white items-center justify-center shadow-md">
             <Bell size={20} color="#7F3DFF" />
@@ -57,7 +59,7 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({ onSelectShop }) =>
           <View className="flex-row items-center gap-3 flex-1">
             <Search size={20} color="#8789A3" />
             <TextInput
-              placeholder="Search Salon, Specialist"
+              placeholder="Kërko berber, qytet..."
               placeholderTextColor="#8789A3"
               className="text-[#161719] font-bold text-sm flex-1"
               value={search}
@@ -70,19 +72,19 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({ onSelectShop }) =>
         </View>
       </View>
 
-      {/* ── SERVICE FILTER PILLS ────────────────────────────── */}
+      {/* ── CITY FILTER PILLS ────────────────────────────── */}
       <View className="py-6 px-6">
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-3">
-          {SERVICES.map((srv) => {
-            const isSelected = selectedService === srv;
+          {CITIES.map((city) => {
+            const isSelected = selectedCity === city;
             return (
               <TouchableOpacity
-                key={srv}
-                onPress={() => setSelectedService(srv)}
+                key={city}
+                onPress={() => setSelectedCity(city)}
                 className={`mr-3 px-6 py-3 rounded-full border ${isSelected ? 'bg-[#7F3DFF] border-[#7F3DFF]' : 'bg-[#F2EDFF] border-transparent'}`}
               >
                 <Text className={`font-extrabold text-xs ${isSelected ? 'text-white' : 'text-[#8789A3]'}`}>
-                  {srv}
+                  📍 {city}
                 </Text>
               </TouchableOpacity>
             );
