@@ -119,7 +119,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
             description: "Kontrollo çdo VIN në sekonda",
             color: "#00d084",
             url: "https://vehees.com/",
-            button_text: "Gjej veturën",
+            button_text: "Na vizitoni",
             image_url: "vehees_banner.jpg",
             status: 'active',
             only_button: true
@@ -130,7 +130,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
             description: "Udhëzues praktikë destinacionesh për çdo udhëtim",
             color: "#8b5cf6",
             url: "https://noasim.com/guides",
-            button_text: "Lexo udhëzuesit",
+            button_text: "Na vizitoni",
             image_url: "noasim_banner.jpg",
             status: 'active',
             only_button: true
@@ -291,49 +291,58 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
           showsHorizontalScrollIndicator={false}
           className="rounded-[32px] overflow-hidden shadow-sm"
         >
-          {ads.map((ad, i) => (
-            <View key={i} style={{ width: width - 48 }} className="h-44 relative overflow-hidden">
-              {/* Background Image */}
-              <Image
-                source={getAdImageSource(ad)}
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-              {/* Overlay - Skip for only_button mode */}
-              {!(ad.only_button || ad.onlyButton) && (
-                <View className="absolute inset-0" style={{ backgroundColor: ad.color, opacity: 0.85 }} />
-              )}
-              <View className="absolute inset-0 bg-black/5" />
+          {ads.map((ad, i) => {
+            const isCleanBanner = ad.only_button || ad.onlyButton;
+            return (
+              <TouchableOpacity
+                key={i}
+                onPress={() => ad.url && Linking.openURL(ad.url)}
+                activeOpacity={0.95}
+                style={{ width: width - 48 }}
+                className="h-48 relative overflow-hidden rounded-[28px] bg-slate-900 shadow-md border border-slate-200/40 mr-4"
+              >
+                {/* Background Banner Image */}
+                <Image
+                  source={getAdImageSource(ad)}
+                  resizeMode={isCleanBanner ? "contain" : "cover"}
+                  className="absolute inset-0 w-full h-full"
+                />
 
-              <View className={`flex-1 p-8 justify-center relative z-10 ${(ad.only_button || ad.onlyButton) ? 'items-start justify-end pb-8' : ''}`}>
-                {!(ad.only_button || ad.onlyButton) && (
-                  <>
-                    <View className="flex-row items-center gap-3 mb-2">
-                       <View className="w-10 h-10 bg-white rounded-xl items-center justify-center p-2 shadow-sm">
-                          <ExternalLink size={20} color={ad.color} strokeWidth={2.5} />
-                       </View>
-                       <View className="bg-white/20 self-start px-2.5 py-1 rounded-full border border-white/20">
-                          <Text className="text-white text-[9px] font-black uppercase tracking-widest">Partner i Verifikuar</Text>
-                       </View>
-                    </View>
-
-                    <Text className="text-white text-lg font-black mb-0.5">{ad.headline}</Text>
-                    <Text className="text-white/80 text-xs font-bold mb-4">{ad.description || ad.desc}</Text>
-                  </>
+                {/* Overlay for standard text ads */}
+                {!isCleanBanner && (
+                  <View className="absolute inset-0" style={{ backgroundColor: ad.color, opacity: 0.85 }} />
                 )}
 
-                <TouchableOpacity
-                  onPress={() => Linking.openURL(ad.url)}
-                  className="bg-white self-start px-6 py-3 rounded-2xl shadow-xl active:scale-95"
-                >
-                   <Text style={{ color: (ad.only_button || ad.onlyButton) ? '#6366f1' : ad.color }} className="font-black text-xs uppercase tracking-tight">
-                     {ad.button_text || ad.buttonText}
-                   </Text>
-                </TouchableOpacity>
-              </View>
+                {/* Content Overlay */}
+                <View className="flex-1 p-4 justify-between relative z-10">
+                  <View className="flex-row items-center justify-between">
+                    <View className="bg-black/50 px-3 py-1 rounded-full border border-white/20">
+                      <Text className="text-white text-[9px] font-black uppercase tracking-widest">Partner i Verifikuar</Text>
+                    </View>
+                  </View>
 
-              {!(ad.only_button || ad.onlyButton) && <View className="absolute right-[-20] bottom-[-20] w-40 h-40 bg-white/10 rounded-full" />}
-            </View>
-          ))}
+                  {!isCleanBanner && (
+                    <View className="my-auto">
+                      <Text className="text-white text-lg font-black mb-0.5">{ad.headline}</Text>
+                      <Text className="text-white/80 text-xs font-bold">{ad.description || ad.desc}</Text>
+                    </View>
+                  )}
+
+                  <View className="flex-row justify-end items-center mt-auto">
+                    <TouchableOpacity
+                      onPress={() => ad.url && Linking.openURL(ad.url)}
+                      className="bg-[#3473ef] px-4 py-2 rounded-xl shadow-xl flex-row items-center gap-1.5 border border-white/20 active:scale-95"
+                    >
+                      <Text className="text-white font-black text-xs uppercase tracking-wider">
+                        {ad.button_text || ad.buttonText || "Na vizitoni"}
+                      </Text>
+                      <ArrowUpRight size={14} color="white" strokeWidth={3} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       </View>
 
