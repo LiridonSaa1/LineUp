@@ -77,9 +77,9 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
   const datetimeX = useSharedValue(width);
 
   useEffect(() => {
-    treatmentX.value = withSpring(activePanel === 'treatment' ? 0 : width, { damping: 20, stiffness: 100 });
-    locationX.value = withSpring(activePanel === 'location' ? 0 : width, { damping: 20, stiffness: 100 });
-    datetimeX.value = withSpring(activePanel === 'datetime' ? 0 : width, { damping: 20, stiffness: 100 });
+    treatmentX.value = activePanel === 'treatment' ? 0 : width;
+    locationX.value = activePanel === 'location' ? 0 : width;
+    datetimeX.value = activePanel === 'datetime' ? 0 : width;
   }, [activePanel]);
 
   const treatmentStyle = useAnimatedStyle(() => ({ transform: [{ translateX: treatmentX.value }] }));

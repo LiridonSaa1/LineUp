@@ -50,7 +50,7 @@ export const LocationScreen: React.FC<LocationScreenProps> = ({ onBack, onSelect
   }, []);
 
   useEffect(() => {
-    panelX.value = withSpring(showAddAddress ? 0 : width, { damping: 20, stiffness: 90 });
+    panelX.value = showAddAddress ? 0 : width;
   }, [showAddAddress]);
 
   const fetchData = async () => {
