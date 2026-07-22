@@ -52,10 +52,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
   const [teamEmployees, setTeamEmployees] = useState("3");
 
   const getAdImageSource = (ad: any) => {
-    // Priority check for branding consistency
-    if (ad.business_name === 'Vehees') return { uri: 'https://vehees.com/wp-content/uploads/2024/03/vehees-hero.jpg' };
-    if (ad.business_name === 'noasim') return { uri: 'https://noasim.com/wp-content/uploads/2024/05/esim-travel-guides.jpg' };
-    return { uri: ad.image_url || ad.imageUrl };
+    // Priority check for branding consistency with local high-resolution assets
+    if (ad.business_name === 'Vehees') return require('../../assets/vehees_banner.jpg');
+    if (ad.business_name === 'noasim' || ad.business_name === 'Noasim') return require('../../assets/noasim_banner.jpg');
+    if (ad.image_url && ad.image_url.startsWith('http')) return { uri: ad.image_url };
+    return { uri: ad.image_url || ad.imageUrl || 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1000&auto=format&fit=crop&q=80' };
   };
 
   useEffect(() => {
@@ -111,11 +112,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
         if (shopsError) throw shopsError;
         if (shopsData) setRecommendedShops(shopsData);
 
-        // Load and seed advertisements
-        const { data: adsData, error: adsError } = await supabase
-          .from('advertisements')
-          .select('*');
-
         const defaultAds = [
           {
             business_name: "Vehees",
@@ -124,23 +120,24 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
             color: "#00d084",
             url: "https://vehees.com/",
             button_text: "Gjej veturën",
-            image_url: "https://vehees.com/wp-content/uploads/2024/03/vehees-hero.jpg",
-            status: 'active'
+            image_url: "vehees_banner.jpg",
+            status: 'active',
+            only_button: true
           },
           {
             business_name: "noasim",
             headline: "Udhëzues eSIM për udhëtim",
-            description: "Udhëzues praktikë për çdo udhëtim",
-            color: "transparent",
+            description: "Udhëzues praktikë destinacionesh për çdo udhëtim",
+            color: "#8b5cf6",
             url: "https://noasim.com/guides",
             button_text: "Lexo udhëzuesit",
-            image_url: "https://noasim.com/wp-content/uploads/2024/05/esim-travel-guides.jpg",
+            image_url: "noasim_banner.jpg",
             status: 'active',
             only_button: true
           }
         ];
 
-        // FORCE SYNC: Upsert defaults and fetch live state
+        // FORCE SYNC: Upsert defaults to Supabase advertisements table
         const { error: seedError } = await supabase
           .from('advertisements')
           .upsert(defaultAds, { onConflict: 'business_name' });
