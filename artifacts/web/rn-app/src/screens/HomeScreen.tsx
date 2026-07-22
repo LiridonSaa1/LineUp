@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, Dimensions, Linking } from "react-native";
-import { Scissors, MapPin, Search, ChevronDown, Heart, Star, Grid, Eye, Waves, Hand, Sparkles, Smile, User, Syringe, Zap, Shield, Check, ArrowRight, Plus, ExternalLink, Megaphone } from "lucide-react-native";
+import { Scissors, MapPin, Search, ChevronDown, Heart, Star, Grid, Eye, Waves, Hand, Sparkles, Smile, User, Syringe, Zap, Shield, Check, ArrowRight, ArrowUpRight, Plus, ExternalLink, Megaphone } from "lucide-react-native";
 import { BlurView } from 'expo-blur';
 import Animated, {
   FadeInUp,
