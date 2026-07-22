@@ -20,6 +20,19 @@ const { width, height } = Dimensions.get("window");
 const SHEET_MIN_HEIGHT = height * 0.35; // Lower position
 const SHEET_MAX_HEIGHT = height - 160; // Leave room for search bar
 
+const CITY_COORDS: Record<string, { lat: number; lng: number }> = {
+  "Prishtinë": { lat: 42.6629, lng: 21.1655 },
+  "Ferizaj": { lat: 42.3703, lng: 21.1559 },
+  "Prizren": { lat: 42.2139, lng: 20.7397 },
+  "Pejë": { lat: 42.6593, lng: 20.2883 },
+  "Gjakovë": { lat: 42.3803, lng: 20.4308 },
+  "Gjilan": { lat: 42.4635, lng: 21.4678 },
+  "Mitrovicë": { lat: 42.8914, lng: 20.8660 },
+  "Fushë Kosovë": { lat: 42.6340, lng: 21.0963 },
+  "Vushtrri": { lat: 42.8231, lng: 20.9675 },
+  "Podujevë": { lat: 42.9114, lng: 21.1903 },
+};
+
 interface ExploreScreenProps {
   onSelectShop: (shop: any) => void;
   onOpenSearch: () => void;
@@ -45,13 +58,15 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
   const context = useSharedValue(0);
 
   const toggleSheet = (expand?: boolean) => {
-    const shouldExpand = expand !== undefined ? expand : translateY.value > (height - SHEET_MAX_HEIGHT + 100);
+    'worklet';
+    const currentVal = translateY.value;
+    const shouldExpand = expand !== undefined ? expand : currentVal > (height - SHEET_MAX_HEIGHT + 100);
     if (shouldExpand) {
       translateY.value = withTiming(height - SHEET_MAX_HEIGHT, { duration: 150 });
-      setIsExpanded(true);
+      runOnJS(setIsExpanded)(true);
     } else {
       translateY.value = withTiming(height - SHEET_MIN_HEIGHT, { duration: 150 });
-      setIsExpanded(false);
+      runOnJS(setIsExpanded)(false);
     }
   };
 
@@ -156,19 +171,26 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
         customMapStyle={mapStyle}
         mapType="satellite"
       >
-        {shops.map((shop) => (
-          <Marker
-            key={shop.id}
-            coordinate={{
-              latitude: shop.latitude || 42.6629 + (Math.random() - 0.5) * 0.1,
-              longitude: shop.longitude || 21.1655 + (Math.random() - 0.5) * 0.1,
-            }}
-          >
-            <View className="bg-white px-3 py-1.5 rounded-full border border-[#3473ef] shadow-md">
-              <Text className="text-[#161719] font-black text-[11px]">{shop.name}</Text>
-            </View>
-          </Marker>
-        ))}
+        {shops.map((shop, index) => {
+          // Determine base coordinates: Use shop's lat/lng, or city's lat/lng, or default to Prishtina
+          const baseCoords = (shop.latitude && shop.longitude)
+            ? { lat: shop.latitude, lng: shop.longitude }
+            : CITY_COORDS[shop.city] || CITY_COORDS["Prishtinë"];
+
+          // Add a small stable offset if we are using fallback coordinates to avoid perfect overlap
+          const isFallback = !shop.latitude || !shop.longitude;
+          const lat = baseCoords.lat + (isFallback ? (index % 10) * 0.001 : 0);
+          const lng = baseCoords.lng + (isFallback ? (Math.floor(index / 10)) * 0.001 : 0);
+
+          return (
+            <Marker
+              key={shop.id}
+              coordinate={{ latitude: lat, longitude: lng }}
+              title={shop.name}
+              description={shop.address}
+            />
+          );
+        })}
       </MapView>
 
       {/* ── FLOATING SEARCH HEADER ────────────────────────── */}
@@ -176,27 +198,30 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
         <TouchableOpacity
           activeOpacity={0.9}
           onPress={onOpenSearch}
-          className="flex-row items-center bg-white rounded-full px-5 h-14 shadow-2xl shadow-black/30 border border-slate-100"
+          className="overflow-hidden border border-white/90 shadow-2xl shadow-black/30"
+          style={{ borderRadius: 100, backgroundColor: 'rgba(255, 255, 255, 0.6)' }}
         >
-          <Search size={22} color="#161719" strokeWidth={2.5} />
-          <View className="flex-1 ml-4">
-            <Text className="text-[#161719] font-black text-sm">
-              {initialSearch || "Hair & styling"}
-            </Text>
-            <Text className="text-[#8789A3] text-[10px] font-bold">
-              {initialCity === "Të gjitha" ? "Map area" : initialCity}
-            </Text>
-          </View>
-          <TouchableOpacity
-            onPress={(e) => { e.stopPropagation(); toggleSheet(!isExpanded); }}
-            className="w-10 h-10 rounded-full bg-slate-50 items-center justify-center border border-slate-100"
-          >
-            {isExpanded ? (
-              <MapIcon size={20} color="#161719" strokeWidth={2} />
-            ) : (
-              <List size={20} color="#161719" strokeWidth={2} />
-            )}
-          </TouchableOpacity>
+          <BlurView intensity={80} tint="light" className="flex-row items-center pl-5 pr-1.5 py-1.5">
+            <Search size={22} color="#161719" strokeWidth={3} />
+            <View className="flex-1 ml-3 h-12 justify-center">
+              <Text className="text-[15px] text-[#161719] font-black">
+                {initialSearch || "Flokë & stilim"}
+              </Text>
+              <Text className="text-[#4b5563] text-[10px] font-extrabold uppercase tracking-tight">
+                {initialCity === "Të gjitha" ? "Zona e hartës" : initialCity}
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={(e) => { e.stopPropagation(); runOnJS(toggleSheet)(!isExpanded); }}
+              className="w-12 h-12 rounded-full bg-black items-center justify-center ml-2 shadow-lg"
+            >
+              {isExpanded ? (
+                <MapIcon size={20} color="white" strokeWidth={2.5} />
+              ) : (
+                <List size={20} color="white" strokeWidth={2.5} />
+              )}
+            </TouchableOpacity>
+          </BlurView>
         </TouchableOpacity>
       </View>
 
@@ -216,18 +241,18 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
             contentContainerStyle={{ paddingBottom: 180 }}
           >
             <Text className="text-[#8789A3] text-center font-bold text-sm mb-6">
-              {shops.length} venues in map area
+              {shops.length} vende në zonën e hartës
             </Text>
 
             {loading ? (
               <ActivityIndicator size="large" color="#6366f1" className="mt-10" />
             ) : (
               shops.map((shop, i) => (
-                <View key={shop.id || i} className="mb-10">
+                <View key={shop.id || i} className="mb-10 bg-white rounded-[40px] p-2 shadow-2xl shadow-black/20 border border-slate-50" style={{ elevation: 15 }}>
                   <TouchableOpacity
                     activeOpacity={0.9}
                     onPress={() => onSelectShop(shop)}
-                    className="rounded-[32px] overflow-hidden bg-slate-50 mb-4"
+                    className="rounded-[34px] overflow-hidden bg-slate-50 mb-4"
                   >
                     <Image
                       source={{ uri: shop.imageUrl || "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800&auto=format&fit=crop&q=80" }}
@@ -243,37 +268,28 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
                     </View>
                   </TouchableOpacity>
 
-                  <View className="flex-row justify-between items-start px-1">
-                    <View className="flex-1 pr-4">
-                      <Text className="text-xl font-black text-[#161719] mb-1">{shop.name}</Text>
-                      <Text className="text-[#8789A3] text-sm font-bold mb-1" numberOfLines={1}>
+                  <View className="px-5 pb-5">
+                    {/* Row 1: Name and Rating */}
+                    <View className="flex-row justify-between items-center mb-3">
+                      <Text className="text-xl font-black text-[#161719] flex-1 mr-4" numberOfLines={1}>{shop.name}</Text>
+                      <View className="flex-row items-center bg-amber-50 px-2.5 py-1 rounded-xl">
+                        <Star size={14} color="#fbbf24" fill="#fbbf24" />
+                        <Text className="text-[#161719] font-black text-sm ml-1.5">{parseFloat(shop.rating || "5.0").toFixed(1)}</Text>
+                      </View>
+                    </View>
+
+                    {/* Row 2: Address */}
+                    <View className="flex-row items-center mb-3">
+                      <MapPin size={14} color="#8789A3" />
+                      <Text className="text-[#8789A3] text-sm font-bold ml-1.5 flex-1" numberOfLines={1}>
                         {shop.address || "Pristina, Banesat e Arabve, Prishtina"}
                       </Text>
-                      <Text className="text-[#8789A3] text-sm font-bold">Barber • 12 reviews</Text>
                     </View>
-                    <View className="flex-row items-center pt-1">
-                      <Star size={16} color="#fbbf24" fill="#fbbf24" />
-                      <Text className="text-[#161719] font-black text-base ml-1.5">5,0</Text>
-                    </View>
-                  </View>
 
-                  {/* Services Mini List (Image 2) */}
-                  <View className="mt-4 gap-y-3 px-1">
-                    {[
-                      { name: "Qethja e femijve", price: "€4", time: "20 min" },
-                      { name: "Ngjyrosja e flokve", price: "€5", time: "15 min" }
-                    ].map((service, si) => (
-                      <TouchableOpacity key={si} className="flex-row items-center justify-between bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
-                        <View>
-                          <Text className="text-[#161719] font-black text-[15px]">{service.name}</Text>
-                          <Text className="text-[#8789A3] text-xs font-bold mt-0.5">{service.time}</Text>
-                        </View>
-                        <Text className="text-[#161719] font-black text-[15px]">{service.price}</Text>
-                      </TouchableOpacity>
-                    ))}
-                    <TouchableOpacity>
-                      <Text className="text-[#6366f1] font-black text-sm mt-1">View 2 matching services</Text>
-                    </TouchableOpacity>
+                    {/* Row 3: Review Count */}
+                    <Text className="text-[#3473ef] text-xs font-black uppercase tracking-widest">
+                      {shop.reviews || "12"} vlerësime
+                    </Text>
                   </View>
                 </View>
               ))

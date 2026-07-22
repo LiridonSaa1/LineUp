@@ -15,7 +15,7 @@ const { width, height } = Dimensions.get('window');
 const USER_ID = 'demo_user_123'; // Placeholder until Auth is implemented
 
 // IMPORTANT: Replace this with your actual Google Maps API Key
-const GOOGLE_MAPS_KEY = 'YOUR_GOOGLE_API_KEY';
+const GOOGLE_MAPS_KEY = 'AIzaSyD9DOb-ko2C84TUlBVuPVILNaf3Jhkl-yg';
 
 interface LocationScreenProps {
   onBack: () => void;
@@ -186,7 +186,7 @@ export const LocationScreen: React.FC<LocationScreenProps> = ({ onBack, onSelect
           </View>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+        <ScrollView showsVerticalScrollIndicator={false} className="flex-1" keyboardShouldPersistTaps="handled">
           {loading ? (
             <ActivityIndicator size="large" color="#6366f1" className="mt-10" />
           ) : searchQuery.length === 0 ? (
@@ -320,8 +320,10 @@ export const LocationScreen: React.FC<LocationScreenProps> = ({ onBack, onSelect
                 query={{
                   key: GOOGLE_MAPS_KEY,
                   language: 'sq',
-                  components: 'country:ks',
+                  components: 'country:xk',
                 }}
+                enablePoweredByContainer={false}
+                minLength={2}
                 styles={{
                   container: { flex: 0, marginBottom: 20 },
                   textInputContainer: {
@@ -347,6 +349,7 @@ export const LocationScreen: React.FC<LocationScreenProps> = ({ onBack, onSelect
                     shadowRadius: 10,
                     borderWidth: 1,
                     borderColor: '#E2E8F0',
+                    zIndex: 1000
                   },
                   row: {
                     padding: 15,

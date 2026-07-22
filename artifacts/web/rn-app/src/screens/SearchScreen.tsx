@@ -8,7 +8,7 @@ import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplet
 const { width } = Dimensions.get('window');
 
 // IMPORTANT: Replace this with your actual Google Maps API Key
-const GOOGLE_MAPS_KEY = 'YOUR_GOOGLE_API_KEY';
+const GOOGLE_MAPS_KEY = 'AIzaSyD9DOb-ko2C84TUlBVuPVILNaf3Jhkl-yg';
 
 interface SearchScreenProps {
   onClose: () => void;
@@ -38,13 +38,23 @@ const CATEGORIES = [
 
 const TREATMENTS = ['Hair & styling', 'Nails', 'Hair removal', 'Massage', 'Facials', 'Barbering', 'Spa & sauna'];
 
-export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, currentLocation = "Current location" }) => {
+const POPULAR_CITIES = [
+  { name: "Prishtinë", lat: 42.6629, lng: 21.1655 },
+  { name: "Prizren", lat: 42.2139, lng: 20.7397 },
+  { name: "Pejë", lat: 42.6593, lng: 20.2883 },
+  { name: "Gjakovë", lat: 42.3803, lng: 20.4308 },
+  { name: "Gjilan", lat: 42.4635, lng: 21.4678 },
+  { name: "Mitrovicë", lat: 42.8914, lng: 20.8660 },
+  { name: "Ferizaj", lat: 42.3703, lng: 21.1559 },
+];
+
+export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, currentLocation = "Lokacioni aktual" }) => {
   const [activePanel, setActivePanel] = useState<'main' | 'treatment' | 'location' | 'datetime'>('main');
 
   // Selection States
   const [selectedTreatment, setSelectedTreatment] = useState("");
   const [selectedLocation, setSelectedLocation] = useState({
-    address: currentLocation === "Current location" ? "" : currentLocation,
+    address: currentLocation === "Lokacioni aktual" ? "" : currentLocation,
     lat: undefined as number | undefined,
     lng: undefined as number | undefined
   });
@@ -147,7 +157,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
       <View className="flex-1">
         <View className="w-12 h-1.5 bg-gray-300 rounded-full self-center mt-3 mb-2" />
         <View className="flex-row items-center justify-between px-6 py-4">
-          <Text className="text-2xl font-bold text-[#161719]">Search</Text>
+          <Text className="text-2xl font-bold text-[#161719]">Kërko</Text>
           <TouchableOpacity onPress={onClose} className="p-1">
             <X size={28} color="#161719" strokeWidth={2.5} />
           </TouchableOpacity>
@@ -200,7 +210,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
           </View>
 
           <View className="mt-8">
-            <Text className="text-xl font-bold text-[#161719] mb-4">Categories</Text>
+            <Text className="text-xl font-bold text-[#161719] mb-4">Kategoritë</Text>
             <View className="flex-row flex-wrap justify-between">
               {CATEGORIES.map((cat, i) => (
                 <TouchableOpacity
@@ -220,7 +230,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
 
         <View className="absolute bottom-0 left-0 right-0 p-6 bg-white/80 border-t border-slate-50">
           <TouchableOpacity onPress={() => handleSearchTrigger()} className="bg-black h-16 rounded-full items-center justify-center shadow-xl">
-            <Text className="text-white text-lg font-black">Search</Text>
+            <Text className="text-white text-lg font-black">Kërko</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -230,20 +240,20 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
         <View className="w-12 h-1.5 bg-gray-300 rounded-full self-center mt-3 mb-2" />
         <View className="flex-row items-center px-6 py-4">
           <TouchableOpacity onPress={() => setActivePanel('main')} className="mr-4"><ArrowLeft size={24} color="black" /></TouchableOpacity>
-          <Text className="text-xl font-bold text-[#161719]">Search</Text>
+          <Text className="text-xl font-bold text-[#161719]">Kërko</Text>
         </View>
         <ScrollView className="flex-1 px-6">
           <View className="flex-row items-center border border-[#6366f1] rounded-2xl px-4 h-14 bg-white mb-6">
             <Search size={20} color="#8789A3" />
             <TextInput
-              placeholder="Search"
+              placeholder="Kërko"
               className="flex-1 ml-3 text-lg font-medium"
               value={treatmentQuery}
               onChangeText={setTreatmentQuery}
             />
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-8">
-            {['All', 'Treatments', 'Venues', 'Professionals'].map((p) => (
+            {['Të gjitha', 'Trajtimet', 'Sallonet', 'Profesionistët'].map((p) => (
               <TouchableOpacity
                 key={p}
                 onPress={() => setActiveFilterTab(p)}
@@ -256,7 +266,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
 
           {filteredTreatments.length > 0 && (
             <>
-              <Text className="text-xl font-bold mb-4">Treatments</Text>
+              <Text className="text-xl font-bold mb-4">Trajtimet</Text>
               {filteredTreatments.map((t) => (
                 <TouchableOpacity key={t} onPress={() => { setSelectedTreatment(t); setActivePanel('main'); }} className="flex-row items-center mb-6">
                   <View className="w-10 h-10 rounded-full bg-[#6366f1]/5 items-center justify-center mr-4">
@@ -275,51 +285,79 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
         <View className="w-12 h-1.5 bg-gray-300 rounded-full self-center mt-3 mb-2" />
         <View className="flex-row items-center px-6 py-4">
           <TouchableOpacity onPress={() => setActivePanel('main')} className="mr-4"><ArrowLeft size={24} color="black" /></TouchableOpacity>
-          <Text className="text-xl font-bold text-[#161719]">Location</Text>
+          <Text className="text-xl font-bold text-[#161719]">Lokacioni</Text>
         </View>
-        <View className="flex-1 px-6">
-           <GooglePlacesAutocomplete
-              ref={autocompleteRef}
-              placeholder='Search for area, city...'
-              fetchDetails={true}
-              onPress={(data, details = null) => {
-                setSelectedLocation({
-                  address: data.description,
-                  lat: details?.geometry?.location?.lat,
-                  lng: details?.geometry?.location?.lng
-                });
-                setActivePanel('main');
-              }}
-              query={{
-                key: GOOGLE_MAPS_KEY,
-                language: 'sq',
-                components: 'country:ks',
-              }}
-              styles={{
-                container: { flex: 0, marginBottom: 20 },
-                textInputContainer: {
-                  backgroundColor: 'white',
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: '#6366f1',
-                  paddingHorizontal: 8
-                },
-                textInput: { height: 54, fontSize: 16, color: '#161719', fontWeight: '500' },
-                listView: { backgroundColor: 'white', borderRadius: 20, marginTop: 10, elevation: 5, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10 },
-                row: { padding: 15, height: 60, flexDirection: 'row' },
-                separator: { height: 1, backgroundColor: '#F1F5F9' },
-                description: { fontSize: 15, color: '#161719' },
-              }}
-              renderLeftButton={() => <View className="justify-center pl-2"><Search size={20} color="#6366f1" /></View>}
-           />
+        <ScrollView className="flex-1" keyboardShouldPersistTaps="handled">
+          <View className="px-6">
+            <GooglePlacesAutocomplete
+                ref={autocompleteRef}
+                placeholder='Kërko zonën, qytetin...'
+                fetchDetails={true}
+                onPress={(data, details = null) => {
+                  setSelectedLocation({
+                    address: data.description,
+                    lat: details?.geometry?.location?.lat,
+                    lng: details?.geometry?.location?.lng
+                  });
+                  setActivePanel('main');
+                }}
+                query={{
+                  key: GOOGLE_MAPS_KEY,
+                  language: 'sq',
+                  // Kosovo data is often better with 'xk' or no restriction + location bias
+                  components: 'country:xk',
+                }}
+                enablePoweredByContainer={false}
+                minLength={2}
+                styles={{
+                  container: { flex: 0, marginBottom: 20 },
+                  textInputContainer: {
+                    backgroundColor: 'white',
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: '#6366f1',
+                    paddingHorizontal: 8
+                  },
+                  textInput: { height: 54, fontSize: 16, color: '#161719', fontWeight: '500' },
+                  listView: { backgroundColor: 'white', borderRadius: 20, marginTop: 10, elevation: 5, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10, zIndex: 1000 },
+                  row: { padding: 15, height: 60, flexDirection: 'row' },
+                  separator: { height: 1, backgroundColor: '#F1F5F9' },
+                  description: { fontSize: 15, color: '#161719' },
+                }}
+                renderLeftButton={() => <View className="justify-center pl-2"><Search size={20} color="#6366f1" /></View>}
+            />
 
-          <View className="flex-row items-start mb-8 pr-4">
-            <AlertCircle size={20} color="#8789A3" />
-            <Text className="flex-1 ml-3 text-[#8789A3] text-[13px] leading-5 font-medium">
-              Find exactly where you want to go. Search by neighborhood or city in Kosovo.
-            </Text>
+            <View className="mt-4">
+              <Text className="text-sm font-bold text-[#8789A3] uppercase tracking-widest mb-4">Qytetet e Popullarizuara</Text>
+              <View className="flex-row flex-wrap gap-3">
+                {POPULAR_CITIES.map((city) => (
+                  <TouchableOpacity
+                    key={city.name}
+                    onPress={() => {
+                      setSelectedLocation({
+                        address: city.name,
+                        lat: city.lat,
+                        lng: city.lng
+                      });
+                      setActivePanel('main');
+                    }}
+                    className="bg-slate-50 px-5 py-3 rounded-2xl border border-slate-100 flex-row items-center"
+                  >
+                    <MapPin size={14} color="#6366f1" className="mr-2" />
+                    <Text className="font-bold text-[#161719]">{city.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View className="flex-row items-start mt-8 mb-8 pr-4">
+              <AlertCircle size={20} color="#8789A3" />
+              <Text className="flex-1 ml-3 text-[#8789A3] text-[13px] leading-5 font-medium">
+                Gjeni saktësisht se ku dëshironi të shkoni. Kërkoni sipas lagjes ose qytetit në Kosovë.
+              </Text>
+            </View>
           </View>
-        </View>
+        </ScrollView>
       </Animated.View>
 
       {/* --- DATE TIME PANEL --- */}
@@ -327,32 +365,32 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
         <View className="w-12 h-1.5 bg-gray-300 rounded-full self-center mt-3 mb-2" />
         <View className="flex-row items-center px-6 py-4">
           <TouchableOpacity onPress={() => setActivePanel('main')} className="mr-4"><ArrowLeft size={24} color="black" /></TouchableOpacity>
-          <Text className="text-xl font-bold text-[#161719]">Date and time</Text>
+          <Text className="text-xl font-bold text-[#161719]">Data dhe ora</Text>
         </View>
         <ScrollView className="flex-1 px-6">
-          <Text className="text-xl font-bold mb-4">Select day</Text>
+          <Text className="text-xl font-bold mb-4">Zgjidh ditën</Text>
           <View className="flex-row justify-between mb-8">
             <TouchableOpacity
               onPress={() => {
-                setSelectedDate("Today");
+                setSelectedDate("Sot");
                 setSelectedCalendarDay(22);
                 setCurrentCalendarDate(new Date(2026, 6, 22));
               }}
-              className={`border rounded-2xl p-6 items-center flex-1 ${selectedDate === "Today" ? 'bg-[#6366f1]/5 border-[#6366f1]' : 'bg-white border-slate-200'} mr-2`}
+              className={`border rounded-2xl p-6 items-center flex-1 ${selectedDate === "Sot" ? 'bg-[#6366f1]/5 border-[#6366f1]' : 'bg-white border-slate-200'} mr-2`}
             >
-              <Text className={`text-lg font-bold ${selectedDate === "Today" ? 'text-[#6366f1]' : 'text-[#161719]'}`}>Today</Text>
-              <Text className="text-[#8789A3]">Wed 22 July</Text>
+              <Text className={`text-lg font-bold ${selectedDate === "Sot" ? 'text-[#6366f1]' : 'text-[#161719]'}`}>Sot</Text>
+              <Text className="text-[#8789A3]">Mër 22 Korrik</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => {
-                setSelectedDate("Tomorrow");
+                setSelectedDate("Nesër");
                 setSelectedCalendarDay(23);
                 setCurrentCalendarDate(new Date(2026, 6, 22));
               }}
-              className={`border rounded-2xl p-6 items-center flex-1 ${selectedDate === "Tomorrow" ? 'bg-[#6366f1]/5 border-[#6366f1]' : 'bg-white border-slate-200'} ml-2`}
+              className={`border rounded-2xl p-6 items-center flex-1 ${selectedDate === "Nesër" ? 'bg-[#6366f1]/5 border-[#6366f1]' : 'bg-white border-slate-200'} ml-2`}
             >
-              <Text className={`text-lg font-bold ${selectedDate === "Tomorrow" ? 'text-[#6366f1]' : 'text-[#161719]'}`}>Tomorrow</Text>
-              <Text className="text-[#8789A3]">Thu 23 July</Text>
+              <Text className={`text-lg font-bold ${selectedDate === "Nesër" ? 'text-[#6366f1]' : 'text-[#161719]'}`}>Nesër</Text>
+              <Text className="text-[#8789A3]">Enj 23 Korrik</Text>
             </TouchableOpacity>
           </View>
 
@@ -370,23 +408,23 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
              </View>
           </View>
 
-          <Text className="text-xl font-bold mb-4">Select time</Text>
+          <Text className="text-xl font-bold mb-4">Zgjidh orën</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-10">
-             {['Anytime', 'Morning', 'Afternoon', 'Evening'].map((t) => (
+             {['Kurdoherë', 'Mëngjes', 'Pasdite', 'Mbrëmje'].map((t) => (
                <TouchableOpacity
                  key={t}
                  onPress={() => setSelectedTime(t)}
                  className={`px-6 py-4 rounded-2xl mr-3 border ${selectedTime === t ? 'border-[#6366f1] bg-[#6366f1]/5' : 'border-slate-200'}`}
                >
                  <Text className={`font-bold text-center ${selectedTime === t ? 'text-[#6366f1]' : '#161719'}`}>{t}</Text>
-                 {t !== 'Anytime' && <Text className="text-[10px] text-[#8789A3] mt-0.5">{t === 'Morning' ? '09:00 - 12:00' : t === 'Afternoon' ? '12:00 - 18:00' : '18:00 - 00:00'}</Text>}
+                 {t !== 'Kurdoherë' && <Text className="text-[10px] text-[#8789A3] mt-0.5">{t === 'Mëngjes' ? '09:00 - 12:00' : t === 'Pasdite' ? '12:00 - 18:00' : '18:00 - 00:00'}</Text>}
                </TouchableOpacity>
              ))}
           </ScrollView>
         </ScrollView>
         <View className="flex-row p-6 border-t border-slate-100">
-           <TouchableOpacity onPress={() => setActivePanel('main')} className="flex-1 h-16 items-center justify-center mr-2"><Text className="text-lg font-bold">Cancel</Text></TouchableOpacity>
-           <TouchableOpacity onPress={() => setActivePanel('main')} className="flex-[1.5] h-16 bg-black rounded-full items-center justify-center ml-2"><Text className="text-white text-lg font-black">Confirm</Text></TouchableOpacity>
+           <TouchableOpacity onPress={() => setActivePanel('main')} className="flex-1 h-16 items-center justify-center mr-2"><Text className="text-lg font-bold">Anulo</Text></TouchableOpacity>
+           <TouchableOpacity onPress={() => setActivePanel('main')} className="flex-[1.5] h-16 bg-black rounded-full items-center justify-center ml-2"><Text className="text-white text-lg font-black">Konfirmo</Text></TouchableOpacity>
         </View>
       </Animated.View>
     </View>

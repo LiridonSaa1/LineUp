@@ -2,7 +2,7 @@ import React from "react";
 import { StatusBar } from "expo-status-bar";
 import { View, TouchableOpacity, Text, Dimensions, Platform, Modal } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { Home, Search, Megaphone, User } from "lucide-react-native";
+import { Home, Search, Calendar, User } from "lucide-react-native";
 import * as Haptics from 'expo-haptics';
 import { BlurView } from 'expo-blur';
 import Animated, {
@@ -14,10 +14,12 @@ import Animated, {
 import { HomeScreen } from "./src/screens/HomeScreen";
 import { ExploreScreen } from "./src/screens/ExploreScreen";
 import { ProfileScreen } from "./src/screens/ProfileScreen";
-import { AdsScreen } from "./src/screens/AdsScreen";
+import { ActivityScreen } from "./src/screens/ActivityScreen";
 import { BarberDetailScreen } from "./src/screens/BarberDetailScreen";
 import { LocationScreen } from "./src/screens/LocationScreen";
 import { SearchScreen } from "./src/screens/SearchScreen";
+import { RegisterShopScreen } from "./src/screens/RegisterShopScreen";
+import { AddAdModal } from "./src/screens/AddAdModal";
 import "./global.css";
 
 const { width } = Dimensions.get("window");
@@ -87,12 +89,15 @@ const TabButton = ({ tab, isActive, onPress }: any) => {
 export default function App() {
   const [activeTab, setActiveTab] = React.useState(0);
   const [selectedShop, setSelectedShop] = React.useState<any>(null);
+  const [user, setUser] = React.useState<any>(null); // Mock user session
   const [cityFilter, setCityFilter] = React.useState("Të gjitha");
   const [searchQuery, setSearchQuery] = React.useState("");
   const [searchCoords, setSearchCoords] = React.useState<{ lat?: number; lng?: number }>({});
   const [showLocation, setShowLocation] = React.useState(false);
   const [showSearch, setShowSearch] = React.useState(false);
-  const [selectedLocation, setSelectedLocation] = React.useState("Current location");
+  const [showRegisterShop, setShowRegisterShop] = React.useState(false);
+  const [showAddAd, setShowAddAd] = React.useState(false);
+  const [selectedLocation, setSelectedLocation] = React.useState("Lokacioni aktual");
 
   const tabPosition = useSharedValue(0);
 
@@ -116,10 +121,10 @@ export default function App() {
   };
 
   const tabs = [
-    { label: 'Home', icon: Home },
-    { label: 'Search', icon: Search },
-    { label: 'Reklama', icon: Megaphone },
-    { label: 'Profile', icon: User },
+    { label: 'Ballina', icon: Home },
+    { label: 'Kërko', icon: Search },
+    { label: 'Aktiviteti', icon: Calendar },
+    { label: 'Profili', icon: User },
   ];
 
   const onTabPress = (index: number) => {
@@ -136,7 +141,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <View className="flex-1 bg-[#F8F9FE]">
+      <View className="flex-1 bg-[#F5F5F5]">
         <StatusBar style="dark" />
 
         {/* Detail Screen Modal or Main Content Switcher */}
@@ -149,6 +154,7 @@ export default function App() {
                 onSelectShop={(shop) => setSelectedShop(shop)}
                 onOpenLocation={() => setShowLocation(true)}
                 onOpenSearch={() => setShowSearch(true)}
+                onOpenAddAd={() => setShowAddAd(true)}
                 selectedLocation={selectedLocation}
               />
             )}
@@ -161,15 +167,28 @@ export default function App() {
                 initialCoords={searchCoords}
               />
             )}
-            {activeTab === 2 && <AdsScreen />}
-            {activeTab === 3 && <ProfileScreen />}
+            {activeTab === 2 && (
+              <ActivityScreen
+                user={user}
+                onLogin={() => setUser({ id: '123', name: 'Artan Berisha' })}
+                onNavigateToSearch={() => setActiveTab(1)}
+              />
+            )}
+            {activeTab === 3 && (
+              <ProfileScreen
+                user={user}
+                onLogin={() => setUser({ id: '123', name: 'Artan Berisha' })}
+                onLogout={() => setUser(null)}
+                onOpenRegisterShop={() => setShowRegisterShop(true)}
+              />
+            )}
           </View>
         )}
 
         {/* Location Selection Modal (Bottom Sheet Style) */}
         <Modal
           visible={showLocation}
-          animationType="slide"
+          animationType="none"
           transparent={true}
           onRequestClose={() => setShowLocation(false)}
         >
@@ -196,7 +215,7 @@ export default function App() {
         {/* Search Modal */}
         <Modal
           visible={showSearch}
-          animationType="slide"
+          animationType="none"
           transparent={true}
           onRequestClose={() => setShowSearch(false)}
         >
@@ -211,6 +230,56 @@ export default function App() {
                 onClose={() => setShowSearch(false)}
                 onSearch={handleSearch}
                 currentLocation={selectedLocation}
+              />
+            </View>
+          </View>
+        </Modal>
+
+        {/* Register Shop Modal */}
+        <Modal
+          visible={showRegisterShop}
+          animationType="none"
+          transparent={true}
+          onRequestClose={() => setShowRegisterShop(false)}
+        >
+          <View className="flex-1 justify-end">
+            <TouchableOpacity
+              className="absolute inset-0 bg-black/40"
+              activeOpacity={1}
+              onPress={() => setShowRegisterShop(false)}
+            />
+            <View className="h-[88%] bg-white rounded-t-[40px] overflow-hidden">
+              <RegisterShopScreen
+                onClose={() => setShowRegisterShop(false)}
+                onSuccess={() => {
+                  setShowRegisterShop(false);
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                }}
+              />
+            </View>
+          </View>
+        </Modal>
+
+        {/* Add Ad Modal */}
+        <Modal
+          visible={showAddAd}
+          animationType="none"
+          transparent={true}
+          onRequestClose={() => setShowAddAd(false)}
+        >
+          <View className="flex-1 justify-end">
+            <TouchableOpacity
+              className="absolute inset-0 bg-black/40"
+              activeOpacity={1}
+              onPress={() => setShowAddAd(false)}
+            />
+            <View className="h-[88%] bg-white rounded-t-[40px] overflow-hidden">
+              <AddAdModal
+                onClose={() => setShowAddAd(false)}
+                onSuccess={() => {
+                  setShowAddAd(false);
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                }}
               />
             </View>
           </View>

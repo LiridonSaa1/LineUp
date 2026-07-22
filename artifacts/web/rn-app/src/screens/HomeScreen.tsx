@@ -1,8 +1,11 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, Dimensions } from "react-native";
-import { Scissors, MapPin, Search, ChevronDown, Heart, Star, Grid, Eye, Waves, Hand, Sparkles, Smile, User, Syringe, Zap, Shield, Check, ArrowRight } from "lucide-react-native";
+import React, { useEffect, useState, useRef } from "react";
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, Dimensions, Linking } from "react-native";
+import { Scissors, MapPin, Search, ChevronDown, Heart, Star, Grid, Eye, Waves, Hand, Sparkles, Smile, User, Syringe, Zap, Shield, Check, ArrowRight, Plus, ExternalLink, Megaphone } from "lucide-react-native";
 import { BlurView } from 'expo-blur';
-import Animated, { FadeInUp, FadeIn } from "react-native-reanimated";
+import Animated, {
+  FadeInUp,
+  FadeIn,
+} from "react-native-reanimated";
 import { supabase } from "@/config/supabase";
 
 const { width } = Dimensions.get("window");
@@ -11,24 +14,87 @@ interface HomeScreenProps {
   onSelectShop: (shop: any) => void;
   onOpenLocation: () => void;
   onOpenSearch: () => void;
+  onOpenAddAd: () => void;
   selectedLocation?: string;
 }
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLocation, onOpenSearch, selectedLocation = "Current location" }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLocation, onOpenSearch, onOpenAddAd, selectedLocation = "Lokacioni aktual" }) => {
   const [loading, setLoading] = useState(true);
   const [recommendedShops, setRecommendedShops] = useState<any[]>([]);
+  const [ads, setAds] = useState<any[]>([
+    {
+      business_name: "Vehees",
+      headline: "Zbulo historikun e veturës tënde",
+      description: "Kontrollo çdo VIN në sekonda",
+      color: "#00d084",
+      url: "https://vehees.com/",
+      button_text: "Gjej veturën",
+      image_url: "https://vehees.com/wp-content/uploads/2024/03/vehees-hero.jpg",
+      status: 'active'
+    },
+    {
+      business_name: "noasim",
+      headline: "Udhëzues eSIM për udhëtim",
+      description: "Udhëzues praktikë për çdo udhëtim",
+      color: "transparent",
+      url: "https://noasim.com/guides",
+      button_text: "Lexo udhëzuesit",
+      image_url: "https://noasim.com/wp-content/uploads/2024/05/esim-travel-guides.jpg",
+      status: 'active',
+      only_button: true
+    }
+  ]);
+  const recommendedScrollRef = useRef<ScrollView>(null);
+  const newToLineUpScrollRef = useRef<ScrollView>(null);
+  const adsScrollRef = useRef<ScrollView>(null);
+  const autoScrollIndex = useRef(0);
+  const adsAutoScrollIndex = useRef(0);
+  const [teamEmployees, setTeamEmployees] = useState("3");
+
+  const getAdImageSource = (ad: any) => {
+    // Priority check for branding consistency
+    if (ad.business_name === 'Vehees') return { uri: 'https://vehees.com/wp-content/uploads/2024/03/vehees-hero.jpg' };
+    if (ad.business_name === 'noasim') return { uri: 'https://noasim.com/wp-content/uploads/2024/05/esim-travel-guides.jpg' };
+    return { uri: ad.image_url || ad.imageUrl };
+  };
+
+  useEffect(() => {
+    if (loading || recommendedShops.length <= 1) return;
+
+    const interval = setInterval(() => {
+      autoScrollIndex.current = (autoScrollIndex.current + 1) % recommendedShops.length;
+
+      const scrollPos = autoScrollIndex.current * ((width - 48) * 0.63 + 16);
+
+      recommendedScrollRef.current?.scrollTo({ x: scrollPos, animated: true });
+      newToLineUpScrollRef.current?.scrollTo({ x: scrollPos, animated: true });
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [loading, recommendedShops]);
+
+  useEffect(() => {
+    if (ads.length <= 1) return;
+    const interval = setInterval(() => {
+      adsAutoScrollIndex.current = (adsAutoScrollIndex.current + 1) % ads.length;
+      const scrollPos = adsAutoScrollIndex.current * (width - 48);
+      adsScrollRef.current?.scrollTo({ x: scrollPos, animated: true });
+    }, 6000); // Slower loop (6 seconds)
+
+    return () => clearInterval(interval);
+  }, [ads]);
 
   const CATEGORIES = [
-    { name: "All", icon: Grid },
-    { name: "Hair and styling", icon: Scissors },
-    { name: "Brows & lashes", icon: Eye },
-    { name: "Massage", icon: User },
-    { name: "Spa & sauna", icon: Waves },
-    { name: "Nails", icon: Hand },
-    { name: "Hair removal", icon: Sparkles },
-    { name: "Facials", icon: Smile },
-    { name: "Barbering", icon: Scissors },
-    { name: "Aesthetics", icon: Syringe },
+    { name: "Të gjitha", icon: Grid },
+    { name: "Flokë & stilim", icon: Scissors },
+    { name: "Vetulla & qerpikë", icon: Eye },
+    { name: "Masazhë", icon: User },
+    { name: "Spa & saunë", icon: Waves },
+    { name: "Thonjtë", icon: Hand },
+    { name: "Depilim", icon: Sparkles },
+    { name: "Trajtime fytyre", icon: Smile },
+    { name: "Berber", icon: Scissors },
+    { name: "Estetikë", icon: Syringe },
   ];
 
   useEffect(() => {
@@ -44,6 +110,51 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
 
         if (shopsError) throw shopsError;
         if (shopsData) setRecommendedShops(shopsData);
+
+        // Load and seed advertisements
+        const { data: adsData, error: adsError } = await supabase
+          .from('advertisements')
+          .select('*');
+
+        const defaultAds = [
+          {
+            business_name: "Vehees",
+            headline: "Zbulo historikun e veturës tënde",
+            description: "Kontrollo çdo VIN në sekonda",
+            color: "#00d084",
+            url: "https://vehees.com/",
+            button_text: "Gjej veturën",
+            image_url: "https://vehees.com/wp-content/uploads/2024/03/vehees-hero.jpg",
+            status: 'active'
+          },
+          {
+            business_name: "noasim",
+            headline: "Udhëzues eSIM për udhëtim",
+            description: "Udhëzues praktikë për çdo udhëtim",
+            color: "transparent",
+            url: "https://noasim.com/guides",
+            button_text: "Lexo udhëzuesit",
+            image_url: "https://noasim.com/wp-content/uploads/2024/05/esim-travel-guides.jpg",
+            status: 'active',
+            only_button: true
+          }
+        ];
+
+        // FORCE SYNC: Upsert defaults and fetch live state
+        const { error: seedError } = await supabase
+          .from('advertisements')
+          .upsert(defaultAds, { onConflict: 'business_name' });
+
+        if (seedError) {
+          console.warn("Seeding failed, using backup:", seedError.message);
+          setAds(defaultAds);
+        } else {
+          const { data: liveAds } = await supabase
+            .from('advertisements')
+            .select('*')
+            .eq('status', 'active');
+          setAds(liveAds && liveAds.length > 0 ? liveAds : defaultAds);
+        }
       } catch (e) {
         console.warn("Failed to load home data:", e);
       } finally {
@@ -58,7 +169,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
       key={item.id}
       onPress={() => onSelectShop(item)}
       className="mr-4 mb-6"
-      style={{ width: width * 0.65 }}
+      style={{ width: (width - 48) * 0.63 }}
     >
       <View className="relative rounded-3xl overflow-hidden mb-3">
         <Image
@@ -70,7 +181,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
           style={{ borderRadius: 100 }}
         >
           <BlurView intensity={80} tint="light" className="px-3 py-1 bg-white/50">
-            <Text className="text-black text-[10px] font-bold">Featured</Text>
+            <Text className="text-black text-[10px] font-bold">I zgjedhur</Text>
           </BlurView>
         </View>
         <TouchableOpacity
@@ -88,7 +199,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
           <Text className="text-[#8789A3] text-sm mt-0.5" numberOfLines={1}>
             {item.distance || ">50 km"} • {item.address || "Manastirski Livadi, Sofia"}
           </Text>
-          <Text className="text-[#8789A3] text-sm mt-0.5">{item.category || "Beauty Salon"} • {item.reviews || "1866"} reviews</Text>
+          <Text className="text-[#8789A3] text-sm mt-0.5">{item.category || "Sallon bukurie"} • {item.reviews || "1866"} vlerësime</Text>
         </View>
         <View className="flex-row items-center bg-amber-50 px-2 py-1 rounded-lg">
           <Star size={12} color="#fbbf24" fill="#fbbf24" />
@@ -99,7 +210,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
   );
 
   return (
-    <View className="flex-1 bg-[#EFF2F7]">
+    <View className="flex-1 bg-[#F5F5F5]">
       {/* Background Decorative Blobs */}
       <View className="absolute top-[-50] left-[-50] w-64 h-64 bg-[#3473ef]/15 rounded-full blur-3xl" />
       <View className="absolute top-[200] right-[-100] w-80 h-80 bg-[#f47458]/15 rounded-full blur-3xl" />
@@ -165,138 +276,244 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
 
       {/* ── ADVERTISEMENT CAROUSEL ─────────────────── */}
       <View className="mt-4 px-6">
+        <View className="flex-row items-center justify-between mb-4 px-1">
+          <Text className="text-xl font-black text-[#161719]">Partnerët tanë</Text>
+          <TouchableOpacity
+            onPress={onOpenAddAd}
+            className="flex-row items-center bg-[#3473ef]/10 px-3 py-1.5 rounded-full border border-[#3473ef]/20"
+          >
+             <Megaphone size={12} color="#3473ef" strokeWidth={2.5} />
+             <Text className="text-[#3473ef] text-[10px] font-black uppercase ml-1.5">Shto Reklamë</Text>
+          </TouchableOpacity>
+        </View>
+
         <ScrollView
+          ref={adsScrollRef}
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
-          className="rounded-[32px] overflow-hidden"
+          className="rounded-[32px] overflow-hidden shadow-sm"
         >
-          {[
-            { title: "Special Offer", desc: "Get 20% off on your first booking", color: "#4f46e5" },
-            { title: "Premium Package", desc: "Exclusive treatments for members", color: "#f47458" },
-            { title: "Summer Style", desc: "New trends available now", color: "#10b981" },
-          ].map((ad, i) => (
-            <View key={i} style={{ width: width - 48 }} className="h-44 relative">
-              <View className="absolute inset-0" style={{ backgroundColor: ad.color, opacity: 0.8 }} />
-              <View className="absolute inset-0 bg-black/10" />
-              <View className="flex-1 p-8 justify-center">
-                <View className="bg-white/30 self-start px-3 py-1 rounded-full mb-3 border border-white/20">
-                  <Text className="text-white text-[10px] font-black uppercase tracking-widest">Reklam</Text>
-                </View>
-                <Text className="text-white text-3xl font-black mb-1">{ad.title}</Text>
-                <Text className="text-white/90 text-base font-bold">{ad.desc}</Text>
+          {ads.map((ad, i) => (
+            <View key={i} style={{ width: width - 48 }} className="h-44 relative overflow-hidden">
+              {/* Background Image */}
+              <Image
+                source={getAdImageSource(ad)}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              {/* Overlay - Skip for only_button mode */}
+              {!(ad.only_button || ad.onlyButton) && (
+                <View className="absolute inset-0" style={{ backgroundColor: ad.color, opacity: 0.85 }} />
+              )}
+              <View className="absolute inset-0 bg-black/5" />
+
+              <View className={`flex-1 p-8 justify-center relative z-10 ${(ad.only_button || ad.onlyButton) ? 'items-start justify-end pb-8' : ''}`}>
+                {!(ad.only_button || ad.onlyButton) && (
+                  <>
+                    <View className="flex-row items-center gap-3 mb-2">
+                       <View className="w-10 h-10 bg-white rounded-xl items-center justify-center p-2 shadow-sm">
+                          <ExternalLink size={20} color={ad.color} strokeWidth={2.5} />
+                       </View>
+                       <View className="bg-white/20 self-start px-2.5 py-1 rounded-full border border-white/20">
+                          <Text className="text-white text-[9px] font-black uppercase tracking-widest">Partner i Verifikuar</Text>
+                       </View>
+                    </View>
+
+                    <Text className="text-white text-lg font-black mb-0.5">{ad.headline}</Text>
+                    <Text className="text-white/80 text-xs font-bold mb-4">{ad.description || ad.desc}</Text>
+                  </>
+                )}
+
+                <TouchableOpacity
+                  onPress={() => Linking.openURL(ad.url)}
+                  className="bg-white self-start px-6 py-3 rounded-2xl shadow-xl active:scale-95"
+                >
+                   <Text style={{ color: (ad.only_button || ad.onlyButton) ? '#6366f1' : ad.color }} className="font-black text-xs uppercase tracking-tight">
+                     {ad.button_text || ad.buttonText}
+                   </Text>
+                </TouchableOpacity>
               </View>
-              <View className="absolute right-[-20] bottom-[-20] w-40 h-40 bg-white/10 rounded-full" />
+
+              {!(ad.only_button || ad.onlyButton) && <View className="absolute right-[-20] bottom-[-20] w-40 h-40 bg-white/10 rounded-full" />}
             </View>
           ))}
         </ScrollView>
       </View>
 
       {/* ── RECOMMENDED SECTION ──────────────────────── */}
-      <View className="mt-4">
-        <View className="flex-row items-center justify-between px-6 mb-4">
-          <Text className="text-2xl font-bold text-[#161719]">Recommended</Text>
+      <View className="mt-4 px-6">
+        <View className="flex-row items-center justify-between mb-4">
+          <Text className="text-2xl font-bold text-[#161719]">Të rekomanduara</Text>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="pl-6">
-          {recommendedShops.map(renderShopCard)}
-        </ScrollView>
+        <View className="overflow-hidden">
+          <Animated.ScrollView
+            ref={recommendedScrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            snapToInterval={(width - 48) * 0.63 + 16}
+            decelerationRate="fast"
+          >
+            {recommendedShops.map(renderShopCard)}
+          </Animated.ScrollView>
+        </View>
       </View>
 
       {/* ── PRICING PLANS ───────────────────────────── */}
-      <View className="mt-12 px-6">
+      <View className="mt-4 px-6">
         <Text className="text-xl font-black text-[#161719] mb-4">Planet e Çmimeve</Text>
-        <View
-          className="overflow-hidden shadow-xl"
-          style={{ borderRadius: 32 }}
-        >
-          <View className="p-6 bg-[#3473ef] relative">
-            {/* Background Accent */}
-            <View className="absolute top-[-10] right-[-10] w-24 h-24 bg-white/10 rounded-full" />
 
-            <View className="flex-row justify-between items-start mb-6">
-              <View className="w-12 h-12 rounded-2xl bg-white/20 items-center justify-center border border-white/30">
-                <Zap size={24} color="white" />
-              </View>
-              <View className="bg-white/20 px-3 py-1 rounded-full border border-white/30">
-                <Text className="text-white text-[9px] font-black uppercase tracking-widest">Më i Populluari</Text>
-              </View>
-            </View>
-
-            <Text className="text-white text-2xl font-black mb-1">Professional</Text>
-            <Text className="text-white/70 font-bold mb-4 text-xs">Rritni biznesin tuaj me lehtësi</Text>
-
-            <View className="flex-row items-baseline mb-6">
-              <Text className="text-4xl font-black text-white">20€</Text>
-              <Text className="text-sm font-bold text-white/70 ml-2">/muaj</Text>
-            </View>
-
-            <View className="bg-white/10 rounded-[24px] p-4 mb-6 border border-white/20">
-              <View className="flex-row items-center mb-3">
-                <View className="w-6 h-6 rounded-full bg-white/20 items-center justify-center mr-3">
-                  <Check size={14} color="white" strokeWidth={3} />
-                </View>
-                <Text className="font-bold text-white text-sm flex-1">Deri në 2 berberë të përfshirë</Text>
-              </View>
-
-              <View className="h-[1px] bg-white/10 w-full mb-3" />
-
-              <View className="flex-row items-center">
-                <View className="w-6 h-6 rounded-full bg-amber-400/20 items-center justify-center mr-3">
-                  <Sparkles size={14} color="#fbbf24" strokeWidth={2} />
-                </View>
-                <Text className="font-bold text-white/90 text-[11px] flex-1 italic">
-                  +3€ për çdo punonjës të ri pas limitit
-                </Text>
-              </View>
-            </View>
-
-            <TouchableOpacity
-              activeOpacity={0.9}
-              className="h-12 bg-white rounded-2xl items-center justify-center shadow-lg shadow-black/10 active:scale-95"
+        <View className="overflow-hidden">
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            snapToInterval={(width - 48) * 0.7 + 16}
+            decelerationRate="fast"
+          >
+            <PricingCard
+              title="Solo"
+              price="15€"
+              employees="1 berber"
+              desc="Ideale për berberët individualë"
+              icon={User}
+            />
+            <PricingCard
+              title="Duo"
+              price="20€"
+              employees="2 berberë"
+              desc="Për ekipe të vogla prej dy personash"
+              icon={Scissors}
+              isPopular
+            />
+            <View
+              className="mr-4 bg-white overflow-hidden shadow-sm border border-slate-100"
+              style={{ width: (width - 48) * 0.7, borderRadius: 28, height: 185 }}
             >
-              <Text className="text-[#3473ef] font-black text-base">Fillo Tani</Text>
-            </TouchableOpacity>
-          </View>
+              <View className="p-4 relative h-full">
+                <View className="absolute top-[-20] right-[-20] w-24 h-24 bg-[#3473ef]/5 rounded-full blur-xl" />
+
+                <View className="flex-row items-center gap-3 mb-3">
+                  <View className="w-9 h-9 rounded-xl bg-[#3473ef]/10 items-center justify-center">
+                    <Grid size={18} color="#3473ef" strokeWidth={2.5} />
+                  </View>
+                  <View>
+                    <Text className="text-[#161719] text-base font-black">Team</Text>
+                    <Text className="text-[#8789A3] text-[9px] font-bold">Për ekipe në rritje</Text>
+                  </View>
+                </View>
+
+                <View className="bg-[#3473ef]/5 p-3 rounded-2xl border-2 border-dashed border-[#3473ef]/20 mb-3">
+                  <View className="flex-row items-center justify-between">
+                    <View className="flex-row items-center flex-1">
+                      <View className="w-8 h-8 rounded-full bg-white items-center justify-center mr-2 shadow-sm">
+                         <User size={14} color="#3473ef" strokeWidth={3} />
+                      </View>
+                      <TextInput
+                        keyboardType="numeric"
+                        className="text-xl font-black text-[#161719] p-0"
+                        value={teamEmployees}
+                        onChangeText={(val) => {
+                          const num = parseInt(val);
+                          if (val === "" || (!isNaN(num) && num >= 3)) {
+                            setTeamEmployees(val);
+                          }
+                        }}
+                        onBlur={() => {
+                          if (!teamEmployees || parseInt(teamEmployees) < 3) {
+                            setTeamEmployees("3");
+                          }
+                        }}
+                        placeholder="3"
+                        placeholderTextColor="#CBD5E1"
+                      />
+                      <Text className="text-[#8789A3] text-[10px] font-bold ml-1.5 pt-1">berberë</Text>
+                    </View>
+                    <Text className="text-xl font-black text-[#3473ef]">
+                      {25 + (Math.max(3, parseInt(teamEmployees || "3")) - 3) * 5}€
+                    </Text>
+                  </View>
+                  <Text className="text-[#3473ef]/60 text-[8px] font-black uppercase mt-2 text-center">Ndrysho numrin për të kalkuluar</Text>
+                </View>
+
+                <TouchableOpacity className="h-10 bg-black rounded-2xl items-center justify-center shadow-md active:scale-95 mt-auto">
+                  <Text className="text-white font-black text-sm">Fillo Tani</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
         </View>
       </View>
 
-      {/* ── NEW TO FRESHA SECTION ───────────────────── */}
-      <View className="mt-8">
-        <View className="flex-row items-center justify-between px-6 mb-4">
-          <Text className="text-2xl font-bold text-[#161719]">New to Fresha</Text>
+      {/* ── NEW TO LINEUP SECTION ───────────────────── */}
+      <View className="mt-4 px-6 mb-8">
+        <View className="flex-row items-center justify-between mb-4">
+          <Text className="text-2xl font-bold text-[#161719]">Të reja në LineUp</Text>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="pl-6">
-          {recommendedShops.slice().reverse().map(renderShopCard)}
-        </ScrollView>
+        <View className="overflow-hidden">
+          <ScrollView
+            ref={newToLineUpScrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            snapToInterval={(width - 48) * 0.63 + 16}
+            decelerationRate="fast"
+          >
+            {recommendedShops.slice().reverse().map(renderShopCard)}
+          </ScrollView>
+        </View>
       </View>
 
       {/* ── HOW TO USE ────────────────────────────── */}
-      <View className="mt-16 px-6 pb-20">
-        <View className="flex-row items-center justify-between mb-10">
+      <View className="mt-4 px-6 pb-20">
+        <View className="flex-row items-center justify-between mb-8">
           <View>
-            <Text className="text-3xl font-black text-[#161719]">How to use it</Text>
-            <Text className="text-[#8789A3] font-bold mt-1">Experience the best styling</Text>
-          </View>
-          <View className="w-14 h-14 rounded-full bg-white border border-slate-100 items-center justify-center shadow-sm">
-            <ArrowRight size={24} color="#161719" />
+            <Text className="text-3xl font-black text-[#161719]">Si funksionon</Text>
+            <Text className="text-[#8789A3] font-bold mt-1">Përjetoni stilimin më të mirë</Text>
           </View>
         </View>
 
-        <View className="gap-y-10">
+        <View className="gap-y-6">
           {[
-            { step: "01", title: "Find your style", desc: "Browse through our curated list of top-rated salons and barbers.", icon: Search },
-            { step: "02", title: "Choose location", desc: "Select your city or use current location to find nearby services.", icon: MapPin },
-            { step: "03", title: "Instant booking", desc: "Confirm your appointment with a few taps and get stylized.", icon: Scissors },
+            {
+              step: "01",
+              title: "Gjej dyqanin tënd",
+              desc: "Kërko sipas qytetit, shfleto vlerësimet dhe eksploro fotot e berberive më të mira të Kosovës.",
+              icon: Search,
+              color: "#3473ef"
+            },
+            {
+              step: "02",
+              title: "Zgjidhni një vend",
+              desc: "Zgjidhni berberin tuaj dhe orën e preferuar nga disponueshmëria në kohë reale.",
+              icon: MapPin,
+              color: "#f47458"
+            },
+            {
+              step: "03",
+              title: "Konfirmo me OTP",
+              desc: "Merrni një kod të njëhershëm. Konfirmuar menjëherë, pa asnjë telefonatë.",
+              icon: Shield,
+              color: "#10b981"
+            },
           ].map((item, i) => (
-            <View key={i} className="flex-row items-start">
-              <View className="w-14 h-14 rounded-[22px] bg-white border border-slate-100 items-center justify-center shadow-sm z-10">
-                <item.icon size={26} color="#3473ef" strokeWidth={2.2} />
-              </View>
-              <View className="flex-1 ml-6 pt-1">
-                <Text className="text-[12px] font-black text-[#3473ef] uppercase tracking-[0.2em] mb-1">Step {item.step}</Text>
-                <Text className="text-xl font-black text-[#161719] mb-2">{item.title}</Text>
-                <Text className="text-[#8789A3] font-bold leading-6">{item.desc}</Text>
-              </View>
+            <View
+              key={i}
+              className="overflow-hidden shadow-lg mb-4"
+              style={{ borderRadius: 28 }}
+            >
+              <BlurView intensity={30} tint="light" className="flex-row items-center p-5 bg-white/20 border border-white/60">
+                <View
+                  className="w-16 h-16 rounded-[22px] items-center justify-center bg-white border border-slate-100 shadow-sm"
+                >
+                  <item.icon size={30} color={item.color} strokeWidth={2.5} />
+                </View>
+
+                <View className="flex-1 ml-5">
+                  <View className="flex-row items-center justify-between mb-1">
+                    <Text className="text-xl font-black text-[#161719]">{item.title}</Text>
+                    <Text className="text-[10px] font-black text-[#8789A3] tracking-[0.2em]">{item.step}</Text>
+                  </View>
+                  <Text className="text-[#8789A3] font-bold leading-5 text-[13px]">{item.desc}</Text>
+                </View>
+              </BlurView>
             </View>
           ))}
         </View>
@@ -306,4 +523,47 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
   </View>
 );
 };
+
+const PricingCard = ({ title, price, employees, desc, icon: Icon, isPopular = false }: any) => (
+  <View
+    className="mr-4 bg-white overflow-hidden shadow-sm border border-slate-100"
+    style={{ width: (width - 48) * 0.7, borderRadius: 28, height: 185 }}
+  >
+    <View className="p-4 relative h-full">
+      <View className="absolute top-[-20] right-[-20] w-24 h-24 bg-[#3473ef]/5 rounded-full blur-xl" />
+
+      <View className="flex-row justify-between items-center mb-3">
+        <View className="flex-row items-center gap-3">
+          <View className="w-9 h-9 rounded-xl bg-[#3473ef]/10 items-center justify-center shadow-lg shadow-[#3473ef]/30">
+            <Icon size={18} color="#3473ef" strokeWidth={2.5} />
+          </View>
+          <View>
+            <Text className="text-[#161719] text-base font-black leading-5">{title}</Text>
+            <Text className="text-[#8789A3] text-[9px] font-bold">LineUp Premium</Text>
+          </View>
+        </View>
+        {isPopular && (
+          <View className="bg-amber-400 px-2 py-0.5 rounded-full">
+            <Text className="text-[#161719] text-[7px] font-black uppercase">Më i Populluari</Text>
+          </View>
+        )}
+      </View>
+
+      <View className="flex-row items-center justify-between mb-3 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+        <View className="flex-row items-baseline">
+          <Text className="text-2xl font-black text-[#161719]">{price}</Text>
+          <Text className="text-[10px] font-bold text-[#8789A3] ml-1">/muaj</Text>
+        </View>
+        <View className="flex-row items-center">
+          <Check size={10} color="#10b981" strokeWidth={4} />
+          <Text className="text-[#161719] font-bold text-[10px] ml-1.5">{employees}</Text>
+        </View>
+      </View>
+
+      <TouchableOpacity className="h-10 bg-black rounded-2xl items-center justify-center shadow-md active:scale-95 mt-auto">
+        <Text className="text-white font-black text-sm">Fillo Tani</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+);
 
