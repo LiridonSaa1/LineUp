@@ -46,6 +46,16 @@ const POPULAR_CITIES = [
   { name: "Gjilan", lat: 42.4635, lng: 21.4678 },
   { name: "Mitrovicë", lat: 42.8914, lng: 20.8660 },
   { name: "Ferizaj", lat: 42.3703, lng: 21.1559 },
+  { name: "Vushtrri", lat: 42.8231, lng: 20.9675 },
+  { name: "Podujevë", lat: 42.9114, lng: 21.1903 },
+  { name: "Fushë Kosovë", lat: 42.6340, lng: 21.0963 },
+  { name: "Rahovec", lat: 42.3994, lng: 20.6553 },
+  { name: "Skënderaj", lat: 42.7478, lng: 20.7878 },
+  { name: "Lipjan", lat: 42.5217, lng: 21.1258 },
+  { name: "Suharekë", lat: 42.3581, lng: 20.8250 },
+  { name: "Deçan", lat: 42.5353, lng: 20.2878 },
+  { name: "Istog", lat: 42.7808, lng: 20.4875 },
+  { name: "Klinë", lat: 42.6225, lng: 20.5786 },
 ];
 
 export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, currentLocation = "Lokacioni aktual" }) => {
@@ -70,6 +80,8 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
   // Calendar States
   const [currentCalendarDate, setCurrentCalendarDate] = useState(new Date(2026, 6, 22));
   const [selectedCalendarDay, setSelectedCalendarDay] = useState<number | null>(22);
+
+  const [cityBias, setCityBias] = useState<{ lat: number; lng: number }>({ lat: 42.6629, lng: 21.1655 });
 
   // Animation Shared Values
   const treatmentX = useSharedValue(width);
@@ -304,11 +316,12 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
                 query={{
                   key: GOOGLE_MAPS_KEY,
                   language: 'sq',
-                  // Kosovo data is often better with 'xk' or no restriction + location bias
+                  location: `${cityBias.lat},${cityBias.lng}`,
+                  radius: 30000,
                   components: 'country:xk',
                 }}
                 enablePoweredByContainer={false}
-                minLength={2}
+                minLength={1}
                 styles={{
                   container: { flex: 0, marginBottom: 20 },
                   textInputContainer: {
@@ -339,7 +352,10 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
                         lat: city.lat,
                         lng: city.lng
                       });
-                      setActivePanel('main');
+                      setCityBias({ lat: city.lat, lng: city.lng });
+                      if (autocompleteRef.current) {
+                        autocompleteRef.current.setAddressText(city.name);
+                      }
                     }}
                     className="bg-slate-50 px-5 py-3 rounded-2xl border border-slate-100 flex-row items-center"
                   >

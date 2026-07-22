@@ -315,11 +315,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
 
                 {/* Content Overlay */}
                 <View className="flex-1 p-4 justify-between relative z-10">
-                  <View className="flex-row items-center justify-between">
-                    <View className="bg-black/50 px-3 py-1 rounded-full border border-white/20">
-                      <Text className="text-white text-[9px] font-black uppercase tracking-widest">Partner i Verifikuar</Text>
-                    </View>
-                  </View>
 
                   {!isCleanBanner && (
                     <View className="my-auto">
