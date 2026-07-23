@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Dimensions, ActivityIndicator, Keyboard, StyleSheet } from "react-native";
+import React, { useState, useEffect, useMemo, memo } from "react";
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Dimensions, ActivityIndicator, Keyboard, StyleSheet, FlatList, Modal, KeyboardAvoidingView, Platform } from "react-native";
 import { User, CreditCard, Shield, Store, Mail, Lock, Eye, EyeOff, Phone, ChevronDown, Search, ArrowLeft, Check, ChevronRight, Zap, Sparkles, MapPin, X } from "lucide-react-native";
 import { supabase } from "@/config/supabase";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 
 const KOSOVO_CITIES = [
   { formatted_address: "Ferizaj", city: "Ferizaj", street: "", postal_code: "70000", country: "Kosovë", latitude: 42.3703, longitude: 21.1559 },
@@ -59,11 +60,314 @@ const DEFAULT_STREETS = [
   "Rruga Adem Jashari", "Rruga UÇK", "Rruga Nënë Tereza", "Rruga Zahir Pajaziti", "Rruga Skënderbeu"
 ];
 
+import { WebView } from 'react-native-webview';
+
 const REGISTRATION_PLANS = [
-  { id: 'starter', name: 'Plani Starter', price: '19€', period: 'muaj', features: ['Deri në 300 rezervime/muaj', '1 profil stafi', 'Kalendari i rezervimeve', 'Njoftime me email'] },
-  { id: 'pro', name: 'Plani Pro', price: '39€', period: 'muaj', features: ['Rezervime pa limit', 'Deri në 5 profile stafi', 'Njoftime me SMS & Email', 'Statistika & Raporte', 'Mbështetje prioritare'], isPopular: true },
-  { id: 'elite', name: 'Plani Elite', price: '59€', period: 'muaj', features: ['Të gjitha të planit Pro', 'Profile stafi pa limit', 'Marketing me SMS', 'Landing page e personalizuar', 'Asistent personal 24/7'] }
+  {
+    id: 'solo',
+    name: 'Solo',
+    prices: { month: '15€', year: '150€' },
+    employees: '1 berber',
+    desc: 'Ideale për berberët individualë',
+    features: ['Deri në 300 rezervime/muaj', '1 profil stafi', 'Kalendari i rezervimeve', 'Njoftime me email'],
+    paddlePriceId: { month: 'pri_solo_mo', year: 'pri_solo_yr' }
+  },
+  {
+    id: 'duo',
+    name: 'Duo',
+    prices: { month: '20€', year: '200€' },
+    employees: '2 berberë',
+    desc: 'Për ekipe të vogla prej dy personash',
+    features: ['Rezervime pa limit', 'Deri në 2 profile stafi', 'Njoftime me SMS & Email', 'Statistika & Raporte', 'Mbështetje prioritare'],
+    isPopular: true,
+    paddlePriceId: { month: 'pri_duo_mo', year: 'pri_duo_yr' }
+  },
+  {
+    id: 'team',
+    name: 'Team',
+    prices: { month: '25€', year: '250€' },
+    employees: '3+ berberë',
+    desc: 'Për ekipe në rritje',
+    features: ['Të gjitha të planit Duo', 'Profile stafi pa limit', 'Marketing me SMS', 'Landing page e personalizuar', 'Asistent personal 24/7'],
+    paddlePriceId: { month: 'pri_team_mo', year: 'pri_team_yr' }
+  }
 ];
+
+const PADDLE_CLIENT_TOKEN = 'test_7386629d38c644d6b63d2e9c2c6'; // Mock sandbox token
+const PADDLE_VENDOR_ID = 12345; // Mock vendor ID
+
+interface PaddleCheckoutProps {
+  email: string;
+  priceId: string;
+  onSuccess: (data: any) => void;
+  onCancel: () => void;
+}
+
+const PaddleCheckout = ({ email, priceId, onSuccess, onCancel }: PaddleCheckoutProps) => {
+  // This HTML will initialize Paddle.js and open the checkout overlay
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
+        <style>
+          body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; font-family: sans-serif; }
+          .loading { text-align: center; }
+        </style>
+      </head>
+      <body>
+        <div class="loading">Duke hapur dritaren e pagesës...</div>
+        <script type="text/javascript">
+          Paddle.Environment.set('sandbox');
+          Paddle.Initialize({
+            token: '${PADDLE_CLIENT_TOKEN}',
+            eventCallback: function(data) {
+              if (data.name === 'checkout.completed') {
+                window.ReactNativeWebView.postMessage(JSON.stringify({ event: 'success', data: data.data }));
+              } else if (data.name === 'checkout.closed') {
+                window.ReactNativeWebView.postMessage(JSON.stringify({ event: 'cancel' }));
+              }
+            }
+          });
+
+          Paddle.Checkout.open({
+            settings: {
+              displayMode: 'overlay',
+              variant: 'one-page',
+              theme: 'light',
+              allowLogout: false
+            },
+            items: [{ priceId: '${priceId}', quantity: 1 }],
+            customer: { email: '${email}' }
+          });
+        </script>
+      </body>
+    </html>
+  `;
+
+  return (
+    <View style={{ flex: 1, backgroundColor: 'white' }}>
+      <WebView
+        originWhitelist={['*']}
+        source={{ html }}
+        onMessage={(event) => {
+          const msg = JSON.parse(event.nativeEvent.data);
+          if (msg.event === 'success') onSuccess(msg.data);
+          if (msg.event === 'cancel') onCancel();
+        }}
+        javaScriptEnabled={true}
+        domStorageEnabled={true}
+        startInLoadingState={true}
+        renderLoading={() => (
+          <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center', backgroundColor: 'white' }]}>
+            <ActivityIndicator size="large" color="#3473ef" />
+          </View>
+        )}
+      />
+    </View>
+  );
+};
+
+interface CityPickerProps {
+  selectedCity: string;
+  onSelect: (city: string) => void;
+}
+
+const CityPicker = memo(({ selectedCity, onSelect }: CityPickerProps) => {
+  const [showPicker, setShowPicker] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const filteredCities = useMemo(() => {
+    return KOSOVO_CITIES.filter(c =>
+      c.city.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [search]);
+
+  return (
+    <View className="mb-1">
+      <TouchableOpacity
+        onPress={() => {
+          Keyboard.dismiss();
+          setShowPicker(true);
+        }}
+        activeOpacity={0.8}
+        className={`w-full bg-white border rounded-2xl px-4 h-14 flex-row items-center justify-between ${selectedCity ? 'border-[#3473ef]' : 'border-slate-200'}`}
+      >
+        <View className="flex-row items-center gap-3">
+          <MapPin size={20} color={selectedCity ? "#3473ef" : "#8789A3"} />
+          <Text className="text-[#161719] font-bold text-base">{selectedCity || "Zgjidh Qytetin"}</Text>
+        </View>
+        <ChevronDown size={20} color="#8789A3" />
+      </TouchableOpacity>
+
+      <Modal
+        visible={showPicker}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowPicker(false)}
+      >
+        <View className="flex-1 bg-black/50 justify-end">
+          <TouchableOpacity
+            className="absolute inset-0"
+            activeOpacity={1}
+            onPress={() => setShowPicker(false)}
+          />
+          <View className="bg-white rounded-t-[32px] h-[80%] overflow-hidden">
+            <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mt-3 mb-2" />
+            <View className="flex-row items-center justify-between px-6 py-4 border-b border-slate-50">
+              <Text className="text-xl font-black text-[#161719]">Zgjidh qytetin</Text>
+              <TouchableOpacity onPress={() => setShowPicker(false)} className="p-2 bg-slate-100 rounded-full">
+                <X size={20} color="#161719" />
+              </TouchableOpacity>
+            </View>
+
+            <View className="px-6 py-4">
+              <View className="flex-row items-center bg-slate-100 rounded-2xl px-4 h-12">
+                <Search size={18} color="#8789A3" />
+                <TextInput
+                  placeholder="Kërko qytetin..."
+                  placeholderTextColor="#94A3B8"
+                  className="flex-1 ml-3 font-bold text-base text-[#161719]"
+                  value={search}
+                  onChangeText={setSearch}
+                  autoCorrect={false}
+                />
+              </View>
+            </View>
+
+            <FlatList
+              data={filteredCities}
+              keyExtractor={(item) => item.city}
+              keyboardShouldPersistTaps="always"
+              contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  onPress={() => {
+                    onSelect(item.city);
+                    setShowPicker(false);
+                    setSearch("");
+                  }}
+                  className={`flex-row items-center py-4 border-b border-slate-50 ${selectedCity === item.city ? 'bg-[#3473ef]/5 rounded-xl px-3' : ''}`}
+                >
+                  <View className={`w-10 h-10 rounded-full items-center justify-center mr-4 ${selectedCity === item.city ? 'bg-[#3473ef]' : 'bg-slate-100'}`}>
+                    <MapPin size={18} color={selectedCity === item.city ? 'white' : '#8789A3'} />
+                  </View>
+                  <Text className={`font-bold text-lg flex-1 ${selectedCity === item.city ? 'text-[#3473ef]' : 'text-[#161719]'}`}>{item.city}</Text>
+                  {selectedCity === item.city && <Check size={20} color="#3473ef" strokeWidth={3} />}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+});
+
+interface AddressPickerProps {
+  selectedCity: string;
+  onSelect: (address: { street: string, full: string }) => void;
+  focusedField: string | null;
+  setFocusedField: (field: string | null) => void;
+}
+
+const AddressPicker = memo(({
+  selectedCity,
+  onSelect,
+  focusedField,
+  setFocusedField
+}: AddressPickerProps) => {
+  const [addressInput, setAddressInput] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const streets = useMemo(() => {
+    if (!addressInput) return [];
+    const list = KOSOVO_STREETS[selectedCity] || DEFAULT_STREETS;
+    return list.filter(st => st.toLowerCase().includes(addressInput.toLowerCase()));
+  }, [selectedCity, addressInput]);
+
+  const handleTextChange = (val: string) => {
+    setAddressInput(val);
+    // Show suggestions only if user hasn't selected one yet or is typing
+    setShowSuggestions(val.length > 0);
+    const fullAddr = val ? `${val}${selectedCity ? `, ${selectedCity}` : ""}` : "";
+    onSelect({ street: val, full: fullAddr });
+  };
+
+  return (
+    <View className="mb-1">
+      <View className={`bg-white rounded-2xl px-4 h-14 flex-row items-center border ${focusedField === 'address' ? 'border-[#3473ef]' : 'border-slate-200'}`}>
+        <MapPin size={20} color={focusedField === 'address' ? '#3473ef' : '#8789A3'} />
+        <TextInput
+          placeholder="Adresa (Rruga dhe Numri)"
+          value={addressInput}
+          onChangeText={handleTextChange}
+          className="flex-1 ml-3 font-bold text-[#161719] text-base"
+          placeholderTextColor="#94A3B8"
+          onFocus={() => {
+            setFocusedField('address');
+            if (addressInput.length > 0) setShowSuggestions(true);
+          }}
+          onBlur={() => setFocusedField(null)}
+          textContentType="fullStreetAddress"
+          autoComplete="street-address"
+        />
+        {addressInput !== "" && (
+          <TouchableOpacity
+            onPress={() => {
+              setAddressInput("");
+              setShowSuggestions(false);
+              onSelect({ street: "", full: "" });
+            }}
+            className="p-2 bg-slate-50 rounded-full"
+          >
+            <X size={16} color="#8789A3" strokeWidth={2.5} />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      <Modal
+        visible={showSuggestions && streets.length > 0}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowSuggestions(false)}
+      >
+        <View className="flex-1 bg-black/20 justify-center px-6">
+          <View className="bg-white rounded-3xl max-h-[60%] overflow-hidden shadow-2xl">
+            <View className="flex-row items-center justify-between px-5 py-4 border-b border-slate-50">
+              <Text className="text-base font-black text-[#161719]">Sugjerime adresash</Text>
+              <TouchableOpacity onPress={() => setShowSuggestions(false)}>
+                <X size={18} color="#8789A3" />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={streets}
+              keyExtractor={(item) => item}
+              keyboardShouldPersistTaps="always"
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  onPress={() => {
+                    const fullAddr = `${item}${selectedCity ? `, ${selectedCity}` : ""}`;
+                    setAddressInput(item);
+                    setShowSuggestions(false);
+                    onSelect({ street: item, full: fullAddr });
+                    Keyboard.dismiss();
+                  }}
+                  className="px-5 py-4 border-b border-slate-50 active:bg-slate-50 flex-row items-center"
+                >
+                  <MapPin size={16} color="#3473ef" className="mr-3" />
+                  <Text className="font-bold text-sm text-[#161719] flex-1">{item}{selectedCity ? `, ${selectedCity}` : ""}</Text>
+                  <ChevronRight size={16} color="#CBD5E1" />
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+});
 
 interface RegisterScreenProps {
   onClose: () => void;
@@ -83,12 +387,25 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
-  const [citySearch, setCitySearch] = useState("");
-  const [showCityPicker, setShowCityPicker] = useState(false);
-  const [addressInput, setAddressInput] = useState("");
-  const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<{ address: string; lat: number; lng: number } | null>(null);
   const [selectedPlan, setSelectedPlan] = useState(REGISTRATION_PLANS[1]);
+  const [billingCycle, setBillingCycle] = useState<'month' | 'year'>('month');
+  const [employeeCount, setTeamEmployees] = useState(3);
+
+  const calculateTeamPrice = (count: number, cycle: 'month' | 'year') => {
+    const basePrice = 25;
+    const extraPrice = (Math.max(3, count) - 3) * 5;
+    const monthlyTotal = basePrice + extraPrice;
+    return cycle === 'year' ? monthlyTotal * 12 * 0.85 : monthlyTotal; // 15% discount for yearly
+  };
+
+  const getPriceDisplay = (plan: any) => {
+    if (plan.id === 'team') {
+      const price = calculateTeamPrice(employeeCount, billingCycle);
+      return `${Math.round(price)}€`;
+    }
+    return billingCycle === 'month' ? plan.prices.month : plan.prices.year;
+  };
 
   // Paddle Checkout states
   const [cardNumber, setCardNumber] = useState("");
@@ -119,6 +436,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
           data: {
             full_name: fullName,
             role: 'barber',
+            is_active_partner: true,
           }
         }
       });
@@ -130,38 +448,32 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
       }
 
       if (signUpData?.user) {
-        // Insert into users table in Supabase
-        try {
-          await supabase.from('users').upsert({
-            id: signUpData.user.id,
-            email: email.trim().toLowerCase(),
-            name: fullName || email.split('@')[0],
-            role: 'barber',
-          });
-        } catch (dbErr) {
-          console.warn("Error writing to users table:", dbErr);
-        }
+        // 1. Insert into users table
+        await supabase.from('users').upsert({
+          id: signUpData.user.id,
+          email: email.trim().toLowerCase(),
+          name: fullName,
+          role: 'barber',
+        });
 
-        // Insert into barbershops table in Supabase
-        try {
-          await supabase.from('barbershops').insert({
-            id: signUpData.user.id,
-            name: fullName,
-            email: email.trim().toLowerCase(),
-            phone: phone,
-            city: selectedCity,
-            address: selectedPlace?.address || "",
-            latitude: selectedPlace?.lat || 42.6629,
-            longitude: selectedPlace?.lng || 21.1655,
-            status: 'active',
-            rating: 5.0,
-            reviews: 0,
-            plan_id: selectedPlan.id
-          });
-        } catch (dbErr) {
-          console.warn("Error writing to barbershops table:", dbErr);
-        }
+        // 2. Insert into barbershops table
+        await supabase.from('barbershops').insert({
+          id: signUpData.user.id,
+          name: fullName,
+          email: email.trim().toLowerCase(),
+          phone: phone,
+          city: selectedCity,
+          address: selectedPlace?.address || "",
+          latitude: selectedPlace?.lat || 42.6629,
+          longitude: selectedPlace?.lng || 21.1655,
+          status: 'active',
+          rating: 5.0,
+          reviews: 0,
+          plan_id: selectedPlan.id,
+          billing_cycle: billingCycle
+        });
 
+        // 3. Mark as success to trigger parent reload/navigation
         onSuccess({
           id: signUpData.user.id,
           name: fullName,
@@ -178,12 +490,20 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
   };
 
   return (
-    <View className="flex-1 bg-[#F5F5F5]">
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      className="flex-1 bg-[#F5F5F5]"
+    >
       {/* Background Decorative Blobs */}
       <View className="absolute top-[-50] left-[-50] w-64 h-64 bg-[#3473ef]/15 rounded-full blur-3xl" />
       <View className="absolute top-[200] right-[-100] w-80 h-80 bg-[#f47458]/15 rounded-full blur-3xl" />
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingBottom: 80, paddingTop: 40 }} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 100, paddingTop: 40 }}
+        keyboardShouldPersistTaps="handled"
+      >
       {/* Header section with Close Button */}
       <View className="pt-16 pb-6 px-6 flex-row items-center justify-between">
         <View className="flex-row items-center gap-4">
@@ -338,117 +658,23 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
             </View>
 
             {/* City Picker input */}
-            <View className="relative z-50">
-              <TouchableOpacity
-                onPress={() => setShowCityPicker(!showCityPicker)}
-                className={`w-full bg-white border rounded-2xl px-4 h-14 flex-row items-center justify-between transition-all ${showCityPicker ? 'border-[#3473ef] shadow-md shadow-[#3473ef]/5' : 'border-slate-200'}`}
-              >
-                <View className="flex-row items-center gap-3">
-                  <MapPin size={20} color={selectedCity ? "#3473ef" : "#8789A3"} />
-                  <Text className="text-[#161719] font-bold text-base">{selectedCity || "Qyteti"}</Text>
-                </View>
-                {showCityPicker ? (
-                  <X size={18} color="#8789A3" strokeWidth={2.5} />
-                ) : (
-                  <ChevronDown size={20} color="#8789A3" />
-                )}
-              </TouchableOpacity>
-
-              {showCityPicker && (
-                <View className="absolute top-16 left-0 right-0 bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden z-50">
-                  <View className="flex-row items-center px-4 py-3 border-b border-slate-100">
-                    <Search size={16} color="#8789A3" />
-                    <TextInput
-                      placeholder="Kërko qytetin..."
-                      placeholderTextColor="#94A3B8"
-                      className="flex-1 ml-2 font-bold text-sm text-[#161719]"
-                      value={citySearch}
-                      onChangeText={setCitySearch}
-                    />
-                  </View>
-                  <View style={{ maxHeight: 180 }}>
-                    <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="always">
-                      {KOSOVO_CITIES.filter(c => c.city.toLowerCase().includes(citySearch.toLowerCase())).map(city => (
-                        <TouchableOpacity
-                          key={city.city}
-                          onPress={() => {
-                            setSelectedCity(city.city);
-                            setShowCityPicker(false);
-                            setCitySearch("");
-                            setSelectedPlace(null);
-                            setAddressInput("");
-                            Keyboard.dismiss();
-                          }}
-                          className={`px-5 py-3.5 border-b border-slate-100 ${selectedCity === city.city ? 'bg-[#3473ef]/10' : ''}`}
-                        >
-                          <Text className={`font-bold text-sm ${selectedCity === city.city ? 'text-[#3473ef]' : 'text-[#161719]'}`}>{city.city}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  </View>
-                </View>
-              )}
-            </View>
+            <CityPicker
+              selectedCity={selectedCity}
+              onSelect={(city) => {
+                setSelectedCity(city);
+                setSelectedPlace(null);
+              }}
+            />
 
             {/* Street address input with popular suggestions for selected city */}
-            <View className="relative z-40">
-              <View className={`bg-white rounded-2xl px-4 h-14 flex-row items-center border ${focusedField === 'address' ? 'border-[#3473ef]' : 'border-slate-200'}`}>
-                <MapPin size={20} color={focusedField === 'address' ? '#3473ef' : '#8789A3'} />
-                <TextInput
-                  placeholder="Adresa (Rruga dhe Numri)"
-                  value={addressInput}
-                  onChangeText={(val) => {
-                    setAddressInput(val);
-                    setSelectedPlace(val ? { address: val + (selectedCity ? `, ${selectedCity}` : ""), lat: 42.6629, lng: 21.1655 } : null);
-                    setShowAddressSuggestions(val.length > 0);
-                  }}
-                  className="flex-1 ml-3 font-bold text-[#161719] text-base"
-                  placeholderTextColor="#94A3B8"
-                  onFocus={() => {
-                    setFocusedField('address');
-                    if (addressInput.length > 0) setShowAddressSuggestions(true);
-                  }}
-                  onBlur={() => {
-                    setFocusedField(null);
-                    // delay to allow onPress trigger
-                    setTimeout(() => setShowAddressSuggestions(false), 250);
-                  }}
-                  textContentType="fullStreetAddress"
-                  autoComplete="street-address"
-                />
-                {addressInput !== "" && (
-                  <TouchableOpacity onPress={() => { setAddressInput(""); setSelectedPlace(null); setShowAddressSuggestions(false); }} className="p-2" activeOpacity={0.7}>
-                    <X size={18} color="#8789A3" strokeWidth={2.5} />
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              {showAddressSuggestions && (
-                <View className="absolute top-16 left-0 right-0 bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden z-50">
-                  <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="always" style={{ maxHeight: 180 }}>
-                    {(KOSOVO_STREETS[selectedCity] || DEFAULT_STREETS)
-                      .filter(st => st.toLowerCase().includes(addressInput.toLowerCase()))
-                      .map((street) => {
-                        const fullAddressString = `${street}${selectedCity ? `, ${selectedCity}` : ""}`;
-                        return (
-                          <TouchableOpacity
-                            key={street}
-                            onPress={() => {
-                              setAddressInput(street);
-                              setSelectedPlace({ address: fullAddressString, lat: 42.6629, lng: 21.1655 });
-                              setShowAddressSuggestions(false);
-                              Keyboard.dismiss();
-                            }}
-                            className="px-5 py-3.5 border-b border-slate-100 active:bg-slate-50"
-                          >
-                            <Text className="font-bold text-sm text-[#161719]">{fullAddressString}</Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                  </ScrollView>
-                </View>
-              )}
-            </View>
+            <AddressPicker
+              selectedCity={selectedCity}
+              focusedField={focusedField}
+              setFocusedField={setFocusedField}
+              onSelect={(addr) => {
+                setSelectedPlace({ address: addr.full, lat: 42.6629, lng: 21.1655 });
+              }}
+            />
           </View>
 
           <TouchableOpacity
@@ -480,7 +706,30 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
       {/* STEP 2: Zgjidh Planin */}
       {registerStep === 2 && (
         <View className="px-6 gap-y-5">
-          <Text className="text-[11px] font-black text-[#8789A3] uppercase tracking-widest text-center mt-2">HAPI 2: ZGJIDH PLANIN TËND</Text>
+          <View className="items-center mt-2">
+            <Text className="text-[11px] font-black text-[#8789A3] uppercase tracking-widest text-center mb-4">HAPI 2: ZGJIDH PLANIN TËND</Text>
+
+            {/* Billing Cycle Toggle */}
+            <View className="bg-slate-200 p-1 rounded-2xl flex-row w-full max-w-[280px]">
+              <TouchableOpacity
+                onPress={() => setBillingCycle('month')}
+                className={`flex-1 py-2.5 rounded-xl items-center ${billingCycle === 'month' ? 'bg-white shadow-sm' : ''}`}
+              >
+                <Text className={`font-black text-xs ${billingCycle === 'month' ? 'text-[#161719]' : 'text-slate-500'}`}>MUJOR</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setBillingCycle('year')}
+                className={`flex-1 py-2.5 rounded-xl items-center ${billingCycle === 'year' ? 'bg-white shadow-sm' : ''}`}
+              >
+                <View className="flex-row items-center gap-1.5">
+                  <Text className={`font-black text-xs ${billingCycle === 'year' ? 'text-[#161719]' : 'text-slate-500'}`}>VJETOR</Text>
+                  <View className="bg-emerald-500 px-1.5 py-0.5 rounded-md">
+                    <Text className="text-white text-[8px] font-black">-15%</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
           
           <View className="gap-y-4">
             {REGISTRATION_PLANS.map((plan) => (
@@ -501,11 +750,32 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
                     <View className={`w-5 h-5 rounded-full border-2 items-center justify-center ${selectedPlan.id === plan.id ? 'border-[#3473ef]' : 'border-slate-300'}`}>
                       {selectedPlan.id === plan.id && <View className="w-2.5 h-2.5 rounded-full bg-[#3473ef]" />}
                     </View>
-                    <Text className="text-lg font-black text-[#161719]">{plan.name}</Text>
+                    <View>
+                      <Text className="text-lg font-black text-[#161719]">{plan.name}</Text>
+                      {plan.id === 'team' ? (
+                        <View className="flex-row items-center gap-2 mt-0.5">
+                          <TouchableOpacity
+                            onPress={() => setTeamEmployees(prev => Math.max(3, prev - 1))}
+                            className="w-5 h-5 bg-slate-100 rounded-md items-center justify-center"
+                          >
+                             <Text className="font-black text-xs">-</Text>
+                          </TouchableOpacity>
+                          <Text className="text-[#161719] font-bold text-xs">{employeeCount} berberë</Text>
+                          <TouchableOpacity
+                            onPress={() => setTeamEmployees(prev => prev + 1)}
+                            className="w-5 h-5 bg-slate-100 rounded-md items-center justify-center"
+                          >
+                             <Text className="font-black text-xs">+</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ) : (
+                        <Text className="text-slate-400 text-[10px] font-bold">{plan.employees}</Text>
+                      )}
+                    </View>
                   </View>
                   <View className="items-end">
-                    <Text className="text-2xl font-black text-[#3473ef]">{plan.price}</Text>
-                    <Text className="text-slate-400 text-[10px] font-bold mt-0.5">/{plan.period}</Text>
+                    <Text className="text-2xl font-black text-[#3473ef]">{getPriceDisplay(plan)}</Text>
+                    <Text className="text-slate-400 text-[10px] font-bold mt-0.5">/{billingCycle === 'month' ? 'muaj' : 'vit'}</Text>
                   </View>
                 </View>
 
@@ -543,127 +813,30 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
 
       {/* STEP 3: Paddle Secure Checkout */}
       {registerStep === 3 && (
-        <View className="px-6 gap-y-6">
-          <View className="items-center mt-2">
+        <View className="px-6 flex-1 min-h-[500px]">
+          <View className="items-center mt-2 mb-6">
             <Text className="text-[11px] font-black text-[#8789A3] uppercase tracking-widest text-center mb-1">HAPI 3: PAGESA ME PADDLE</Text>
-            <Text className="text-slate-500 text-xs font-bold text-center">Faturimi i sigurt i planit {selectedPlan.name} ({selectedPlan.price})</Text>
+            <Text className="text-slate-500 text-xs font-bold text-center">Faturimi i sigurt i planit {selectedPlan.name} ({getPriceDisplay(selectedPlan)})</Text>
           </View>
 
-          {/* Styled Mock Paddle Checkout Container */}
-          <View className="bg-white rounded-3xl p-5 border border-slate-100 shadow-2xl shadow-black/5">
-                  <View className="flex-row items-center justify-between mb-6 pb-4 border-b border-slate-100">
-              <View className="flex-row items-center gap-2">
-                <CreditCard size={18} color="#3473ef" />
-                <Text className="text-[#161719] font-black text-sm">Pagesë e sigurt me Paddle</Text>
-              </View>
-              <Lock size={14} color="#8789A3" />
-            </View>
-
-            {/* Card Fields */}
-            <View className="gap-y-4 mb-6">
-              <View className={`bg-slate-50 rounded-2xl px-4 h-12 flex-row items-center border ${focusedField === 'cardNumber' ? 'border-[#3473ef] bg-white' : 'border-slate-200'}`}>
-                <CreditCard size={16} color={focusedField === 'cardNumber' ? '#3473ef' : '#8789A3'} />
-                <TextInput
-                  placeholder="Numri i Kartës"
-                  placeholderTextColor="#94A3B8"
-                  value={cardNumber}
-                  onChangeText={(val) => {
-                    const cleaned = val.replace(/\D/g, "");
-                    const formatted = cleaned.match(/.{1,4}/g)?.join(" ") || cleaned;
-                    setCardNumber(formatted);
-                  }}
-                  keyboardType="numeric"
-                  maxLength={19} // 16 digits + 3 spaces
-                  className="flex-1 ml-3 font-bold text-[#161719] text-sm"
-                  onFocus={() => setFocusedField('cardNumber')}
-                  onBlur={() => setFocusedField(null)}
-                  textContentType="creditCardNumber"
-                  autoComplete="cc-number"
-                />
-              </View>
-
-              <View className="flex-row gap-3">
-                <View className={`bg-slate-50 rounded-2xl px-4 h-12 flex-row items-center border flex-1 ${focusedField === 'cardExpiry' ? 'border-[#3473ef] bg-white' : 'border-slate-200'}`}>
-                  <TextInput
-                    placeholder="MM/VV"
-                    placeholderTextColor="#94A3B8"
-                    value={cardExpiry}
-                    onChangeText={(val) => {
-                      const cleaned = val.replace(/\D/g, "");
-                      let formatted = val;
-                      if (cleaned.length > 2) {
-                        formatted = `${cleaned.substring(0, 2)}/${cleaned.substring(2, 4)}`;
-                      }
-                      setCardExpiry(formatted);
-                    }}
-                    keyboardType="numeric"
-                    maxLength={5}
-                    className="flex-1 font-bold text-[#161719] text-sm text-center"
-                    onFocus={() => setFocusedField('cardExpiry')}
-                    onBlur={() => setFocusedField(null)}
-                    textContentType="none"
-                    autoComplete="cc-exp"
-                  />
-                </View>
-                <View className={`bg-slate-50 rounded-2xl px-4 h-12 flex-row items-center border flex-1 ${focusedField === 'cardCvv' ? 'border-[#3473ef] bg-white' : 'border-slate-200'}`}>
-                  <TextInput
-                    placeholder="CVV"
-                    placeholderTextColor="#94A3B8"
-                    value={cardCvv}
-                    onChangeText={setCardCvv}
-                    keyboardType="numeric"
-                    secureTextEntry
-                    maxLength={3}
-                    className="flex-1 font-bold text-[#161719] text-sm text-center"
-                    onFocus={() => setFocusedField('cardCvv')}
-                    onBlur={() => setFocusedField(null)}
-                    textContentType="none"
-                    autoComplete="cc-csc"
-                  />
-                </View>
-              </View>
-
-              <View className={`bg-slate-50 rounded-2xl px-4 h-12 flex-row items-center border ${focusedField === 'cardName' ? 'border-[#3473ef] bg-white' : 'border-slate-200'}`}>
-                <User size={16} color={focusedField === 'cardName' ? '#3473ef' : '#8789A3'} />
-                <TextInput
-                  placeholder="Emri në Kartë"
-                  placeholderTextColor="#94A3B8"
-                  value={cardName}
-                  onChangeText={setCardName}
-                  className="flex-1 ml-3 font-bold text-[#161719] text-sm"
-                  onFocus={() => setFocusedField('cardName')}
-                  onBlur={() => setFocusedField(null)}
-                  textContentType="name"
-                  autoComplete="name"
-                />
-              </View>
-            </View>
-
-            <TouchableOpacity
-              onPress={handleAuthSubmit}
-              disabled={loading || !cardNumber || !cardExpiry || !cardCvv || !cardName}
-              activeOpacity={0.9}
-              className="bg-black h-14 rounded-2xl items-center justify-center shadow-lg active:scale-98"
-            >
-               {loading ? (
-                 <ActivityIndicator color="white" />
-               ) : (
-                 <Text className="text-white text-base font-black tracking-wide">
-                   Paguaj & Regjistro Sallonin ({selectedPlan.price})
-                 </Text>
-               )}
-            </TouchableOpacity>
+          <View className="flex-1 bg-white rounded-[40px] overflow-hidden border border-slate-100 shadow-2xl">
+            <PaddleCheckout
+              email={email}
+              priceId={billingCycle === 'month' ? selectedPlan.paddlePriceId.month : selectedPlan.paddlePriceId.year}
+              onSuccess={handleAuthSubmit}
+              onCancel={() => setRegisterStep(2)}
+            />
           </View>
 
           <TouchableOpacity
             onPress={() => setRegisterStep(2)}
-            className="py-3 items-center"
+            className="py-6 items-center"
           >
-            <Text className="text-slate-500 font-black text-xs">Kthehu mbrapa</Text>
+            <Text className="text-slate-500 font-black text-xs uppercase tracking-widest">Anulo dhe kthehu</Text>
           </TouchableOpacity>
         </View>
       )}
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 };

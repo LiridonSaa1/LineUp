@@ -112,45 +112,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
         if (shopsError) throw shopsError;
         if (shopsData) setRecommendedShops(shopsData);
 
-        const defaultAds = [
-          {
-            business_name: "Vehees",
-            headline: "Zbulo historikun e veturës tënde",
-            description: "Kontrollo çdo VIN në sekonda",
-            color: "#00d084",
-            url: "https://vehees.com/",
-            button_text: "Na vizitoni",
-            image_url: "vehees_banner.jpg",
-            status: 'active',
-            only_button: true
-          },
-          {
-            business_name: "noasim",
-            headline: "Udhëzues eSIM për udhëtim",
-            description: "Udhëzues praktikë destinacionesh për çdo udhëtim",
-            color: "#8b5cf6",
-            url: "https://noasim.com/guides",
-            button_text: "Na vizitoni",
-            image_url: "noasim_banner.jpg",
-            status: 'active',
-            only_button: true
-          }
-        ];
-
-        // FORCE SYNC: Upsert defaults to Supabase advertisements table
-        const { error: seedError } = await supabase
+        const { data: liveAds } = await supabase
           .from('advertisements')
-          .upsert(defaultAds, { onConflict: 'business_name' });
+          .select('*')
+          .eq('status', 'active');
 
-        if (seedError) {
-          console.warn("Seeding failed, using backup:", seedError.message);
-          setAds(defaultAds);
-        } else {
-          const { data: liveAds } = await supabase
-            .from('advertisements')
-            .select('*')
-            .eq('status', 'active');
-          setAds(liveAds && liveAds.length > 0 ? liveAds : defaultAds);
+        if (liveAds && liveAds.length > 0) {
+          setAds(liveAds);
         }
       } catch (e) {
         console.warn("Failed to load home data:", e);
@@ -271,7 +239,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
         </View>
       </View>
 
-      {/* ── ADVERTISEMENT CAROUSEL ─────────────────── */}
       {/* ── ADVERTISEMENT CAROUSEL ─────────────────── */}
       <View className="mt-4 px-6">
         <View className="flex-row items-center justify-between mb-4 px-1">

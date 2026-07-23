@@ -911,16 +911,16 @@ const bannerAds = [
   },
   {
     id: 4,
-    bg: "from-[#0a0a0a] via-[#0d1f0d] to-[#0a2a0a]",
+    bg: "from-[#0f172a] via-[#1e293b] to-[#0f172a]",
     image:
       "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1200&q=80",
     label: "LINEUP PRIZREN",
     headline: "Hapim dyqanin tonë të ri!",
     sub: "Grand Opening · 30 ditë falas për pronarët",
     cta: "Partnero me ne",
-    ctaColor: "bg-emerald-500 hover:bg-emerald-600",
+    ctaColor: "bg-primary hover:bg-primary/90",
     badge: "GRAND OPENING",
-    badgeColor: "bg-emerald-500",
+    badgeColor: "bg-primary",
   },
 ];
 
@@ -1323,14 +1323,14 @@ function BannerAds() {
     "from-[#0f0c29] via-[#302b63] to-[#24243e]",
     "from-[#1a1a2e] via-[#16213e] to-[#0f3460]",
     "from-[#0d0d0d] via-[#1a0a00] to-[#2d1500]",
-    "from-[#0a0a0a] via-[#0d1f0d] to-[#0a2a0a]",
+    "from-[#0f172a] via-[#1e293b] to-[#0f172a]",
   ];
-  const BADGE_COLORS = ["bg-primary", "bg-blue-500", "bg-amber-500", "bg-emerald-500"];
+  const BADGE_COLORS = ["bg-primary", "bg-blue-500", "bg-amber-500", "bg-primary"];
   const CTA_COLORS = [
     "bg-primary hover:bg-primary/90",
     "bg-blue-500 hover:bg-blue-600",
     "bg-amber-500 hover:bg-amber-600",
-    "bg-emerald-500 hover:bg-emerald-600",
+    "bg-primary hover:bg-primary/90",
   ];
 
   return (

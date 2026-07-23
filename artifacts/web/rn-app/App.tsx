@@ -26,6 +26,7 @@ import { BarberDetailScreen } from "./src/screens/BarberDetailScreen";
 import { LocationScreen } from "./src/screens/LocationScreen";
 import { SearchScreen } from "./src/screens/SearchScreen";
 import { RegisterShopScreen } from "./src/screens/RegisterShopScreen";
+import { BarberDashboardScreen } from "./src/screens/BarberDashboardScreen";
 import { AddAdModal } from "./src/screens/AddAdModal";
 import { supabase } from "./src/config/supabase";
 import "./global.css";
@@ -225,192 +226,202 @@ export default function App() {
       <View className="flex-1 bg-[#ECEEF2]">
         <StatusBar style="dark" />
 
-        {/* Detail Screen Modal or Main Content Switcher */}
-        {selectedShop ? (
-          <BarberDetailScreen shop={selectedShop} onBack={() => setSelectedShop(null)} />
+        {/* Conditional Rendering: Barber Dashboard vs Standard App */}
+        {user?.role === 'barber' ? (
+          <BarberDashboardScreen
+            user={user}
+            onLogout={async () => {
+              await supabase.auth.signOut();
+              setUser(null);
+            }}
+          />
         ) : (
-          <View className="flex-1">
-            {activeTab === 0 && (
-              <HomeScreen
-                onSelectShop={(shop) => setSelectedShop(shop)}
-                onOpenLocation={() => setShowLocation(true)}
-                onOpenSearch={() => setShowSearch(true)}
-                onOpenAddAd={() => setShowAddAd(true)}
-                selectedLocation={selectedLocation}
-              />
-            )}
-            {activeTab === 1 && (
-              <ExploreScreen
-                onSelectShop={(shop) => setSelectedShop(shop)}
-                onOpenSearch={() => setShowSearch(true)}
-                initialCity={cityFilter}
-                initialSearch={searchQuery}
-                initialCoords={searchCoords}
-              />
-            )}
-            {activeTab === 2 && (
-              <ActivityScreen
-                user={user}
-                onLogin={(userData) => setUser(userData || { id: '123', name: 'Artan Berisha', email: 'artan@lineup.com' })}
-                onNavigateToSearch={() => setActiveTab(1)}
-              />
-            )}
-            {activeTab === 3 && (
-              <ProfileScreen
-                user={user}
-                onLogin={(userData) => setUser(userData || { id: '123', name: 'Artan Berisha', email: 'artan@lineup.com' })}
-                onLogout={async () => {
-                  await supabase.auth.signOut();
-                  setUser(null);
-                }}
-                onOpenRegisterShop={() => setShowRegisterShop(true)}
-              />
-            )}
-          </View>
-        )}
-
-        {/* Location Selection Modal (Bottom Sheet Style) */}
-        <Modal
-          visible={showLocation}
-          animationType="none"
-          transparent={true}
-          onRequestClose={() => setShowLocation(false)}
-        >
-          <View className="flex-1 justify-end">
-            <TouchableOpacity
-              className="absolute inset-0 bg-black/40"
-              activeOpacity={1}
-              onPress={() => setShowLocation(false)}
-            />
-            <View className="h-[88%] bg-white rounded-t-[40px] overflow-hidden">
-              <LocationScreen
-                onBack={() => setShowLocation(false)}
-                onSelectLocation={(loc) => {
-                  setSelectedLocation(loc);
-                  setCityFilter(loc);
-                  setShowLocation(false);
-                }}
-              />
-            </View>
-          </View>
-        </Modal>
-
-        {/* Search Modal */}
-        <Modal
-          visible={showSearch}
-          animationType="none"
-          transparent={true}
-          onRequestClose={() => setShowSearch(false)}
-        >
-          <View className="flex-1 justify-end">
-            <TouchableOpacity
-              className="absolute inset-0 bg-black/40"
-              activeOpacity={1}
-              onPress={() => setShowSearch(false)}
-            />
-            <View className="h-[88%] bg-white rounded-t-[40px] overflow-hidden">
-              <SearchScreen
-                onClose={() => setShowSearch(false)}
-                onSearch={handleSearch}
-                currentLocation={selectedLocation}
-              />
-            </View>
-          </View>
-        </Modal>
-
-        {/* Register Shop Modal */}
-        <Modal
-          visible={showRegisterShop}
-          animationType="none"
-          transparent={true}
-          onRequestClose={() => setShowRegisterShop(false)}
-        >
-          <View className="flex-1 justify-end">
-            <TouchableOpacity
-              className="absolute inset-0 bg-black/40"
-              activeOpacity={1}
-              onPress={() => setShowRegisterShop(false)}
-            />
-            <View className="h-[88%] bg-white rounded-t-[40px] overflow-hidden">
-              <RegisterShopScreen
-                onClose={() => setShowRegisterShop(false)}
-                onSuccess={() => {
-                  setShowRegisterShop(false);
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                }}
-              />
-            </View>
-          </View>
-        </Modal>
-
-        {/* Add Ad Modal */}
-        <Modal
-          visible={showAddAd}
-          animationType="none"
-          transparent={true}
-          onRequestClose={() => setShowAddAd(false)}
-        >
-          <View className="flex-1 justify-end">
-            <TouchableOpacity
-              className="absolute inset-0 bg-black/40"
-              activeOpacity={1}
-              onPress={() => setShowAddAd(false)}
-            />
-            <View className="h-[88%] bg-white rounded-t-[40px] overflow-hidden">
-              <AddAdModal
-                onClose={() => setShowAddAd(false)}
-                onSuccess={() => {
-                  setShowAddAd(false);
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                }}
-              />
-            </View>
-          </View>
-        </Modal>
-
-        {/* ── MODERN ANIMATED BOTTOM BAR ────────────────────── */}
-        {!selectedShop && (
-          <View className="absolute bottom-10 left-6 right-6" style={{ zIndex: 100 }}>
-            <View
-              className="h-[64px] rounded-[32px] overflow-hidden shadow-2xl shadow-black/10 border border-white/60"
-              style={{ width: TAB_BAR_WIDTH }}
-            >
-              <BlurView
-                intensity={20}
-                tint="light"
-                className="flex-1 flex-row items-center px-0 bg-white/10"
-              >
-                {/* Apple-style Frosted Indicator */}
-                <Animated.View
-                  style={[
-                    indicatorStyle,
-                    {
-                      position: 'absolute',
-                      width: TAB_WIDTH - 16,
-                      height: 48,
-                      backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                      borderRadius: 24,
-                      left: 8,
-                      top: 8,
-                      borderWidth: 1,
-                      borderColor: 'rgba(255, 255, 255, 0.1)',
-                    }
-                  ]}
-                />
-
-                {tabs.map((tab, i) => (
-                  <TabButton
-                    key={i}
-                    tab={tab}
-                    isActive={activeTab === i}
-                    onPress={() => onTabPress(i)}
+          <>
+            {selectedShop ? (
+              <BarberDetailScreen shop={selectedShop} onBack={() => setSelectedShop(null)} />
+            ) : (
+              <View className="flex-1">
+                {activeTab === 0 && (
+                  <HomeScreen
+                    onSelectShop={(shop) => setSelectedShop(shop)}
+                    onOpenLocation={() => setShowLocation(true)}
+                    onOpenSearch={() => setShowSearch(true)}
+                    onOpenAddAd={() => setShowAddAd(true)}
+                    selectedLocation={selectedLocation}
                   />
-                ))}
-              </BlurView>
-            </View>
-          </View>
-        )}
+                )}
+                {activeTab === 1 && (
+                  <ExploreScreen
+                    onSelectShop={(shop) => setSelectedShop(shop)}
+                    onOpenSearch={() => setShowSearch(true)}
+                    initialCity={cityFilter}
+                    initialSearch={searchQuery}
+                    initialCoords={searchCoords}
+                  />
+                )}
+                {activeTab === 2 && (
+                  <ActivityScreen
+                    user={user}
+                    onLogin={(userData) => setUser(userData || { id: '123', name: 'Artan Berisha', email: 'artan@lineup.com' })}
+                    onNavigateToSearch={() => setActiveTab(1)}
+                  />
+                )}
+                {activeTab === 3 && (
+                  <ProfileScreen
+                    user={user}
+                    onLogin={(userData) => setUser(userData || { id: '123', name: 'Artan Berisha', email: 'artan@lineup.com' })}
+                    onLogout={async () => {
+                      await supabase.auth.signOut();
+                      setUser(null);
+                    }}
+                    onOpenRegisterShop={() => setShowRegisterShop(true)}
+                  />
+                )}
+              </View>
+            )}
 
+            {/* Location Selection Modal (Bottom Sheet Style) */}
+            <Modal
+              visible={showLocation}
+              animationType="none"
+              transparent={true}
+              onRequestClose={() => setShowLocation(false)}
+            >
+              <View className="flex-1 justify-end">
+                <TouchableOpacity
+                  className="absolute inset-0 bg-black/40"
+                  activeOpacity={1}
+                  onPress={() => setShowLocation(false)}
+                />
+                <View className="h-[88%] bg-white rounded-t-[40px] overflow-hidden">
+                  <LocationScreen
+                    onBack={() => setShowLocation(false)}
+                    onSelectLocation={(loc) => {
+                      setSelectedLocation(loc);
+                      setCityFilter(loc);
+                      setShowLocation(false);
+                    }}
+                  />
+                </View>
+              </View>
+            </Modal>
+
+            {/* Search Modal */}
+            <Modal
+              visible={showSearch}
+              animationType="none"
+              transparent={true}
+              onRequestClose={() => setShowSearch(false)}
+            >
+              <View className="flex-1 justify-end">
+                <TouchableOpacity
+                  className="absolute inset-0 bg-black/40"
+                  activeOpacity={1}
+                  onPress={() => setShowSearch(false)}
+                />
+                <View className="h-[88%] bg-white rounded-t-[40px] overflow-hidden">
+                  <SearchScreen
+                    onClose={() => setShowSearch(false)}
+                    onSearch={handleSearch}
+                    currentLocation={selectedLocation}
+                  />
+                </View>
+              </View>
+            </Modal>
+
+            {/* Register Shop Modal */}
+            <Modal
+              visible={showRegisterShop}
+              animationType="none"
+              transparent={true}
+              onRequestClose={() => setShowRegisterShop(false)}
+            >
+              <View className="flex-1 justify-end">
+                <TouchableOpacity
+                  className="absolute inset-0 bg-black/40"
+                  activeOpacity={1}
+                  onPress={() => setShowRegisterShop(false)}
+                />
+                <View className="h-[88%] bg-white rounded-t-[40px] overflow-hidden">
+                  <RegisterShopScreen
+                    onClose={() => setShowRegisterShop(false)}
+                    onSuccess={() => {
+                      setShowRegisterShop(false);
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    }}
+                  />
+                </View>
+              </View>
+            </Modal>
+
+            {/* Add Ad Modal */}
+            <Modal
+              visible={showAddAd}
+              animationType="none"
+              transparent={true}
+              onRequestClose={() => setShowAddAd(false)}
+            >
+              <View className="flex-1 justify-end">
+                <TouchableOpacity
+                  className="absolute inset-0 bg-black/40"
+                  activeOpacity={1}
+                  onPress={() => setShowAddAd(false)}
+                />
+                <View className="h-[88%] bg-white rounded-t-[40px] overflow-hidden">
+                  <AddAdModal
+                    onClose={() => setShowAddAd(false)}
+                    onSuccess={() => {
+                      setShowAddAd(false);
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    }}
+                  />
+                </View>
+              </View>
+            </Modal>
+
+            {/* ── MODERN ANIMATED BOTTOM BAR ────────────────────── */}
+            {!selectedShop && (
+              <View className="absolute bottom-10 left-6 right-6" style={{ zIndex: 100 }}>
+                <View
+                  className="h-[64px] rounded-[32px] overflow-hidden shadow-2xl shadow-black/10 border border-white/60"
+                  style={{ width: TAB_BAR_WIDTH }}
+                >
+                  <BlurView
+                    intensity={20}
+                    tint="light"
+                    className="flex-1 flex-row items-center px-0 bg-white/10"
+                  >
+                    <Animated.View
+                      style={[
+                        indicatorStyle,
+                        {
+                          position: 'absolute',
+                          width: TAB_WIDTH - 16,
+                          height: 48,
+                          backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                          borderRadius: 24,
+                          left: 8,
+                          top: 8,
+                          borderWidth: 1,
+                          borderColor: 'rgba(255, 255, 255, 0.1)',
+                        }
+                      ]}
+                    />
+
+                    {tabs.map((tab, i) => (
+                      <TabButton
+                        key={i}
+                        tab={tab}
+                        isActive={activeTab === i}
+                        onPress={() => onTabPress(i)}
+                      />
+                    ))}
+                  </BlurView>
+                </View>
+              </View>
+            )}
+          </>
+        )}
       </View>
     </SafeAreaProvider>
   );

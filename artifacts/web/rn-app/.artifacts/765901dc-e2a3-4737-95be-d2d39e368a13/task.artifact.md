@@ -1,0 +1,5 @@
+- `[x]` Fresh Supabase Cleanup
+    - `[x]` Provide SQL script for table reset and category seeding
+    - `[x]` Remove auto-seeding logic from `HomeScreen.tsx`
+- `[x]` Verification
+    - `[x]` App loads correctly and only reads advertisement data

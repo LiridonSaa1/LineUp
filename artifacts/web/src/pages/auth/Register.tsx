@@ -406,11 +406,17 @@ function CityDropdown({ value, onChange, error }: { value: string; onChange: (v:
             style={{ background: "#12151e", border: "1px solid rgba(79,142,247,0.25)", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", maxHeight: "220px" }}>
             {KOSOVO_CITIES.map(city => (
               <button key={city} type="button"
-                onClick={() => { onChange(city); setOpen(false); }}
-                className="w-full px-4 py-2.5 text-left text-sm transition-all duration-150"
+                onMouseDown={e => e.preventDefault()}
+                onClick={e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onChange(city);
+                  setOpen(false);
+                }}
+                className="w-full px-4 py-2.5 text-left text-sm transition-all duration-150 hover:bg-white/10"
                 style={{
-                  color: value === city ? PRIMARY : "rgba(255,255,255,0.7)",
-                  background: value === city ? "rgba(79,142,247,0.1)" : "transparent",
+                  color: value === city ? PRIMARY : "rgba(255,255,255,0.85)",
+                  background: value === city ? "rgba(79,142,247,0.15)" : "transparent",
                 }}>
                 {city}
               </button>

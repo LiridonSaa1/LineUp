@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Switch, Image, TextInput, Dimensions, ActivityIndicator, Keyboard, Alert, Modal } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Switch, Image, TextInput, Dimensions, ActivityIndicator, Keyboard, Alert, Modal, KeyboardAvoidingView, Platform } from "react-native";
 import { User, Settings, CreditCard, Bell, Shield, HelpCircle, LogOut, ChevronRight, Calendar, Heart, Award, Store, Mail, Lock, Eye, EyeOff, UserPlus, LogIn, Phone, ChevronDown, Search, ArrowLeft, Check, Zap, Sparkles, MapPin, X } from "lucide-react-native";
 import Animated, { FadeInUp, FadeIn } from "react-native-reanimated";
 import { BlurView } from 'expo-blur';
@@ -60,49 +60,49 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
     setErrorMessage("");
 
     try {
+      const cleanEmail = email.trim().toLowerCase();
       // --- REAL LOGIN WITH SUPABASE ---
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
+        email: cleanEmail,
         password,
       });
 
       if (authError) {
-        setErrorMessage("E-mail ose fjalëkalimi është i gabuar. Ju lutem kontrolloni të dhënat.");
+        setErrorMessage(authError.message === "Invalid login credentials"
+          ? "E-mail ose fjalëkalimi është i gabuar. Ju lutem kontrolloni të dhënat."
+          : authError.message
+        );
         setLoading(false);
         return;
       }
 
-      // Query users or barbershops table in Supabase
-      const { data: dbUser } = await supabase.from('users').select('*').eq('email', email.trim().toLowerCase()).maybeSingle();
-      const { data: dbBarber } = await supabase.from('barbershops').select('*').eq('email', email.trim().toLowerCase()).maybeSingle();
+      if (authData?.user) {
+        // Query users or barbershops table in Supabase
+        const { data: dbUser } = await supabase.from('users').select('*').eq('email', cleanEmail).maybeSingle();
+        const { data: dbBarber } = await supabase.from('barbershops').select('*').eq('email', cleanEmail).maybeSingle();
 
-      if (dbUser) {
-        onLogin({
-          id: dbUser.id,
-          name: dbUser.name || dbUser.full_name || email.split('@')[0],
-          email: dbUser.email,
-          role: dbUser.role || 'client'
-        });
-      } else if (dbBarber) {
-        onLogin({
-          id: dbBarber.id,
-          name: dbBarber.name,
-          email: dbBarber.email || email,
-          role: 'barber'
-        });
-      } else if (authData?.user) {
-        onLogin({
-          id: authData.user.id,
-          name: authData.user.user_metadata?.full_name || email.split('@')[0],
-          email: authData.user.email,
-          role: authData.user.user_metadata?.role || 'client'
-        });
-      } else {
-        onLogin({
-          name: email.split('@')[0],
-          email: email.trim().toLowerCase(),
-          role: 'client'
-        });
+        if (dbUser) {
+          onLogin({
+            id: dbUser.id,
+            name: dbUser.name || dbUser.full_name || cleanEmail.split('@')[0],
+            email: dbUser.email,
+            role: dbUser.role || 'client'
+          });
+        } else if (dbBarber) {
+          onLogin({
+            id: dbBarber.id,
+            name: dbBarber.name,
+            email: dbBarber.email || cleanEmail,
+            role: 'barber'
+          });
+        } else {
+          onLogin({
+            id: authData.user.id,
+            name: authData.user.user_metadata?.full_name || cleanEmail.split('@')[0],
+            email: authData.user.email,
+            role: authData.user.user_metadata?.role || 'client'
+          });
+        }
       }
     } catch (e: any) {
       console.warn("Auth submit error:", e);
@@ -114,12 +114,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
 
   if (!user) {
     return (
-      <View className="flex-1">
-        <ScrollView className="flex-1 bg-[#F5F5F5]" showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingBottom: 80, paddingTop: 40 }}>
-          {/* Background Decorative Ambient Blobs */}
-          <View className="absolute top-[-50] left-[-50] w-72 h-72 bg-[#3473ef]/15 rounded-full blur-3xl" />
-          <View className="absolute top-[200] right-[-80] w-80 h-80 bg-[#f47458]/10 rounded-full blur-3xl" />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        className="flex-1 bg-[#F5F5F5]"
+      >
+        {/* Background Decorative Blobs */}
+        <View className="absolute top-[-50] left-[-50] w-64 h-64 bg-[#3473ef]/15 rounded-full blur-3xl" />
+        <View className="absolute top-[200] right-[-100] w-80 h-80 bg-[#f47458]/15 rounded-full blur-3xl" />
 
+        <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingBottom: 80, paddingTop: 40 }}>
           {/* Auth Header */}
           <View className="pb-8 px-6 items-center">
              <Text className="text-3xl font-black text-[#161719] text-center tracking-tight mb-2">Mirëseerdhët përsëri</Text>
@@ -242,7 +245,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
             }}
           />
         </Modal>
-      </View>
+      </KeyboardAvoidingView>
     );
   }
 
