@@ -200,39 +200,39 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
   if (!user) {
     if (authMode === 'register') {
       return (
-        <ScrollView className="flex-1 bg-[#0F172A]" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }} keyboardShouldPersistTaps="handled">
+        <ScrollView className="flex-1 bg-[#ECEEF2]" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }} keyboardShouldPersistTaps="handled">
           {/* Header section with Shop/Business Icon */}
           <View className="pt-16 pb-6 px-6 flex-row items-center gap-4">
             <View className="w-14 h-14 bg-[#3473ef]/10 rounded-2xl items-center justify-center border border-[#3473ef]/20">
               <Store size={28} color="#3473ef" />
             </View>
             <View className="flex-1">
-              <Text className="text-2xl font-black text-white tracking-tight">Regjistro biznesin</Text>
-              <Text className="text-slate-400 font-bold text-xs mt-0.5">Shto sallon tënd dhe fillo të marrësh rezervime.</Text>
+              <Text className="text-2xl font-black text-[#161719] tracking-tight">Regjistro biznesin</Text>
+              <Text className="text-slate-500 font-bold text-xs mt-0.5">Shto sallon tënd dhe fillo të marrësh rezervime.</Text>
             </View>
           </View>
 
           {/* Steps Progress Indicator */}
           <View className="flex-row justify-center items-center px-8 py-4 mb-6">
-            <View className={`w-8 h-8 rounded-full items-center justify-center ${registerStep >= 1 ? 'bg-[#3473ef]' : 'bg-[#1E293B]'}`}>
-              {registerStep > 1 ? <Check size={16} color="white" strokeWidth={3} /> : <Text className="text-white font-black text-xs">1</Text>}
+            <View className={`w-8 h-8 rounded-full items-center justify-center ${registerStep >= 1 ? 'bg-[#3473ef]' : 'bg-slate-200'}`}>
+              {registerStep > 1 ? <Check size={16} color="white" strokeWidth={3} /> : <Text className={`font-black text-xs ${registerStep >= 1 ? 'text-white' : 'text-slate-500'}`}>1</Text>}
             </View>
-            <View className={`flex-1 h-0.5 mx-2 ${registerStep >= 2 ? 'bg-[#3473ef]' : 'bg-[#1E293B]'}`} />
+            <View className={`flex-1 h-0.5 mx-2 ${registerStep >= 2 ? 'bg-[#3473ef]' : 'bg-slate-300'}`} />
             
-            <View className={`w-8 h-8 rounded-full items-center justify-center ${registerStep >= 2 ? 'bg-[#3473ef]' : 'bg-[#1E293B]'}`}>
-              {registerStep > 2 ? <Check size={16} color="white" strokeWidth={3} /> : <Text className="text-white font-black text-xs">2</Text>}
+            <View className={`w-8 h-8 rounded-full items-center justify-center ${registerStep >= 2 ? 'bg-[#3473ef]' : 'bg-slate-200'}`}>
+              {registerStep > 2 ? <Check size={16} color="white" strokeWidth={3} /> : <Text className={`font-black text-xs ${registerStep >= 2 ? 'text-white' : 'text-slate-500'}`}>2</Text>}
             </View>
-            <View className={`flex-1 h-0.5 mx-2 ${registerStep >= 3 ? 'bg-[#3473ef]' : 'bg-[#1E293B]'}`} />
+            <View className={`flex-1 h-0.5 mx-2 ${registerStep >= 3 ? 'bg-[#3473ef]' : 'bg-slate-300'}`} />
             
-            <View className={`w-8 h-8 rounded-full items-center justify-center ${registerStep >= 3 ? 'bg-[#3473ef]' : 'bg-[#1E293B]'}`}>
-              <Text className="text-white font-black text-xs">3</Text>
+            <View className={`w-8 h-8 rounded-full items-center justify-center ${registerStep >= 3 ? 'bg-[#3473ef]' : 'bg-slate-200'}`}>
+              <Text className={`font-black text-xs ${registerStep >= 3 ? 'text-white' : 'text-slate-500'}`}>3</Text>
             </View>
           </View>
 
           {errorMessage !== "" && (
-            <View className="mx-6 bg-rose-500/10 border border-rose-500/20 p-4 rounded-2xl mb-6 flex-row items-center">
+            <View className="mx-6 bg-rose-50 border border-rose-200 p-4 rounded-2xl mb-6 flex-row items-center">
               <Shield size={18} color="#ef4444" className="mr-3" />
-              <Text className="text-rose-400 font-bold text-xs flex-1">{errorMessage}</Text>
+              <Text className="text-rose-700 font-bold text-xs flex-1">{errorMessage}</Text>
             </View>
           )}
 
@@ -241,85 +241,86 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
             <View className="px-6 gap-y-6">
               {/* Informata Bazë Section */}
               <View className="gap-y-3">
-                <Text className="text-[11px] font-black text-[#8789A3] uppercase tracking-widest ml-1">INFORMATA BAZË</Text>
+                <Text className="text-[11px] font-black text-[#8789A3] uppercase tracking-widest text-center mt-2">INFORMATA BAZË</Text>
                 
-                <View className="bg-[#1E293B] rounded-2xl px-4 h-14 flex-row items-center border border-slate-800">
-                  <Building2 size={20} color="#64748B" />
+                <View className="bg-white rounded-2xl px-4 h-14 flex-row items-center border border-slate-200 shadow-sm">
+                  <Building2 size={20} color="#8789A3" />
                   <TextInput
                     placeholder="Emri i biznesit"
                     value={fullName}
                     onChangeText={setFullName}
-                    className="flex-1 ml-3 font-bold text-white text-base"
-                    placeholderTextColor="#64748B"
+                    className="flex-1 ml-3 font-bold text-[#161719] text-base"
+                    placeholderTextColor="#94A3B8"
                   />
                 </View>
 
-                <View className="bg-[#1E293B] rounded-2xl px-4 h-14 flex-row items-center border border-slate-800">
-                  <Mail size={20} color="#64748B" />
+                <View className="bg-white rounded-2xl px-4 h-14 flex-row items-center border border-slate-200 shadow-sm">
+                  <Mail size={20} color="#8789A3" />
                   <TextInput
                     placeholder="Email"
                     value={email}
                     onChangeText={setEmail}
-                    className="flex-1 ml-3 font-bold text-white text-base"
-                    placeholderTextColor="#64748B"
+                    className="flex-1 ml-3 font-bold text-[#161719] text-base"
+                    placeholderTextColor="#94A3B8"
                     keyboardType="email-address"
                     autoCapitalize="none"
                   />
                 </View>
 
-                <View className="bg-[#1E293B] rounded-2xl px-4 h-14 flex-row items-center border border-slate-800">
-                  <Phone size={20} color="#64748B" />
+                <View className="bg-white rounded-2xl px-4 h-14 flex-row items-center border border-slate-200 shadow-sm">
+                  <Phone size={20} color="#8789A3" />
                   <TextInput
                     placeholder="Telefoni +383"
                     value={phone}
                     onChangeText={setPhone}
-                    className="flex-1 ml-3 font-bold text-white text-base"
-                    placeholderTextColor="#64748B"
+                    className="flex-1 ml-3 font-bold text-[#161719] text-base"
+                    placeholderTextColor="#94A3B8"
                     keyboardType="phone-pad"
                   />
                 </View>
 
-                <View className="bg-[#1E293B] rounded-2xl px-4 h-14 flex-row items-center border border-slate-800">
-                  <Lock size={20} color="#64748B" />
+                <View className="bg-white rounded-2xl px-4 h-14 flex-row items-center border border-slate-200 shadow-sm">
+                  <Lock size={20} color="#8789A3" />
                   <TextInput
                     placeholder="Fjalëkalimi"
                     value={password}
                     onChangeText={setPassword}
-                    className="flex-1 ml-3 font-bold text-white text-base"
-                    placeholderTextColor="#64748B"
+                    className="flex-1 ml-3 font-bold text-[#161719] text-base"
+                    placeholderTextColor="#94A3B8"
                     secureTextEntry={!showPassword}
                   />
                   <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                     {showPassword ? <EyeOff size={20} color="#64748B" /> : <Eye size={20} color="#64748B" />}
+                     {showPassword ? <EyeOff size={20} color="#8789A3" /> : <Eye size={20} color="#8789A3" />}
                   </TouchableOpacity>
                 </View>
               </View>
 
+              {/* Centered LOKACIONI Label in the middle of the screen */}
+              <Text className="text-[11px] font-black text-[#8789A3] uppercase tracking-widest text-center mt-4">LOKACIONI</Text>
+
               {/* Lokacioni Section */}
               <View className="gap-y-3">
-                <Text className="text-[11px] font-black text-[#8789A3] uppercase tracking-widest ml-1">LOKACIONI</Text>
-
                 {/* City Picker input */}
                 <View className="relative z-50">
                   <TouchableOpacity
                     onPress={() => setShowCityPicker(!showCityPicker)}
-                    className="w-full bg-[#1E293B] border border-slate-800 rounded-2xl pl-12 pr-10 h-14 flex-row items-center justify-between shadow-xs"
+                    className="w-full bg-white border border-slate-200 rounded-2xl pl-12 pr-10 h-14 flex-row items-center justify-between shadow-sm"
                   >
                     <View className="absolute left-4 z-10">
                       <MapPin size={20} color="#3473ef" />
                     </View>
-                    <Text className="text-white font-bold text-base ml-2">{selectedCity || "Qyteti"}</Text>
-                    <ChevronDown size={20} color="#64748B" />
+                    <Text className="text-[#161719] font-bold text-base ml-2">{selectedCity || "Qyteti"}</Text>
+                    <ChevronDown size={20} color="#8789A3" />
                   </TouchableOpacity>
 
                   {showCityPicker && (
-                    <View className="absolute top-16 left-0 right-0 bg-[#1E293B] rounded-2xl border border-slate-800 shadow-2xl overflow-hidden z-50">
-                      <View className="flex-row items-center px-4 py-3 border-b border-slate-800">
-                        <Search size={16} color="#64748B" />
+                    <View className="absolute top-16 left-0 right-0 bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden z-50">
+                      <View className="flex-row items-center px-4 py-3 border-b border-slate-100">
+                        <Search size={16} color="#8789A3" />
                         <TextInput
                           placeholder="Kërko qytetin..."
-                          placeholderTextColor="#64748B"
-                          className="flex-1 ml-2 font-bold text-sm text-white"
+                          placeholderTextColor="#94A3B8"
+                          className="flex-1 ml-2 font-bold text-sm text-[#161719]"
                           value={citySearch}
                           onChangeText={setCitySearch}
                         />
@@ -336,9 +337,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                                 setSelectedPlace(null);
                                 Keyboard.dismiss();
                               }}
-                              className={`px-5 py-3.5 border-b border-slate-800/50 ${selectedCity === city.city ? 'bg-[#3473ef]/10' : ''}`}
+                              className={`px-5 py-3.5 border-b border-slate-100 ${selectedCity === city.city ? 'bg-[#3473ef]/10' : ''}`}
                             >
-                              <Text className={`font-bold text-sm ${selectedCity === city.city ? 'text-[#3473ef]' : 'text-white'}`}>{city.city}</Text>
+                              <Text className={`font-bold text-sm ${selectedCity === city.city ? 'text-[#3473ef]' : 'text-[#161719]'}`}>{city.city}</Text>
                             </TouchableOpacity>
                           ))}
                         </ScrollView>
@@ -352,7 +353,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                   key={selectedCity}
                   placeholder="Adresa"
                   selectedCity={selectedCity}
-                  inputClassName="bg-[#1E293B] border-slate-800 text-white"
+                  inputClassName="bg-white border-slate-200 text-[#161719]"
                   onSelectAddress={(place) => {
                     setSelectedPlace({
                       address: place.formatted_address,
@@ -383,7 +384,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                 onPress={() => { setAuthMode('login'); setErrorMessage(""); }}
                 className="py-4 items-center"
               >
-                <Text className="text-slate-400 font-bold text-xs">
+                <Text className="text-slate-500 font-bold text-xs">
                   Keni tashmë llogari? <Text className="text-[#3473ef] font-black">Kyçu tani →</Text>
                 </Text>
               </TouchableOpacity>
@@ -393,14 +394,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
           {/* STEP 2: Zgjidh Planin */}
           {registerStep === 2 && (
             <View className="px-6 gap-y-5">
-              <Text className="text-[11px] font-black text-[#8789A3] uppercase tracking-widest ml-1">HAPI 2: ZGJIDH PLANIN TËND</Text>
+              <Text className="text-[11px] font-black text-[#8789A3] uppercase tracking-widest text-center mt-2">HAPI 2: ZGJIDH PLANIN TËND</Text>
               
               {REGISTRATION_PLANS.map((plan) => (
                 <TouchableOpacity
                   key={plan.id}
                   onPress={() => setSelectedPlan(plan)}
                   activeOpacity={0.9}
-                  className={`bg-[#1E293B] rounded-3xl p-5 border relative overflow-hidden ${selectedPlan.id === plan.id ? 'border-[#3473ef] bg-[#3473ef]/5' : 'border-slate-800'}`}
+                  className={`bg-white rounded-3xl p-5 border relative overflow-hidden shadow-sm ${selectedPlan.id === plan.id ? 'border-[#3473ef] bg-[#3473ef]/5' : 'border-slate-200'}`}
                 >
                   {plan.isPopular && (
                     <View className="absolute top-0 right-0 bg-[#3473ef] px-3 py-1 rounded-bl-2xl">
@@ -409,22 +410,22 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                   )}
                   <View className="flex-row items-center justify-between mb-4">
                     <View className="flex-row items-center gap-3">
-                      <View className={`w-10 h-10 rounded-2xl items-center justify-center ${selectedPlan.id === plan.id ? 'bg-[#3473ef]/20' : 'bg-slate-800'}`}>
-                        {plan.id === 'starter' ? <Zap size={18} color={selectedPlan.id === plan.id ? '#3473ef' : '#94A3B8'} /> : plan.id === 'pro' ? <Sparkles size={18} color={selectedPlan.id === plan.id ? '#3473ef' : '#94A3B8'} /> : <Award size={18} color={selectedPlan.id === plan.id ? '#3473ef' : '#94A3B8'} />}
+                      <View className={`w-10 h-10 rounded-2xl items-center justify-center ${selectedPlan.id === plan.id ? 'bg-[#3473ef]/20' : 'bg-slate-100'}`}>
+                        {plan.id === 'starter' ? <Zap size={18} color={selectedPlan.id === plan.id ? '#3473ef' : '#8789A3'} /> : plan.id === 'pro' ? <Sparkles size={18} color={selectedPlan.id === plan.id ? '#3473ef' : '#8789A3'} /> : <Award size={18} color={selectedPlan.id === plan.id ? '#3473ef' : '#8789A3'} />}
                       </View>
-                      <Text className="text-white font-black text-base">{plan.name}</Text>
+                      <Text className="text-[#161719] font-black text-base">{plan.name}</Text>
                     </View>
                     <View className="items-end">
-                      <Text className="text-white font-black text-xl">{plan.price}</Text>
+                      <Text className="text-[#161719] font-black text-xl">{plan.price}</Text>
                       <Text className="text-slate-400 font-bold text-[10px]">/{plan.period}</Text>
                     </View>
                   </View>
 
-                  <View className="gap-y-2 border-t border-slate-800/80 pt-4">
+                  <View className="gap-y-2 border-t border-slate-100 pt-4">
                     {plan.features.map((feature, i) => (
                       <View key={i} className="flex-row items-center gap-2">
                         <Check size={12} color="#3473ef" strokeWidth={3} />
-                        <Text className="text-slate-300 font-bold text-xs">{feature}</Text>
+                        <Text className="text-slate-600 font-bold text-xs">{feature}</Text>
                       </View>
                     ))}
                   </View>
@@ -444,7 +445,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                 onPress={() => setRegisterStep(1)}
                 className="py-3 items-center"
               >
-                <Text className="text-slate-400 font-black text-xs">Kthehu mbrapa</Text>
+                <Text className="text-slate-500 font-black text-xs">Kthehu mbrapa</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -452,24 +453,24 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
           {/* STEP 3: Pagesa me Paddle */}
           {registerStep === 3 && (
             <View className="px-6 gap-y-6">
-              <Text className="text-[11px] font-black text-[#8789A3] uppercase tracking-widest ml-1">HAPI 3: PAGESA ME PADDLE</Text>
+              <Text className="text-[11px] font-black text-[#8789A3] uppercase tracking-widest text-center mt-2">HAPI 3: PAGESA ME PADDLE</Text>
 
               {/* Selected Plan Summary Card */}
-              <View className="bg-[#1E293B] rounded-3xl p-5 border border-slate-800 flex-row justify-between items-center">
+              <View className="bg-white rounded-3xl p-5 border border-slate-200 flex-row justify-between items-center shadow-sm">
                 <View className="flex-row items-center gap-3">
                   <View className="w-10 h-10 rounded-2xl bg-[#3473ef]/10 items-center justify-center border border-[#3473ef]/20">
                     <Sparkles size={18} color="#3473ef" />
                   </View>
                   <View>
-                    <Text className="text-white font-black text-sm">{selectedPlan.name}</Text>
-                    <Text className="text-slate-400 font-bold text-[10px]">Abonim mujor</Text>
+                    <Text className="text-[#161719] font-black text-sm">{selectedPlan.name}</Text>
+                    <Text className="text-slate-500 font-bold text-[10px]">Abonim mujor</Text>
                   </View>
                 </View>
-                <Text className="text-white font-black text-lg">{selectedPlan.price}</Text>
+                <Text className="text-[#161719] font-black text-lg">{selectedPlan.price}</Text>
               </View>
 
               {/* Styled Mock Paddle Checkout Container */}
-              <View className="bg-white rounded-3xl p-5 border border-slate-100 shadow-2xl shadow-black/40">
+              <View className="bg-white rounded-3xl p-5 border border-slate-100 shadow-2xl shadow-black/5">
                 <View className="flex-row items-center justify-between mb-6 pb-4 border-b border-slate-100">
                   <View className="flex-row items-center gap-2">
                     <CreditCard size={18} color="#3473ef" />
@@ -551,10 +552,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                 onPress={() => setRegisterStep(2)}
                 className="py-3 items-center"
               >
-                <Text className="text-slate-400 font-black text-xs">Kthehu mbrapa</Text>
+                <Text className="text-slate-500 font-black text-xs">Kthehu mbrapa</Text>
               </TouchableOpacity>
             </View>
           )}
+        </ScrollView>
+      );
+    }    )}
         </ScrollView>
       );
     }
