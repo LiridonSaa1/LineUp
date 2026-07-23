@@ -168,23 +168,14 @@ export const LocationScreen: React.FC<LocationScreenProps> = ({ onBack, onSelect
           <Text className="text-xl font-bold text-[#161719]">Location</Text>
         </View>
 
-        {/* Search Input - Main list search */}
-        <View
-          className="overflow-hidden border border-[#6366f1] mb-6"
-          style={{ borderRadius: 12, backgroundColor: 'white' }}
-        >
-          <View className="flex-row items-center px-4 h-14">
-            <Search size={22} color="#6366f1" strokeWidth={2} />
-            <TextInput
-              placeholder="Search"
-              className="flex-1 ml-3 text-lg text-[#161719] font-medium"
-              placeholderTextColor="#8789A3"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              selectionColor="#6366f1"
-            />
-          </View>
-        </View>
+        {/* Smart Address & City Autocomplete */}
+        <AddressAutocomplete
+          placeholder="Kërko qytetin, zonën ose rrugën..."
+          containerClassName="mb-6 z-50"
+          onSelectAddress={(place) => {
+            handleSelect(place.formatted_address);
+          }}
+        />
 
         <ScrollView showsVerticalScrollIndicator={false} className="flex-1" keyboardShouldPersistTaps="handled">
           {loading ? (
