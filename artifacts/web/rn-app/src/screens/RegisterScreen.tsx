@@ -23,6 +23,42 @@ const KOSOVO_CITIES = [
   { formatted_address: "Klinë", city: "Klinë", street: "", postal_code: "32000", country: "Kosovë", latitude: 42.6225, longitude: 20.5786 },
 ];
 
+const KOSOVO_STREETS: Record<string, string[]> = {
+  "Prishtinë": [
+    "Rruga B", "Rruga C", "Rruga Muharrem Fejza", "Bulevardi Nënë Tereza", "Rruga Bill Clinton", 
+    "Rruga George Bush", "Rruga Garibaldi", "Rruga Luan Haradinaj", "Rruga UÇK", 
+    "Rruga Agim Ramadani", "Rruga Bajram Kelmendi", "Rruga Fehmi Agani", "Rruga Rexhep Luci"
+  ],
+  "Ferizaj": [
+    "Rruga Ahmet Kaçiku", "Rruga Gjon Serreçi", "Rruga Vëllezërit Gërvalla", "Rruga Rexhep Bislimi", 
+    "Rruga Zenel Hajdini", "Rruga Enver Topalli", "Rruga Kemajl Hetemi", "Rruga 2 Korriku"
+  ],
+  "Prizren": [
+    "Rruga William Walker", "Rruga Edit Durham", "Rruga Adem Jashari", "Rruga Remzi Ademaj", 
+    "Bulevardi i Dëshmorëve", "Rruga Shatërvan", "Rruga Marin Barleti", "Rruga Jeronim De Rada"
+  ],
+  "Pejë": [
+    "Rruga Mbretëresha Teutë", "Rruga Eliot Engel", "Rruga Adem Jashari", "Rruga Hasan Prishtina", 
+    "Rruga Lekë Dukagjini", "Rruga Papa Klementi", "Rruga William Walker"
+  ],
+  "Gjakovë": [
+    "Rruga Çarshia e Madhe", "Rruga Mother Teresa", "Rruga Ismail Qemali", "Rruga Bardhyl Qaushi", 
+    "Rruga Mic Sokoli", "Rruga Sadik Stavileci", "Rruga Washington"
+  ],
+  "Gjilan": [
+    "Rruga Adem Jashari", "Rruga Marie Shllaku", "Rruga Medlin Ollbrajt", "Rruga Idriz Seferi", 
+    "Rruga Mulla Idrizi", "Rruga Bulevardi i Pavarësisë", "Rruga Kadri Zeka"
+  ],
+  "Mitrovicë": [
+    "Rruga Mbretëresha Teutë", "Rruga Shemsi Ahmeti", "Rruga Isa Boletini", "Rruga Bislim Bajgora", 
+    "Rruga Bulevardi Sheshi Adem Jashari", "Rruga UÇK"
+  ]
+};
+
+const DEFAULT_STREETS = [
+  "Rruga Adem Jashari", "Rruga UÇK", "Rruga Nënë Tereza", "Rruga Zahir Pajaziti", "Rruga Skënderbeu"
+];
+
 const REGISTRATION_PLANS = [
   { id: 'starter', name: 'Plani Starter', price: '19€', period: 'muaj', features: ['Deri në 300 rezervime/muaj', '1 profil stafi', 'Kalendari i rezervimeve', 'Njoftime me email'] },
   { id: 'pro', name: 'Plani Pro', price: '39€', period: 'muaj', features: ['Rezervime pa limit', 'Deri në 5 profile stafi', 'Njoftime me SMS & Email', 'Statistika & Raporte', 'Mbështetje prioritare'], isPopular: true },
@@ -49,6 +85,8 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
   const [selectedCity, setSelectedCity] = useState("");
   const [citySearch, setCitySearch] = useState("");
   const [showCityPicker, setShowCityPicker] = useState(false);
+  const [addressInput, setAddressInput] = useState("");
+  const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<{ address: string; lat: number; lng: number } | null>(null);
   const [selectedPlan, setSelectedPlan] = useState(REGISTRATION_PLANS[1]);
 
@@ -57,6 +95,16 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvv, setCardCvv] = useState("");
   const [cardName, setCardName] = useState("");
+
+  const isEmailValid = (em: string) => {
+    const clean = em.trim().toLowerCase();
+    return clean.endsWith("@gmail.com") || clean.endsWith("@outlook.com") || clean.endsWith("@pronto.me");
+  };
+
+  const isPhoneValid = (ph: string) => {
+    const clean = ph.replace(/\D/g, "");
+    return clean.length === 11 && clean.startsWith("383");
+  };
 
   const handleAuthSubmit = async () => {
     setLoading(true);
@@ -329,6 +377,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
                             setShowCityPicker(false);
                             setCitySearch("");
                             setSelectedPlace(null);
+                            setAddressInput("");
                             Keyboard.dismiss();
                           }}
                           className={`px-5 py-3.5 border-b border-slate-100 ${selectedCity === city.city ? 'bg-[#3473ef]/10' : ''}`}
@@ -342,24 +391,63 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
               )}
             </View>
 
-            {/* Street address input */}
-            <View className={`bg-white rounded-2xl px-4 h-14 flex-row items-center border transition-all ${focusedField === 'address' ? 'border-[#3473ef] shadow-md shadow-[#3473ef]/5' : 'border-slate-200'}`}>
-              <MapPin size={20} color={focusedField === 'address' ? '#3473ef' : '#8789A3'} />
-              <TextInput
-                placeholder="Adresa (Rruga dhe Numri)"
-                value={selectedPlace ? selectedPlace.address : ""}
-                onChangeText={(val) => setSelectedPlace(val ? { address: val, lat: 42.6629, lng: 21.1655 } : null)}
-                className="flex-1 ml-3 font-bold text-[#161719] text-base"
-                placeholderTextColor="#94A3B8"
-                onFocus={() => setFocusedField('address')}
-                onBlur={() => setFocusedField(null)}
-                textContentType="fullStreetAddress"
-                autoComplete="street-address"
-              />
-              {selectedPlace && selectedPlace.address !== "" && (
-                <TouchableOpacity onPress={() => setSelectedPlace(null)} className="p-1">
-                  <X size={18} color="#8789A3" strokeWidth={2.5} />
-                </TouchableOpacity>
+            {/* Street address input with popular suggestions for selected city */}
+            <View className="relative z-40">
+              <View className={`bg-white rounded-2xl px-4 h-14 flex-row items-center border transition-all ${focusedField === 'address' ? 'border-[#3473ef] shadow-md shadow-[#3473ef]/5' : 'border-slate-200'}`}>
+                <MapPin size={20} color={focusedField === 'address' ? '#3473ef' : '#8789A3'} />
+                <TextInput
+                  placeholder="Adresa (Rruga dhe Numri)"
+                  value={addressInput}
+                  onChangeText={(val) => {
+                    setAddressInput(val);
+                    setSelectedPlace(val ? { address: val + (selectedCity ? `, ${selectedCity}` : ""), lat: 42.6629, lng: 21.1655 } : null);
+                    setShowAddressSuggestions(val.length > 0);
+                  }}
+                  className="flex-1 ml-3 font-bold text-[#161719] text-base"
+                  placeholderTextColor="#94A3B8"
+                  onFocus={() => {
+                    setFocusedField('address');
+                    if (addressInput.length > 0) setShowAddressSuggestions(true);
+                  }}
+                  onBlur={() => {
+                    setFocusedField(null);
+                    // delay to allow onPress trigger
+                    setTimeout(() => setShowAddressSuggestions(false), 250);
+                  }}
+                  textContentType="fullStreetAddress"
+                  autoComplete="street-address"
+                />
+                {addressInput !== "" && (
+                  <TouchableOpacity onPress={() => { setAddressInput(""); setSelectedPlace(null); setShowAddressSuggestions(false); }} className="p-1">
+                    <X size={18} color="#8789A3" strokeWidth={2.5} />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {showAddressSuggestions && (
+                <View className="absolute top-16 left-0 right-0 bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden z-50">
+                  <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="always" style={{ maxHeight: 180 }}>
+                    {(KOSOVO_STREETS[selectedCity] || DEFAULT_STREETS)
+                      .filter(st => st.toLowerCase().includes(addressInput.toLowerCase()))
+                      .map((street) => {
+                        const fullAddressString = `${street}${selectedCity ? `, ${selectedCity}` : ""}`;
+                        return (
+                          <TouchableOpacity
+                            key={street}
+                            onPress={() => {
+                              setAddressInput(street);
+                              setSelectedPlace({ address: fullAddressString, lat: 42.6629, lng: 21.1655 });
+                              setShowAddressSuggestions(false);
+                              Keyboard.dismiss();
+                            }}
+                            className="px-5 py-3.5 border-b border-slate-100 active:bg-slate-50"
+                          >
+                            <Text className="font-bold text-sm text-[#161719]">{fullAddressString}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                  </ScrollView>
+                </View>
               )}
             </View>
           </View>
@@ -368,6 +456,14 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
             onPress={() => {
               if (!fullName || !email || !phone || !password || !selectedPlace) {
                 setErrorMessage("Ju lutemi plotësoni të gjitha fushat dhe zgjidhni adresën.");
+                return;
+              }
+              if (!isEmailValid(email)) {
+                setErrorMessage("Email-i duhet të jetë valide (vetëm me @gmail.com, @outlook.com ose @pronto.me).");
+                return;
+              }
+              if (!isPhoneValid(phone)) {
+                setErrorMessage("Numri i telefonit duhet të jetë sipas rregullave të Kosovës (p.sh. +383 45 436 246).");
                 return;
               }
               setErrorMessage("");
