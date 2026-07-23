@@ -203,9 +203,8 @@ export default function App() {
                 onBack={() => setShowLocation(false)}
                 onSelectLocation={(loc) => {
                   setSelectedLocation(loc);
-                  setCityFilter(loc); // Keep initialCity in sync for ExploreScreen
+                  setCityFilter(loc);
                   setShowLocation(false);
-                  setActiveTab(1); // Navigate to ExploreScreen
                 }}
               />
             </View>
