@@ -38,8 +38,33 @@ const CATEGORIES = [
 
 const TREATMENTS = ['Hair & styling', 'Nails', 'Hair removal', 'Massage', 'Facials', 'Barbering', 'Spa & sauna'];
 
+const KOSOVO_PREDEFINED_PLACES = [
+  { description: "Prishtinë (Qendër)", geometry: { location: { lat: 42.6629, lng: 21.1655 } } },
+  { description: "Prishtinë - Dardania", geometry: { location: { lat: 42.6550, lng: 21.1520 } } },
+  { description: "Prishtinë - Bregu i Diellit", geometry: { location: { lat: 42.6580, lng: 21.1750 } } },
+  { description: "Prishtinë - Rruga B", geometry: { location: { lat: 42.6560, lng: 21.1820 } } },
+  { description: "Prishtinë - Rruga C", geometry: { location: { lat: 42.6500, lng: 21.1850 } } },
+  { description: "Prishtinë - Pejton", geometry: { location: { lat: 42.6590, lng: 21.1580 } } },
+  { description: "Prishtinë - Arbëri (Dragodan)", geometry: { location: { lat: 42.6680, lng: 21.1550 } } },
+  { description: "Prishtinë - Ulpianë", geometry: { location: { lat: 42.6510, lng: 21.1610 } } },
+  { description: "Prizren (Qendër / Shatërvan)", geometry: { location: { lat: 42.2139, lng: 20.7397 } } },
+  { description: "Prizren - Bazhdarhane", geometry: { location: { lat: 42.2200, lng: 20.7420 } } },
+  { description: "Pejë (Qendër)", geometry: { location: { lat: 42.6593, lng: 20.2883 } } },
+  { description: "Pejë - Karagaç", geometry: { location: { lat: 42.6540, lng: 20.2910 } } },
+  { description: "Gjakovë (Qarshia e Madhe)", geometry: { location: { lat: 42.3803, lng: 20.4308 } } },
+  { description: "Gjilan (Qendër)", geometry: { location: { lat: 42.4635, lng: 21.4678 } } },
+  { description: "Mitrovicë (Qendër)", geometry: { location: { lat: 42.8914, lng: 20.8660 } } },
+  { description: "Ferizaj (Qendër)", geometry: { location: { lat: 42.3703, lng: 21.1559 } } },
+  { description: "Vushtrri (Qendër)", geometry: { location: { lat: 42.8231, lng: 20.9675 } } },
+  { description: "Podujevë (Qendër)", geometry: { location: { lat: 42.9114, lng: 21.1903 } } },
+  { description: "Fushë Kosovë (Qendër)", geometry: { location: { lat: 42.6340, lng: 21.0963 } } },
+  { description: "Rahovec (Qendër)", geometry: { location: { lat: 42.3994, lng: 20.6553 } } },
+  { description: "Skënderaj (Qendër)", geometry: { location: { lat: 42.7478, lng: 20.7878 } } },
+  { description: "Lipjan (Qendër)", geometry: { location: { lat: 42.5217, lng: 21.1258 } } },
+  { description: "Suharekë (Qendër)", geometry: { location: { lat: 42.3581, lng: 20.8250 } } },
+];
+
 const POPULAR_CITIES = [
-  { name: "Prishtinë", lat: 42.6629, lng: 21.1655 },
   { name: "Prizren", lat: 42.2139, lng: 20.7397 },
   { name: "Pejë", lat: 42.6593, lng: 20.2883 },
   { name: "Gjakovë", lat: 42.3803, lng: 20.4308 },
@@ -320,6 +345,8 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
                   radius: 30000,
                   components: 'country:xk',
                 }}
+                predefinedPlaces={KOSOVO_PREDEFINED_PLACES}
+                predefinedPlacesAlwaysVisible={true}
                 enablePoweredByContainer={false}
                 minLength={1}
                 styles={{
