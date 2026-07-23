@@ -50,14 +50,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
     loadStats();
   }, []);
 
-  const fillDemoAccount = (demoEmail: string, demoPass: string, demoName: string, demoRole: 'client' | 'barber') => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setFullName(demoName);
-    setRole(demoRole);
-    setErrorMessage("");
-  };
-
   const handleAuthSubmit = async () => {
     if (!email || !password) {
       setErrorMessage("Ju lutemi plotësoni email-in dhe fjalëkalimin.");
@@ -68,51 +60,85 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
     setErrorMessage("");
 
     try {
-      let loggedInUser = {
-        name: fullName || email.split('@')[0],
-        email: email,
-        role: role
-      };
+      if (authMode === 'register') {
+        // --- REAL REGISTER WITH SUPABASE ---
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: email.trim().toLowerCase(),
+          password,
+          options: {
+            data: {
+              full_name: fullName,
+              role: role,
+            }
+          }
+        });
 
-      // 1. Check Supabase Auth session
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+        if (signUpError && signUpError.message) {
+          setErrorMessage(signUpError.message);
+          setLoading(false);
+          return;
+        }
 
-      if (!authError && authData?.user) {
-        loggedInUser.email = authData.user.email || email;
-        loggedInUser.name = authData.user.user_metadata?.full_name || loggedInUser.name;
-      }
+        // Insert into users table in Supabase
+        await supabase.from('users').upsert({
+          email: email.trim().toLowerCase(),
+          name: fullName || email.split('@')[0],
+          role: role,
+        });
 
-      // 2. Query 'users' table in Supabase
-      try {
-        const { data: dbUser } = await supabase.from('users').select('*').eq('email', email).maybeSingle();
+        onLogin({
+          id: signUpData.user?.id || 'new-user',
+          name: fullName || email.split('@')[0],
+          email: email.trim().toLowerCase(),
+          role: role,
+        });
+      } else {
+        // --- REAL LOGIN WITH SUPABASE ---
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+          email: email.trim().toLowerCase(),
+          password,
+        });
+
+        // Query users or barbershops table in Supabase
+        const { data: dbUser } = await supabase.from('users').select('*').eq('email', email.trim().toLowerCase()).maybeSingle();
+        const { data: dbBarber } = await supabase.from('barbershops').select('*').eq('email', email.trim().toLowerCase()).maybeSingle();
+
         if (dbUser) {
-          loggedInUser = {
-            name: dbUser.name || dbUser.full_name || dbUser.email?.split('@')[0] || loggedInUser.name,
+          onLogin({
+            id: dbUser.id,
+            name: dbUser.name || dbUser.full_name || email.split('@')[0],
             email: dbUser.email,
             role: dbUser.role || 'client'
-          };
+          });
+        } else if (dbBarber) {
+          onLogin({
+            id: dbBarber.id,
+            name: dbBarber.name,
+            email: dbBarber.email || email,
+            role: 'barber'
+          });
+        } else if (authData?.user) {
+          onLogin({
+            id: authData.user.id,
+            name: authData.user.user_metadata?.full_name || email.split('@')[0],
+            email: authData.user.email,
+            role: authData.user.user_metadata?.role || role
+          });
+        } else if (authError) {
+          setErrorMessage("E-mail ose fjalëkalimi është i gabuar. Ju lutem kontrolloni të dhënat.");
+          setLoading(false);
+          return;
         } else {
-          // 3. Query 'barbershops' table in Supabase
-          const { data: dbBarber } = await supabase.from('barbershops').select('*').eq('email', email).maybeSingle();
-          if (dbBarber) {
-            loggedInUser = {
-              name: dbBarber.name,
-              email: dbBarber.email || email,
-              role: 'barber'
-            };
-          }
+          onLogin({
+            name: fullName || email.split('@')[0],
+            email: email.trim().toLowerCase(),
+            role: role
+          });
         }
-      } catch (dbErr) {
-        console.warn("Supabase user table query error:", dbErr);
       }
-
-      onLogin(loggedInUser);
-    } catch (e) {
+    } catch (e: any) {
       console.warn("Auth submit error:", e);
-      onLogin({ name: fullName || email.split('@')[0], email, role });
+      setErrorMessage(e?.message || "Ndodhi një gabim gjatë kyçjes.");
     } finally {
       setLoading(false);
     }
@@ -155,35 +181,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                 </TouchableOpacity>
               </View>
 
-              {/* Demo Accounts Quick Fill Buttons */}
-              <Text className="text-[11px] font-black text-[#8789A3] uppercase tracking-widest mb-3 ml-1">
-                Llogari Testuese Demo (1-Klikim):
-              </Text>
-              <View className="flex-row gap-2 mb-6 flex-wrap">
-                <TouchableOpacity
-                  onPress={() => fillDemoAccount("admin@lineup.com", "admin123", "Admin LineUp", "barber")}
-                  className="bg-rose-50 px-3 py-2 rounded-xl border border-rose-200 flex-row items-center gap-1.5"
-                >
-                  <Shield size={12} color="#ef4444" />
-                  <Text className="text-rose-600 font-extrabold text-xs">Admin</Text>
-                </TouchableOpacity>
 
-                <TouchableOpacity
-                  onPress={() => fillDemoAccount("artan@lineup.com", "owner123", "Artan Berber", "barber")}
-                  className="bg-indigo-50 px-3 py-2 rounded-xl border border-indigo-200 flex-row items-center gap-1.5"
-                >
-                  <Store size={12} color="#3473ef" />
-                  <Text className="text-[#3473ef] font-extrabold text-xs">Berber (Artan)</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => fillDemoAccount("besim@gmail.com", "user123", "Besim Gashi", "client")}
-                  className="bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-200 flex-row items-center gap-1.5"
-                >
-                  <User size={12} color="#10b981" />
-                  <Text className="text-emerald-600 font-extrabold text-xs">Klient (Besim)</Text>
-                </TouchableOpacity>
-              </View>
 
               {/* Error Alert */}
               {errorMessage !== "" && (
