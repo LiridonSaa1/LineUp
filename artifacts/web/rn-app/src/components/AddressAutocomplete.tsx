@@ -167,12 +167,31 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
       return;
     }
 
-    // Filter streets and places specific to selected city if provided
-    const localMatches = (selectedCity && KOSOVO_STREETS[selectedCity] ? KOSOVO_STREETS[selectedCity] : KOSOVO_LOCATIONS).filter(item =>
-      normalizeStr(item.formatted_address).includes(cleanInput) ||
-      normalizeStr(item.city).includes(cleanInput) ||
-      normalizeStr(item.street).includes(cleanInput)
-    );
+    // Filter streets and places
+    let localMatches: PlaceDetails[] = [];
+    if (selectedCity) {
+      // Search only in streets of the selected city
+      const cityStreets = KOSOVO_STREETS[selectedCity] || [];
+      localMatches = cityStreets.filter(item =>
+        normalizeStr(item.formatted_address).includes(cleanInput) ||
+        normalizeStr(item.street).includes(cleanInput)
+      );
+    } else {
+      // Search generally for cities first
+      localMatches = KOSOVO_CITIES.filter(item =>
+        normalizeStr(item.city).includes(cleanInput) ||
+        normalizeStr(item.formatted_address).includes(cleanInput)
+      );
+
+      // If no city matches, fallback to broader location/streets database
+      if (localMatches.length === 0) {
+        localMatches = KOSOVO_LOCATIONS.filter(item =>
+          normalizeStr(item.formatted_address).includes(cleanInput) ||
+          normalizeStr(item.city).includes(cleanInput) ||
+          normalizeStr(item.street).includes(cleanInput)
+        );
+      }
+    }
 
     setSuggestions(localMatches.length > 0 ? localMatches : baseList);
     setIsOpen(true);
@@ -183,12 +202,13 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
       debounceRef.current = setTimeout(async () => {
         try {
           const apiQueryTerm = selectedCity ? `${text}, ${selectedCity}, Kosovë` : `${text}, Kosovë`;
+          const typesParam = !selectedCity ? '&types=(regions)' : '';
           
           // 1. Fetch from Google Places Autocomplete API
           const googleRes = await fetch(
             `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
               apiQueryTerm
-            )}&key=${apiKey}&language=sq`
+            )}&key=${apiKey}&language=sq${typesParam}`
           );
           const googleData = await googleRes.json();
           let livePlaces: PlaceDetails[] = [];
