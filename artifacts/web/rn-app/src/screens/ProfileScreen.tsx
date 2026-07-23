@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Switch, Image, TextInput, Dimensions, ActivityIndicator, Keyboard, Alert } from "react-native";
-import { User, Settings, CreditCard, Bell, Shield, HelpCircle, LogOut, ChevronRight, Calendar, Heart, Award, Store, Mail, Lock, Eye, EyeOff, UserPlus, LogIn, Building2, Phone, ChevronDown, Search, ArrowLeft, Check, ArrowRight, Zap, Sparkles, MapPin } from "lucide-react-native";
+import { User, Settings, CreditCard, Bell, Shield, HelpCircle, LogOut, ChevronRight, Calendar, Heart, Award, Store, Mail, Lock, Eye, EyeOff, UserPlus, LogIn, Phone, ChevronDown, Search, ArrowLeft, Check, Zap, Sparkles, MapPin } from "lucide-react-native";
 import Animated, { FadeInUp, FadeIn } from "react-native-reanimated";
 import { BlurView } from 'expo-blur';
 import { supabase } from "@/config/supabase";
@@ -264,7 +264,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                 <Text className="text-[11px] font-black text-[#8789A3] uppercase tracking-widest text-center mt-2">INFORMATA BAZË</Text>
                 
                 <View className="bg-white rounded-2xl px-4 h-14 flex-row items-center border border-slate-200 shadow-sm">
-                  <Building2 size={20} color="#8789A3" />
+                  <Store size={20} color="#8789A3" />
                   <TextInput
                     placeholder="Emri i biznesit"
                     value={fullName}
@@ -394,7 +394,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                 className="bg-[#3473ef] h-14 rounded-2xl items-center justify-center flex-row gap-2 mt-4 shadow-lg shadow-[#3473ef]/30"
               >
                 <Text className="text-white text-base font-black tracking-wide">Vazhdo</Text>
-                <ArrowRight size={18} color="white" strokeWidth={3} />
+                <ChevronRight size={18} color="white" strokeWidth={3} />
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -455,7 +455,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                 className="bg-[#3473ef] h-14 rounded-2xl items-center justify-center flex-row gap-2 mt-6 shadow-lg shadow-[#3473ef]/30"
               >
                 <Text className="text-white text-base font-black tracking-wide">Vazhdo te Pagesa</Text>
-                <ArrowRight size={18} color="white" strokeWidth={3} />
+                <ChevronRight size={18} color="white" strokeWidth={3} />
               </TouchableOpacity>
 
               <TouchableOpacity
