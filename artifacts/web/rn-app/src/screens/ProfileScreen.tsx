@@ -558,9 +558,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
           )}
         </ScrollView>
       );
-    }    )}
-        </ScrollView>
-      );
     }
 
     return (
