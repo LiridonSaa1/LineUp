@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Dimensions } from 'react-native';
 import { X, Store, MapPin, Camera, Check, ChevronRight, Info, Search } from 'lucide-react-native';
-import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+import { AddressAutocomplete } from '../components/AddressAutocomplete';
 import { supabase } from '@/config/supabase';
 
 const { width } = Dimensions.get('window');
@@ -88,38 +88,18 @@ export const RegisterShopScreen: React.FC<RegisterShopScreenProps> = ({ onClose,
             </TouchableOpacity>
           </View>
 
-          <Text className="text-xs font-black text-[#8789A3] uppercase tracking-widest mb-3 ml-1">Lokacioni i verifikuar</Text>
-          <View className="mb-8 z-50">
-             <GooglePlacesAutocomplete
-                ref={autocompleteRef}
-                placeholder='Kërko adresën e sallonit tuaj...'
-                fetchDetails={true}
-                onPress={(data, details = null) => {
-                  setSelectedPlace({
-                    address: data.description,
-                    lat: details?.geometry?.location?.lat || 0,
-                    lng: details?.geometry?.location?.lng || 0
-                  });
-                }}
-                query={{
-                  key: GOOGLE_MAPS_KEY,
-                  language: 'sq',
-                  components: 'country:ks',
-                }}
-                styles={{
-                  textInputContainer: { backgroundColor: '#F8FAFC', borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 8 },
-                  textInput: { height: 56, fontSize: 16, color: '#161719', fontWeight: 'bold', backgroundColor: 'transparent' },
-                  listView: { backgroundColor: 'white', borderRadius: 20, marginTop: 10, elevation: 5, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10, borderWeight: 1, borderColor: '#E2E8F0' },
-                  row: { padding: 15, height: 60, flexDirection: 'row' },
-                  description: { fontSize: 15, color: '#161719', fontWeight: '500' },
-                }}
-                renderLeftButton={() => (
-                   <View className="justify-center pl-2">
-                      <Search size={20} color="#3473ef" />
-                   </View>
-                )}
-             />
-          </View>
+          <AddressAutocomplete
+            label="Lokacioni i verifikuar"
+            placeholder="Kërko adresën e sallonit tuaj..."
+            containerClassName="mb-8"
+            onSelectAddress={(place) => {
+              setSelectedPlace({
+                address: place.formatted_address,
+                lat: place.latitude || 42.6629,
+                lng: place.longitude || 21.1655
+              });
+            }}
+          />
 
           {selectedPlace && (
              <View className="bg-emerald-50 p-5 rounded-3xl border border-emerald-100 mb-8">

@@ -4,6 +4,7 @@ import { X, Search, MapPin, Calendar, Grid, Scissors, Hand, Eye, Sparkles, User,
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { withTiming } from 'react-native-reanimated';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+import { AddressAutocomplete } from '../components/AddressAutocomplete';
 
 const { width } = Dimensions.get('window');
 
@@ -306,44 +307,17 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
           <Text className="text-xl font-bold text-[#161719]">Lokacioni</Text>
         </View>
         <View className="flex-1 px-6">
-          <GooglePlacesAutocomplete
-              ref={autocompleteRef}
-              placeholder='Kërko zonën, qytetin...'
-              fetchDetails={true}
-              onPress={(data, details = null) => {
+          <AddressAutocomplete
+              placeholder="Kërko zonën, qytetin ose rrugën..."
+              containerClassName="mb-6"
+              onSelectAddress={(place) => {
                 setSelectedLocation({
-                  address: data.description,
-                  lat: details?.geometry?.location?.lat,
-                  lng: details?.geometry?.location?.lng
+                  address: place.formatted_address,
+                  lat: place.latitude,
+                  lng: place.longitude
                 });
                 setActivePanel('main');
               }}
-              query={{
-                key: GOOGLE_MAPS_KEY,
-                language: 'sq',
-                location: `${cityBias.lat},${cityBias.lng}`,
-                radius: 30000,
-                components: 'country:xk',
-              }}
-              predefinedPlaces={KOSOVO_PREDEFINED_PLACES}
-              enablePoweredByContainer={false}
-              minLength={1}
-              styles={{
-                container: { flex: 0, marginBottom: 20 },
-                textInputContainer: {
-                  backgroundColor: 'white',
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: '#6366f1',
-                  paddingHorizontal: 8
-                },
-                textInput: { height: 54, fontSize: 16, color: '#161719', fontWeight: '500' },
-                listView: { backgroundColor: 'white', borderRadius: 20, marginTop: 10, elevation: 5, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10, zIndex: 1000 },
-                row: { padding: 15, height: 60, flexDirection: 'row' },
-                separator: { height: 1, backgroundColor: '#F1F5F9' },
-                description: { fontSize: 15, color: '#161719' },
-              }}
-              renderLeftButton={() => <View className="justify-center pl-2"><Search size={20} color="#6366f1" /></View>}
           />
 
           <View className="flex-row items-start mt-8 mb-8 pr-4">

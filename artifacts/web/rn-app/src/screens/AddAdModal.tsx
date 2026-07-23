@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Dimensions, Image, Alert } from 'react-native';
 import { X, Megaphone, MapPin, Camera, Check, ChevronDown, Info, Search, Building2, Calendar, Sparkles, Zap, Award } from 'lucide-react-native';
-import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+import { AddressAutocomplete } from '../components/AddressAutocomplete';
 import { supabase } from '@/config/supabase';
 
 const { width, height } = Dimensions.get("window");
@@ -177,44 +177,18 @@ export const AddAdModal: React.FC<AddAdModalProps> = ({ onClose, onSuccess }) =>
           </View>
 
           {/* Location Autocomplete */}
-          <Text className="text-xs font-black text-[#8789A3] uppercase tracking-widest mb-3 ml-1">Lokacioni i Verifikuar</Text>
-          <View className="mb-6 z-50">
-             <GooglePlacesAutocomplete
-                ref={autocompleteRef}
-                placeholder={`Kërko rrugën në ${selectedCity}...`}
-                fetchDetails={true}
-                onPress={(data, details = null) => {
-                  setSelectedPlace({
-                    address: data.description,
-                    lat: details?.geometry?.location?.lat || 0,
-                    lng: details?.geometry?.location?.lng || 0
-                  });
-                }}
-                query={{
-                  key: GOOGLE_MAPS_KEY,
-                  language: 'sq',
-                  components: 'country:xk',
-                  location: `${CITY_DATA[selectedCity].lat},${CITY_DATA[selectedCity].lng}`,
-                  radius: 5000, // 5km strict radius biasing
-                  strictbounds: true
-                }}
-                enablePoweredByContainer={false}
-                minLength={2}
-                textInputProps={{
-                   onChangeText: (text) => {
-                      if (text === "") setSelectedPlace(null);
-                   }
-                }}
-                styles={{
-                  textInputContainer: { backgroundColor: '#F8FAFC', borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 8 },
-                  textInput: { height: 56, fontSize: 16, color: '#161719', fontWeight: 'bold', backgroundColor: 'transparent' },
-                  listView: { backgroundColor: 'white', borderRadius: 20, marginTop: 10, elevation: 5, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10, zIndex: 1000 },
-                  row: { padding: 15, height: 60, flexDirection: 'row' },
-                  description: { fontSize: 15, color: '#161719', fontWeight: '500' },
-                }}
-                renderLeftButton={() => <View className="justify-center pl-2"><Search size={20} color="#3473ef" /></View>}
-             />
-          </View>
+          <AddressAutocomplete
+            label="Lokacioni i Verifikuar"
+            placeholder={`Kërko rrugën në ${selectedCity}...`}
+            containerClassName="mb-6"
+            onSelectAddress={(place) => {
+              setSelectedPlace({
+                address: place.formatted_address,
+                lat: place.latitude || CITY_DATA[selectedCity]?.lat || 42.6629,
+                lng: place.longitude || CITY_DATA[selectedCity]?.lng || 21.1655
+              });
+            }}
+          />
 
           {selectedPlace && (
              <View className="bg-emerald-50 p-5 rounded-3xl border border-emerald-100 mb-8">

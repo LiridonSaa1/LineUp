@@ -8,7 +8,7 @@ import Animated, {
   withSpring
 } from 'react-native-reanimated';
 import { withTiming } from 'react-native-reanimated';
-import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+import { AddressAutocomplete } from '../components/AddressAutocomplete';
 import { supabase } from '@/config/supabase';
 
 const { width, height } = Dimensions.get('window');
@@ -304,72 +304,17 @@ export const LocationScreen: React.FC<LocationScreenProps> = ({ onBack, onSelect
 
           {/* Google Places Autocomplete Search */}
           <View className="flex-1">
-             <Text className="text-sm font-bold text-[#8789A3] uppercase tracking-widest mb-3 ml-1">Search Address</Text>
-
-             <GooglePlacesAutocomplete
-                ref={autocompleteRef}
-                placeholder='Search for street, building...'
-                fetchDetails={true}
-                onPress={(data, details = null) => {
+             <AddressAutocomplete
+                label="Kërko Adresën / Rrugën"
+                placeholder="Kërko rrugën, ndërtesën..."
+                containerClassName="mb-6"
+                onSelectAddress={(place) => {
                   setSelectedPlace({
-                    address: data.description,
-                    lat: details?.geometry?.location?.lat,
-                    lng: details?.geometry?.location?.lng
+                    address: place.formatted_address,
+                    lat: place.latitude,
+                    lng: place.longitude
                   });
                 }}
-                query={{
-                  key: GOOGLE_MAPS_KEY,
-                  language: 'sq',
-                  components: 'country:xk',
-                }}
-                enablePoweredByContainer={false}
-                minLength={2}
-                styles={{
-                  container: { flex: 0, marginBottom: 20 },
-                  textInputContainer: {
-                    backgroundColor: 'white',
-                    borderRadius: 12,
-                    borderWidth: 1,
-                    borderColor: '#6366f1',
-                    paddingHorizontal: 8
-                  },
-                  textInput: {
-                    height: 54,
-                    fontSize: 16,
-                    color: '#161719',
-                    fontWeight: '500'
-                  },
-                  listView: {
-                    backgroundColor: 'white',
-                    borderRadius: 20,
-                    marginTop: 10,
-                    elevation: 5,
-                    shadowColor: '#000',
-                    shadowOpacity: 0.1,
-                    shadowRadius: 10,
-                    borderWidth: 1,
-                    borderColor: '#E2E8F0',
-                    zIndex: 1000
-                  },
-                  row: {
-                    padding: 15,
-                    height: 60,
-                    flexDirection: 'row',
-                  },
-                  separator: {
-                    height: 1,
-                    backgroundColor: '#F1F5F9',
-                  },
-                  description: {
-                    fontSize: 15,
-                    color: '#161719',
-                  },
-                }}
-                renderLeftButton={() => (
-                   <View className="justify-center pl-2">
-                      <Search size={20} color="#6366f1" />
-                   </View>
-                )}
              />
 
              {selectedPlace && (
