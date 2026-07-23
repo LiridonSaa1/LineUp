@@ -208,9 +208,16 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
                 Kërko sallone, trajtime...
               </Text>
             </View>
-            <View className="bg-black px-8 h-12 rounded-full items-center justify-center ml-2 shadow-lg">
-              <Text className="text-white font-black text-base">Kërko</Text>
-            </View>
+            <TouchableOpacity
+              onPress={(e) => { e.stopPropagation(); runOnJS(toggleSheet)(!isExpanded); }}
+              className="w-12 h-12 rounded-full bg-black items-center justify-center ml-2 shadow-lg"
+            >
+              {isExpanded ? (
+                <MapIcon size={20} color="white" strokeWidth={2.5} />
+              ) : (
+                <List size={20} color="white" strokeWidth={2.5} />
+              )}
+            </TouchableOpacity>
           </BlurView>
         </TouchableOpacity>
       </View>
