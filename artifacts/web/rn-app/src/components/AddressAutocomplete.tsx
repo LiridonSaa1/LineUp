@@ -75,6 +75,15 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
     setQuery(initialValue);
   }, [initialValue]);
 
+  const handleFocus = () => {
+    if (query.trim().length === 0) {
+      setSuggestions(KOSOVO_LOCATIONS);
+      setIsOpen(true);
+    } else {
+      handleTextChange(query);
+    }
+  };
+
   const handleTextChange = (text: string) => {
     setQuery(text);
     setError(null);
@@ -82,8 +91,8 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     if (text.trim().length === 0) {
-      setSuggestions([]);
-      setIsOpen(false);
+      setSuggestions(KOSOVO_LOCATIONS);
+      setIsOpen(true);
       return;
     }
 
@@ -94,7 +103,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
       item.street.toLowerCase().includes(text.toLowerCase())
     );
 
-    setSuggestions(localMatches);
+    setSuggestions(localMatches.length > 0 ? localMatches : KOSOVO_LOCATIONS);
     setIsOpen(true);
 
     // Online Google Places Autocomplete API query
@@ -129,7 +138,6 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
           }
         } catch (err) {
           console.warn("Google Places fetch error:", err);
-          // Fallback gracefully to local matches
         } finally {
           setLoading(false);
         }
@@ -159,6 +167,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
 
         <TextInput
           value={query}
+          onFocus={handleFocus}
           onChangeText={handleTextChange}
           placeholder={placeholder}
           placeholderTextColor="#8789A3"
