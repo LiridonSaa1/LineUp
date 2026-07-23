@@ -217,19 +217,74 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
 
   if (!user) {
     if (authMode === 'register') {
-      console.log("ProfileScreen: Rendering temporary debug register screen");
+      console.log("ProfileScreen: Rendering register debug step 1: basic fields only");
       return (
-        <View className="flex-1 bg-slate-100 justify-center items-center p-6">
-          <Store size={48} color="#3473ef" className="mb-4" />
-          <Text className="text-xl font-black text-[#161719] mb-2">Regjistro Biznesin</Text>
-          <Text className="text-slate-500 text-center mb-6">Nëse e shihni këtë ekran, kalimi i modaliteteve po funksionon pa probleme!</Text>
+        <ScrollView className="flex-1 bg-[#ECEEF2]" showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 24, paddingTop: 64 }}>
+          <Store size={36} color="#3473ef" className="mb-2 align-self-center" />
+          <Text className="text-xl font-black text-[#161719] text-center mb-6">Regjistro Sallonin</Text>
+          
+          <View className="gap-y-4 mb-6">
+            <View className="bg-white rounded-2xl px-4 h-14 flex-row items-center border border-slate-200">
+              <Store size={20} color="#8789A3" />
+              <TextInput
+                placeholder="Emri i sallonit"
+                value={fullName}
+                onChangeText={setFullName}
+                className="flex-1 ml-3 font-bold text-[#161719] text-base"
+                placeholderTextColor="#94A3B8"
+              />
+            </View>
+
+            <View className="bg-white rounded-2xl px-4 h-14 flex-row items-center border border-slate-200">
+              <Mail size={20} color="#8789A3" />
+              <TextInput
+                placeholder="Email"
+                value={email}
+                onChangeText={setEmail}
+                className="flex-1 ml-3 font-bold text-[#161719] text-base"
+                placeholderTextColor="#94A3B8"
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+
+            <View className="bg-white rounded-2xl px-4 h-14 flex-row items-center border border-slate-200">
+              <Phone size={20} color="#8789A3" />
+              <TextInput
+                placeholder="Telefoni +383"
+                value={phone}
+                onChangeText={setPhone}
+                className="flex-1 ml-3 font-bold text-[#161719] text-base"
+                placeholderTextColor="#94A3B8"
+                keyboardType="phone-pad"
+              />
+            </View>
+
+            <View className="bg-white rounded-2xl px-4 h-14 flex-row items-center border border-slate-200">
+              <Lock size={20} color="#8789A3" />
+              <TextInput
+                placeholder="Fjalëkalimi"
+                value={password}
+                onChangeText={setPassword}
+                className="flex-1 ml-3 font-bold text-[#161719] text-base"
+                placeholderTextColor="#94A3B8"
+                secureTextEntry={!showPassword}
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                {showPassword ? <EyeOff size={20} color="#8789A3" /> : <Eye size={20} color="#8789A3" />}
+              </TouchableOpacity>
+            </View>
+          </View>
+
           <TouchableOpacity
             onPress={() => { Keyboard.dismiss(); setAuthMode('login'); }}
-            className="bg-[#3473ef] px-6 py-3.5 rounded-2xl shadow-md"
+            className="py-4 items-center"
           >
-            <Text className="text-white font-black text-sm">Kthehu te Kyçja</Text>
+            <Text className="text-slate-500 font-bold text-xs">
+              Keni tashmë llogari? <Text className="text-[#3473ef] font-black">Kyçu tani →</Text>
+            </Text>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
       );
     }
 
