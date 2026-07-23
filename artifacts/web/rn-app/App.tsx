@@ -27,6 +27,7 @@ import { LocationScreen } from "./src/screens/LocationScreen";
 import { SearchScreen } from "./src/screens/SearchScreen";
 import { RegisterShopScreen } from "./src/screens/RegisterShopScreen";
 import { BarberDashboardScreen } from "./src/screens/BarberDashboardScreen";
+import { AdminDashboardScreen } from "./src/screens/AdminDashboardScreen";
 import { AddAdModal } from "./src/screens/AddAdModal";
 import { supabase } from "./src/config/supabase";
 import "./global.css";
@@ -202,10 +203,12 @@ export default function App() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
+  const isBusinessRole = user?.role === 'barber' || user?.role === 'owner' || user?.role === 'employee';
+
   const tabs = [
     { label: 'Ballina', icon: Home },
     { label: 'Kërko', icon: Search },
-    { label: 'Aktiviteti', icon: Calendar },
+    { label: isBusinessRole ? 'Paneli' : 'Aktiviteti', icon: Calendar },
     { label: 'Profili', icon: User },
   ];
 
@@ -226,10 +229,9 @@ export default function App() {
       <View className="flex-1 bg-[#ECEEF2]">
         <StatusBar style="dark" />
 
-        {/* Conditional Rendering: Barber Dashboard vs Standard App */}
-        {user?.role === 'barber' ? (
-          <BarberDashboardScreen
-            user={user}
+        {/* Conditional Rendering: Super Admin Panel vs Unified Standard App */}
+        {user?.role === 'super_admin' || user?.role === 'admin' ? (
+          <AdminDashboardScreen
             onLogout={async () => {
               await supabase.auth.signOut();
               setUser(null);
@@ -260,16 +262,26 @@ export default function App() {
                   />
                 )}
                 {activeTab === 2 && (
-                  <ActivityScreen
-                    user={user}
-                    onLogin={(userData) => setUser(userData || { id: '123', name: 'Artan Berisha', email: 'artan@lineup.com' })}
-                    onNavigateToSearch={() => setActiveTab(1)}
-                  />
+                  isBusinessRole ? (
+                    <BarberDashboardScreen
+                      user={user}
+                      onLogout={async () => {
+                        await supabase.auth.signOut();
+                        setUser(null);
+                      }}
+                    />
+                  ) : (
+                    <ActivityScreen
+                      user={user}
+                      onLogin={() => setActiveTab(3)}
+                      onNavigateToSearch={() => setActiveTab(1)}
+                    />
+                  )
                 )}
                 {activeTab === 3 && (
                   <ProfileScreen
                     user={user}
-                    onLogin={(userData) => setUser(userData || { id: '123', name: 'Artan Berisha', email: 'artan@lineup.com' })}
+                    onLogin={(userData) => setUser(userData)}
                     onLogout={async () => {
                       await supabase.auth.signOut();
                       setUser(null);

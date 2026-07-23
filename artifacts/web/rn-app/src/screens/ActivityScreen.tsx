@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Image, Dimensions } from "react-native";
-import { Calendar, Clock, ChevronRight, MessageSquare, History, Lock, Search } from "lucide-react-native";
+import { Calendar, Clock, ChevronRight, MessageSquare, History, Lock, Search, Star } from "lucide-react-native";
 import { BlurView } from 'expo-blur';
 import { supabase } from "@/config/supabase";
 
@@ -23,31 +23,36 @@ export const ActivityScreen: React.FC<ActivityScreenProps> = ({ user, onLogin, o
 
       setLoading(true);
       try {
-        // Mocking for now as we don't have a robust appointments table yet
-        const mockData = [
-          {
-            id: 1,
-            shopName: "Barber Shop Labi",
-            service: "Qethje & Mjekër",
-            date: "24 Korrik 2026",
-            time: "14:30",
-            status: "Konfirmuar",
-            price: "€12",
-            imageUrl: "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=400"
-          },
-          {
-            id: 2,
-            shopName: "XOXO Hair Salon",
-            service: "Ngjyrosje",
-            date: "28 Korrik 2026",
-            time: "10:00",
-            status: "Në pritje",
-            price: "€45",
-            imageUrl: "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=400"
-          }
-        ];
+        const { data, error } = await supabase
+          .from('appointments')
+          .select(`
+            *,
+            barbershops (
+              name
+            )
+          `)
+          .eq('user_id', user.id)
+          .order('date', { ascending: false });
 
-        setAppointments(activeTab === 'upcoming' ? mockData : []);
+        if (error) throw error;
+
+        const now = new Date();
+        const formatted = data?.map(item => {
+          const apptDate = new Date(`${item.date}T${item.time}`);
+          const isPast = apptDate < now || item.status === 'completed' || item.status === 'cancelled';
+          return {
+            ...item,
+            isPast,
+            shopName: item.barbershops?.name || "Barber Shop",
+            imageUrl: item.imageUrl || "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=400"
+          };
+        });
+
+        const filtered = formatted?.filter(item =>
+          activeTab === 'upcoming' ? !item.isPast : item.isPast
+        );
+
+        setAppointments(filtered || []);
       } catch (e) {
         console.error("Error loading activity:", e);
       } finally {
@@ -134,8 +139,8 @@ export const ActivityScreen: React.FC<ActivityScreenProps> = ({ user, onLogin, o
                   <Text className="text-lg font-black text-[#161719]">{item.shopName}</Text>
                   <Text className="text-[#8789A3] font-bold text-xs">{item.service}</Text>
                 </View>
-                <View className={`px-3 py-1.5 rounded-full ${item.status === 'Konfirmuar' ? 'bg-emerald-50' : 'bg-amber-50'}`}>
-                  <Text className={`text-[10px] font-black uppercase ${item.status === 'Konfirmuar' ? 'text-emerald-500' : 'text-amber-500'}`}>
+                <View className={`px-3 py-1.5 rounded-full ${item.status === 'confirmed' || item.status === 'Konfirmuar' ? 'bg-emerald-50' : 'bg-amber-50'}`}>
+                  <Text className={`text-[10px] font-black uppercase ${item.status === 'confirmed' || item.status === 'Konfirmuar' ? 'text-emerald-500' : 'text-amber-500'}`}>
                     {item.status}
                   </Text>
                 </View>
@@ -144,8 +149,8 @@ export const ActivityScreen: React.FC<ActivityScreenProps> = ({ user, onLogin, o
               <View className="h-[1px] bg-slate-50 w-full mb-4" />
 
               <View className="flex-row justify-between items-center">
-                <View className="flex-row gap-4">
-                  <View className="flex-row items-center">
+                <View>
+                  <View className="flex-row items-center mb-1">
                     <Calendar size={14} color="#8789A3" />
                     <Text className="text-[#161719] font-bold text-xs ml-1.5">{item.date}</Text>
                   </View>
@@ -154,7 +159,15 @@ export const ActivityScreen: React.FC<ActivityScreenProps> = ({ user, onLogin, o
                     <Text className="text-[#161719] font-bold text-xs ml-1.5">{item.time}</Text>
                   </View>
                 </View>
-                <Text className="text-[#3473ef] font-black text-lg">{item.price}</Text>
+
+                {activeTab === 'past' ? (
+                   <TouchableOpacity className="bg-black px-5 py-2.5 rounded-xl flex-row items-center gap-2">
+                      <Star size={14} color="#fbbf24" fill="#fbbf24" />
+                      <Text className="text-white font-black text-xs">Vlerëso</Text>
+                   </TouchableOpacity>
+                ) : (
+                   <Text className="text-[#3473ef] font-black text-lg">{item.price}</Text>
+                )}
               </View>
             </TouchableOpacity>
           ))
@@ -163,17 +176,23 @@ export const ActivityScreen: React.FC<ActivityScreenProps> = ({ user, onLogin, o
             <View className="w-24 h-24 bg-white rounded-full items-center justify-center mb-6 shadow-md border border-slate-50">
               <Search size={32} color="#CBD5E1" />
             </View>
-            <Text className="text-[#161719] font-black text-xl mb-2 text-center">Nuk ka terminet të rezervuara</Text>
+            <Text className="text-[#161719] font-black text-xl mb-2 text-center">
+              {activeTab === 'upcoming' ? "Nuk ka terminet të rezervuara" : "Historia është e zbrazët"}
+            </Text>
             <Text className="text-[#8789A3] font-bold text-sm text-center mb-8 px-8 leading-5">
-              Ju ende nuk keni rezervuar asnjë shërbim. Zbuloni sallonet më të mira pranë jush.
+              {activeTab === 'upcoming'
+                ? "Ju ende nuk keni rezervuar asnjë shërbim. Zbuloni sallonet më të mira pranë jush."
+                : "Ju ende nuk keni përfunduar asnjë termin."}
             </Text>
 
-            <TouchableOpacity
-              onPress={onNavigateToSearch}
-              className="bg-[#3473ef] px-10 py-4 rounded-2xl shadow-lg shadow-[#3473ef]/30"
-            >
-              <Text className="text-white font-black text-sm uppercase tracking-widest">Kërko një Sallon</Text>
-            </TouchableOpacity>
+            {activeTab === 'upcoming' && (
+              <TouchableOpacity
+                onPress={onNavigateToSearch}
+                className="bg-[#3473ef] px-10 py-4 rounded-2xl shadow-lg shadow-[#3473ef]/30"
+              >
+                <Text className="text-white font-black text-sm uppercase tracking-widest">Kërko një Sallon</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </ScrollView>

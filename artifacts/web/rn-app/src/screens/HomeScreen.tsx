@@ -102,15 +102,25 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
     async function loadData() {
       setLoading(true);
       try {
-        const { data: shopsData, error: shopsError } = await supabase
+        let { data: shopsData, error: shopsError } = await supabase
           .from('barbershops')
           .select('*')
           .eq('status', 'active')
           .order('rating', { ascending: false })
           .limit(6);
 
-        if (shopsError) throw shopsError;
-        if (shopsData) setRecommendedShops(shopsData);
+        if (shopsError && (shopsError.code === 'PGRST205' || shopsError.message?.includes('barbershops'))) {
+          const fallbackRes = await supabase
+            .from('barbers')
+            .select('*')
+            .limit(6);
+          shopsData = fallbackRes.data;
+          shopsError = fallbackRes.error;
+        }
+
+        if (shopsData && shopsData.length > 0) {
+          setRecommendedShops(shopsData);
+        }
 
         const { data: liveAds } = await supabase
           .from('advertisements')
@@ -273,28 +283,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
                 {!isCleanBanner && (
                   <View className="absolute inset-0" style={{ backgroundColor: ad.color, opacity: 0.85 }} />
                 )}
-
-                {/* Content Overlay */}
-                <View className="flex-1 p-4 justify-between relative z-10">
-                  {!isCleanBanner && (
-                    <View className="my-auto">
-                      <Text className="text-white text-lg font-black mb-0.5">{ad.headline}</Text>
-                      <Text className="text-white/80 text-xs font-bold">{ad.description || ad.desc}</Text>
-                    </View>
-                  )}
-
-                  <View className="flex-row justify-end items-center mt-auto">
-                    <TouchableOpacity
-                      onPress={() => ad.url && Linking.openURL(ad.url)}
-                      className="bg-[#3473ef] px-4 py-2 rounded-xl shadow-xl flex-row items-center gap-1.5 border border-white/20 active:scale-95"
-                    >
-                      <Text className="text-white font-black text-xs uppercase tracking-wider">
-                        {ad.button_text || ad.buttonText || "Na vizitoni"}
-                      </Text>
-                      <ArrowUpRight size={14} color="white" strokeWidth={3} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
               </TouchableOpacity>
             );
           })}

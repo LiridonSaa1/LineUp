@@ -30,11 +30,18 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
   useEffect(() => {
     async function loadStats() {
       try {
-        const [shops, cities, appointments] = await Promise.all([
+        let [shops, cities, appointments] = await Promise.all([
           supabase.from('barbershops').select('*', { count: 'exact', head: true }).eq('status', 'active'),
           supabase.from('barbershops').select('city').eq('status', 'active'),
           supabase.from('appointments').select('*', { count: 'exact', head: true }).neq('status', 'cancelled')
         ]);
+
+        if (shops.error && (shops.error.code === 'PGRST205' || shops.error.message?.includes('barbershops'))) {
+          shops = await supabase.from('barbers').select('*', { count: 'exact', head: true });
+        }
+        if (cities.error && (cities.error.code === 'PGRST205' || cities.error.message?.includes('barbershops'))) {
+          cities = await supabase.from('barbers').select('city');
+        }
 
         const uniqueCities = new Set(cities.data?.map(s => s.city));
 
@@ -61,6 +68,20 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
 
     try {
       const cleanEmail = email.trim().toLowerCase();
+
+      // --- DEFAULT SUPER ADMIN LOGIN CHECK ---
+      if (cleanEmail === "lineup@admin.com" && password === "lineup12.@") {
+        console.log("[ProfileScreen] Default Super Admin logged in!");
+        onLogin({
+          id: "admin_1",
+          name: "LineUp Super Admin",
+          email: "lineup@admin.com",
+          role: "super_admin"
+        });
+        setLoading(false);
+        return;
+      }
+
       // --- REAL LOGIN WITH SUPABASE ---
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: cleanEmail,

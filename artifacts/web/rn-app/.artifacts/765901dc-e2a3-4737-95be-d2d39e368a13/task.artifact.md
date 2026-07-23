@@ -1,5 +1,8 @@
-- `[x]` Fresh Supabase Cleanup
-    - `[x]` Provide SQL script for table reset and category seeding
-    - `[x]` Remove auto-seeding logic from `HomeScreen.tsx`
-- `[x]` Verification
-    - `[x]` App loads correctly and only reads advertisement data
+- `[ ]` Add multi-category selection to Register Screen
+    - `[ ]` Define `ALBANIAN_CATEGORIES` constant with icons
+    - `[ ]` Add `selectedCategories` state and toggle logic
+    - `[ ]` Implement the category selection UI in Hapi 1
+    - `[ ]` Update `handleAuthSubmit` to include categories in database insert
+- `[ ]` Verification
+    - `[ ]` Test multi-selection UI
+    - `[ ]` Verify data persistence in Supabase

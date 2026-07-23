@@ -272,6 +272,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   };
 
   const handleSelectSuggestion = async (item: PlaceDetails) => {
+    console.log("[AddressAutocomplete] Selected address:", item.formatted_address);
     setQuery(item.formatted_address);
     setIsOpen(false);
     setSuggestions([]);
@@ -293,8 +294,14 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
 
         <TextInput
           value={query}
-          onFocus={handleFocus}
-          onChangeText={handleTextChange}
+          onFocus={() => {
+            console.log("[AddressAutocomplete] Field focused");
+            handleFocus();
+          }}
+          onChangeText={(text) => {
+            console.log("[AddressAutocomplete] Text changed:", text);
+            handleTextChange(text);
+          }}
           placeholder={placeholder}
           placeholderTextColor="#8789A3"
           disabled={disabled}
@@ -308,6 +315,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
           {(query.length > 0 || isOpen) && (
             <TouchableOpacity
               onPress={() => {
+                console.log("[AddressAutocomplete] Clear button pressed");
                 setQuery("");
                 setSuggestions(getCityBaseList());
                 setIsOpen(false);
@@ -321,33 +329,31 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
         </View>
       </View>
 
-      {/* Autocomplete Dropdown List */}
+      {/* Autocomplete Dropdown List — Rendered without nested ScrollView to prevent iOS layout deadlock */}
       {isOpen && suggestions.length > 0 && (
         <View
           className="absolute top-16 left-0 right-0 bg-white rounded-3xl border border-slate-200 p-2 shadow-2xl overflow-hidden"
-          style={{ zIndex: 9999, elevation: 20, maxHeight: 260 }}
+          style={{ zIndex: 9999, elevation: 20 }}
         >
-          <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="always" style={{ maxHeight: 250 }}>
-            {suggestions.map((item, index) => (
-              <TouchableOpacity
-                key={index}
-                onPress={() => handleSelectSuggestion(item)}
-                className="flex-row items-center p-3.5 rounded-2xl border-b border-slate-50 active:bg-slate-50"
-              >
-                <View className="w-8 h-8 rounded-full bg-[#3473ef]/10 items-center justify-center mr-3">
-                  <Navigation size={16} color="#3473ef" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-[#161719] font-black text-sm" numberOfLines={1}>
-                    {item.formatted_address}
-                  </Text>
-                  <Text className="text-[#8789A3] font-bold text-[11px] mt-0.5">
-                    📍 {item.city} • {item.country}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          {suggestions.slice(0, 5).map((item, index) => (
+            <TouchableOpacity
+              key={index}
+              onPress={() => handleSelectSuggestion(item)}
+              className="flex-row items-center p-3.5 rounded-2xl border-b border-slate-50 active:bg-slate-50"
+            >
+              <View className="w-8 h-8 rounded-full bg-[#3473ef]/10 items-center justify-center mr-3">
+                <Navigation size={16} color="#3473ef" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-[#161719] font-black text-sm" numberOfLines={1}>
+                  {item.formatted_address}
+                </Text>
+                <Text className="text-[#8789A3] font-bold text-[11px] mt-0.5">
+                  📍 {item.city} • {item.country}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ))}
         </View>
       )}
     </View>

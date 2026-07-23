@@ -136,12 +136,19 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
     async function loadShops() {
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('barbershops')
           .select('*')
           .eq('status', 'active');
 
-        if (error) throw error;
+        if (error && (error.code === 'PGRST205' || error.message?.includes('barbershops'))) {
+          const fallback = await supabase
+            .from('barbers')
+            .select('*');
+          data = fallback.data;
+          error = fallback.error;
+        }
+
         setShops(data || []);
       } catch (e) {
         console.warn("Error fetching shops from Supabase:", e);
