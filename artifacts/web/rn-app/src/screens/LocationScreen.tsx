@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, TextInput, ScrollView, SafeAreaView, Linking, ActivityIndicator, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, ScrollView, SafeAreaView, Linking, ActivityIndicator, Dimensions, Keyboard } from 'react-native';
 import { ArrowLeft, Search, Navigation, Home, Briefcase, MapPin, AlertCircle, X, ChevronRight, ChevronDown } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import Animated, {
@@ -299,29 +299,30 @@ export const LocationScreen: React.FC<LocationScreenProps> = ({ onBack, onSelect
           {/* City Picker & Street search */}
           <View className="flex-1">
             <Text className="text-xs font-black text-[#8789A3] uppercase tracking-widest mb-3 ml-1">Qyteti</Text>
-            <View className="bg-white rounded-2xl p-4 mb-6 border border-slate-200/85 shadow-sm relative z-50">
+            <View className="relative mb-6 z-50">
+              <View className="absolute left-4 top-4.5 z-10">
+                <MapPin size={20} color="#3473ef" />
+              </View>
+              <TextInput
+                value={citySearch !== "" || showCityPicker ? citySearch : selectedCity}
+                onChangeText={(txt) => {
+                  setCitySearch(txt);
+                  setShowCityPicker(true);
+                }}
+                onFocus={() => setShowCityPicker(true)}
+                placeholder="Zgjidh qytetin..."
+                placeholderTextColor="#8789A3"
+                className="w-full bg-white border border-slate-200 rounded-2xl pl-12 pr-10 h-14 text-base font-bold text-[#161719] shadow-xs"
+              />
               <TouchableOpacity
                 onPress={() => setShowCityPicker(!showCityPicker)}
-                className="flex-row items-center justify-between h-10 px-0.5"
+                className="absolute right-4 top-4.5 z-10"
               >
-                 <View className="flex-row items-center">
-                    <MapPin size={18} color="#3473ef" />
-                    <Text className="text-[#161719] font-bold text-base ml-3">{selectedCity}</Text>
-                 </View>
-                 <ChevronDown size={20} color="#94A3B8" />
+                <ChevronDown size={20} color="#94A3B8" />
               </TouchableOpacity>
 
               {showCityPicker && (
-                 <View className="mt-4 bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden">
-                    <View className="flex-row items-center px-4 py-3 border-b border-slate-100">
-                      <Search size={16} color="#8789A3" />
-                      <TextInput
-                        placeholder="Kërko qytetin..."
-                        className="flex-1 ml-2 font-bold text-sm text-[#161719]"
-                        value={citySearch}
-                        onChangeText={setCitySearch}
-                      />
-                    </View>
+                 <View className="absolute top-16 left-0 right-0 bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden z-50">
                     <View style={{ maxHeight: 200 }}>
                       <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="always">
                         {KOSOVO_CITIES.filter(c => c.city.toLowerCase().includes(citySearch.toLowerCase())).map(city => (
@@ -332,6 +333,7 @@ export const LocationScreen: React.FC<LocationScreenProps> = ({ onBack, onSelect
                               setShowCityPicker(false);
                               setCitySearch("");
                               setSelectedPlace(null);
+                              Keyboard.dismiss();
                             }}
                             className={`px-5 py-3.5 border-b border-slate-50 ${selectedCity === city.city ? 'bg-[#3473ef]/5' : ''}`}
                           >
