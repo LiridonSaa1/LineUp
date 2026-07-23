@@ -4,7 +4,25 @@ import { User, Settings, CreditCard, Bell, Shield, HelpCircle, LogOut, ChevronRi
 import Animated, { FadeInUp, FadeIn } from "react-native-reanimated";
 import { BlurView } from 'expo-blur';
 import { supabase } from "@/config/supabase";
-import { AddressAutocomplete, KOSOVO_CITIES } from "../components/AddressAutocomplete";
+const KOSOVO_CITIES = [
+  { formatted_address: "Ferizaj", city: "Ferizaj", street: "", postal_code: "70000", country: "Kosovë", latitude: 42.3703, longitude: 21.1559 },
+  { formatted_address: "Prishtinë", city: "Prishtinë", street: "", postal_code: "10000", country: "Kosovë", latitude: 42.6629, longitude: 21.1655 },
+  { formatted_address: "Prizren", city: "Prizren", street: "", postal_code: "20000", country: "Kosovë", latitude: 42.2139, longitude: 20.7397 },
+  { formatted_address: "Pejë", city: "Pejë", street: "", postal_code: "30000", country: "Kosovë", latitude: 42.6593, longitude: 20.2883 },
+  { formatted_address: "Gjakovë", city: "Gjakovë", street: "", postal_code: "50000", country: "Kosovë", latitude: 42.3803, longitude: 20.4308 },
+  { formatted_address: "Gjilan", city: "Gjilan", street: "", postal_code: "60000", country: "Kosovë", latitude: 42.4635, longitude: 21.4678 },
+  { formatted_address: "Mitrovicë", city: "Mitrovicë", street: "", postal_code: "40000", country: "Kosovë", latitude: 42.8914, longitude: 20.8660 },
+  { formatted_address: "Vushtrri", city: "Vushtrri", street: "", postal_code: "42000", country: "Kosovë", latitude: 42.8231, longitude: 20.9675 },
+  { formatted_address: "Podujevë", city: "Podujevë", street: "", postal_code: "11000", country: "Kosovë", latitude: 42.9114, longitude: 21.1903 },
+  { formatted_address: "Fushë Kosovë", city: "Fushë Kosovë", street: "", postal_code: "12000", country: "Kosovë", latitude: 42.6340, longitude: 21.0963 },
+  { formatted_address: "Rahovec", city: "Rahovec", street: "", postal_code: "21000", country: "Kosovë", latitude: 42.3994, longitude: 20.6553 },
+  { formatted_address: "Skënderaj", city: "Skënderaj", street: "", postal_code: "41000", country: "Kosovë", latitude: 42.7478, longitude: 20.7878 },
+  { formatted_address: "Lipjan", city: "Lipjan", street: "", postal_code: "14000", country: "Kosovë", latitude: 42.5217, longitude: 21.1258 },
+  { formatted_address: "Suharekë", city: "Suharekë", street: "", postal_code: "23000", country: "Kosovë", latitude: 42.3581, longitude: 20.8250 },
+  { formatted_address: "Deçan", city: "Deçan", street: "", postal_code: "51000", country: "Kosovë", latitude: 42.5353, longitude: 20.2878 },
+  { formatted_address: "Istog", city: "Istog", street: "", postal_code: "31000", country: "Kosovë", latitude: 42.7808, longitude: 20.4875 },
+  { formatted_address: "Klinë", city: "Klinë", street: "", postal_code: "32000", country: "Kosovë", latitude: 42.6225, longitude: 20.5786 },
+];
 
 const { width } = Dimensions.get("window");
 
@@ -198,7 +216,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
   };
 
   if (!user) {
+    console.log("ProfileScreen: User is null. authMode =", authMode);
     if (authMode === 'register') {
+      console.log("ProfileScreen: Rendering register layout. step =", registerStep);
       return (
         <ScrollView className="flex-1 bg-[#ECEEF2]" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }} keyboardShouldPersistTaps="handled">
           {/* Header section with Shop/Business Icon */}
@@ -580,14 +600,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
               {/* Tab Switcher */}
               <View className="flex-row bg-slate-100 p-1.5 rounded-2xl mb-6">
                 <TouchableOpacity
-                  onPress={() => { setAuthMode('login'); setErrorMessage(""); }}
+                  onPress={() => { console.log("ProfileScreen: tab switcher clicked: login"); setAuthMode('login'); setErrorMessage(""); }}
                   className={`flex-1 py-3 rounded-xl items-center flex-row justify-center gap-2 ${authMode === 'login' ? 'bg-white shadow-sm border border-slate-200/80' : ''}`}
                 >
                   <LogIn size={16} color={authMode === 'login' ? '#3473ef' : '#64748B'} strokeWidth={2.5} />
                   <Text className={`font-black text-xs uppercase tracking-wider ${authMode === 'login' ? 'text-[#161719]' : 'text-[#64748B]'}`}>Kyçu</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={() => { setAuthMode('register'); setErrorMessage(""); }}
+                  onPress={() => { console.log("ProfileScreen: tab switcher clicked: register"); setAuthMode('register'); setErrorMessage(""); }}
                   className={`flex-1 py-3 rounded-xl items-center flex-row justify-center gap-2 ${authMode === 'register' ? 'bg-white shadow-sm border border-slate-200/80' : ''}`}
                 >
                   <UserPlus size={16} color={authMode === 'register' ? '#3473ef' : '#64748B'} strokeWidth={2.5} />
