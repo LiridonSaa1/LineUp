@@ -349,19 +349,16 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                 </View>
 
                 {/* Street address input */}
-                <AddressAutocomplete
-                  key={selectedCity}
-                  placeholder="Adresa"
-                  selectedCity={selectedCity}
-                  inputClassName="bg-white border-slate-200 text-[#161719]"
-                  onSelectAddress={(place) => {
-                    setSelectedPlace({
-                      address: place.formatted_address,
-                      lat: place.latitude || 42.6629,
-                      lng: place.longitude || 21.1655
-                    });
-                  }}
-                />
+                <View className="bg-white rounded-2xl px-4 h-14 flex-row items-center border border-slate-200 shadow-sm">
+                  <MapPin size={20} color="#8789A3" />
+                  <TextInput
+                    placeholder="Adresa (Rruga dhe Numri)"
+                    value={selectedPlace ? selectedPlace.address : ""}
+                    onChangeText={(val) => setSelectedPlace({ address: val, lat: 42.6629, lng: 21.1655 })}
+                    className="flex-1 ml-3 font-bold text-[#161719] text-base"
+                    placeholderTextColor="#94A3B8"
+                  />
+                </View>
               </View>
 
               <TouchableOpacity
