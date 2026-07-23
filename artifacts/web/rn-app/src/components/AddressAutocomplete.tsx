@@ -26,6 +26,17 @@ export interface AddressAutocompleteProps {
 
 const DEFAULT_GOOGLE_MAPS_KEY = 'AIzaSyD9DOb-ko2C84TUlBVuPVILNaf3Jhkl-yg';
 
+// Normalizer for Albanian characters (ë -> e, ç -> c)
+const normalizeStr = (str: string) =>
+  str
+    ? str
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/ë/g, "e")
+        .replace(/ç/g, "c")
+    : "";
+
 // Comprehensive Kosovo Places Database for Instant Local Fallback & Offline Autocomplete
 export const KOSOVO_LOCATIONS: PlaceDetails[] = [
   { formatted_address: "Prishtinë, Qendër, Kosovë", city: "Prishtinë", street: "Sheshi Nënë Tereza", postal_code: "10000", country: "Kosovë", latitude: 42.6629, longitude: 21.1655 },
@@ -65,7 +76,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   disabled = false,
 }) => {
   const [query, setQuery] = useState(initialValue);
-  const [suggestions, setSuggestions] = useState<PlaceDetails[]>([]);
+  const [suggestions, setSuggestions] = useState<PlaceDetails[]>(KOSOVO_LOCATIONS);
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,24 +101,26 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
-    if (text.trim().length === 0) {
+    const cleanInput = normalizeStr(text);
+
+    if (cleanInput.length === 0) {
       setSuggestions(KOSOVO_LOCATIONS);
       setIsOpen(true);
       return;
     }
 
-    // Instant local Kosovo filter
+    // Instant local Kosovo filter with Albanian accent normalization
     const localMatches = KOSOVO_LOCATIONS.filter(item =>
-      item.formatted_address.toLowerCase().includes(text.toLowerCase()) ||
-      item.city.toLowerCase().includes(text.toLowerCase()) ||
-      item.street.toLowerCase().includes(text.toLowerCase())
+      normalizeStr(item.formatted_address).includes(cleanInput) ||
+      normalizeStr(item.city).includes(cleanInput) ||
+      normalizeStr(item.street).includes(cleanInput)
     );
 
     setSuggestions(localMatches.length > 0 ? localMatches : KOSOVO_LOCATIONS);
     setIsOpen(true);
 
     // Online Google Places Autocomplete API query
-    if (text.trim().length >= 2) {
+    if (cleanInput.length >= 2) {
       setLoading(true);
       debounceRef.current = setTimeout(async () => {
         try {
@@ -130,7 +143,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
             // Merge local and Google API results uniquely
             const combined = [...localMatches];
             googlePlaces.forEach(gp => {
-              if (!combined.some(c => c.formatted_address.toLowerCase() === gp.formatted_address.toLowerCase())) {
+              if (!combined.some(c => normalizeStr(c.formatted_address) === normalizeStr(gp.formatted_address))) {
                 combined.push(gp);
               }
             });
@@ -153,7 +166,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   };
 
   return (
-    <View className={`relative z-50 ${containerClassName}`}>
+    <View className={`relative z-50 ${containerClassName}`} style={{ zIndex: 9999, elevation: 10 }}>
       {label && (
         <Text className="text-xs font-black text-[#8789A3] uppercase tracking-widest mb-2 ml-1">
           {label}
@@ -184,8 +197,11 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
 
       {/* Autocomplete Dropdown List */}
       {isOpen && suggestions.length > 0 && (
-        <View className="mt-2 bg-white rounded-3xl border border-slate-200 p-2 shadow-2xl z-50 max-h-60 overflow-hidden">
-          <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="always">
+        <View
+          className="absolute top-16 left-0 right-0 bg-white rounded-3xl border border-slate-200 p-2 shadow-2xl overflow-hidden"
+          style={{ zIndex: 9999, elevation: 20, maxHeight: 260 }}
+        >
+          <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="always" style={{ maxHeight: 250 }}>
             {suggestions.map((item, index) => (
               <TouchableOpacity
                 key={index}
