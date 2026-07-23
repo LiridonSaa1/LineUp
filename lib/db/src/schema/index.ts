@@ -14,3 +14,4 @@ export * from "./holidays";
 export * from "./coupons";
 export * from "./loyalty";
 export * from "./recurring";
+export * from "./categories";

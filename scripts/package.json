@@ -6,6 +6,7 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "seed": "tsx ./src/seed.ts",
+    "seed:categories": "tsx ./src/seed-categories.ts",
     "clear:all": "tsx ./src/clear-all-data.ts",
     "clear:demo": "tsx ./src/clear-demo.ts",
     "check:db": "tsx ./src/check-db.ts",

@@ -87,15 +87,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
 
   const CATEGORIES = [
     { name: "Të gjitha", icon: Grid },
-    { name: "Flokë & stilim", icon: Scissors },
-    { name: "Vetulla & qerpikë", icon: Eye },
-    { name: "Masazhë", icon: User },
-    { name: "Spa & saunë", icon: Waves },
-    { name: "Thonjtë", icon: Hand },
-    { name: "Depilim", icon: Sparkles },
-    { name: "Trajtime fytyre", icon: Smile },
-    { name: "Berber", icon: Scissors },
-    { name: "Estetikë", icon: Syringe },
+    { name: "Haircut & Styling", icon: Scissors },
+    { name: "Hair Coloring", icon: Sparkles },
+    { name: "Hair Treatment", icon: Zap },
+    { name: "Beard & Grooming", icon: User },
+    { name: "Nails", icon: Hand },
+    { name: "Makeup", icon: Smile },
+    { name: "Brows & Lashes", icon: Eye },
+    { name: "Skin Care", icon: Shield },
+    { name: "Body Care", icon: Waves },
   ];
 
   useEffect(() => {
