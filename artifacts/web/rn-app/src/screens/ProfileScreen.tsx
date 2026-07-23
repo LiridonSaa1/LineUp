@@ -121,10 +121,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
 
           {/* Auth Header */}
           <View className="pb-8 px-6 items-center">
-             <View className="w-20 h-20 bg-[#3473ef] rounded-3xl items-center justify-center shadow-xl shadow-[#3473ef]/30 border border-white mb-4">
-                <User size={40} color="white" strokeWidth={2.5} />
-             </View>
-
              <Text className="text-3xl font-black text-[#161719] text-center tracking-tight mb-2">Welcome back</Text>
              <Text className="text-[#64748B] font-bold text-center text-sm leading-5 px-6">
                Sign in to your account to continue
