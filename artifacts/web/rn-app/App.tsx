@@ -10,7 +10,14 @@ import Animated, {
   withSpring,
   useSharedValue,
   FadeIn,
+  configureReanimatedLogger,
+  ReanimatedLogLevel,
 } from "react-native-reanimated";
+
+configureReanimatedLogger({
+  level: ReanimatedLogLevel.warn,
+  strict: false,
+});
 import { HomeScreen } from "./src/screens/HomeScreen";
 import { ExploreScreen } from "./src/screens/ExploreScreen";
 import { ProfileScreen } from "./src/screens/ProfileScreen";
