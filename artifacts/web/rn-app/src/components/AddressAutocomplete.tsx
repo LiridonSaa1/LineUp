@@ -177,42 +177,77 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
     setSuggestions(localMatches.length > 0 ? localMatches : baseList);
     setIsOpen(true);
 
-    // Online Google Places Autocomplete API query
+    // Online Google Places API + Nominatim OpenStreetMap live street search
     if (cleanInput.length >= 2) {
       setLoading(true);
       debounceRef.current = setTimeout(async () => {
         try {
-          const response = await fetch(
+          const apiQueryTerm = selectedCity ? `${text}, ${selectedCity}, Kosovë` : `${text}, Kosovë`;
+          
+          // 1. Fetch from Google Places Autocomplete API
+          const googleRes = await fetch(
             `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
-              text
-            )}&key=${apiKey}&components=country:${countryCode}&language=sq`
+              apiQueryTerm
+            )}&key=${apiKey}&language=sq`
           );
-          const data = await response.json();
+          const googleData = await googleRes.json();
+          let livePlaces: PlaceDetails[] = [];
 
-          if (data.status === 'OK' && Array.isArray(data.predictions)) {
-            const googlePlaces: PlaceDetails[] = data.predictions.map((p: any) => ({
+          if (googleData.status === 'OK' && Array.isArray(googleData.predictions)) {
+            livePlaces = googleData.predictions.map((p: any) => ({
               formatted_address: p.description,
-              city: p.structured_formatting?.secondary_text?.split(',')[0] || "Kosovë",
+              city: selectedCity || p.structured_formatting?.secondary_text?.split(',')[0] || "Kosovë",
               street: p.structured_formatting?.main_text || p.description,
               postal_code: "",
               country: "Kosovë",
             }));
-
-            // Merge local and Google API results uniquely
-            const combined = [...localMatches];
-            googlePlaces.forEach(gp => {
-              if (!combined.some(c => normalizeStr(c.formatted_address) === normalizeStr(gp.formatted_address))) {
-                combined.push(gp);
-              }
-            });
-            setSuggestions(combined);
           }
+
+          // 2. Fetch from OpenStreetMap Nominatim API for full coverage of all Kosovo streets
+          try {
+            const osmRes = await fetch(
+              `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(apiQueryTerm)}&format=json&addressdetails=1&limit=8`,
+              { headers: { 'User-Agent': 'LineUpApp/1.0' } }
+            );
+            const osmData = await osmRes.json();
+            if (Array.isArray(osmData)) {
+              osmData.forEach((item: any) => {
+                const streetName = item.address?.road || item.address?.suburb || item.display_name.split(',')[0];
+                const cityName = selectedCity || item.address?.city || item.address?.town || "Kosovë";
+                const fullAddr = `${cityName} - ${streetName}, Kosovë`;
+                
+                if (!livePlaces.some(lp => normalizeStr(lp.formatted_address) === normalizeStr(fullAddr))) {
+                  livePlaces.push({
+                    formatted_address: fullAddr,
+                    city: cityName,
+                    street: streetName,
+                    postal_code: item.address?.postcode || "",
+                    country: "Kosovë",
+                    latitude: parseFloat(item.lat),
+                    longitude: parseFloat(item.lon),
+                  });
+                }
+              });
+            }
+          } catch (osmErr) {
+            // Silently fallback to Google Places
+          }
+
+          // Merge local database with live API results uniquely
+          const combined = [...localMatches];
+          livePlaces.forEach(lp => {
+            if (!combined.some(c => normalizeStr(c.formatted_address) === normalizeStr(lp.formatted_address))) {
+              combined.push(lp);
+            }
+          });
+
+          setSuggestions(combined.length > 0 ? combined : baseList);
         } catch (err) {
-          console.warn("Google Places fetch error:", err);
+          console.warn("Places API live search error:", err);
         } finally {
           setLoading(false);
         }
-      }, 300);
+      }, 250);
     }
   };
 
