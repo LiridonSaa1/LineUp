@@ -204,23 +204,13 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
           <BlurView intensity={80} tint="light" className="flex-row items-center pl-5 pr-1.5 py-1.5">
             <Search size={22} color="#161719" strokeWidth={3} />
             <View className="flex-1 ml-3 h-12 justify-center">
-              <Text className="text-[15px] text-[#161719] font-black">
-                {initialSearch || "Flokë & stilim"}
-              </Text>
-              <Text className="text-[#4b5563] text-[10px] font-extrabold uppercase tracking-tight">
-                {initialCity === "Të gjitha" ? "Zona e hartës" : initialCity}
+              <Text className="text-[16px] text-[#4b5563] font-extrabold">
+                Kërko sallone, trajtime...
               </Text>
             </View>
-            <TouchableOpacity
-              onPress={(e) => { e.stopPropagation(); runOnJS(toggleSheet)(!isExpanded); }}
-              className="w-12 h-12 rounded-full bg-black items-center justify-center ml-2 shadow-lg"
-            >
-              {isExpanded ? (
-                <MapIcon size={20} color="white" strokeWidth={2.5} />
-              ) : (
-                <List size={20} color="white" strokeWidth={2.5} />
-              )}
-            </TouchableOpacity>
+            <View className="bg-black px-8 h-12 rounded-full items-center justify-center ml-2 shadow-lg">
+              <Text className="text-white font-black text-base">Kërko</Text>
+            </View>
           </BlurView>
         </TouchableOpacity>
       </View>
