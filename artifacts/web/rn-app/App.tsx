@@ -204,6 +204,7 @@ export default function App() {
                 onSelectLocation={(loc) => {
                   setSelectedLocation(loc);
                   setCityFilter(loc);
+                  setShowLocation(false);
                 }}
               />
             </View>
