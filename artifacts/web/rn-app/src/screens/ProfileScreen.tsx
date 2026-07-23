@@ -312,12 +312,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                     {showPassword ? <EyeOff size={20} color="#8789A3" /> : <Eye size={20} color="#8789A3" />}
                   </TouchableOpacity>
                 </View>
-              </View>
 
-
-
-              {/* Lokacioni Section */}
-              <View className="gap-y-3">
                 {/* City Picker input */}
                 <View className="relative z-50">
                   <TouchableOpacity
