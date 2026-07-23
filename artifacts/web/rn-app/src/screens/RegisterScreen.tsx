@@ -24,9 +24,9 @@ const KOSOVO_CITIES = [
 ];
 
 const REGISTRATION_PLANS = [
-  { id: 'starter', name: 'Starter Plan', price: '19€', period: 'muaj', features: ['Deri në 300 rezervime/muaj', '1 profil stafi', 'Kalendari i rezervimeve', 'Njoftime me email'] },
-  { id: 'pro', name: 'Pro Plan', price: '39€', period: 'muaj', features: ['Rezervime pa limit', 'Deri në 5 profile stafi', 'Njoftime me SMS & Email', 'Statistika & Raporte', 'Mbështetje prioritare'], isPopular: true },
-  { id: 'elite', name: 'Elite Plan', price: '59€', period: 'muaj', features: ['Të gjitha të planit Pro', 'Profile stafi pa limit', 'Marketing me SMS', 'Landing page e personalizuar', 'Asistent personal 24/7'] }
+  { id: 'starter', name: 'Plani Starter', price: '19€', period: 'muaj', features: ['Deri në 300 rezervime/muaj', '1 profil stafi', 'Kalendari i rezervimeve', 'Njoftime me email'] },
+  { id: 'pro', name: 'Plani Pro', price: '39€', period: 'muaj', features: ['Rezervime pa limit', 'Deri në 5 profile stafi', 'Njoftime me SMS & Email', 'Statistika & Raporte', 'Mbështetje prioritare'], isPopular: true },
+  { id: 'elite', name: 'Plani Elite', price: '59€', period: 'muaj', features: ['Të gjitha të planit Pro', 'Profile stafi pa limit', 'Marketing me SMS', 'Landing page e personalizuar', 'Asistent personal 24/7'] }
 ];
 
 interface RegisterScreenProps {
@@ -397,7 +397,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
             <View className="flex-row items-center justify-between mb-6 pb-4 border-b border-slate-100">
               <View className="flex-row items-center gap-2">
                 <CreditCard size={18} color="#3473ef" />
-                <Text className="text-[#161719] font-black text-sm">Paddle Secure Checkout</Text>
+                <Text className="text-[#161719] font-black text-sm">Pagesë e sigurt me Paddle</Text>
               </View>
               <Lock size={14} color="#8789A3" />
             </View>

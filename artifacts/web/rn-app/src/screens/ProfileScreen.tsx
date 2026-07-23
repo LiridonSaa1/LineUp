@@ -121,9 +121,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
 
           {/* Auth Header */}
           <View className="pb-8 px-6 items-center">
-             <Text className="text-3xl font-black text-[#161719] text-center tracking-tight mb-2">Welcome back</Text>
+             <Text className="text-3xl font-black text-[#161719] text-center tracking-tight mb-2">Mirëseerdhët përsëri</Text>
              <Text className="text-[#64748B] font-bold text-center text-sm leading-5 px-6">
-               Sign in to your account to continue
+               Kyçuni në llogarinë tuaj për të vazhduar
              </Text>
           </View>
 
