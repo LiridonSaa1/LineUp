@@ -415,7 +415,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => { setAuthMode('login'); setErrorMessage(""); }}
+                onPress={() => { Keyboard.dismiss(); setAuthMode('login'); setErrorMessage(""); }}
                 className="py-4 items-center"
               >
                 <Text className="text-slate-500 font-bold text-xs">
@@ -617,14 +617,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
               {/* Tab Switcher */}
               <View className="flex-row bg-slate-100 p-1.5 rounded-2xl mb-6">
                 <TouchableOpacity
-                  onPress={() => { console.log("ProfileScreen: tab switcher clicked: login"); setAuthMode('login'); setErrorMessage(""); }}
+                  onPress={() => { Keyboard.dismiss(); console.log("ProfileScreen: tab switcher clicked: login"); setAuthMode('login'); setErrorMessage(""); }}
                   className={`flex-1 py-3 rounded-xl items-center flex-row justify-center gap-2 ${authMode === 'login' ? 'bg-white shadow-sm border border-slate-200/80' : ''}`}
                 >
                   <LogIn size={16} color={authMode === 'login' ? '#3473ef' : '#64748B'} strokeWidth={2.5} />
                   <Text className={`font-black text-xs uppercase tracking-wider ${authMode === 'login' ? 'text-[#161719]' : 'text-[#64748B]'}`}>Kyçu</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={() => { console.log("ProfileScreen: tab switcher clicked: register"); setAuthMode('register'); setErrorMessage(""); }}
+                  onPress={() => { Keyboard.dismiss(); console.log("ProfileScreen: tab switcher clicked: register"); setAuthMode('register'); setErrorMessage(""); }}
                   className={`flex-1 py-3 rounded-xl items-center flex-row justify-center gap-2 ${authMode === 'register' ? 'bg-white shadow-sm border border-slate-200/80' : ''}`}
                 >
                   <UserPlus size={16} color={authMode === 'register' ? '#3473ef' : '#64748B'} strokeWidth={2.5} />
