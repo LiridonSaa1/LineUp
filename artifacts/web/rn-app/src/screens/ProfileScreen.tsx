@@ -314,8 +314,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                 </View>
               </View>
 
-              {/* Centered LOKACIONI Label */}
-              <Text className="text-[11px] font-black text-[#8789A3] uppercase tracking-widest text-center mt-4">LOKACIONI</Text>
+
 
               {/* Lokacioni Section */}
               <View className="gap-y-3">
