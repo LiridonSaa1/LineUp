@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, TextInput, ScrollView, SafeAreaView, Linking, ActivityIndicator, Dimensions, Keyboard } from 'react-native';
-import { ArrowLeft, Search, Navigation, Home, Briefcase, MapPin, AlertCircle, X, ChevronRight, ChevronDown } from 'lucide-react-native';
+import { ArrowLeft, Search, Navigation, Home, Briefcase, MapPin, AlertCircle, X, ChevronRight } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import Animated, {
   useAnimatedStyle,
@@ -8,7 +8,7 @@ import Animated, {
   withSpring
 } from 'react-native-reanimated';
 import { withTiming } from 'react-native-reanimated';
-import { AddressAutocomplete, KOSOVO_CITIES } from '../components/AddressAutocomplete';
+import { AddressAutocomplete } from '../components/AddressAutocomplete';
 import { supabase } from '@/config/supabase';
 
 const { width, height } = Dimensions.get('window');
@@ -33,9 +33,6 @@ export const LocationScreen: React.FC<LocationScreenProps> = ({ onBack, onSelect
   const [showAddAddress, setShowAddAddress] = useState(false);
   const [addressType, setAddressType] = useState<'home' | 'work' | 'other'>('other');
   const [selectedPlace, setSelectedPlace] = useState<{ address: string; lat?: number; lng?: number } | null>(null);
-  const [selectedCity, setSelectedCity] = useState("Prishtinë");
-  const [citySearch, setCitySearch] = useState("");
-  const [showCityPicker, setShowCityPicker] = useState(false);
 
   const autocompleteRef = useRef<any>(null);
 
@@ -296,61 +293,11 @@ export const LocationScreen: React.FC<LocationScreenProps> = ({ onBack, onSelect
             </Text>
           </View>
 
-          {/* City Picker & Street search */}
+          {/* Street search */}
           <View className="flex-1">
-            <Text className="text-xs font-black text-[#8789A3] uppercase tracking-widest mb-3 ml-1">Qyteti</Text>
-            <View className="relative mb-6 z-50">
-              <View className="absolute left-4 top-4.5 z-10">
-                <MapPin size={20} color="#3473ef" />
-              </View>
-              <TextInput
-                value={citySearch !== "" || showCityPicker ? citySearch : selectedCity}
-                onChangeText={(txt) => {
-                  setCitySearch(txt);
-                  setShowCityPicker(true);
-                }}
-                onFocus={() => setShowCityPicker(true)}
-                placeholder="Zgjidh qytetin..."
-                placeholderTextColor="#8789A3"
-                className="w-full bg-white border border-slate-200 rounded-2xl pl-12 pr-10 h-14 text-base font-bold text-[#161719] shadow-xs"
-              />
-              <TouchableOpacity
-                onPress={() => setShowCityPicker(!showCityPicker)}
-                className="absolute right-4 top-4.5 z-10"
-              >
-                <ChevronDown size={20} color="#94A3B8" />
-              </TouchableOpacity>
-
-              {showCityPicker && (
-                 <View className="absolute top-16 left-0 right-0 bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden z-50">
-                    <View style={{ maxHeight: 200 }}>
-                      <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="always">
-                        {KOSOVO_CITIES.filter(c => c.city.toLowerCase().includes(citySearch.toLowerCase())).map(city => (
-                          <TouchableOpacity
-                            key={city.city}
-                            onPress={() => {
-                              setSelectedCity(city.city);
-                              setShowCityPicker(false);
-                              setCitySearch("");
-                              setSelectedPlace(null);
-                              Keyboard.dismiss();
-                            }}
-                            className={`px-5 py-3.5 border-b border-slate-50 ${selectedCity === city.city ? 'bg-[#3473ef]/5' : ''}`}
-                          >
-                            <Text className={`font-bold text-sm ${selectedCity === city.city ? 'text-[#3473ef]' : 'text-[#161719]'}`}>{city.city}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </ScrollView>
-                    </View>
-                 </View>
-              )}
-            </View>
-
              <AddressAutocomplete
-                key={selectedCity}
                 label="Kërko Adresën / Rrugën"
-                placeholder={`Kërko rrugën në ${selectedCity}...`}
-                selectedCity={selectedCity}
+                placeholder="Kërko rrugën, qytetin ose ndërtesën..."
                 containerClassName="mb-6"
                 onSelectAddress={(place) => {
                   setSelectedPlace({
