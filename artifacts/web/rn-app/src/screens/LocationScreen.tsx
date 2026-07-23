@@ -152,7 +152,7 @@ export const LocationScreen: React.FC<LocationScreenProps> = ({ onBack, onSelect
   });
 
   return (
-    <View className="flex-1 bg-[#EFF2F7]">
+    <View className="flex-1 bg-[#F5F5F5]">
       {/* Modal Handle */}
       <View className="w-12 h-1.5 bg-gray-300 rounded-full self-center mt-3 mb-2" />
 
