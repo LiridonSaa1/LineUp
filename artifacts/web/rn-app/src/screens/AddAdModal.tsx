@@ -65,10 +65,43 @@ export const AddAdModal: React.FC<AddAdModalProps> = ({ onClose, onSuccess }) =>
   const [showCityPicker, setShowCityPicker] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<{ address: string; lat: number; lng: number } | null>(null);
   const [selectedPlan, setSelectedPlan] = useState(PLANS[1]);
+  const [adImage, setAdImage] = useState<string | null>("https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=1000&auto=format&fit=crop&q=80");
 
   const autocompleteRef = useRef<any>(null);
 
   const filteredCities = CITIES.filter(c => c.toLowerCase().includes(citySearch.toLowerCase()));
+
+  const handlePickImage = () => {
+    // Allows selecting from gallery or high-res demo banners
+    const sampleBanners = [
+      "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=1000&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1000&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=1000&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1000&auto=format&fit=crop&q=80"
+    ];
+
+    if (typeof document !== 'undefined') {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = (e: any) => {
+        const file = e.target?.files?.[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            if (event.target?.result) {
+              setAdImage(event.target.result as string);
+            }
+          };
+          reader.readAsDataURL(file);
+        }
+      };
+      input.click();
+    } else {
+      const randomBanner = sampleBanners[Math.floor(Math.random() * sampleBanners.length)];
+      setAdImage(randomBanner);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!businessName || !selectedPlace) return;
@@ -180,6 +213,7 @@ export const AddAdModal: React.FC<AddAdModalProps> = ({ onClose, onSuccess }) =>
           <AddressAutocomplete
             label="Lokacioni i Verifikuar"
             placeholder={`Kërko rrugën në ${selectedCity}...`}
+            selectedCity={selectedCity}
             containerClassName="mb-6"
             onSelectAddress={(place) => {
               setSelectedPlace({
@@ -194,7 +228,7 @@ export const AddAdModal: React.FC<AddAdModalProps> = ({ onClose, onSuccess }) =>
              <View className="bg-emerald-50 p-5 rounded-3xl border border-emerald-100 mb-8">
                 <View className="flex-row items-center mb-2">
                    <Check size={18} color="#10b981" strokeWidth={3} />
-                   <Text className="text-emerald-600 font-black text-xs uppercase ml-2 tracking-widest">Adresa u verifikua</Text>
+                   <Text className="text-emerald-600 font-black text-xs uppercase ml-2 tracking-widest">Adresa u verifikua në {selectedCity}</Text>
                 </View>
                 <Text className="text-[#161719] font-bold text-sm leading-5">{selectedPlace.address}</Text>
              </View>
@@ -202,13 +236,31 @@ export const AddAdModal: React.FC<AddAdModalProps> = ({ onClose, onSuccess }) =>
 
           {/* Image Upload Area */}
           <Text className="text-xs font-black text-[#8789A3] uppercase tracking-widest mb-3 ml-1">Vizuali i Reklamës</Text>
-          <TouchableOpacity className="h-44 bg-slate-50 rounded-[32px] border-2 border-dashed border-slate-200 items-center justify-center mb-8">
-             <View className="w-14 h-14 bg-white rounded-full items-center justify-center shadow-sm mb-3">
-                <Camera size={24} color="#3473ef" />
-             </View>
-             <Text className="text-[#161719] font-black text-sm">Ngarko Foto / Logo</Text>
-             <Text className="text-[#8789A3] font-bold text-[11px] mt-1">Rekomandohet 1000x500px</Text>
-          </TouchableOpacity>
+          {adImage ? (
+            <View className="relative mb-8 rounded-[32px] overflow-hidden border border-slate-200 shadow-md">
+              <Image source={{ uri: adImage }} className="w-full h-48 object-cover" />
+              <View className="absolute inset-0 bg-black/30 items-center justify-center">
+                 <TouchableOpacity
+                   onPress={handlePickImage}
+                   className="bg-white/90 px-4 py-2 rounded-full flex-row items-center border border-white"
+                 >
+                    <Camera size={16} color="#3473ef" />
+                    <Text className="text-[#3473ef] font-black text-xs ml-2 uppercase">Ndrysho Foton</Text>
+                 </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity
+               onPress={handlePickImage}
+               className="h-44 bg-slate-50 rounded-[32px] border-2 border-dashed border-slate-200 items-center justify-center mb-8 active:bg-slate-100"
+            >
+               <View className="w-14 h-14 bg-white rounded-full items-center justify-center shadow-sm mb-3">
+                  <Camera size={24} color="#3473ef" />
+               </View>
+               <Text className="text-[#161719] font-black text-sm">Ngarko Foto / Banner Reklamues</Text>
+               <Text className="text-[#8789A3] font-bold text-[11px] mt-1">Shtypni këtu për të zgjedhur foton (1000x500px)</Text>
+            </TouchableOpacity>
+          )}
 
           {/* Plan Selection */}
           <Text className="text-xs font-black text-[#8789A3] uppercase tracking-widest mb-3 ml-1">Zgjidh Planin</Text>

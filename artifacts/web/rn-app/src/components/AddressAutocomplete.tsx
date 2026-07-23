@@ -22,6 +22,7 @@ export interface AddressAutocompleteProps {
   apiKey?: string;
   countryCode?: string;
   disabled?: boolean;
+  selectedCity?: string;
 }
 
 const DEFAULT_GOOGLE_MAPS_KEY = 'AIzaSyD9DOb-ko2C84TUlBVuPVILNaf3Jhkl-yg';
@@ -56,28 +57,53 @@ export const KOSOVO_CITIES: PlaceDetails[] = [
   { formatted_address: "Deçan", city: "Deçan", street: "", postal_code: "51000", country: "Kosovë", latitude: 42.5353, longitude: 20.2878 },
   { formatted_address: "Istog", city: "Istog", street: "", postal_code: "31000", country: "Kosovë", latitude: 42.7808, longitude: 20.4875 },
   { formatted_address: "Klinë", city: "Klinë", street: "", postal_code: "32000", country: "Kosovë", latitude: 42.6225, longitude: 20.5786 },
-  { formatted_address: "Kamenicë", city: "Kamenicë", street: "", postal_code: "62000", country: "Kosovë", latitude: 42.5781, longitude: 21.5803 },
-  { formatted_address: "Kaçanik", city: "Kaçanik", street: "", postal_code: "71000", country: "Kosovë", latitude: 42.2319, longitude: 21.2594 },
-  { formatted_address: "Dragash", city: "Dragash", street: "", postal_code: "22000", country: "Kosovë", latitude: 42.0265, longitude: 20.6533 },
-  { formatted_address: "Malishevë", city: "Malishevë", street: "", postal_code: "24000", country: "Kosovë", latitude: 42.4822, longitude: 20.7458 },
-  { formatted_address: "Drenas (Gllogoc)", city: "Drenas", street: "", postal_code: "13000", country: "Kosovë", latitude: 42.6256, longitude: 20.8942 },
-  { formatted_address: "Shtime", city: "Shtime", street: "", postal_code: "72000", country: "Kosovë", latitude: 42.4331, longitude: 21.0397 },
-  { formatted_address: "Obiliq", city: "Obiliq", street: "", postal_code: "15000", country: "Kosovë", latitude: 42.6869, longitude: 21.0703 },
 ];
+
+export const KOSOVO_STREETS: Record<string, PlaceDetails[]> = {
+  "Ferizaj": [
+    { formatted_address: "Ferizaj - Rruga Dëshmorët e Kombit", city: "Ferizaj", street: "Rruga Dëshmorët e Kombit", postal_code: "70000", country: "Kosovë", latitude: 42.3703, longitude: 21.1559 },
+    { formatted_address: "Ferizaj - Rruga 12 Qershori", city: "Ferizaj", street: "Rruga 12 Qershori", postal_code: "70000", country: "Kosovë", latitude: 42.3685, longitude: 21.1540 },
+    { formatted_address: "Ferizaj - Rruga Ahmet Kaçiku", city: "Ferizaj", street: "Rruga Ahmet Kaçiku", postal_code: "70000", country: "Kosovë", latitude: 42.3720, longitude: 21.1580 },
+    { formatted_address: "Ferizaj - Rruga Reçaku", city: "Ferizaj", street: "Rruga Reçaku", postal_code: "70000", country: "Kosovë", latitude: 42.3650, longitude: 21.1500 },
+    { formatted_address: "Ferizaj - Rruga Nerodime", city: "Ferizaj", street: "Rruga Nerodime", postal_code: "70000", country: "Kosovë", latitude: 42.3600, longitude: 21.1450 },
+    { formatted_address: "Ferizaj - Sheshi Adem Jashari", city: "Ferizaj", street: "Sheshi Adem Jashari", postal_code: "70000", country: "Kosovë", latitude: 42.3700, longitude: 21.1550 },
+  ],
+  "Prishtinë": [
+    { formatted_address: "Prishtinë - Rruga B", city: "Prishtinë", street: "Rruga B", postal_code: "10000", country: "Kosovë", latitude: 42.6560, longitude: 21.1820 },
+    { formatted_address: "Prishtinë - Rruga C", city: "Prishtinë", street: "Rruga C", postal_code: "10000", country: "Kosovë", latitude: 42.6500, longitude: 21.1850 },
+    { formatted_address: "Prishtinë - Dardania (Bill Clinton)", city: "Prishtinë", street: "Bulevardi Bill Clinton", postal_code: "10000", country: "Kosovë", latitude: 42.6550, longitude: 21.1520 },
+    { formatted_address: "Prishtinë - Bregu i Diellit (Enver Maloku)", city: "Prishtinë", street: "Rruga Enver Maloku", postal_code: "10000", country: "Kosovë", latitude: 42.6580, longitude: 21.1750 },
+    { formatted_address: "Prishtinë - Pejton (Fehmi Agani)", city: "Prishtinë", street: "Rruga Fehmi Agani", postal_code: "10000", country: "Kosovë", latitude: 42.6590, longitude: 21.1580 },
+    { formatted_address: "Prishtinë - Dragodan / Arbëri", city: "Prishtinë", street: "Rruga Ahmet Krasniqi", postal_code: "10000", country: "Kosovë", latitude: 42.6680, longitude: 21.1550 },
+    { formatted_address: "Prishtinë - Ulpianë", city: "Prishtinë", street: "Rruga Henry Dunant", postal_code: "10000", country: "Kosovë", latitude: 42.6510, longitude: 21.1610 },
+  ],
+  "Prizren": [
+    { formatted_address: "Prizren - Sheshi Shatërvan", city: "Prizren", street: "Sheshi Shatërvan", postal_code: "20000", country: "Kosovë", latitude: 42.2139, longitude: 20.7397 },
+    { formatted_address: "Prizren - Bazhdarhane", city: "Prizren", street: "Rruga Remzi Ademaj", postal_code: "20000", country: "Kosovë", latitude: 42.2200, longitude: 20.7420 },
+    { formatted_address: "Prizren - Rruga Adem Jashari", city: "Prizren", street: "Rruga Adem Jashari", postal_code: "20000", country: "Kosovë", latitude: 42.2180, longitude: 20.7410 },
+  ],
+  "Pejë": [
+    { formatted_address: "Pejë - Sheshi Haxhi Zeka", city: "Pejë", street: "Sheshi Haxhi Zeka", postal_code: "30000", country: "Kosovë", latitude: 42.6593, longitude: 20.2883 },
+    { formatted_address: "Pejë - Karagaç", city: "Pejë", street: "Rruga Mbretëresha Teutë", postal_code: "30000", country: "Kosovë", latitude: 42.6540, longitude: 20.2910 },
+  ],
+  "Gjakovë": [
+    { formatted_address: "Gjakovë - Qarshia e Madhe", city: "Gjakovë", street: "Rruga Qarshia e Madhe", postal_code: "50000", country: "Kosovë", latitude: 42.3803, longitude: 20.4308 },
+    { formatted_address: "Gjakovë - Rruga Nënë Tereza", city: "Gjakovë", street: "Rruga Nënë Tereza", postal_code: "50000", country: "Kosovë", latitude: 42.3815, longitude: 20.4320 },
+  ],
+  "Gjilan": [
+    { formatted_address: "Gjilan - Bulevardi i Pavarësisë", city: "Gjilan", street: "Bulevardi i Pavarësisë", postal_code: "60000", country: "Kosovë", latitude: 42.4635, longitude: 21.4678 },
+    { formatted_address: "Gjilan - Rruga Adem Jashari", city: "Gjilan", street: "Rruga Adem Jashari", postal_code: "60000", country: "Kosovë", latitude: 42.4650, longitude: 21.4690 },
+  ],
+  "Mitrovicë": [
+    { formatted_address: "Mitrovicë - Sheshi Mehë Uka", city: "Mitrovicë", street: "Sheshi Mehë Uka", postal_code: "40000", country: "Kosovë", latitude: 42.8914, longitude: 20.8660 },
+    { formatted_address: "Mitrovicë - Rruga Mbretëresha Teutë", city: "Mitrovicë", street: "Rruga Mbretëresha Teutë", postal_code: "40000", country: "Kosovë", latitude: 42.8930, longitude: 20.8680 },
+  ]
+};
 
 // Comprehensive Kosovo Places Database for Instant Local Fallback & Offline Autocomplete
 export const KOSOVO_LOCATIONS: PlaceDetails[] = [
   ...KOSOVO_CITIES,
-  { formatted_address: "Prishtinë - Dardania, Kosovë", city: "Prishtinë", street: "Bulevardi Bill Clinton", postal_code: "10000", country: "Kosovë", latitude: 42.6550, longitude: 21.1520 },
-  { formatted_address: "Prishtinë - Bregu i Diellit, Kosovë", city: "Prishtinë", street: "Rruga Enver Maloku", postal_code: "10000", country: "Kosovë", latitude: 42.6580, longitude: 21.1750 },
-  { formatted_address: "Prishtinë - Rruga B, Kosovë", city: "Prishtinë", street: "Rruga B", postal_code: "10000", country: "Kosovë", latitude: 42.6560, longitude: 21.1820 },
-  { formatted_address: "Prishtinë - Rruga C, Kosovë", city: "Prishtinë", street: "Rruga C", postal_code: "10000", country: "Kosovë", latitude: 42.6500, longitude: 21.1850 },
-  { formatted_address: "Prishtinë - Pejton, Kosovë", city: "Prishtinë", street: "Rruga Fehmi Agani", postal_code: "10000", country: "Kosovë", latitude: 42.6590, longitude: 21.1580 },
-  { formatted_address: "Prishtinë - Arbëri (Dragodan), Kosovë", city: "Prishtinë", street: "Rruga Ahmet Krasniqi", postal_code: "10000", country: "Kosovë", latitude: 42.6680, longitude: 21.1550 },
-  { formatted_address: "Prishtinë - Ulpianë, Kosovë", city: "Prishtinë", street: "Rruga Henry Dunant", postal_code: "10000", country: "Kosovë", latitude: 42.6510, longitude: 21.1610 },
-  { formatted_address: "Prizren - Bazhdarhane, Kosovë", city: "Prizren", street: "Rruga Remzi Ademaj", postal_code: "20000", country: "Kosovë", latitude: 42.2200, longitude: 20.7420 },
-  { formatted_address: "Pejë - Karagaç, Kosovë", city: "Pejë", street: "Rruga Mbretëresha Teutë", postal_code: "30000", country: "Kosovë", latitude: 42.6540, longitude: 20.2910 },
-  { formatted_address: "Gjakovë - Qarshia e Madhe, Kosovë", city: "Gjakovë", street: "Rruga Qarshia e Madhe", postal_code: "50000", country: "Kosovë", latitude: 42.3803, longitude: 20.4308 },
+  ...Object.values(KOSOVO_STREETS).flat()
 ];
 
 export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
@@ -90,9 +116,17 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   apiKey = DEFAULT_GOOGLE_MAPS_KEY,
   countryCode = "xk",
   disabled = false,
+  selectedCity,
 }) => {
   const [query, setQuery] = useState(initialValue);
-  const [suggestions, setSuggestions] = useState<PlaceDetails[]>(KOSOVO_CITIES);
+  const getCityBaseList = () => {
+    if (selectedCity && KOSOVO_STREETS[selectedCity]) {
+      return KOSOVO_STREETS[selectedCity];
+    }
+    return KOSOVO_CITIES;
+  };
+
+  const [suggestions, setSuggestions] = useState<PlaceDetails[]>(getCityBaseList());
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -102,9 +136,16 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
     setQuery(initialValue);
   }, [initialValue]);
 
+  useEffect(() => {
+    if (selectedCity) {
+      setSuggestions(getCityBaseList());
+    }
+  }, [selectedCity]);
+
   const handleFocus = () => {
+    const baseList = getCityBaseList();
     if (query.trim().length === 0) {
-      setSuggestions(KOSOVO_CITIES);
+      setSuggestions(baseList);
       setIsOpen(true);
     } else {
       handleTextChange(query);
@@ -118,29 +159,22 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     const cleanInput = normalizeStr(text);
+    const baseList = getCityBaseList();
 
     if (cleanInput.length === 0) {
-      setSuggestions(KOSOVO_CITIES);
+      setSuggestions(baseList);
       setIsOpen(true);
       return;
     }
 
-    // 1. First priority: Match clean city names (e.g. Fer -> Ferizaj, Prish -> Prishtinë)
-    const matchedCities = KOSOVO_CITIES.filter(item =>
-      normalizeStr(item.city).includes(cleanInput) ||
-      normalizeStr(item.formatted_address).includes(cleanInput)
-    );
-
-    // 2. Second priority: Match streets or broader locations
-    const matchedLocations = KOSOVO_LOCATIONS.filter(item =>
+    // Filter streets and places specific to selected city if provided
+    const localMatches = (selectedCity && KOSOVO_STREETS[selectedCity] ? KOSOVO_STREETS[selectedCity] : KOSOVO_LOCATIONS).filter(item =>
       normalizeStr(item.formatted_address).includes(cleanInput) ||
       normalizeStr(item.city).includes(cleanInput) ||
       normalizeStr(item.street).includes(cleanInput)
     );
 
-    const localMatches = matchedCities.length > 0 ? matchedCities : matchedLocations;
-
-    setSuggestions(localMatches.length > 0 ? localMatches : KOSOVO_CITIES);
+    setSuggestions(localMatches.length > 0 ? localMatches : baseList);
     setIsOpen(true);
 
     // Online Google Places Autocomplete API query
