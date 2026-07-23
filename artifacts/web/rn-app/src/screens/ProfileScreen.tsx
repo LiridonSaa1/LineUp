@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Switch, Image, TextInput, Dimensions, ActivityIndicator, Keyboard, Alert } from "react-native";
-import { User, Settings, CreditCard, Bell, Shield, HelpCircle, LogOut, ChevronRight, Calendar, Heart, Award, Store, Mail, Lock, Eye, EyeOff, UserPlus, LogIn, Phone, ChevronDown, Search, ArrowLeft, Check, Zap, Sparkles, MapPin } from "lucide-react-native";
+import { User, Settings, CreditCard, Bell, Shield, HelpCircle, LogOut, ChevronRight, Calendar, Heart, Award, Store, Mail, Lock, Eye, EyeOff, UserPlus, LogIn, Phone, ChevronDown, Search, ArrowLeft, Check, Zap, Sparkles, MapPin, X } from "lucide-react-native";
 import Animated, { FadeInUp, FadeIn } from "react-native-reanimated";
 import { BlurView } from 'expo-blur';
 import { supabase } from "@/config/supabase";
@@ -330,7 +330,19 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                       <MapPin size={20} color="#3473ef" />
                     </View>
                     <Text className="text-[#161719] font-bold text-base ml-2">{selectedCity || "Qyteti"}</Text>
-                    <ChevronDown size={20} color="#8789A3" />
+                    {showCityPicker ? (
+                      <TouchableOpacity
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          setShowCityPicker(false);
+                        }}
+                        className="p-1"
+                      >
+                        <X size={18} color="#8789A3" strokeWidth={2.5} />
+                      </TouchableOpacity>
+                    ) : (
+                      <ChevronDown size={20} color="#8789A3" />
+                    )}
                   </TouchableOpacity>
 
                   {showCityPicker && (
@@ -374,10 +386,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                   <TextInput
                     placeholder="Adresa (Rruga dhe Numri)"
                     value={selectedPlace ? selectedPlace.address : ""}
-                    onChangeText={(val) => setSelectedPlace({ address: val, lat: 42.6629, lng: 21.1655 })}
+                    onChangeText={(val) => setSelectedPlace(val ? { address: val, lat: 42.6629, lng: 21.1655 } : null)}
                     className="flex-1 ml-3 font-bold text-[#161719] text-base"
                     placeholderTextColor="#94A3B8"
                   />
+                  {selectedPlace && selectedPlace.address !== "" && (
+                    <TouchableOpacity onPress={() => setSelectedPlace(null)} className="p-1">
+                      <X size={18} color="#8789A3" strokeWidth={2.5} />
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
 

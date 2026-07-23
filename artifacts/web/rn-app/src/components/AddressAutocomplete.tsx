@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, ScrollView, StyleSheet } from 'react-native';
-import { MapPin, Search, Check, AlertCircle, Navigation } from 'lucide-react-native';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, ScrollView, StyleSheet, Keyboard } from 'react-native';
+import { MapPin, Search, Check, AlertCircle, Navigation, X } from 'lucide-react-native';
 
 export interface PlaceDetails {
   formatted_address: string;
@@ -301,11 +301,24 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
           className={`w-full bg-white border border-slate-200 rounded-2xl pl-12 pr-10 h-14 text-base font-bold text-[#161719] shadow-xs ${inputClassName}`}
         />
 
-        {loading && (
-          <View className="absolute right-4 z-10">
+        <View className="absolute right-4 z-10 flex-row items-center gap-2">
+          {loading && (
             <ActivityIndicator size="small" color="#3473ef" />
-          </View>
-        )}
+          )}
+          {(query.length > 0 || isOpen) && (
+            <TouchableOpacity
+              onPress={() => {
+                setQuery("");
+                setSuggestions(getCityBaseList());
+                setIsOpen(false);
+                Keyboard.dismiss();
+              }}
+              className="p-1"
+            >
+              <X size={18} color="#8789A3" strokeWidth={2.5} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* Autocomplete Dropdown List */}
