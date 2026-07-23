@@ -170,14 +170,14 @@ export default function App() {
             {activeTab === 2 && (
               <ActivityScreen
                 user={user}
-                onLogin={() => setUser({ id: '123', name: 'Artan Berisha' })}
+                onLogin={(userData) => setUser(userData || { id: '123', name: 'Artan Berisha', email: 'artan@lineup.com' })}
                 onNavigateToSearch={() => setActiveTab(1)}
               />
             )}
             {activeTab === 3 && (
               <ProfileScreen
                 user={user}
-                onLogin={() => setUser({ id: '123', name: 'Artan Berisha' })}
+                onLogin={(userData) => setUser(userData || { id: '123', name: 'Artan Berisha', email: 'artan@lineup.com' })}
                 onLogout={() => setUser(null)}
                 onOpenRegisterShop={() => setShowRegisterShop(true)}
               />

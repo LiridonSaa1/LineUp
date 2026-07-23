@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Switch, Image, TextInput, Dimensions } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Switch, Image, TextInput, Dimensions, ActivityIndicator } from "react-native";
 import { User, Settings, CreditCard, Bell, Shield, HelpCircle, LogOut, ChevronRight, Calendar, Heart, Award, Store, Mail, Lock, Eye, EyeOff, UserPlus, LogIn } from "lucide-react-native";
 import Animated, { FadeInUp, FadeIn } from "react-native-reanimated";
 import { BlurView } from 'expo-blur';
@@ -9,7 +9,7 @@ const { width } = Dimensions.get("window");
 
 interface ProfileScreenProps {
   user: any;
-  onLogin: () => void;
+  onLogin: (userData?: any) => void;
   onLogout: () => void;
   onOpenRegisterShop: () => void;
 }
@@ -68,22 +68,51 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
     setErrorMessage("");
 
     try {
-      // 1. Try Supabase Auth
-      const { data, error } = await supabase.auth.signInWithPassword({
+      let loggedInUser = {
+        name: fullName || email.split('@')[0],
+        email: email,
+        role: role
+      };
+
+      // 1. Check Supabase Auth session
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (!error && data.user) {
-        onLogin();
-        return;
+      if (!authError && authData?.user) {
+        loggedInUser.email = authData.user.email || email;
+        loggedInUser.name = authData.user.user_metadata?.full_name || loggedInUser.name;
       }
 
-      // 2. Fallback to API server / Demo account login matching Web routes
-      onLogin();
+      // 2. Query 'users' table in Supabase
+      try {
+        const { data: dbUser } = await supabase.from('users').select('*').eq('email', email).maybeSingle();
+        if (dbUser) {
+          loggedInUser = {
+            name: dbUser.name || dbUser.full_name || dbUser.email?.split('@')[0] || loggedInUser.name,
+            email: dbUser.email,
+            role: dbUser.role || 'client'
+          };
+        } else {
+          // 3. Query 'barbershops' table in Supabase
+          const { data: dbBarber } = await supabase.from('barbershops').select('*').eq('email', email).maybeSingle();
+          if (dbBarber) {
+            loggedInUser = {
+              name: dbBarber.name,
+              email: dbBarber.email || email,
+              role: 'barber'
+            };
+          }
+        }
+      } catch (dbErr) {
+        console.warn("Supabase user table query error:", dbErr);
+      }
+
+      onLogin(loggedInUser);
     } catch (e) {
       console.warn("Auth submit error:", e);
-      onLogin();
+      onLogin({ name: fullName || email.split('@')[0], email, role });
     } finally {
       setLoading(false);
     }
