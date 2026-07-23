@@ -114,20 +114,20 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
   if (!user) {
     return (
       <View className="flex-1">
-        <ScrollView className="flex-1 bg-[#F5F5F5]" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
+        <ScrollView className="flex-1 bg-[#F5F5F5]" showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingBottom: 80, paddingTop: 40 }}>
           {/* Background Decorative Ambient Blobs */}
           <View className="absolute top-[-50] left-[-50] w-72 h-72 bg-[#3473ef]/15 rounded-full blur-3xl" />
           <View className="absolute top-[200] right-[-80] w-80 h-80 bg-[#f47458]/10 rounded-full blur-3xl" />
 
           {/* Auth Header */}
-          <View className="pt-16 pb-8 px-6 items-center">
+          <View className="pb-8 px-6 items-center">
              <View className="w-20 h-20 bg-[#3473ef] rounded-3xl items-center justify-center shadow-xl shadow-[#3473ef]/30 border border-white mb-4">
                 <User size={40} color="white" strokeWidth={2.5} />
              </View>
 
-             <Text className="text-3xl font-black text-[#161719] text-center tracking-tight mb-2">LineUp</Text>
+             <Text className="text-3xl font-black text-[#161719] text-center tracking-tight mb-2">Welcome back</Text>
              <Text className="text-[#64748B] font-bold text-center text-sm leading-5 px-6">
-               Platforma #1 për rezervimin e salloneve & berberëve në Kosovë.
+               Sign in to your account to continue
              </Text>
           </View>
 
