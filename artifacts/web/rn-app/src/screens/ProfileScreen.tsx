@@ -140,7 +140,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
 
                 {/* Form Inputs */}
                 <View className="gap-y-4 mb-6">
-                   <View className={`bg-slate-50 rounded-2xl px-4 h-14 flex-row items-center border transition-all ${focusedField === 'email' ? 'border-[#3473ef] bg-white shadow-md shadow-[#3473ef]/5' : 'border-slate-200'}`}>
+                   <View className={`bg-slate-50 rounded-2xl px-4 h-14 flex-row items-center border ${focusedField === 'email' ? 'border-[#3473ef] bg-white' : 'border-slate-200'}`}>
                       <Mail size={20} color={focusedField === 'email' ? '#3473ef' : '#8789A3'} />
                       <TextInput
                         placeholder="E-mail adresa"
@@ -157,13 +157,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                         autoComplete="email"
                       />
                       {email !== "" && (
-                        <TouchableOpacity onPress={() => setEmail("")} className="p-1">
+                        <TouchableOpacity onPress={() => setEmail("")} className="p-2" activeOpacity={0.7}>
                           <X size={16} color="#8789A3" />
                         </TouchableOpacity>
                       )}
                    </View>
 
-                   <View className={`bg-slate-50 rounded-2xl px-4 h-14 flex-row items-center border transition-all ${focusedField === 'password' ? 'border-[#3473ef] bg-white shadow-md shadow-[#3473ef]/5' : 'border-slate-200'}`}>
+                   <View className={`bg-slate-50 rounded-2xl px-4 h-14 flex-row items-center border ${focusedField === 'password' ? 'border-[#3473ef] bg-white' : 'border-slate-200'}`}>
                       <Lock size={20} color={focusedField === 'password' ? '#3473ef' : '#8789A3'} />
                       <TextInput
                         placeholder="Fjalëkalimi"
@@ -179,7 +179,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                         textContentType="password"
                         autoComplete="password"
                       />
-                      <TouchableOpacity onPress={() => setShowPassword(!showPassword)} className="p-1">
+                      <TouchableOpacity onPress={() => setShowPassword(!showPassword)} className="p-2" activeOpacity={0.7}>
                          {showPassword ? <EyeOff size={20} color={focusedField === 'password' ? '#3473ef' : '#8789A3'} /> : <Eye size={20} color={focusedField === 'password' ? '#3473ef' : '#8789A3'} />}
                       </TouchableOpacity>
                    </View>
