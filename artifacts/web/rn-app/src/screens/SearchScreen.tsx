@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, TextInput, ScrollView, Dimensions, FlatList } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, ScrollView, Dimensions, FlatList, Keyboard } from 'react-native';
 import { X, Search, MapPin, Calendar, Grid, Scissors, Hand, Eye, Sparkles, User, Smile, Waves, ArrowLeft, ChevronRight, AlertCircle, Check, ChevronLeft } from 'lucide-react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { withTiming } from 'react-native-reanimated';
@@ -311,6 +311,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
               placeholder="Kërko zonën, qytetin ose rrugën..."
               containerClassName="mb-6"
               onSelectAddress={(place) => {
+                Keyboard.dismiss();
                 setSelectedLocation({
                   address: place.formatted_address,
                   lat: place.latitude,
