@@ -1,11 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Switch, Image, TextInput, Dimensions, ActivityIndicator } from "react-native";
-import { User, Settings, CreditCard, Bell, Shield, HelpCircle, LogOut, ChevronRight, Calendar, Heart, Award, Store, Mail, Lock, Eye, EyeOff, UserPlus, LogIn } from "lucide-react-native";
+import { View, Text, ScrollView, TouchableOpacity, Switch, Image, TextInput, Dimensions, ActivityIndicator, Keyboard, Alert } from "react-native";
+import { User, Settings, CreditCard, Bell, Shield, HelpCircle, LogOut, ChevronRight, Calendar, Heart, Award, Store, Mail, Lock, Eye, EyeOff, UserPlus, LogIn, Building2, Phone, ChevronDown, Search, ArrowLeft, Check, ArrowRight, LockKeyhole, Zap, Sparkles } from "lucide-react-native";
 import Animated, { FadeInUp, FadeIn } from "react-native-reanimated";
 import { BlurView } from 'expo-blur';
 import { supabase } from "@/config/supabase";
+import { AddressAutocomplete, KOSOVO_CITIES } from "../components/AddressAutocomplete";
 
 const { width } = Dimensions.get("window");
+
+const REGISTRATION_PLANS = [
+  { id: 'starter', name: 'Starter Plan', price: '19€', period: 'muaj', features: ['Deri në 300 rezervime/muaj', '1 profil stafi', 'Kalendari i rezervimeve', 'Njoftime me email'] },
+  { id: 'pro', name: 'Pro Plan', price: '39€', period: 'muaj', features: ['Rezervime pa limit', 'Deri në 5 profile stafi', 'Njoftime me SMS & Email', 'Statistika & Raporte', 'Mbështetje prioritare'], isPopular: true },
+  { id: 'elite', name: 'Elite Plan', price: '59€', period: 'muaj', features: ['Të gjitha të planit Pro', 'Profile stafi pa limit', 'Marketing me SMS', 'Landing page e personalizuar', 'Asistent personal 24/7'] }
+];
 
 interface ProfileScreenProps {
   user: any;
@@ -25,7 +32,22 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState<'client' | 'barber'>('client');
+  const [role, setRole] = useState<'client' | 'barber'>('barber');
+  const [phone, setPhone] = useState("");
+  const [selectedCity, setSelectedCity] = useState("Prishtinë");
+  const [citySearch, setCitySearch] = useState("");
+  const [showCityPicker, setShowCityPicker] = useState(false);
+  const [selectedPlace, setSelectedPlace] = useState<{ address: string; lat: number; lng: number } | null>(null);
+
+  // Registration steps and plans
+  const [registerStep, setRegisterStep] = useState(1);
+  const [selectedPlan, setSelectedPlan] = useState(REGISTRATION_PLANS[1]);
+
+  // Paddle Checkout states
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCvv, setCardCvv] = useState("");
+  const [cardName, setCardName] = useState("");
 
   useEffect(() => {
     async function loadStats() {
@@ -68,7 +90,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
           options: {
             data: {
               full_name: fullName,
-              role: role,
+              role: 'barber',
             }
           }
         });
@@ -91,17 +113,37 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
             id: signUpData.user.id,
             email: email.trim().toLowerCase(),
             name: fullName || email.split('@')[0],
-            role: role,
+            role: 'barber',
           });
         } catch (dbErr) {
           console.warn("Error writing to users table:", dbErr);
         }
 
+        // Insert into barbershops table in Supabase
+        try {
+          await supabase.from('barbershops').insert({
+            id: signUpData.user.id,
+            name: fullName,
+            email: email.trim().toLowerCase(),
+            phone: phone,
+            city: selectedCity,
+            address: selectedPlace?.address || "",
+            latitude: selectedPlace?.lat || 42.6629,
+            longitude: selectedPlace?.lng || 21.1655,
+            status: 'active',
+            rating: 5.0,
+            reviews: 0,
+            plan_id: selectedPlan.id
+          });
+        } catch (dbErr) {
+          console.warn("Error writing to barbershops table:", dbErr);
+        }
+
         onLogin({
           id: signUpData.user.id,
-          name: fullName || email.split('@')[0],
+          name: fullName,
           email: email.trim().toLowerCase(),
-          role: role,
+          role: 'barber',
         });
       } else {
         // --- REAL LOGIN WITH SUPABASE ---
@@ -156,8 +198,369 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
   };
 
   if (!user) {
+    if (authMode === 'register') {
+      return (
+        <ScrollView className="flex-1 bg-[#0F172A]" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }} keyboardShouldPersistTaps="handled">
+          {/* Header section with Shop/Business Icon */}
+          <View className="pt-16 pb-6 px-6 flex-row items-center gap-4">
+            <View className="w-14 h-14 bg-[#3473ef]/10 rounded-2xl items-center justify-center border border-[#3473ef]/20">
+              <Store size={28} color="#3473ef" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-2xl font-black text-white tracking-tight">Regjistro biznesin</Text>
+              <Text className="text-slate-400 font-bold text-xs mt-0.5">Shto sallon tënd dhe fillo të marrësh rezervime.</Text>
+            </View>
+          </View>
+
+          {/* Steps Progress Indicator */}
+          <View className="flex-row justify-center items-center px-8 py-4 mb-6">
+            <View className={`w-8 h-8 rounded-full items-center justify-center ${registerStep >= 1 ? 'bg-[#3473ef]' : 'bg-[#1E293B]'}`}>
+              {registerStep > 1 ? <Check size={16} color="white" strokeWidth={3} /> : <Text className="text-white font-black text-xs">1</Text>}
+            </View>
+            <View className={`flex-1 h-0.5 mx-2 ${registerStep >= 2 ? 'bg-[#3473ef]' : 'bg-[#1E293B]'}`} />
+            
+            <View className={`w-8 h-8 rounded-full items-center justify-center ${registerStep >= 2 ? 'bg-[#3473ef]' : 'bg-[#1E293B]'}`}>
+              {registerStep > 2 ? <Check size={16} color="white" strokeWidth={3} /> : <Text className="text-white font-black text-xs">2</Text>}
+            </View>
+            <View className={`flex-1 h-0.5 mx-2 ${registerStep >= 3 ? 'bg-[#3473ef]' : 'bg-[#1E293B]'}`} />
+            
+            <View className={`w-8 h-8 rounded-full items-center justify-center ${registerStep >= 3 ? 'bg-[#3473ef]' : 'bg-[#1E293B]'}`}>
+              <Text className="text-white font-black text-xs">3</Text>
+            </View>
+          </View>
+
+          {errorMessage !== "" && (
+            <View className="mx-6 bg-rose-500/10 border border-rose-500/20 p-4 rounded-2xl mb-6 flex-row items-center">
+              <Shield size={18} color="#ef4444" className="mr-3" />
+              <Text className="text-rose-400 font-bold text-xs flex-1">{errorMessage}</Text>
+            </View>
+          )}
+
+          {/* STEP 1: Basic Info & Location */}
+          {registerStep === 1 && (
+            <View className="px-6 gap-y-6">
+              {/* Informata Bazë Section */}
+              <View className="gap-y-3">
+                <Text className="text-[11px] font-black text-[#8789A3] uppercase tracking-widest ml-1">INFORMATA BAZË</Text>
+                
+                <View className="bg-[#1E293B] rounded-2xl px-4 h-14 flex-row items-center border border-slate-800">
+                  <Building2 size={20} color="#64748B" />
+                  <TextInput
+                    placeholder="Emri i biznesit"
+                    value={fullName}
+                    onChangeText={setFullName}
+                    className="flex-1 ml-3 font-bold text-white text-base"
+                    placeholderTextColor="#64748B"
+                  />
+                </View>
+
+                <View className="bg-[#1E293B] rounded-2xl px-4 h-14 flex-row items-center border border-slate-800">
+                  <Mail size={20} color="#64748B" />
+                  <TextInput
+                    placeholder="Email"
+                    value={email}
+                    onChangeText={setEmail}
+                    className="flex-1 ml-3 font-bold text-white text-base"
+                    placeholderTextColor="#64748B"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                </View>
+
+                <View className="bg-[#1E293B] rounded-2xl px-4 h-14 flex-row items-center border border-slate-800">
+                  <Phone size={20} color="#64748B" />
+                  <TextInput
+                    placeholder="Telefoni +383"
+                    value={phone}
+                    onChangeText={setPhone}
+                    className="flex-1 ml-3 font-bold text-white text-base"
+                    placeholderTextColor="#64748B"
+                    keyboardType="phone-pad"
+                  />
+                </View>
+
+                <View className="bg-[#1E293B] rounded-2xl px-4 h-14 flex-row items-center border border-slate-800">
+                  <Lock size={20} color="#64748B" />
+                  <TextInput
+                    placeholder="Fjalëkalimi"
+                    value={password}
+                    onChangeText={setPassword}
+                    className="flex-1 ml-3 font-bold text-white text-base"
+                    placeholderTextColor="#64748B"
+                    secureTextEntry={!showPassword}
+                  />
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                     {showPassword ? <EyeOff size={20} color="#64748B" /> : <Eye size={20} color="#64748B" />}
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Lokacioni Section */}
+              <View className="gap-y-3">
+                <Text className="text-[11px] font-black text-[#8789A3] uppercase tracking-widest ml-1">LOKACIONI</Text>
+
+                {/* City Picker input */}
+                <View className="relative z-50">
+                  <TouchableOpacity
+                    onPress={() => setShowCityPicker(!showCityPicker)}
+                    className="w-full bg-[#1E293B] border border-slate-800 rounded-2xl pl-12 pr-10 h-14 flex-row items-center justify-between shadow-xs"
+                  >
+                    <View className="absolute left-4 z-10">
+                      <MapPin size={20} color="#3473ef" />
+                    </View>
+                    <Text className="text-white font-bold text-base ml-2">{selectedCity || "Qyteti"}</Text>
+                    <ChevronDown size={20} color="#64748B" />
+                  </TouchableOpacity>
+
+                  {showCityPicker && (
+                    <View className="absolute top-16 left-0 right-0 bg-[#1E293B] rounded-2xl border border-slate-800 shadow-2xl overflow-hidden z-50">
+                      <View className="flex-row items-center px-4 py-3 border-b border-slate-800">
+                        <Search size={16} color="#64748B" />
+                        <TextInput
+                          placeholder="Kërko qytetin..."
+                          placeholderTextColor="#64748B"
+                          className="flex-1 ml-2 font-bold text-sm text-white"
+                          value={citySearch}
+                          onChangeText={setCitySearch}
+                        />
+                      </View>
+                      <View style={{ maxHeight: 180 }}>
+                        <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="always">
+                          {KOSOVO_CITIES.filter(c => c.city.toLowerCase().includes(citySearch.toLowerCase())).map(city => (
+                            <TouchableOpacity
+                              key={city.city}
+                              onPress={() => {
+                                setSelectedCity(city.city);
+                                setShowCityPicker(false);
+                                setCitySearch("");
+                                setSelectedPlace(null);
+                                Keyboard.dismiss();
+                              }}
+                              className={`px-5 py-3.5 border-b border-slate-800/50 ${selectedCity === city.city ? 'bg-[#3473ef]/10' : ''}`}
+                            >
+                              <Text className={`font-bold text-sm ${selectedCity === city.city ? 'text-[#3473ef]' : 'text-white'}`}>{city.city}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+                      </View>
+                    </View>
+                  )}
+                </View>
+
+                {/* Street address input */}
+                <AddressAutocomplete
+                  key={selectedCity}
+                  placeholder="Adresa"
+                  selectedCity={selectedCity}
+                  inputClassName="bg-[#1E293B] border-slate-800 text-white"
+                  onSelectAddress={(place) => {
+                    setSelectedPlace({
+                      address: place.formatted_address,
+                      lat: place.latitude || 42.6629,
+                      lng: place.longitude || 21.1655
+                    });
+                  }}
+                />
+              </View>
+
+              <TouchableOpacity
+                onPress={() => {
+                  if (!fullName || !email || !phone || !password || !selectedPlace) {
+                    setErrorMessage("Ju lutemi plotësoni të gjitha fushat dhe zgjidhni adresën.");
+                    return;
+                  }
+                  setErrorMessage("");
+                  setRegisterStep(2);
+                }}
+                activeOpacity={0.9}
+                className="bg-[#3473ef] h-14 rounded-2xl items-center justify-center flex-row gap-2 mt-4 shadow-lg shadow-[#3473ef]/30"
+              >
+                <Text className="text-white text-base font-black tracking-wide">Vazhdo</Text>
+                <ArrowRight size={18} color="white" strokeWidth={3} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => { setAuthMode('login'); setErrorMessage(""); }}
+                className="py-4 items-center"
+              >
+                <Text className="text-slate-400 font-bold text-xs">
+                  Keni tashmë llogari? <Text className="text-[#3473ef] font-black">Kyçu tani →</Text>
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* STEP 2: Zgjidh Planin */}
+          {registerStep === 2 && (
+            <View className="px-6 gap-y-5">
+              <Text className="text-[11px] font-black text-[#8789A3] uppercase tracking-widest ml-1">HAPI 2: ZGJIDH PLANIN TËND</Text>
+              
+              {REGISTRATION_PLANS.map((plan) => (
+                <TouchableOpacity
+                  key={plan.id}
+                  onPress={() => setSelectedPlan(plan)}
+                  activeOpacity={0.9}
+                  className={`bg-[#1E293B] rounded-3xl p-5 border relative overflow-hidden ${selectedPlan.id === plan.id ? 'border-[#3473ef] bg-[#3473ef]/5' : 'border-slate-800'}`}
+                >
+                  {plan.isPopular && (
+                    <View className="absolute top-0 right-0 bg-[#3473ef] px-3 py-1 rounded-bl-2xl">
+                      <Text className="text-[9px] font-black text-white uppercase tracking-widest">Më Popullor</Text>
+                    </View>
+                  )}
+                  <View className="flex-row items-center justify-between mb-4">
+                    <View className="flex-row items-center gap-3">
+                      <View className={`w-10 h-10 rounded-2xl items-center justify-center ${selectedPlan.id === plan.id ? 'bg-[#3473ef]/20' : 'bg-slate-800'}`}>
+                        {plan.id === 'starter' ? <Zap size={18} color={selectedPlan.id === plan.id ? '#3473ef' : '#94A3B8'} /> : plan.id === 'pro' ? <Sparkles size={18} color={selectedPlan.id === plan.id ? '#3473ef' : '#94A3B8'} /> : <Award size={18} color={selectedPlan.id === plan.id ? '#3473ef' : '#94A3B8'} />}
+                      </View>
+                      <Text className="text-white font-black text-base">{plan.name}</Text>
+                    </View>
+                    <View className="items-end">
+                      <Text className="text-white font-black text-xl">{plan.price}</Text>
+                      <Text className="text-slate-400 font-bold text-[10px]">/{plan.period}</Text>
+                    </View>
+                  </View>
+
+                  <View className="gap-y-2 border-t border-slate-800/80 pt-4">
+                    {plan.features.map((feature, i) => (
+                      <View key={i} className="flex-row items-center gap-2">
+                        <Check size={12} color="#3473ef" strokeWidth={3} />
+                        <Text className="text-slate-300 font-bold text-xs">{feature}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </TouchableOpacity>
+              ))}
+
+              <TouchableOpacity
+                onPress={() => setRegisterStep(3)}
+                activeOpacity={0.9}
+                className="bg-[#3473ef] h-14 rounded-2xl items-center justify-center flex-row gap-2 mt-6 shadow-lg shadow-[#3473ef]/30"
+              >
+                <Text className="text-white text-base font-black tracking-wide">Vazhdo te Pagesa</Text>
+                <ArrowRight size={18} color="white" strokeWidth={3} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setRegisterStep(1)}
+                className="py-3 items-center"
+              >
+                <Text className="text-slate-400 font-black text-xs">Kthehu mbrapa</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* STEP 3: Pagesa me Paddle */}
+          {registerStep === 3 && (
+            <View className="px-6 gap-y-6">
+              <Text className="text-[11px] font-black text-[#8789A3] uppercase tracking-widest ml-1">HAPI 3: PAGESA ME PADDLE</Text>
+
+              {/* Selected Plan Summary Card */}
+              <View className="bg-[#1E293B] rounded-3xl p-5 border border-slate-800 flex-row justify-between items-center">
+                <View className="flex-row items-center gap-3">
+                  <View className="w-10 h-10 rounded-2xl bg-[#3473ef]/10 items-center justify-center border border-[#3473ef]/20">
+                    <Sparkles size={18} color="#3473ef" />
+                  </View>
+                  <View>
+                    <Text className="text-white font-black text-sm">{selectedPlan.name}</Text>
+                    <Text className="text-slate-400 font-bold text-[10px]">Abonim mujor</Text>
+                  </View>
+                </View>
+                <Text className="text-white font-black text-lg">{selectedPlan.price}</Text>
+              </View>
+
+              {/* Styled Mock Paddle Checkout Container */}
+              <View className="bg-white rounded-3xl p-5 border border-slate-100 shadow-2xl shadow-black/40">
+                <View className="flex-row items-center justify-between mb-6 pb-4 border-b border-slate-100">
+                  <View className="flex-row items-center gap-2">
+                    <CreditCard size={18} color="#3473ef" />
+                    <Text className="text-[#161719] font-black text-sm">Paddle Secure Checkout</Text>
+                  </View>
+                  <LockKeyhole size={14} color="#8789A3" />
+                </View>
+
+                {/* Card Fields */}
+                <View className="gap-y-4 mb-6">
+                  <View className="bg-slate-50 rounded-2xl px-4 h-12 flex-row items-center border border-slate-200">
+                    <CreditCard size={16} color="#8789A3" />
+                    <TextInput
+                      placeholder="Numri i Kartës"
+                      placeholderTextColor="#94A3B8"
+                      value={cardNumber}
+                      onChangeText={setCardNumber}
+                      keyboardType="numeric"
+                      maxLength={16}
+                      className="flex-1 ml-3 font-bold text-[#161719] text-sm"
+                    />
+                  </View>
+
+                  <View className="flex-row gap-3">
+                    <View className="bg-slate-50 rounded-2xl px-4 h-12 flex-row items-center border border-slate-200 flex-1">
+                      <TextInput
+                        placeholder="MM/VV"
+                        placeholderTextColor="#94A3B8"
+                        value={cardExpiry}
+                        onChangeText={setCardExpiry}
+                        keyboardType="numeric"
+                        maxLength={5}
+                        className="flex-1 font-bold text-[#161719] text-sm text-center"
+                      />
+                    </View>
+                    <View className="bg-slate-50 rounded-2xl px-4 h-12 flex-row items-center border border-slate-200 flex-1">
+                      <TextInput
+                        placeholder="CVV"
+                        placeholderTextColor="#94A3B8"
+                        value={cardCvv}
+                        onChangeText={setCardCvv}
+                        keyboardType="numeric"
+                        secureTextEntry
+                        maxLength={3}
+                        className="flex-1 font-bold text-[#161719] text-sm text-center"
+                      />
+                    </View>
+                  </View>
+
+                  <View className="bg-slate-50 rounded-2xl px-4 h-12 flex-row items-center border border-slate-200">
+                    <User size={16} color="#8789A3" />
+                    <TextInput
+                      placeholder="Emri në Kartë"
+                      placeholderTextColor="#94A3B8"
+                      value={cardName}
+                      onChangeText={setCardName}
+                      className="flex-1 ml-3 font-bold text-[#161719] text-sm"
+                    />
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  onPress={handleAuthSubmit}
+                  disabled={loading || !cardNumber || !cardExpiry || !cardCvv || !cardName}
+                  activeOpacity={0.9}
+                  className="bg-black h-14 rounded-2xl items-center justify-center shadow-lg active:scale-98"
+                >
+                   {loading ? (
+                     <ActivityIndicator color="white" />
+                   ) : (
+                     <Text className="text-white text-base font-black tracking-wide">
+                       Paguaj & Regjistro Sallonin ({selectedPlan.price})
+                     </Text>
+                   )}
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => setRegisterStep(2)}
+                className="py-3 items-center"
+              >
+                <Text className="text-slate-400 font-black text-xs">Kthehu mbrapa</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </ScrollView>
+      );
+    }
+
     return (
-      <ScrollView className="flex-1 bg-[#ECEEF2]" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
+      <ScrollView className="flex-1 bg-[#F5F5F5]" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
         {/* Background Decorative Ambient Blobs */}
         <View className="absolute top-[-50] left-[-50] w-72 h-72 bg-[#3473ef]/15 rounded-full blur-3xl" />
         <View className="absolute top-[200] right-[-80] w-80 h-80 bg-[#f47458]/10 rounded-full blur-3xl" />
@@ -204,40 +607,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
 
               {/* Form Inputs */}
               <View className="gap-y-4 mb-6">
-                 {authMode === 'register' && (
-                    <>
-                      <View className="bg-slate-50 rounded-2xl px-4 h-14 flex-row items-center border border-slate-200">
-                        <User size={20} color="#8789A3" />
-                        <TextInput
-                          placeholder="Emri i plotë"
-                          value={fullName}
-                          onChangeText={setFullName}
-                          className="flex-1 ml-3 font-bold text-[#161719]"
-                          placeholderTextColor="#94A3B8"
-                        />
-                      </View>
-
-                      {/* Role Selection */}
-                      <View className="flex-row gap-3">
-                        <TouchableOpacity
-                          onPress={() => setRole('client')}
-                          className={`flex-1 py-3 px-4 rounded-xl border flex-row items-center justify-center gap-2 ${role === 'client' ? 'bg-[#3473ef]/10 border-[#3473ef]' : 'bg-slate-50 border-slate-200'}`}
-                        >
-                          <User size={14} color={role === 'client' ? '#3473ef' : '#64748B'} />
-                          <Text className={`font-black text-xs ${role === 'client' ? 'text-[#3473ef]' : 'text-[#64748B]'}`}>Klient</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          onPress={() => setRole('barber')}
-                          className={`flex-1 py-3 px-4 rounded-xl border flex-row items-center justify-center gap-2 ${role === 'barber' ? 'bg-[#3473ef]/10 border-[#3473ef]' : 'bg-slate-50 border-slate-200'}`}
-                        >
-                          <Store size={14} color={role === 'barber' ? '#3473ef' : '#64748B'} />
-                          <Text className={`font-black text-xs ${role === 'barber' ? 'text-[#3473ef]' : 'text-[#64748B]'}`}>Berber / Sallon</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </>
-                 )}
-
                  <View className="bg-slate-50 rounded-2xl px-4 h-14 flex-row items-center border border-slate-200">
                     <Mail size={20} color="#8789A3" />
                     <TextInput
@@ -277,16 +646,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                    <ActivityIndicator color="white" />
                  ) : (
                    <Text className="text-white text-base font-black tracking-wide">
-                     {authMode === 'login' ? 'Kyçu Tani' : 'Krijo Llogarinë'}
+                     Kyçu Tani
                    </Text>
                  )}
               </TouchableOpacity>
 
-              {authMode === 'login' && (
-                <TouchableOpacity className="mt-4 items-center">
-                   <Text className="text-[#3473ef] font-black text-xs">Harruat fjalëkalimin?</Text>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity className="mt-4 items-center">
+                 <Text className="text-[#3473ef] font-black text-xs">Harruat fjalëkalimin?</Text>
+              </TouchableOpacity>
            </View>
         </View>
 
