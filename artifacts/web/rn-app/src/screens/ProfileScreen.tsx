@@ -146,42 +146,42 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
 
   if (!user) {
     return (
-      <ScrollView className="flex-1 bg-[#0F172A]" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-        {/* Auth Header with Brand Glow */}
-        <View className="pt-20 pb-12 px-8 items-center relative overflow-hidden">
-           <View className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-[#3473ef]/20 rounded-full blur-3xl -z-10" />
+      <ScrollView className="flex-1 bg-[#F5F7FA]" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
+        {/* Background Decorative Ambient Blobs */}
+        <View className="absolute top-[-50] left-[-50] w-72 h-72 bg-[#3473ef]/15 rounded-full blur-3xl" />
+        <View className="absolute top-[200] right-[-80] w-80 h-80 bg-[#f47458]/10 rounded-full blur-3xl" />
 
-           <View className="w-24 h-24 bg-[#3473ef] rounded-3xl items-center justify-center shadow-2xl shadow-[#3473ef]/50 border border-white/20 mb-6">
-              <User size={48} color="white" strokeWidth={2.5} />
+        {/* Auth Header */}
+        <View className="pt-16 pb-8 px-6 items-center">
+           <View className="w-20 h-20 bg-[#3473ef] rounded-3xl items-center justify-center shadow-xl shadow-[#3473ef]/30 border border-white mb-4">
+              <User size={40} color="white" strokeWidth={2.5} />
            </View>
 
-           <Text className="text-4xl font-black text-white text-center tracking-tight mb-3">LineUp</Text>
-           <Text className="text-slate-400 font-bold text-center text-sm leading-6 px-4">
-             Platforma #1 në Kosovë për rezervimin e salloneve dhe berberëve me 1-klikim.
+           <Text className="text-3xl font-black text-[#161719] text-center tracking-tight mb-2">LineUp</Text>
+           <Text className="text-[#64748B] font-bold text-center text-sm leading-5 px-6">
+             Platforma #1 për rezervimin e salloneve & berberëve në Kosovë.
            </Text>
         </View>
 
-        <View className="px-6 -mt-4">
-           <View className="bg-white rounded-[36px] p-7 shadow-2xl shadow-black/20 border border-slate-100">
+        <View className="px-6">
+           <View className="bg-white rounded-[32px] p-6 shadow-xl shadow-slate-200/60 border border-slate-100">
               {/* Tab Switcher */}
               <View className="flex-row bg-slate-100 p-1.5 rounded-2xl mb-6">
                 <TouchableOpacity
                   onPress={() => { setAuthMode('login'); setErrorMessage(""); }}
-                  className={`flex-1 py-3.5 rounded-xl items-center flex-row justify-center gap-2 ${authMode === 'login' ? 'bg-white shadow-md border border-slate-200' : ''}`}
+                  className={`flex-1 py-3 rounded-xl items-center flex-row justify-center gap-2 ${authMode === 'login' ? 'bg-white shadow-sm border border-slate-200/80' : ''}`}
                 >
-                  <LogIn size={16} color={authMode === 'login' ? '#3473ef' : '#64748B'} strokeWidth={3} />
+                  <LogIn size={16} color={authMode === 'login' ? '#3473ef' : '#64748B'} strokeWidth={2.5} />
                   <Text className={`font-black text-xs uppercase tracking-wider ${authMode === 'login' ? 'text-[#161719]' : 'text-[#64748B]'}`}>Kyçu</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => { setAuthMode('register'); setErrorMessage(""); }}
-                  className={`flex-1 py-3.5 rounded-xl items-center flex-row justify-center gap-2 ${authMode === 'register' ? 'bg-white shadow-md border border-slate-200' : ''}`}
+                  className={`flex-1 py-3 rounded-xl items-center flex-row justify-center gap-2 ${authMode === 'register' ? 'bg-white shadow-sm border border-slate-200/80' : ''}`}
                 >
-                  <UserPlus size={16} color={authMode === 'register' ? '#3473ef' : '#64748B'} strokeWidth={3} />
+                  <UserPlus size={16} color={authMode === 'register' ? '#3473ef' : '#64748B'} strokeWidth={2.5} />
                   <Text className={`font-black text-xs uppercase tracking-wider ${authMode === 'register' ? 'text-[#161719]' : 'text-[#64748B]'}`}>Krijo Llogari</Text>
                 </TouchableOpacity>
               </View>
-
-
 
               {/* Error Alert */}
               {errorMessage !== "" && (
@@ -260,31 +260,31 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                 onPress={handleAuthSubmit}
                 disabled={loading}
                 activeOpacity={0.9}
-                className="bg-[#3473ef] h-16 rounded-2xl items-center justify-center shadow-xl shadow-[#3473ef]/40 active:scale-98"
+                className="bg-black h-14 rounded-2xl items-center justify-center shadow-lg active:scale-98"
               >
                  {loading ? (
                    <ActivityIndicator color="white" />
                  ) : (
-                   <Text className="text-white text-lg font-black tracking-wide">
+                   <Text className="text-white text-base font-black tracking-wide">
                      {authMode === 'login' ? 'Kyçu Tani' : 'Krijo Llogarinë'}
                    </Text>
                  )}
               </TouchableOpacity>
 
               {authMode === 'login' && (
-                <TouchableOpacity className="mt-5 items-center">
+                <TouchableOpacity className="mt-4 items-center">
                    <Text className="text-[#3473ef] font-black text-xs">Harruat fjalëkalimin?</Text>
                 </TouchableOpacity>
               )}
            </View>
         </View>
 
-        {/* Security Badge */}
-        <View className="px-6 mt-8">
-           <View className="bg-white/10 p-5 rounded-3xl border border-white/10 flex-row items-start">
-              <Shield size={20} color="#3473ef" className="mt-0.5 mr-4" />
-              <Text className="flex-1 text-slate-300 font-bold text-xs leading-5">
-                 Të dhënat tuaja janë të sigurta. LineUp përdor enkriptim të nivelit bankar SSL për të mbrojtur llogarinë tuaj.
+        {/* Security Guarantee Badge */}
+        <View className="px-6 mt-6">
+           <View className="bg-white p-4 rounded-2xl border border-slate-200/80 flex-row items-center shadow-sm">
+              <Shield size={18} color="#3473ef" className="mr-3" />
+              <Text className="flex-1 text-[#64748B] font-bold text-xs leading-4">
+                 Të dhënat tuaja ruhen në mënyrë të sigurt me enkriptim të avancuar.
               </Text>
            </View>
         </View>
