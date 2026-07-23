@@ -73,21 +73,32 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
           }
         });
 
-        if (signUpError && signUpError.message) {
-          setErrorMessage(signUpError.message);
+        if (signUpError) {
+          setErrorMessage(signUpError.message || "Ndodhi një gabim gjatë regjistrimit.");
           setLoading(false);
           return;
         }
 
-        // Insert into users table in Supabase
-        await supabase.from('users').upsert({
-          email: email.trim().toLowerCase(),
-          name: fullName || email.split('@')[0],
-          role: role,
-        });
+        if (!signUpData || !signUpData.user) {
+          setErrorMessage("Regjistrimi dështoi. Ju lutemi provoni përsëri.");
+          setLoading(false);
+          return;
+        }
+
+        // Insert into users table in Supabase with correct auth ID
+        try {
+          await supabase.from('users').upsert({
+            id: signUpData.user.id,
+            email: email.trim().toLowerCase(),
+            name: fullName || email.split('@')[0],
+            role: role,
+          });
+        } catch (dbErr) {
+          console.warn("Error writing to users table:", dbErr);
+        }
 
         onLogin({
-          id: signUpData.user?.id || 'new-user',
+          id: signUpData.user.id,
           name: fullName || email.split('@')[0],
           email: email.trim().toLowerCase(),
           role: role,
