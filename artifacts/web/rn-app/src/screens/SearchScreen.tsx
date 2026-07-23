@@ -64,25 +64,6 @@ const KOSOVO_PREDEFINED_PLACES = [
   { description: "Suharekë (Qendër)", geometry: { location: { lat: 42.3581, lng: 20.8250 } } },
 ];
 
-const POPULAR_CITIES = [
-  { name: "Prizren", lat: 42.2139, lng: 20.7397 },
-  { name: "Pejë", lat: 42.6593, lng: 20.2883 },
-  { name: "Gjakovë", lat: 42.3803, lng: 20.4308 },
-  { name: "Gjilan", lat: 42.4635, lng: 21.4678 },
-  { name: "Mitrovicë", lat: 42.8914, lng: 20.8660 },
-  { name: "Ferizaj", lat: 42.3703, lng: 21.1559 },
-  { name: "Vushtrri", lat: 42.8231, lng: 20.9675 },
-  { name: "Podujevë", lat: 42.9114, lng: 21.1903 },
-  { name: "Fushë Kosovë", lat: 42.6340, lng: 21.0963 },
-  { name: "Rahovec", lat: 42.3994, lng: 20.6553 },
-  { name: "Skënderaj", lat: 42.7478, lng: 20.7878 },
-  { name: "Lipjan", lat: 42.5217, lng: 21.1258 },
-  { name: "Suharekë", lat: 42.3581, lng: 20.8250 },
-  { name: "Deçan", lat: 42.5353, lng: 20.2878 },
-  { name: "Istog", lat: 42.7808, lng: 20.4875 },
-  { name: "Klinë", lat: 42.6225, lng: 20.5786 },
-];
-
 export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, currentLocation = "Lokacioni aktual" }) => {
   const [activePanel, setActivePanel] = useState<'main' | 'treatment' | 'location' | 'datetime'>('main');
 
@@ -324,56 +305,54 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
           <TouchableOpacity onPress={() => setActivePanel('main')} className="mr-4"><ArrowLeft size={24} color="black" /></TouchableOpacity>
           <Text className="text-xl font-bold text-[#161719]">Lokacioni</Text>
         </View>
-        <ScrollView className="flex-1" keyboardShouldPersistTaps="handled">
-          <View className="px-6">
-            <GooglePlacesAutocomplete
-                ref={autocompleteRef}
-                placeholder='Kërko zonën, qytetin...'
-                fetchDetails={true}
-                onPress={(data, details = null) => {
-                  setSelectedLocation({
-                    address: data.description,
-                    lat: details?.geometry?.location?.lat,
-                    lng: details?.geometry?.location?.lng
-                  });
-                  setActivePanel('main');
-                }}
-                query={{
-                  key: GOOGLE_MAPS_KEY,
-                  language: 'sq',
-                  location: `${cityBias.lat},${cityBias.lng}`,
-                  radius: 30000,
-                  components: 'country:xk',
-                }}
-                predefinedPlaces={KOSOVO_PREDEFINED_PLACES}
-                enablePoweredByContainer={false}
-                minLength={1}
-                styles={{
-                  container: { flex: 0, marginBottom: 20 },
-                  textInputContainer: {
-                    backgroundColor: 'white',
-                    borderRadius: 12,
-                    borderWidth: 1,
-                    borderColor: '#6366f1',
-                    paddingHorizontal: 8
-                  },
-                  textInput: { height: 54, fontSize: 16, color: '#161719', fontWeight: '500' },
-                  listView: { backgroundColor: 'white', borderRadius: 20, marginTop: 10, elevation: 5, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10, zIndex: 1000 },
-                  row: { padding: 15, height: 60, flexDirection: 'row' },
-                  separator: { height: 1, backgroundColor: '#F1F5F9' },
-                  description: { fontSize: 15, color: '#161719' },
-                }}
-                renderLeftButton={() => <View className="justify-center pl-2"><Search size={20} color="#6366f1" /></View>}
-            />
+        <View className="flex-1 px-6">
+          <GooglePlacesAutocomplete
+              ref={autocompleteRef}
+              placeholder='Kërko zonën, qytetin...'
+              fetchDetails={true}
+              onPress={(data, details = null) => {
+                setSelectedLocation({
+                  address: data.description,
+                  lat: details?.geometry?.location?.lat,
+                  lng: details?.geometry?.location?.lng
+                });
+                setActivePanel('main');
+              }}
+              query={{
+                key: GOOGLE_MAPS_KEY,
+                language: 'sq',
+                location: `${cityBias.lat},${cityBias.lng}`,
+                radius: 30000,
+                components: 'country:xk',
+              }}
+              predefinedPlaces={KOSOVO_PREDEFINED_PLACES}
+              enablePoweredByContainer={false}
+              minLength={1}
+              styles={{
+                container: { flex: 0, marginBottom: 20 },
+                textInputContainer: {
+                  backgroundColor: 'white',
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: '#6366f1',
+                  paddingHorizontal: 8
+                },
+                textInput: { height: 54, fontSize: 16, color: '#161719', fontWeight: '500' },
+                listView: { backgroundColor: 'white', borderRadius: 20, marginTop: 10, elevation: 5, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10, zIndex: 1000 },
+                row: { padding: 15, height: 60, flexDirection: 'row' },
+                separator: { height: 1, backgroundColor: '#F1F5F9' },
+                description: { fontSize: 15, color: '#161719' },
+              }}
+              renderLeftButton={() => <View className="justify-center pl-2"><Search size={20} color="#6366f1" /></View>}
+          />
 
-            <View className="flex-row items-start mt-8 mb-8 pr-4">
-              <AlertCircle size={20} color="#8789A3" />
-              <Text className="flex-1 ml-3 text-[#8789A3] text-[13px] leading-5 font-medium">
-                Gjeni saktësisht se ku dëshironi të shkoni. Kërkoni sipas lagjes ose qytetit në Kosovë.
-              </Text>
-            </View>
+          <View className="flex-row items-start mt-8 mb-8 pr-4">
+            <AlertCircle size={20} color="#8789A3" />
+            <Text className="flex-1 ml-3 text-[#8789A3] text-[13px] leading-5 font-medium">
+              Gjeni saktësisht se ku dëshironi të shkoni. Kërkoni sipas lagjes ose qytetit në Kosovë.
+            </Text>
           </View>
-        </ScrollView>
+        </View>
       </Animated.View>
 
       {/* --- DATE TIME PANEL --- */}
