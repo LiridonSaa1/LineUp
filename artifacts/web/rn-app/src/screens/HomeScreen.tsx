@@ -276,13 +276,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
       <View className="mt-4 px-6">
         <View className="flex-row items-center justify-between mb-4 px-1">
           <Text className="text-xl font-black text-[#161719]">Partnerët tanë</Text>
-          <TouchableOpacity
-            onPress={onOpenAddAd}
-            className="flex-row items-center bg-[#3473ef]/10 px-3 py-1.5 rounded-full border border-[#3473ef]/20"
-          >
-             <Megaphone size={12} color="#3473ef" strokeWidth={2.5} />
-             <Text className="text-[#3473ef] text-[10px] font-black uppercase ml-1.5">Shto Reklamë</Text>
-          </TouchableOpacity>
         </View>
 
         <ScrollView
