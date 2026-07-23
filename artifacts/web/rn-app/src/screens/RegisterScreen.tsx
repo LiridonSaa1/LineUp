@@ -129,7 +129,12 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
   };
 
   return (
-    <ScrollView className="flex-1 bg-[#ECEEF2]" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }} keyboardShouldPersistTaps="handled">
+    <View className="flex-1 bg-[#F5F5F5]">
+      {/* Background Decorative Blobs */}
+      <View className="absolute top-[-50] left-[-50] w-64 h-64 bg-[#3473ef]/15 rounded-full blur-3xl" />
+      <View className="absolute top-[200] right-[-100] w-80 h-80 bg-[#f47458]/15 rounded-full blur-3xl" />
+
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingBottom: 80, paddingTop: 40 }} keyboardShouldPersistTaps="handled">
       {/* Header section with Close Button */}
       <View className="pt-16 pb-6 px-6 flex-row items-center justify-between">
         <View className="flex-row items-center gap-4">
@@ -474,6 +479,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
           </TouchableOpacity>
         </View>
       )}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
