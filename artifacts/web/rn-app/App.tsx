@@ -27,6 +27,7 @@ import { LocationScreen } from "./src/screens/LocationScreen";
 import { SearchScreen } from "./src/screens/SearchScreen";
 import { RegisterShopScreen } from "./src/screens/RegisterShopScreen";
 import { AddAdModal } from "./src/screens/AddAdModal";
+import { supabase } from "./src/config/supabase";
 import "./global.css";
 
 const { width } = Dimensions.get("window");
@@ -96,7 +97,7 @@ const TabButton = ({ tab, isActive, onPress }: any) => {
 export default function App() {
   const [activeTab, setActiveTab] = React.useState(0);
   const [selectedShop, setSelectedShop] = React.useState<any>(null);
-  const [user, setUser] = React.useState<any>(null); // Mock user session
+  const [user, setUser] = React.useState<any>(null);
   const [cityFilter, setCityFilter] = React.useState("Të gjitha");
   const [searchQuery, setSearchQuery] = React.useState("");
   const [searchCoords, setSearchCoords] = React.useState<{ lat?: number; lng?: number }>({});
@@ -107,6 +108,79 @@ export default function App() {
   const [selectedLocation, setSelectedLocation] = React.useState("Lokacioni aktual");
 
   const tabPosition = useSharedValue(0);
+
+  React.useEffect(() => {
+    // Check active session on startup
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        // Query users or barbershops table in Supabase to check role
+        Promise.all([
+          supabase.from('users').select('*').eq('email', session.user.email?.toLowerCase()).maybeSingle(),
+          supabase.from('barbershops').select('*').eq('email', session.user.email?.toLowerCase()).maybeSingle()
+        ]).then(([dbUser, dbBarber]) => {
+          if (dbUser.data) {
+            setUser({
+              id: dbUser.data.id,
+              name: dbUser.data.name || dbUser.data.full_name || session.user.email?.split('@')[0],
+              email: dbUser.data.email,
+              role: dbUser.data.role || 'client'
+            });
+          } else if (dbBarber.data) {
+            setUser({
+              id: dbBarber.data.id,
+              name: dbBarber.data.name,
+              email: dbBarber.data.email,
+              role: 'barber'
+            });
+          } else {
+            setUser({
+              id: session.user.id,
+              name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
+              email: session.user.email,
+              role: session.user.user_metadata?.role || 'client'
+            });
+          }
+        });
+      }
+    });
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        Promise.all([
+          supabase.from('users').select('*').eq('email', session.user.email?.toLowerCase()).maybeSingle(),
+          supabase.from('barbershops').select('*').eq('email', session.user.email?.toLowerCase()).maybeSingle()
+        ]).then(([dbUser, dbBarber]) => {
+          if (dbUser.data) {
+            setUser({
+              id: dbUser.data.id,
+              name: dbUser.data.name || dbUser.data.full_name || session.user.email?.split('@')[0],
+              email: dbUser.data.email,
+              role: dbUser.data.role || 'client'
+            });
+          } else if (dbBarber.data) {
+            setUser({
+              id: dbBarber.data.id,
+              name: dbBarber.data.name,
+              email: dbBarber.data.email,
+              role: 'barber'
+            });
+          } else {
+            setUser({
+              id: session.user.id,
+              name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
+              email: session.user.email,
+              role: session.user.user_metadata?.role || 'client'
+            });
+          }
+        });
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   React.useEffect(() => {
     tabPosition.value = withSpring(activeTab * TAB_WIDTH, { damping: 15, stiffness: 120 });
@@ -185,7 +259,10 @@ export default function App() {
               <ProfileScreen
                 user={user}
                 onLogin={(userData) => setUser(userData || { id: '123', name: 'Artan Berisha', email: 'artan@lineup.com' })}
-                onLogout={() => setUser(null)}
+                onLogout={async () => {
+                  await supabase.auth.signOut();
+                  setUser(null);
+                }}
                 onOpenRegisterShop={() => setShowRegisterShop(true)}
               />
             )}
