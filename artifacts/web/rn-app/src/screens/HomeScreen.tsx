@@ -78,7 +78,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
     if (ads.length <= 1) return;
     const interval = setInterval(() => {
       adsAutoScrollIndex.current = (adsAutoScrollIndex.current + 1) % ads.length;
-      const scrollPos = adsAutoScrollIndex.current * (width - 48);
+      const scrollPos = adsAutoScrollIndex.current * width;
       adsScrollRef.current?.scrollTo({ x: scrollPos, animated: true });
     }, 6000); // Slower loop (6 seconds)
 
@@ -272,8 +272,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
       </View>
 
       {/* ── ADVERTISEMENT CAROUSEL ─────────────────── */}
-      <View className="mt-4 px-6">
-        <View className="flex-row items-center justify-between mb-4 px-1">
+      {/* ── ADVERTISEMENT CAROUSEL (FULL WIDTH) ─────────────────── */}
+      <View className="mt-4">
+        <View className="flex-row items-center justify-between mb-4 px-6">
           <Text className="text-xl font-black text-[#161719]">Partnerët tanë</Text>
           <TouchableOpacity
             onPress={onOpenAddAd}
@@ -289,7 +290,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
-          className="rounded-[32px] overflow-hidden shadow-sm"
+          className="w-full"
         >
           {ads.map((ad, i) => {
             const isCleanBanner = ad.only_button || ad.onlyButton;
@@ -298,13 +299,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
                 key={i}
                 onPress={() => ad.url && Linking.openURL(ad.url)}
                 activeOpacity={0.95}
-                style={{ width: width - 48 }}
-                className="h-48 relative overflow-hidden rounded-[28px] bg-slate-900 shadow-md border border-slate-200/40 mr-4"
+                style={{ width: width }}
+                className="h-52 relative overflow-hidden bg-slate-900 shadow-md"
               >
                 {/* Background Banner Image */}
                 <Image
                   source={getAdImageSource(ad)}
-                  resizeMode={isCleanBanner ? "contain" : "cover"}
+                  resizeMode="cover"
                   className="absolute inset-0 w-full h-full"
                 />
 
@@ -314,8 +315,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
                 )}
 
                 {/* Content Overlay */}
-                <View className="flex-1 p-4 justify-between relative z-10">
-
+                <View className="flex-1 p-5 justify-between relative z-10">
                   {!isCleanBanner && (
                     <View className="my-auto">
                       <Text className="text-white text-lg font-black mb-0.5">{ad.headline}</Text>
@@ -326,7 +326,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
                   <View className="flex-row justify-end items-center mt-auto">
                     <TouchableOpacity
                       onPress={() => ad.url && Linking.openURL(ad.url)}
-                      className="bg-[#3473ef] px-4 py-2 rounded-xl shadow-xl flex-row items-center gap-1.5 border border-white/20 active:scale-95"
+                      className="bg-[#3473ef] px-4 py-2.5 rounded-2xl shadow-2xl flex-row items-center gap-1.5 border border-white/30 active:scale-95"
                     >
                       <Text className="text-white font-black text-xs uppercase tracking-wider">
                         {ad.button_text || ad.buttonText || "Na vizitoni"}
