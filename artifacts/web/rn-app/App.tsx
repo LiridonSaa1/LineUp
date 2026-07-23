@@ -148,7 +148,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <View className="flex-1 bg-[#F5F5F5]">
+      <View className="flex-1 bg-[#ECEEF2]">
         <StatusBar style="dark" />
 
         {/* Detail Screen Modal or Main Content Switcher */}
