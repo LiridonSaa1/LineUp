@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, TextInput, ScrollView, Dimensions, FlatList, Keyboard } from 'react-native';
-import { X, Search, MapPin, Calendar, Grid, Scissors, Hand, Eye, Sparkles, User, Smile, Waves, ArrowLeft, ChevronRight, AlertCircle, Check, ChevronLeft } from 'lucide-react-native';
+import { X, Search, MapPin, Calendar, Grid, Scissors, Hand, Eye, Sparkles, User, Smile, Waves, ArrowLeft, ChevronRight, AlertCircle, Check, ChevronLeft, Shield, Zap } from 'lucide-react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { withTiming } from 'react-native-reanimated';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { AddressAutocomplete } from '../components/AddressAutocomplete';
+import { supabase } from '@/config/supabase';
 
 const { width } = Dimensions.get('window');
+const USER_ID = 'demo_user_123';
 
 // IMPORTANT: Replace this with your actual Google Maps API Key
 const GOOGLE_MAPS_KEY = 'AIzaSyD9DOb-ko2C84TUlBVuPVILNaf3Jhkl-yg';
@@ -25,19 +27,29 @@ interface SearchScreenProps {
 }
 
 const CATEGORIES = [
-  { name: "All treatments", icon: Grid },
-  { name: "Hair and styling", icon: Scissors },
+  { name: "Të gjitha", icon: Grid },
+  { name: "Haircut & Styling", icon: Scissors },
+  { name: "Hair Coloring", icon: Sparkles },
+  { name: "Hair Treatment", icon: Zap },
+  { name: "Beard & Grooming", icon: User },
   { name: "Nails", icon: Hand },
-  { name: "Brows & lashes", icon: Eye },
-  { name: "Hair removal", icon: Sparkles },
-  { name: "Massage", icon: User },
-  { name: "Facials", icon: Smile },
-  { name: "Spa & sauna", icon: Waves },
-  { name: "Barbering", icon: Scissors },
-  { name: "Body", icon: User },
+  { name: "Makeup", icon: Smile },
+  { name: "Brows & Lashes", icon: Eye },
+  { name: "Skin Care", icon: Shield },
+  { name: "Body Care", icon: Waves },
 ];
 
-const TREATMENTS = ['Hair & styling', 'Nails', 'Hair removal', 'Massage', 'Facials', 'Barbering', 'Spa & sauna'];
+const TREATMENTS = [
+  'Haircut & Styling',
+  'Hair Coloring',
+  'Hair Treatment',
+  'Beard & Grooming',
+  'Nails',
+  'Makeup',
+  'Brows & Lashes',
+  'Skin Care',
+  'Body Care'
+];
 
 const KOSOVO_PREDEFINED_PLACES = [
   { description: "Prishtinë (Qendër)", geometry: { location: { lat: 42.6629, lng: 21.1655 } } },
@@ -78,6 +90,9 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
   const [selectedDate, setSelectedDate] = useState("Anytime");
   const [selectedTime, setSelectedTime] = useState("Anytime");
 
+  // Recents State
+  const [recents, setRecents] = useState<string[]>([]);
+
   // Filter States
   const [treatmentQuery, setTreatmentQuery] = useState("");
   const [activeFilterTab, setActiveFilterTab] = useState('All');
@@ -101,13 +116,75 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
     datetimeX.value = activePanel === 'datetime' ? 0 : width;
   }, [activePanel]);
 
+  useEffect(() => {
+    fetchRecents();
+  }, []);
+
+  const fetchRecents = async () => {
+    try {
+      const { data: recentData } = await supabase
+        .from('recent_searches')
+        .select('category_name')
+        .eq('user_id', USER_ID)
+        .not('category_name', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (recentData) {
+        const uniqueRecents = [...new Set(recentData.map(r => r.category_name).filter(Boolean))] as string[];
+        setRecents(uniqueRecents.slice(0, 5));
+      }
+    } catch (e) {
+      console.warn("Error fetching category recents from Supabase:", e);
+    }
+  };
+
+  const saveRecentSearch = async (category: string) => {
+    if (!category) return;
+    const updatedRecents = [category, ...recents.filter(r => r !== category)].slice(0, 5);
+    setRecents(updatedRecents);
+
+    try {
+      await supabase
+        .from('recent_searches')
+        .delete()
+        .eq('user_id', USER_ID)
+        .eq('category_name', category);
+
+      await supabase.from('recent_searches').insert({
+        user_id: USER_ID,
+        category_name: category
+      });
+    } catch (e) {
+      console.warn("Error saving category recent to Supabase:", e);
+    }
+  };
+
+  const handleClearRecents = async () => {
+    try {
+      await supabase
+        .from('recent_searches')
+        .delete()
+        .eq('user_id', USER_ID)
+        .not('category_name', 'is', null);
+
+      setRecents([]);
+    } catch (e) {
+      console.warn("Error clearing category recents from Supabase:", e);
+    }
+  };
+
   const treatmentStyle = useAnimatedStyle(() => ({ transform: [{ translateX: treatmentX.value }] }));
   const locationStyle = useAnimatedStyle(() => ({ transform: [{ translateX: locationX.value }] }));
   const datetimeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: datetimeX.value }] }));
 
   const handleSearchTrigger = (query?: string) => {
+    const finalQuery = query || selectedTreatment;
+    if (finalQuery) {
+      saveRecentSearch(finalQuery);
+    }
     onSearch({
-      query: query || selectedTreatment,
+      query: finalQuery,
       city: selectedLocation.address || "Të gjitha",
       lat: selectedLocation.lat,
       lng: selectedLocation.lng,
@@ -215,18 +292,28 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
             </TouchableOpacity>
           </View>
 
-          <View className="mt-8">
-            <View className="flex-row justify-between items-center mb-4">
-              <Text className="text-xl font-bold text-[#161719]">Recents</Text>
-              <TouchableOpacity><Text className="text-[#6366f1] font-bold text-base">Clear</Text></TouchableOpacity>
-            </View>
-            <TouchableOpacity onPress={() => handleSearchTrigger("Hair & styling")} className="flex-row items-center mb-2">
-              <View className="w-10 h-10 rounded-full bg-[#6366f1]/10 items-center justify-center mr-4">
-                <Search size={20} color="#6366f1" />
+          {recents.length > 0 && (
+            <View className="mt-8">
+              <View className="flex-row justify-between items-center mb-4">
+                <Text className="text-xl font-bold text-[#161719]">Recents</Text>
+                <TouchableOpacity onPress={handleClearRecents}>
+                  <Text className="text-[#6366f1] font-bold text-base">Clear</Text>
+                </TouchableOpacity>
               </View>
-              <Text className="text-[17px] font-bold text-[#161719]">Hair & styling</Text>
-            </TouchableOpacity>
-          </View>
+              {recents.map((item, index) => (
+                <TouchableOpacity
+                  key={index}
+                  onPress={() => handleSearchTrigger(item)}
+                  className="flex-row items-center mb-4 active:opacity-75"
+                >
+                  <View className="w-10 h-10 rounded-full bg-[#6366f1]/10 items-center justify-center mr-4">
+                    <Search size={20} color="#6366f1" />
+                  </View>
+                  <Text className="text-[17px] font-bold text-[#161719]">{item}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
 
           <View className="mt-8">
             <Text className="text-xl font-bold text-[#161719] mb-4">Kategoritë</Text>
