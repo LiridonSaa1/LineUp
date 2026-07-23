@@ -346,7 +346,6 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
                   components: 'country:xk',
                 }}
                 predefinedPlaces={KOSOVO_PREDEFINED_PLACES}
-                predefinedPlacesAlwaysVisible={true}
                 enablePoweredByContainer={false}
                 minLength={1}
                 styles={{
@@ -366,32 +365,6 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
                 }}
                 renderLeftButton={() => <View className="justify-center pl-2"><Search size={20} color="#6366f1" /></View>}
             />
-
-            <View className="mt-4">
-              <Text className="text-sm font-bold text-[#8789A3] uppercase tracking-widest mb-4">Qytetet e Popullarizuara</Text>
-              <View className="flex-row flex-wrap gap-3">
-                {POPULAR_CITIES.map((city) => (
-                  <TouchableOpacity
-                    key={city.name}
-                    onPress={() => {
-                      setSelectedLocation({
-                        address: city.name,
-                        lat: city.lat,
-                        lng: city.lng
-                      });
-                      setCityBias({ lat: city.lat, lng: city.lng });
-                      if (autocompleteRef.current) {
-                        autocompleteRef.current.setAddressText(city.name);
-                      }
-                    }}
-                    className="bg-slate-50 px-5 py-3 rounded-2xl border border-slate-100 flex-row items-center"
-                  >
-                    <MapPin size={14} color="#6366f1" className="mr-2" />
-                    <Text className="font-bold text-[#161719]">{city.name}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
 
             <View className="flex-row items-start mt-8 mb-8 pr-4">
               <AlertCircle size={20} color="#8789A3" />
