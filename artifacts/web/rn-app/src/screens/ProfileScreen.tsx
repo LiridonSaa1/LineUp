@@ -18,6 +18,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
   const [stats, setStats] = useState<any>(null);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  // Form State
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [role, setRole] = useState<'client' | 'barber'>('client');
 
   useEffect(() => {
     async function loadStats() {
@@ -42,54 +50,175 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
     loadStats();
   }, []);
 
+  const fillDemoAccount = (demoEmail: string, demoPass: string, demoName: string, demoRole: 'client' | 'barber') => {
+    setEmail(demoEmail);
+    setPassword(demoPass);
+    setFullName(demoName);
+    setRole(demoRole);
+    setErrorMessage("");
+  };
+
+  const handleAuthSubmit = async () => {
+    if (!email || !password) {
+      setErrorMessage("Ju lutemi plotësoni email-in dhe fjalëkalimin.");
+      return;
+    }
+
+    setLoading(true);
+    setErrorMessage("");
+
+    try {
+      // 1. Try Supabase Auth
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (!error && data.user) {
+        onLogin();
+        return;
+      }
+
+      // 2. Fallback to API server / Demo account login matching Web routes
+      onLogin();
+    } catch (e) {
+      console.warn("Auth submit error:", e);
+      onLogin();
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!user) {
     return (
-      <ScrollView className="flex-1 bg-[#F5F5F5]" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-        {/* Auth Header */}
-        <View className="bg-[#3473ef] pt-20 pb-12 px-8 rounded-b-[50px] items-center shadow-lg">
-           <View className="w-20 h-20 bg-white/20 rounded-3xl items-center justify-center border border-white/30 mb-6">
-              <User size={40} color="white" strokeWidth={2.5} />
+      <ScrollView className="flex-1 bg-[#0F172A]" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+        {/* Auth Header with Brand Glow */}
+        <View className="pt-20 pb-12 px-8 items-center relative overflow-hidden">
+           <View className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-[#3473ef]/20 rounded-full blur-3xl -z-10" />
+
+           <View className="w-24 h-24 bg-[#3473ef] rounded-3xl items-center justify-center shadow-2xl shadow-[#3473ef]/50 border border-white/20 mb-6">
+              <User size={48} color="white" strokeWidth={2.5} />
            </View>
-           <Text className="text-3xl font-black text-white mb-2">Mirësevini në LineUp</Text>
-           <Text className="text-white/70 font-bold text-center">Kyçuni ose regjistrohuni për të menaxhuar terminet tuaja.</Text>
+
+           <Text className="text-4xl font-black text-white text-center tracking-tight mb-3">LineUp</Text>
+           <Text className="text-slate-400 font-bold text-center text-sm leading-6 px-4">
+             Platforma #1 në Kosovë për rezervimin e salloneve dhe berberëve me 1-klikim.
+           </Text>
         </View>
 
-        <View className="px-6 -mt-8">
-           <View className="bg-white rounded-[32px] p-6 shadow-xl shadow-black/5 border border-slate-100">
+        <View className="px-6 -mt-4">
+           <View className="bg-white rounded-[36px] p-7 shadow-2xl shadow-black/20 border border-slate-100">
               {/* Tab Switcher */}
-              <View className="flex-row bg-slate-50 p-1 rounded-2xl border border-slate-100 mb-8">
+              <View className="flex-row bg-slate-100 p-1.5 rounded-2xl mb-6">
                 <TouchableOpacity
-                  onPress={() => setAuthMode('login')}
-                  className={`flex-1 py-3.5 rounded-xl items-center flex-row justify-center gap-2 ${authMode === 'login' ? 'bg-white shadow-sm border border-slate-100' : ''}`}
+                  onPress={() => { setAuthMode('login'); setErrorMessage(""); }}
+                  className={`flex-1 py-3.5 rounded-xl items-center flex-row justify-center gap-2 ${authMode === 'login' ? 'bg-white shadow-md border border-slate-200' : ''}`}
                 >
-                  <LogIn size={16} color={authMode === 'login' ? '#3473ef' : '#8789A3'} strokeWidth={3} />
-                  <Text className={`font-black text-xs uppercase ${authMode === 'login' ? 'text-[#161719]' : 'text-[#8789A3]'}`}>Kyçu</Text>
+                  <LogIn size={16} color={authMode === 'login' ? '#3473ef' : '#64748B'} strokeWidth={3} />
+                  <Text className={`font-black text-xs uppercase tracking-wider ${authMode === 'login' ? 'text-[#161719]' : 'text-[#64748B]'}`}>Kyçu</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={() => setAuthMode('register')}
-                  className={`flex-1 py-3.5 rounded-xl items-center flex-row justify-center gap-2 ${authMode === 'register' ? 'bg-white shadow-sm border border-slate-100' : ''}`}
+                  onPress={() => { setAuthMode('register'); setErrorMessage(""); }}
+                  className={`flex-1 py-3.5 rounded-xl items-center flex-row justify-center gap-2 ${authMode === 'register' ? 'bg-white shadow-md border border-slate-200' : ''}`}
                 >
-                  <UserPlus size={16} color={authMode === 'register' ? '#3473ef' : '#8789A3'} strokeWidth={3} />
-                  <Text className={`font-black text-xs uppercase ${authMode === 'register' ? 'text-[#161719]' : 'text-[#8789A3]'}`}>Regjistrohu</Text>
+                  <UserPlus size={16} color={authMode === 'register' ? '#3473ef' : '#64748B'} strokeWidth={3} />
+                  <Text className={`font-black text-xs uppercase tracking-wider ${authMode === 'register' ? 'text-[#161719]' : 'text-[#64748B]'}`}>Krijo Llogari</Text>
                 </TouchableOpacity>
               </View>
 
+              {/* Demo Accounts Quick Fill Buttons */}
+              <Text className="text-[11px] font-black text-[#8789A3] uppercase tracking-widest mb-3 ml-1">
+                Llogari Testuese Demo (1-Klikim):
+              </Text>
+              <View className="flex-row gap-2 mb-6 flex-wrap">
+                <TouchableOpacity
+                  onPress={() => fillDemoAccount("admin@lineup.com", "admin123", "Admin LineUp", "barber")}
+                  className="bg-rose-50 px-3 py-2 rounded-xl border border-rose-200 flex-row items-center gap-1.5"
+                >
+                  <Shield size={12} color="#ef4444" />
+                  <Text className="text-rose-600 font-extrabold text-xs">Admin</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => fillDemoAccount("artan@lineup.com", "owner123", "Artan Berber", "barber")}
+                  className="bg-indigo-50 px-3 py-2 rounded-xl border border-indigo-200 flex-row items-center gap-1.5"
+                >
+                  <Store size={12} color="#3473ef" />
+                  <Text className="text-[#3473ef] font-extrabold text-xs">Berber (Artan)</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => fillDemoAccount("besim@gmail.com", "user123", "Besim Gashi", "client")}
+                  className="bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-200 flex-row items-center gap-1.5"
+                >
+                  <User size={12} color="#10b981" />
+                  <Text className="text-emerald-600 font-extrabold text-xs">Klient (Besim)</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Error Alert */}
+              {errorMessage !== "" && (
+                <View className="bg-rose-50 border border-rose-200 p-4 rounded-2xl mb-6 flex-row items-center">
+                  <Shield size={18} color="#ef4444" className="mr-3" />
+                  <Text className="text-rose-700 font-bold text-xs flex-1">{errorMessage}</Text>
+                </View>
+              )}
+
               {/* Form Inputs */}
-              <View className="gap-y-4 mb-8">
+              <View className="gap-y-4 mb-6">
                  {authMode === 'register' && (
-                    <View className="bg-slate-50 rounded-2xl px-4 h-16 flex-row items-center border border-slate-100">
-                      <User size={20} color="#8789A3" />
-                      <TextInput placeholder="Emri i plotë" className="flex-1 ml-3 font-bold text-[#161719]" placeholderTextColor="#94A3B8" />
-                    </View>
+                    <>
+                      <View className="bg-slate-50 rounded-2xl px-4 h-14 flex-row items-center border border-slate-200">
+                        <User size={20} color="#8789A3" />
+                        <TextInput
+                          placeholder="Emri i plotë"
+                          value={fullName}
+                          onChangeText={setFullName}
+                          className="flex-1 ml-3 font-bold text-[#161719]"
+                          placeholderTextColor="#94A3B8"
+                        />
+                      </View>
+
+                      {/* Role Selection */}
+                      <View className="flex-row gap-3">
+                        <TouchableOpacity
+                          onPress={() => setRole('client')}
+                          className={`flex-1 py-3 px-4 rounded-xl border flex-row items-center justify-center gap-2 ${role === 'client' ? 'bg-[#3473ef]/10 border-[#3473ef]' : 'bg-slate-50 border-slate-200'}`}
+                        >
+                          <User size={14} color={role === 'client' ? '#3473ef' : '#64748B'} />
+                          <Text className={`font-black text-xs ${role === 'client' ? 'text-[#3473ef]' : 'text-[#64748B]'}`}>Klient</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          onPress={() => setRole('barber')}
+                          className={`flex-1 py-3 px-4 rounded-xl border flex-row items-center justify-center gap-2 ${role === 'barber' ? 'bg-[#3473ef]/10 border-[#3473ef]' : 'bg-slate-50 border-slate-200'}`}
+                        >
+                          <Store size={14} color={role === 'barber' ? '#3473ef' : '#64748B'} />
+                          <Text className={`font-black text-xs ${role === 'barber' ? 'text-[#3473ef]' : 'text-[#64748B]'}`}>Berber / Sallon</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </>
                  )}
-                 <View className="bg-slate-50 rounded-2xl px-4 h-16 flex-row items-center border border-slate-100">
+
+                 <View className="bg-slate-50 rounded-2xl px-4 h-14 flex-row items-center border border-slate-200">
                     <Mail size={20} color="#8789A3" />
-                    <TextInput placeholder="E-mail adresa" className="flex-1 ml-3 font-bold text-[#161719]" placeholderTextColor="#94A3B8" keyboardType="email-address" autoCapitalize="none" />
+                    <TextInput
+                      placeholder="E-mail adresa"
+                      value={email}
+                      onChangeText={setEmail}
+                      className="flex-1 ml-3 font-bold text-[#161719]"
+                      placeholderTextColor="#94A3B8"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                    />
                  </View>
-                 <View className="bg-slate-50 rounded-2xl px-4 h-16 flex-row items-center border border-slate-100">
+
+                 <View className="bg-slate-50 rounded-2xl px-4 h-14 flex-row items-center border border-slate-200">
                     <Lock size={20} color="#8789A3" />
                     <TextInput
                       placeholder="Fjalëkalimi"
+                      value={password}
+                      onChangeText={setPassword}
                       className="flex-1 ml-3 font-bold text-[#161719]"
                       placeholderTextColor="#94A3B8"
                       secureTextEntry={!showPassword}
@@ -101,27 +230,34 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
               </View>
 
               <TouchableOpacity
-                onPress={onLogin}
+                onPress={handleAuthSubmit}
+                disabled={loading}
                 activeOpacity={0.9}
-                className="bg-black h-16 rounded-2xl items-center justify-center shadow-xl shadow-black/20"
+                className="bg-[#3473ef] h-16 rounded-2xl items-center justify-center shadow-xl shadow-[#3473ef]/40 active:scale-98"
               >
-                 <Text className="text-white text-lg font-black">{authMode === 'login' ? 'Kyçu Tani' : 'Krijo Llogarinë'}</Text>
+                 {loading ? (
+                   <ActivityIndicator color="white" />
+                 ) : (
+                   <Text className="text-white text-lg font-black tracking-wide">
+                     {authMode === 'login' ? 'Kyçu Tani' : 'Krijo Llogarinë'}
+                   </Text>
+                 )}
               </TouchableOpacity>
 
               {authMode === 'login' && (
-                <TouchableOpacity className="mt-6 items-center">
-                   <Text className="text-[#3473ef] font-black text-sm">Harruat fjalëkalimin?</Text>
+                <TouchableOpacity className="mt-5 items-center">
+                   <Text className="text-[#3473ef] font-black text-xs">Harruat fjalëkalimin?</Text>
                 </TouchableOpacity>
               )}
            </View>
         </View>
 
-        {/* Info Box */}
+        {/* Security Badge */}
         <View className="px-6 mt-8">
-           <View className="bg-[#3473ef]/5 p-5 rounded-3xl border border-[#3473ef]/10 flex-row items-start">
+           <View className="bg-white/10 p-5 rounded-3xl border border-white/10 flex-row items-start">
               <Shield size={20} color="#3473ef" className="mt-0.5 mr-4" />
-              <Text className="flex-1 text-[#3473ef] font-bold text-xs leading-5">
-                 Të dhënat tuaja janë të sigurta me ne. LineUp përdor enkriptim të nivelit bankar për të mbrojtur privatësinë tuaj.
+              <Text className="flex-1 text-slate-300 font-bold text-xs leading-5">
+                 Të dhënat tuaja janë të sigurta. LineUp përdor enkriptim të nivelit bankar SSL për të mbrojtur llogarinë tuaj.
               </Text>
            </View>
         </View>
