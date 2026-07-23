@@ -118,7 +118,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   disabled = false,
   selectedCity,
 }) => {
-  const [query, setQuery] = useState(initialValue);
+  const [query, setQuery] = useState(initialValue || "");
   const getCityBaseList = () => {
     if (selectedCity && KOSOVO_STREETS[selectedCity]) {
       return KOSOVO_STREETS[selectedCity];
@@ -133,7 +133,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    setQuery(initialValue);
+    setQuery(initialValue || "");
   }, [initialValue]);
 
   useEffect(() => {

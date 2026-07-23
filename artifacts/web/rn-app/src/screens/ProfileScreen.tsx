@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Switch, Image, TextInput, Dimensions, ActivityIndicator, Keyboard, Alert } from "react-native";
-import { User, Settings, CreditCard, Bell, Shield, HelpCircle, LogOut, ChevronRight, Calendar, Heart, Award, Store, Mail, Lock, Eye, EyeOff, UserPlus, LogIn, Building2, Phone, ChevronDown, Search, ArrowLeft, Check, ArrowRight, LockKeyhole, Zap, Sparkles, MapPin } from "lucide-react-native";
+import { User, Settings, CreditCard, Bell, Shield, HelpCircle, LogOut, ChevronRight, Calendar, Heart, Award, Store, Mail, Lock, Eye, EyeOff, UserPlus, LogIn, Building2, Phone, ChevronDown, Search, ArrowLeft, Check, ArrowRight, Zap, Sparkles, MapPin } from "lucide-react-native";
 import Animated, { FadeInUp, FadeIn } from "react-native-reanimated";
 import { BlurView } from 'expo-blur';
 import { supabase } from "@/config/supabase";
@@ -476,7 +476,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                     <CreditCard size={18} color="#3473ef" />
                     <Text className="text-[#161719] font-black text-sm">Paddle Secure Checkout</Text>
                   </View>
-                  <LockKeyhole size={14} color="#8789A3" />
+                  <Lock size={14} color="#8789A3" />
                 </View>
 
                 {/* Card Fields */}
