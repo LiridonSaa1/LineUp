@@ -21,6 +21,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
 
   // Form State
   const [email, setEmail] = useState("");
@@ -139,8 +140,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
 
                 {/* Form Inputs */}
                 <View className="gap-y-4 mb-6">
-                   <View className="bg-slate-50 rounded-2xl px-4 h-14 flex-row items-center border border-slate-200">
-                      <Mail size={20} color="#8789A3" />
+                   <View className={`bg-slate-50 rounded-2xl px-4 h-14 flex-row items-center border transition-all ${focusedField === 'email' ? 'border-[#3473ef] bg-white shadow-md shadow-[#3473ef]/5' : 'border-slate-200'}`}>
+                      <Mail size={20} color={focusedField === 'email' ? '#3473ef' : '#8789A3'} />
                       <TextInput
                         placeholder="E-mail adresa"
                         value={email}
@@ -149,11 +150,21 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                         placeholderTextColor="#94A3B8"
                         keyboardType="email-address"
                         autoCapitalize="none"
+                        autoCorrect={false}
+                        onFocus={() => setFocusedField('email')}
+                        onBlur={() => setFocusedField(null)}
+                        textContentType="emailAddress"
+                        autoComplete="email"
                       />
+                      {email !== "" && (
+                        <TouchableOpacity onPress={() => setEmail("")} className="p-1">
+                          <X size={16} color="#8789A3" />
+                        </TouchableOpacity>
+                      )}
                    </View>
 
-                   <View className="bg-slate-50 rounded-2xl px-4 h-14 flex-row items-center border border-slate-200">
-                      <Lock size={20} color="#8789A3" />
+                   <View className={`bg-slate-50 rounded-2xl px-4 h-14 flex-row items-center border transition-all ${focusedField === 'password' ? 'border-[#3473ef] bg-white shadow-md shadow-[#3473ef]/5' : 'border-slate-200'}`}>
+                      <Lock size={20} color={focusedField === 'password' ? '#3473ef' : '#8789A3'} />
                       <TextInput
                         placeholder="Fjalëkalimi"
                         value={password}
@@ -161,9 +172,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                         className="flex-1 ml-3 font-bold text-[#161719]"
                         placeholderTextColor="#94A3B8"
                         secureTextEntry={!showPassword}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        onFocus={() => setFocusedField('password')}
+                        onBlur={() => setFocusedField(null)}
+                        textContentType="password"
+                        autoComplete="password"
                       />
-                      <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                         {showPassword ? <EyeOff size={20} color="#8789A3" /> : <Eye size={20} color="#8789A3" />}
+                      <TouchableOpacity onPress={() => setShowPassword(!showPassword)} className="p-1">
+                         {showPassword ? <EyeOff size={20} color={focusedField === 'password' ? '#3473ef' : '#8789A3'} /> : <Eye size={20} color={focusedField === 'password' ? '#3473ef' : '#8789A3'} />}
                       </TouchableOpacity>
                    </View>
                 </View>

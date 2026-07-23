@@ -39,6 +39,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
 
   // Form State
   const [email, setEmail] = useState("");
@@ -181,19 +182,28 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
           <View className="gap-y-3">
             <Text className="text-[11px] font-black text-[#8789A3] uppercase tracking-widest text-center mt-2">INFORMATA BAZË</Text>
             
-            <View className="bg-white rounded-2xl px-4 h-14 flex-row items-center border border-slate-200 shadow-sm">
-              <Store size={20} color="#8789A3" />
+            <View className={`bg-white rounded-2xl px-4 h-14 flex-row items-center border transition-all ${focusedField === 'fullName' ? 'border-[#3473ef] shadow-md shadow-[#3473ef]/5' : 'border-slate-200'}`}>
+              <Store size={20} color={focusedField === 'fullName' ? '#3473ef' : '#8789A3'} />
               <TextInput
                 placeholder="Emri i biznesit"
                 value={fullName}
                 onChangeText={setFullName}
                 className="flex-1 ml-3 font-bold text-[#161719] text-base"
                 placeholderTextColor="#94A3B8"
+                onFocus={() => setFocusedField('fullName')}
+                onBlur={() => setFocusedField(null)}
+                textContentType="organizationName"
+                autoComplete="organization"
               />
+              {fullName !== "" && (
+                <TouchableOpacity onPress={() => setFullName("")} className="p-1">
+                  <X size={16} color="#8789A3" />
+                </TouchableOpacity>
+              )}
             </View>
 
-            <View className="bg-white rounded-2xl px-4 h-14 flex-row items-center border border-slate-200 shadow-sm">
-              <Mail size={20} color="#8789A3" />
+            <View className={`bg-white rounded-2xl px-4 h-14 flex-row items-center border transition-all ${focusedField === 'email' ? 'border-[#3473ef] shadow-md shadow-[#3473ef]/5' : 'border-slate-200'}`}>
+              <Mail size={20} color={focusedField === 'email' ? '#3473ef' : '#8789A3'} />
               <TextInput
                 placeholder="Email"
                 value={email}
@@ -202,23 +212,65 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
                 placeholderTextColor="#94A3B8"
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoCorrect={false}
+                onFocus={() => setFocusedField('email')}
+                onBlur={() => setFocusedField(null)}
+                textContentType="emailAddress"
+                autoComplete="email"
               />
+              {email !== "" && (
+                <TouchableOpacity onPress={() => setEmail("")} className="p-1">
+                  <X size={16} color="#8789A3" />
+                </TouchableOpacity>
+              )}
             </View>
 
-            <View className="bg-white rounded-2xl px-4 h-14 flex-row items-center border border-slate-200 shadow-sm">
-              <Phone size={20} color="#8789A3" />
+            <View className={`bg-white rounded-2xl px-4 h-14 flex-row items-center border transition-all ${focusedField === 'phone' ? 'border-[#3473ef] shadow-md shadow-[#3473ef]/5' : 'border-slate-200'}`}>
+              <Phone size={20} color={focusedField === 'phone' ? '#3473ef' : '#8789A3'} />
               <TextInput
                 placeholder="Telefoni +383"
                 value={phone}
-                onChangeText={setPhone}
+                onChangeText={(val) => {
+                  // Format Kosova phone number dynamically
+                  const cleaned = val.replace(/\D/g, "");
+                  let formatted = val;
+                  if (cleaned.length > 0) {
+                    let numberPart = cleaned;
+                    if (cleaned.startsWith("383")) {
+                      numberPart = cleaned.substring(3);
+                    } else if (cleaned.startsWith("0")) {
+                      numberPart = cleaned.substring(1);
+                    }
+                    
+                    if (numberPart.length > 5) {
+                      formatted = `+383 ${numberPart.substring(0, 2)} ${numberPart.substring(2, 5)} ${numberPart.substring(5, 8)}`;
+                    } else if (numberPart.length > 2) {
+                      formatted = `+383 ${numberPart.substring(0, 2)} ${numberPart.substring(2)}`;
+                    } else {
+                      formatted = `+383 ${numberPart}`;
+                    }
+                  } else {
+                    formatted = "";
+                  }
+                  setPhone(formatted);
+                }}
                 className="flex-1 ml-3 font-bold text-[#161719] text-base"
                 placeholderTextColor="#94A3B8"
                 keyboardType="phone-pad"
+                onFocus={() => setFocusedField('phone')}
+                onBlur={() => setFocusedField(null)}
+                textContentType="telephoneNumber"
+                autoComplete="tel"
               />
+              {phone !== "" && (
+                <TouchableOpacity onPress={() => setPhone("")} className="p-1">
+                  <X size={16} color="#8789A3" />
+                </TouchableOpacity>
+              )}
             </View>
 
-            <View className="bg-white rounded-2xl px-4 h-14 flex-row items-center border border-slate-200 shadow-sm">
-              <Lock size={20} color="#8789A3" />
+            <View className={`bg-white rounded-2xl px-4 h-14 flex-row items-center border transition-all ${focusedField === 'password' ? 'border-[#3473ef] shadow-md shadow-[#3473ef]/5' : 'border-slate-200'}`}>
+              <Lock size={20} color={focusedField === 'password' ? '#3473ef' : '#8789A3'} />
               <TextInput
                 placeholder="Fjalëkalimi"
                 value={password}
@@ -226,9 +278,15 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
                 className="flex-1 ml-3 font-bold text-[#161719] text-base"
                 placeholderTextColor="#94A3B8"
                 secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                onFocus={() => setFocusedField('password')}
+                onBlur={() => setFocusedField(null)}
+                textContentType="newPassword"
+                autoComplete="password"
               />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                {showPassword ? <EyeOff size={20} color="#8789A3" /> : <Eye size={20} color="#8789A3" />}
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} className="p-1">
+                {showPassword ? <EyeOff size={20} color={focusedField === 'password' ? '#3473ef' : '#8789A3'} /> : <Eye size={20} color={focusedField === 'password' ? '#3473ef' : '#8789A3'} />}
               </TouchableOpacity>
             </View>
 
@@ -236,10 +294,10 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
             <View className="relative z-50">
               <TouchableOpacity
                 onPress={() => setShowCityPicker(!showCityPicker)}
-                className="w-full bg-white border border-slate-200 rounded-2xl px-4 h-14 flex-row items-center justify-between shadow-sm"
+                className={`w-full bg-white border rounded-2xl px-4 h-14 flex-row items-center justify-between transition-all ${showCityPicker ? 'border-[#3473ef] shadow-md shadow-[#3473ef]/5' : 'border-slate-200'}`}
               >
                 <View className="flex-row items-center gap-3">
-                  <MapPin size={20} color="#3473ef" />
+                  <MapPin size={20} color={selectedCity ? "#3473ef" : "#8789A3"} />
                   <Text className="text-[#161719] font-bold text-base">{selectedCity || "Qyteti"}</Text>
                 </View>
                 {showCityPicker ? (
@@ -285,14 +343,18 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
             </View>
 
             {/* Street address input */}
-            <View className="bg-white rounded-2xl px-4 h-14 flex-row items-center border border-slate-200 shadow-sm">
-              <MapPin size={20} color="#8789A3" />
+            <View className={`bg-white rounded-2xl px-4 h-14 flex-row items-center border transition-all ${focusedField === 'address' ? 'border-[#3473ef] shadow-md shadow-[#3473ef]/5' : 'border-slate-200'}`}>
+              <MapPin size={20} color={focusedField === 'address' ? '#3473ef' : '#8789A3'} />
               <TextInput
                 placeholder="Adresa (Rruga dhe Numri)"
                 value={selectedPlace ? selectedPlace.address : ""}
                 onChangeText={(val) => setSelectedPlace(val ? { address: val, lat: 42.6629, lng: 21.1655 } : null)}
                 className="flex-1 ml-3 font-bold text-[#161719] text-base"
                 placeholderTextColor="#94A3B8"
+                onFocus={() => setFocusedField('address')}
+                onBlur={() => setFocusedField(null)}
+                textContentType="fullStreetAddress"
+                autoComplete="street-address"
               />
               {selectedPlace && selectedPlace.address !== "" && (
                 <TouchableOpacity onPress={() => setSelectedPlace(null)} className="p-1">
@@ -404,32 +466,51 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
 
             {/* Card Fields */}
             <View className="gap-y-4 mb-6">
-              <View className="bg-slate-50 rounded-2xl px-4 h-12 flex-row items-center border border-slate-200">
-                <CreditCard size={16} color="#8789A3" />
+              <View className={`bg-slate-50 rounded-2xl px-4 h-12 flex-row items-center border transition-all ${focusedField === 'cardNumber' ? 'border-[#3473ef] bg-white shadow-md shadow-[#3473ef]/5' : 'border-slate-200'}`}>
+                <CreditCard size={16} color={focusedField === 'cardNumber' ? '#3473ef' : '#8789A3'} />
                 <TextInput
                   placeholder="Numri i Kartës"
                   placeholderTextColor="#94A3B8"
                   value={cardNumber}
-                  onChangeText={setCardNumber}
+                  onChangeText={(val) => {
+                    const cleaned = val.replace(/\D/g, "");
+                    const formatted = cleaned.match(/.{1,4}/g)?.join(" ") || cleaned;
+                    setCardNumber(formatted);
+                  }}
                   keyboardType="numeric"
-                  maxLength={16}
+                  maxLength={19} // 16 digits + 3 spaces
                   className="flex-1 ml-3 font-bold text-[#161719] text-sm"
+                  onFocus={() => setFocusedField('cardNumber')}
+                  onBlur={() => setFocusedField(null)}
+                  textContentType="creditCardNumber"
+                  autoComplete="cc-number"
                 />
               </View>
 
               <View className="flex-row gap-3">
-                <View className="bg-slate-50 rounded-2xl px-4 h-12 flex-row items-center border border-slate-200 flex-1">
+                <View className={`bg-slate-50 rounded-2xl px-4 h-12 flex-row items-center border flex-1 transition-all ${focusedField === 'cardExpiry' ? 'border-[#3473ef] bg-white shadow-md shadow-[#3473ef]/5' : 'border-slate-200'}`}>
                   <TextInput
                     placeholder="MM/VV"
                     placeholderTextColor="#94A3B8"
                     value={cardExpiry}
-                    onChangeText={setCardExpiry}
+                    onChangeText={(val) => {
+                      const cleaned = val.replace(/\D/g, "");
+                      let formatted = cleaned;
+                      if (cleaned.length > 2) {
+                        formatted = `${cleaned.substring(0, 2)}/${cleaned.substring(2, 4)}`;
+                      }
+                      setCardExpiry(formatted);
+                    }}
                     keyboardType="numeric"
                     maxLength={5}
                     className="flex-1 font-bold text-[#161719] text-sm text-center"
+                    onFocus={() => setFocusedField('cardExpiry')}
+                    onBlur={() => setFocusedField(null)}
+                    textContentType="none"
+                    autoComplete="cc-exp"
                   />
                 </View>
-                <View className="bg-slate-50 rounded-2xl px-4 h-12 flex-row items-center border border-slate-200 flex-1">
+                <View className={`bg-slate-50 rounded-2xl px-4 h-12 flex-row items-center border flex-1 transition-all ${focusedField === 'cardCvv' ? 'border-[#3473ef] bg-white shadow-md shadow-[#3473ef]/5' : 'border-slate-200'}`}>
                   <TextInput
                     placeholder="CVV"
                     placeholderTextColor="#94A3B8"
@@ -439,18 +520,26 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
                     secureTextEntry
                     maxLength={3}
                     className="flex-1 font-bold text-[#161719] text-sm text-center"
+                    onFocus={() => setFocusedField('cardCvv')}
+                    onBlur={() => setFocusedField(null)}
+                    textContentType="none"
+                    autoComplete="cc-csc"
                   />
                 </View>
               </View>
 
-              <View className="bg-slate-50 rounded-2xl px-4 h-12 flex-row items-center border border-slate-200">
-                <User size={16} color="#8789A3" />
+              <View className={`bg-slate-50 rounded-2xl px-4 h-12 flex-row items-center border transition-all ${focusedField === 'cardName' ? 'border-[#3473ef] bg-white shadow-md shadow-[#3473ef]/5' : 'border-slate-200'}`}>
+                <User size={16} color={focusedField === 'cardName' ? '#3473ef' : '#8789A3'} />
                 <TextInput
                   placeholder="Emri në Kartë"
                   placeholderTextColor="#94A3B8"
                   value={cardName}
                   onChangeText={setCardName}
                   className="flex-1 ml-3 font-bold text-[#161719] text-sm"
+                  onFocus={() => setFocusedField('cardName')}
+                  onBlur={() => setFocusedField(null)}
+                  textContentType="name"
+                  autoComplete="name"
                 />
               </View>
             </View>
