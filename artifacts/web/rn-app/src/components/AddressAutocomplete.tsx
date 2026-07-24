@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, ScrollView, StyleSheet, Keyboard } from 'react-native';
 import { MapPin, Search, Check, AlertCircle, Navigation, X } from 'lucide-react-native';
+import { supabase } from '@/config/supabase';
 
 export interface PlaceDetails {
   formatted_address: string;
@@ -119,14 +120,58 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   selectedCity,
 }) => {
   const [query, setQuery] = useState(initialValue || "");
+  const [dbCities, setDbCities] = useState<PlaceDetails[]>([]);
+
+  useEffect(() => {
+    async function fetchDbCities() {
+      try {
+        const { data } = await supabase
+          .from('barbershops')
+          .select('city, latitude, longitude')
+          .eq('status', 'active');
+        
+        if (data && data.length > 0) {
+          const uniqueMap = new Map<string, PlaceDetails>();
+          data.forEach(item => {
+            if (item.city) {
+              const cityName = item.city.trim();
+              if (!uniqueMap.has(cityName)) {
+                uniqueMap.set(cityName, {
+                  formatted_address: cityName,
+                  city: cityName,
+                  street: "",
+                  postal_code: "",
+                  country: "Kosovë",
+                  latitude: item.latitude || 42.6629,
+                  longitude: item.longitude || 21.1655
+                });
+              }
+            }
+          });
+          if (uniqueMap.size > 0) {
+            setDbCities(Array.from(uniqueMap.values()));
+          } else {
+            setDbCities(KOSOVO_CITIES);
+          }
+        } else {
+          setDbCities(KOSOVO_CITIES);
+        }
+      } catch (e) {
+        console.warn("Failed to load cities from Supabase, using local fallback:", e);
+        setDbCities(KOSOVO_CITIES);
+      }
+    }
+    fetchDbCities();
+  }, []);
+
   const getCityBaseList = () => {
     if (selectedCity && KOSOVO_STREETS[selectedCity]) {
       return KOSOVO_STREETS[selectedCity];
     }
-    return KOSOVO_CITIES;
+    return dbCities.length > 0 ? dbCities : KOSOVO_CITIES;
   };
 
-  const [suggestions, setSuggestions] = useState<PlaceDetails[]>(getCityBaseList());
+  const [suggestions, setSuggestions] = useState<PlaceDetails[]>([]);
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -137,10 +182,8 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   }, [initialValue]);
 
   useEffect(() => {
-    if (selectedCity) {
-      setSuggestions(getCityBaseList());
-    }
-  }, [selectedCity]);
+    setSuggestions(getCityBaseList());
+  }, [dbCities, selectedCity]);
 
   const handleFocus = () => {
     const baseList = getCityBaseList();
