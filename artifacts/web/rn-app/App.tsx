@@ -217,6 +217,13 @@ export default function App() {
 
   const onTabPress = (index: number) => {
     setActiveTab(index);
+    if (index === 1) {
+      setSearchQuery("");
+      setSearchSubIds([]);
+      setCityFilter("Të gjitha");
+      setSearchCoords(undefined);
+      setSelectedLocation("Lokacioni aktual");
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 

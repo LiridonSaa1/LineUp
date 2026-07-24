@@ -57,21 +57,28 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
   const [selectedShopMarker, setSelectedShopMarker] = useState<any>(null);
 
   useEffect(() => {
+    console.log("[ExploreScreen] Filtering shops. Original shops count:", shops.length);
+    console.log("[ExploreScreen] Filter parameters:", { initialCity, initialSearch, initialSubIds });
+    
     let result = [...shops];
 
     // 1. Filter by City
-    if (initialCity && initialCity !== "Të gjitha" && initialCity !== "Lokacioni aktual") {
-      result = result.filter(shop => shop.city?.toLowerCase() === initialCity.toLowerCase());
+    const cleanCity = initialCity?.toLowerCase().trim();
+    if (cleanCity && cleanCity !== "të gjitha" && cleanCity !== "lokacioni aktual") {
+      result = result.filter(shop => shop.city?.toLowerCase() === cleanCity);
+      console.log("[ExploreScreen] After City filter:", result.length);
     }
 
     // 2. Filter by subcategory IDs (initialSubIds)
-    if (initialSubIds && initialSubIds.length > 0) {
+    const activeSubIds = (initialSubIds || []).filter(id => id && id.toString().trim().length > 0);
+    if (activeSubIds.length > 0) {
       result = result.filter(shop => {
         if (Array.isArray(shop.subcategories) && shop.subcategories.length > 0) {
-          return shop.subcategories.some((id: string) => initialSubIds.includes(id));
+          return shop.subcategories.some((id: string) => activeSubIds.includes(id));
         }
         return false;
       });
+      console.log("[ExploreScreen] After Subcategories filter:", result.length);
     }
 
     // 3. Filter by Search Query (name, city, address)
@@ -83,8 +90,10 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
         const addressMatch = shop.address?.toLowerCase().includes(cleanSearch);
         return nameMatch || cityMatch || addressMatch;
       });
+      console.log("[ExploreScreen] After Search filter:", result.length);
     }
 
+    console.log("[ExploreScreen] Final filtered shops count:", result.length);
     setFilteredShops(result);
   }, [shops, initialCity, initialSearch, initialSubIds]);
 
