@@ -508,61 +508,73 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
         </View>
       )}
 
-      {/* ── HOW TO USE ────────────────────────────── */}
+      {/* ── HOW TO USE (TIMELINE STYLE) ──────────────── */}
       <View className="mt-4 px-6 pb-20">
-        <View className="flex-row items-center justify-between mb-8">
+        <View className="flex-row items-center justify-between mb-6">
           <View>
             <Text className="text-3xl font-black text-[#161719]">Si funksionon</Text>
-            <Text className="text-[#8789A3] font-bold mt-1">Përjetoni stilimin më të mirë</Text>
+            <Text className="text-[#8789A3] font-bold mt-1">Përjetoni stilimin më të mirë në 3 hapa</Text>
           </View>
         </View>
 
-        <View className="gap-y-6">
-          {[
-            {
-              step: "01",
-              title: "Gjej dyqanin tënd",
-              desc: "Kërko sipas qytetit, shfleto vlerësimet dhe eksploro fotot e berberive më të mira të Kosovës.",
-              icon: Search,
-              color: "#3473ef"
-            },
-            {
-              step: "02",
-              title: "Zgjidhni një vend",
-              desc: "Zgjidhni berberin tuaj dhe orën e preferuar nga disponueshmëria në kohë reale.",
-              icon: MapPin,
-              color: "#f47458"
-            },
-            {
-              step: "03",
-              title: "Konfirmo me OTP",
-              desc: "Merrni një kod të njëhershëm. Konfirmuar menjëherë, pa asnjë telefonatë.",
-              icon: Shield,
-              color: "#10b981"
-            },
-          ].map((item, i) => (
-            <View
-              key={i}
-              className="overflow-hidden shadow-lg mb-4"
-              style={{ borderRadius: 28 }}
-            >
-              <BlurView intensity={30} tint="light" className="flex-row items-center p-5 bg-white/20 border border-white/60">
-                <View
-                  className="w-16 h-16 rounded-[22px] items-center justify-center bg-white border border-slate-100 shadow-sm"
-                >
-                  <item.icon size={30} color={item.color} strokeWidth={2.5} />
-                </View>
+        <View 
+          className="overflow-hidden border border-white/60 shadow-lg" 
+          style={{ borderRadius: 32, backgroundColor: 'rgba(255, 255, 255, 0.4)' }}
+        >
+          <BlurView intensity={30} tint="light" className="p-6 relative">
+            {/* Timeline Vertical Line Connector */}
+            <View 
+              className="absolute left-[38px] top-12 bottom-12 w-[1px] bg-slate-300" 
+              style={{ borderStyle: 'dashed', borderWidth: 1, borderColor: '#cbd5e1' }}
+            />
 
-                <View className="flex-1 ml-5">
-                  <View className="flex-row items-center justify-between mb-1">
-                    <Text className="text-xl font-black text-[#161719]">{item.title}</Text>
-                    <Text className="text-[10px] font-black text-[#8789A3] tracking-[0.2em]">{item.step}</Text>
+            <View className="gap-y-8">
+              {[
+                {
+                  step: "01",
+                  title: "Gjej dyqanin tënd",
+                  desc: "Kërko sipas qytetit, shfleto vlerësimet dhe eksploro fotot e berberive më të mira të Kosovës.",
+                  icon: Search,
+                  color: "#3473ef"
+                },
+                {
+                  step: "02",
+                  title: "Zgjidhni një vend",
+                  desc: "Zgjidhni berberin tuaj dhe orën e preferuar nga disponueshmëria në kohë reale.",
+                  icon: MapPin,
+                  color: "#f47458"
+                },
+                {
+                  step: "03",
+                  title: "Konfirmo me OTP",
+                  desc: "Konfirmoni terminin tuaj menjëherë pa pasur nevojë për telefonata të lodhshme.",
+                  icon: Shield,
+                  color: "#10b981"
+                },
+              ].map((item, i) => (
+                <View key={i} className="flex-row items-start relative z-10">
+                  {/* Left Circle Icon */}
+                  <View 
+                    className="w-11 h-11 rounded-full items-center justify-center border-2 border-white shadow-sm"
+                    style={{ backgroundColor: item.color }}
+                  >
+                    <item.icon size={20} color="white" strokeWidth={2.5} />
                   </View>
-                  <Text className="text-[#8789A3] font-bold leading-5 text-[13px]">{item.desc}</Text>
+
+                  {/* Right Content */}
+                  <View className="flex-1 ml-5">
+                    <View className="flex-row items-center justify-between mb-1">
+                      <Text className="text-lg font-black text-[#161719]">{item.title}</Text>
+                      <View className="bg-white/60 px-2 py-0.5 rounded-full border border-white/80">
+                        <Text className="text-[10px] font-black text-[#8789A3] tracking-widest">{item.step}</Text>
+                      </View>
+                    </View>
+                    <Text className="text-[#8789A3] font-semibold leading-5 text-[13px]">{item.desc}</Text>
+                  </View>
                 </View>
-              </BlurView>
+              ))}
             </View>
-          ))}
+          </BlurView>
         </View>
       </View>
 
