@@ -98,6 +98,8 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
   // Dynamic Categories
   const [dbCategories, setDbCategories] = useState<any[]>([]);
   const [dbSubcategories, setDbSubcategories] = useState<any[]>([]);
+  const [dbShops, setDbShops] = useState<any[]>([]);
+  const [dbBarbers, setDbBarbers] = useState<any[]>([]);
   const [selectedMainCategory, setSelectedMainCategory] = useState<any | null>(null);
   const [showSubModal, setShowSubModal] = useState(false);
   const [selectedSubIds, setSelectedSubIds] = useState<string[]>([]);
@@ -123,7 +125,30 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
 
   useEffect(() => {
     fetchRecents();
+    loadSearchOptions();
   }, []);
+
+  const loadSearchOptions = async () => {
+    try {
+      // Fetch Categories
+      const { data: catData } = await supabase.from('categories').select('*');
+      if (catData) setDbCategories(catData);
+
+      // Fetch Subcategories
+      const { data: subData } = await supabase.from('subcategories').select('*');
+      if (subData) setDbSubcategories(subData);
+
+      // Fetch Barbershops (Venues)
+      const { data: shopsData } = await supabase.from('barbershops').select('*').limit(30);
+      if (shopsData) setDbShops(shopsData);
+
+      // Fetch Barbers (Professionals)
+      const { data: barbersData } = await supabase.from('barbers').select('*').limit(30);
+      if (barbersData) setDbBarbers(barbersData);
+    } catch (e) {
+      console.warn("Error loading database search options:", e);
+    }
+  };
 
   const fetchRecents = async () => {
     try {
@@ -198,6 +223,18 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
       subIds: selectedSubIds
     });
   };
+
+  const filteredSubcategories = dbSubcategories.filter(sub => 
+    !treatmentQuery || sub.name?.toLowerCase().includes(treatmentQuery.toLowerCase())
+  );
+  
+  const filteredShops = dbShops.filter(shop => 
+    !treatmentQuery || shop.name?.toLowerCase().includes(treatmentQuery.toLowerCase())
+  );
+  
+  const filteredBarbers = dbBarbers.filter(barber => 
+    !treatmentQuery || barber.name?.toLowerCase().includes(treatmentQuery.toLowerCase())
+  );
 
   const filteredTreatments = TREATMENTS.filter(t => t.toLowerCase().includes(treatmentQuery.toLowerCase()));
 
@@ -382,18 +419,67 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
             ))}
           </ScrollView>
 
-          {filteredTreatments.length > 0 && (
-            <>
+          {/* Subcategories (Trajtimet) */}
+          {(activeFilterTab === 'Të gjitha' || activeFilterTab === 'Trajtimet') && filteredSubcategories.length > 0 && (
+            <View className="mb-6">
+              <Text className="text-xl font-bold mb-4">Trajtimet</Text>
+              {filteredSubcategories.map((t, idx) => (
+                <TouchableOpacity key={t.id || idx} onPress={() => { setSelectedTreatment(t.name); setActivePanel('main'); }} className="flex-row items-center mb-4">
+                  <View className="w-10 h-10 rounded-full bg-[#3473ef]/10 items-center justify-center mr-4">
+                    <Scissors size={20} color="#3473ef" />
+                  </View>
+                  <Text className="text-[17px] font-bold text-[#161719]">{t.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {/* Sallonet (Venues) */}
+          {(activeFilterTab === 'Të gjitha' || activeFilterTab === 'Sallonet') && filteredShops.length > 0 && (
+            <View className="mb-6">
+              <Text className="text-xl font-bold mb-4">Sallonet</Text>
+              {filteredShops.map((shop, idx) => (
+                <TouchableOpacity key={shop.id || idx} onPress={() => { setSelectedTreatment(shop.name); setActivePanel('main'); }} className="flex-row items-center mb-4">
+                  <View className="w-10 h-10 rounded-full bg-[#3473ef]/10 items-center justify-center mr-4">
+                    <MapPin size={20} color="#3473ef" />
+                  </View>
+                  <View>
+                    <Text className="text-[17px] font-bold text-[#161719]">{shop.name}</Text>
+                    {shop.city && <Text className="text-xs text-gray-400 font-semibold">{shop.city}</Text>}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {/* Profesionistët (Barbers) */}
+          {(activeFilterTab === 'Të gjitha' || activeFilterTab === 'Profesionistët') && filteredBarbers.length > 0 && (
+            <View className="mb-6">
+              <Text className="text-xl font-bold mb-4">Profesionistët</Text>
+              {filteredBarbers.map((barber, idx) => (
+                <TouchableOpacity key={barber.id || idx} onPress={() => { setSelectedTreatment(barber.name); setActivePanel('main'); }} className="flex-row items-center mb-4">
+                  <View className="w-10 h-10 rounded-full bg-[#3473ef]/10 items-center justify-center mr-4">
+                    <User size={20} color="#3473ef" />
+                  </View>
+                  <Text className="text-[17px] font-bold text-[#161719]">{barber.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {/* Fallback to hardcoded list if database didn't return any values */}
+          {filteredSubcategories.length === 0 && filteredShops.length === 0 && filteredBarbers.length === 0 && filteredTreatments.length > 0 && (
+            <View className="mb-6">
               <Text className="text-xl font-bold mb-4">Trajtimet</Text>
               {filteredTreatments.map((t) => (
                 <TouchableOpacity key={t} onPress={() => { setSelectedTreatment(t); setActivePanel('main'); }} className="flex-row items-center mb-6">
-                  <View className="w-10 h-10 rounded-full bg-[#6366f1]/5 items-center justify-center mr-4">
-                    <Scissors size={20} color="#6366f1" opacity={0.6} />
+                  <View className="w-10 h-10 rounded-full bg-[#3473ef]/10 items-center justify-center mr-4">
+                    <Scissors size={20} color="#3473ef" />
                   </View>
-                  <Text className="text-[17px] font-bold">{t}</Text>
+                  <Text className="text-[17px] font-bold text-[#161719]">{t}</Text>
                 </TouchableOpacity>
               ))}
-            </>
+            </View>
           )}
         </ScrollView>
       </Animated.View>

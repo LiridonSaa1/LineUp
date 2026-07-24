@@ -1,6 +1,7 @@
 import React from "react";
-import { View, Text, ScrollView, TouchableOpacity, Image, Dimensions } from "react-native";
-import { ArrowLeft, Share2, Star, MapPin, Phone, MessageSquare, Compass, Globe, Heart, Calendar } from "lucide-react-native";
+import { View, Text, ScrollView, TouchableOpacity, Image, Dimensions, Modal, TextInput } from "react-native";
+import { useState } from "react";
+import { ArrowLeft, Share2, Star, MapPin, Phone, MessageSquare, Compass, Globe, Heart, Calendar, Check, X, User as UserIcon, Clock, Scissors as ScissorsIcon } from "lucide-react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
 
 const { width } = Dimensions.get("window");
@@ -11,6 +12,24 @@ interface BarberDetailScreenProps {
 }
 
 export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, onBack }) => {
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [bookingStep, setBookingStep] = useState(1);
+  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
+  const [selectedServices, setSelectedServices] = useState<any[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string>("Sot, 22 Qershor");
+  const [selectedTime, setSelectedTime] = useState<string>("14:30");
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  
+  const MOCK_EMPLOYEES = [
+    { id: 1, name: "Arben B.", role: "Senior Barber", rating: "4.9" },
+    { id: 2, name: "Luan M.", role: "Master Barber", rating: "5.0" }
+  ];
+  const MOCK_SERVICES = [
+    { id: 1, name: "Haircut", price: 15, duration: "30 min" },
+    { id: 2, name: "Beard Trim", price: 10, duration: "15 min" },
+    { id: 3, name: "Hair & Beard", price: 22, duration: "45 min" }
+  ];
+
   const shopName = shop?.name || "Classic Cuts Barber Shop";
   const city = shop?.city || "Prishtinë";
   const address = shop?.address || "10 Oxford Street, Soho, London, UK";
@@ -119,7 +138,7 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, on
 
       {/* Sticky Book Appointment Bottom Bar */}
       <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-5 z-30 shadow-[0_-10px_30px_rgba(0,0,0,0.06)]">
-        <TouchableOpacity className="bg-[#3473ef] py-4 rounded-full items-center justify-center shadow-lg shadow-[#3473ef]/30 active:scale-98">
+        <TouchableOpacity onPress={() => setShowBookingModal(true)} className="bg-[#3473ef] py-4 rounded-full items-center justify-center shadow-lg shadow-[#3473ef]/30 active:scale-98">
           <Text className="text-white text-base font-extrabold">Book Appointment</Text>
         </TouchableOpacity>
       </View>

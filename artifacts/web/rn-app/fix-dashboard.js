@@ -1,4 +1,7 @@
-import React, { useState, useEffect } from 'react';
+const fs = require('fs');
+const path = 'src/screens/BarberDashboardScreen.tsx';
+
+const content = `import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, Dimensions, ActivityIndicator } from 'react-native';
 import {
   Users,
@@ -53,7 +56,7 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
         const today = new Date().toISOString().split('T')[0];
         const { data: appts } = await supabase
           .from('appointments')
-          .select(`
+          .select(\`
             id,
             time,
             service,
@@ -62,7 +65,7 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
             users (
               name
             )
-          `)
+          \`)
           .eq('shop_id', user.id)
           .eq('date', today)
           .order('time', { ascending: true });
@@ -138,9 +141,9 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
           <TouchableOpacity
             key={tab.id}
             onPress={() => setActiveTab(tab.id as any)}
-            className={`flex-1 py-3 items-center border-b-2 ${activeTab === tab.id ? 'border-[#3473ef]' : 'border-transparent'}`}
+            className={\`flex-1 py-3 items-center border-b-2 \${activeTab === tab.id ? 'border-[#3473ef]' : 'border-transparent'}\`}
           >
-            <Text className={`font-black ${activeTab === tab.id ? 'text-[#3473ef]' : 'text-[#8789A3]'}`}>{tab.label}</Text>
+            <Text className={\`font-black \${activeTab === tab.id ? 'text-[#3473ef]' : 'text-[#8789A3]'}\`}>{tab.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -246,17 +249,17 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
             <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-6 flex-row">
               <TouchableOpacity
                 onPress={() => setSelectedStaffFilter(null)}
-                className={`px-5 py-2.5 rounded-full mr-3 border ${selectedStaffFilter === null ? 'bg-black border-black' : 'bg-white border-slate-200'}`}
+                className={\`px-5 py-2.5 rounded-full mr-3 border \${selectedStaffFilter === null ? 'bg-black border-black' : 'bg-white border-slate-200'}\`}
               >
-                <Text className={`font-bold ${selectedStaffFilter === null ? 'text-white' : 'text-[#161719]'}`}>Të gjithë</Text>
+                <Text className={\`font-bold \${selectedStaffFilter === null ? 'text-white' : 'text-[#161719]'}\`}>Të gjithë</Text>
               </TouchableOpacity>
               {MOCK_STAFF.map(emp => (
                 <TouchableOpacity
                   key={emp.id}
                   onPress={() => setSelectedStaffFilter(emp.id)}
-                  className={`px-5 py-2.5 rounded-full mr-3 border ${selectedStaffFilter === emp.id ? 'bg-[#3473ef] border-[#3473ef]' : 'bg-white border-slate-200'}`}
+                  className={\`px-5 py-2.5 rounded-full mr-3 border \${selectedStaffFilter === emp.id ? 'bg-[#3473ef] border-[#3473ef]' : 'bg-white border-slate-200'}\`}
                 >
-                  <Text className={`font-bold ${selectedStaffFilter === emp.id ? 'text-white' : 'text-[#161719]'}`}>{emp.name}</Text>
+                  <Text className={\`font-bold \${selectedStaffFilter === emp.id ? 'text-white' : 'text-[#161719]'}\`}>{emp.name}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -286,8 +289,8 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
                         <Text className="text-[#8789A3] text-xs font-bold">{appt.service}</Text>
                       </View>
                     </View>
-                    <View className={`px-3 py-1.5 rounded-full ${appt.status === 'confirmed' ? 'bg-emerald-50' : 'bg-amber-50'}`}>
-                      <Text className={`text-[10px] font-black uppercase tracking-wider ${appt.status === 'confirmed' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                    <View className={\`px-3 py-1.5 rounded-full \${appt.status === 'confirmed' ? 'bg-emerald-50' : 'bg-amber-50'}\`}>
+                      <Text className={\`text-[10px] font-black uppercase tracking-wider \${appt.status === 'confirmed' ? 'text-emerald-600' : 'text-amber-600'}\`}>
                         {appt.status}
                       </Text>
                     </View>
@@ -311,3 +314,7 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
     </View>
   );
 };
+`;
+
+fs.writeFileSync(path, content);
+console.log('BarberDashboardScreen completely updated!');

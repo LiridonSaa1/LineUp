@@ -142,7 +142,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
         <View className="absolute top-[-50] left-[-50] w-64 h-64 bg-[#3473ef]/15 rounded-full blur-3xl" />
         <View className="absolute top-[200] right-[-100] w-80 h-80 bg-[#f47458]/15 rounded-full blur-3xl" />
 
-        <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingBottom: 80, paddingTop: 40 }}>
+        <ScrollView className="flex-1" showsVerticalScrollIndicator={false} automaticallyAdjustKeyboardInsets={false} bounces={false} contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingBottom: 80, paddingTop: 40 }}>
           {/* Auth Header */}
           <View className="pb-8 px-6 items-center">
              <Text className="text-3xl font-black text-[#161719] text-center tracking-tight mb-2">Welcome back</Text>
