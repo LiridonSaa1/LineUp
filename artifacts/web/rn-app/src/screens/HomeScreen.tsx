@@ -31,14 +31,24 @@ interface HomeScreenProps {
   selectedLocation: string;
   onSearch?: (query: string, subIds?: string[]) => void;
   onStartPlan?: (planId: string) => void;
+  categories?: any[];
+  subcategories?: any[];
 }
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLocation, onOpenSearch, onOpenAddAd, selectedLocation = "Lokacioni aktual", onSearch, onStartPlan }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({
+  onSelectShop,
+  onOpenLocation,
+  onOpenSearch,
+  onOpenAddAd,
+  selectedLocation = "Lokacioni aktual",
+  onSearch,
+  onStartPlan,
+  categories = [],
+  subcategories = []
+}) => {
   const [loading, setLoading] = useState(true);
   const [recommendedShops, setRecommendedShops] = useState<any[]>([]);
   const [newShops, setNewShops] = useState<any[]>([]);
-  const [dbCategories, setDbCategories] = useState<any[]>([]);
-  const [dbSubcategories, setDbSubcategories] = useState<any[]>([]);
   const [selectedMainCategory, setSelectedMainCategory] = useState<any | null>(null);
   const [showSubModal, setShowSubModal] = useState(false);
   const [selectedSubIds, setSelectedSubIds] = useState<string[]>([]);
@@ -124,7 +134,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
     async function loadData() {
       setLoading(true);
       try {
-        const [shopsRes, newShopsRes, adsRes, categoriesRes, subcategoriesRes] = await Promise.all([
+        const [shopsRes, newShopsRes, adsRes] = await Promise.all([
           supabase
             .from('barbershops')
             .select('*')
@@ -141,8 +151,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
             .from('advertisements')
             .select('*')
             .eq('status', 'active'),
-          supabase.from('categories').select('*'),
-          supabase.from('subcategories').select('*'),
         ]);
 
         let shopsData = shopsRes.data;
@@ -166,14 +174,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
 
         if (adsRes.data && adsRes.data.length > 0) {
           setAds(adsRes.data);
-        }
-
-        if (categoriesRes.data) {
-          setDbCategories(categoriesRes.data);
-        }
-
-        if (subcategoriesRes.data) {
-          setDbSubcategories(subcategoriesRes.data);
         }
 
       } catch (e) {
@@ -318,7 +318,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
       {/* ── CATEGORIES GRID ──────────────────────────── */}
       <View className="px-6 mt-4">
         <View className="flex-row flex-wrap justify-between">
-          {dbCategories.map((cat, i) => {
+          {categories.map((cat, i) => {
             const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
             return (
               <View key={i} className="items-center mb-6" style={{ width: '22%' }}>
@@ -613,7 +613,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
           {/* Category Tabs */}
           <View className="border-b border-slate-100">
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-              {dbCategories.map(cat => {
+              {categories.map(cat => {
                 const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
                 const isSelected = selectedMainCategory?.id === cat.id;
                 return (
@@ -636,7 +636,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
             <TouchableOpacity
               onPress={() => {
                 if (selectedMainCategory) {
-                  const currentCategorySubIds = dbSubcategories
+                  const currentCategorySubIds = subcategories
                     .filter(s => s.category_id === selectedMainCategory.id)
                     .map(s => s.id);
                   
@@ -656,12 +656,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
                   });
                 }
               }}
-              className={`rounded-2xl py-4 items-center mb-4 border ${!selectedMainCategory || dbSubcategories.filter(s => s.category_id === selectedMainCategory?.id).every(s => selectedSubIds.includes(s.id)) ? 'bg-[#3473ef]/10 border-[#3473ef]' : 'bg-slate-50 border-slate-200'}`}
+              className={`rounded-2xl py-4 items-center mb-4 border ${!selectedMainCategory || subcategories.filter(s => s.category_id === selectedMainCategory?.id).every(s => selectedSubIds.includes(s.id)) ? 'bg-[#3473ef]/10 border-[#3473ef]' : 'bg-slate-50 border-slate-200'}`}
             >
-              <Text className={`font-black text-base ${!selectedMainCategory || dbSubcategories.filter(s => s.category_id === selectedMainCategory?.id).every(s => selectedSubIds.includes(s.id)) ? 'text-[#3473ef]' : 'text-[#64748b]'}`}>Të gjitha në këtë kategori</Text>
+              <Text className={`font-black text-base ${!selectedMainCategory || subcategories.filter(s => s.category_id === selectedMainCategory?.id).every(s => selectedSubIds.includes(s.id)) ? 'text-[#3473ef]' : 'text-[#64748b]'}`}>Të gjitha në këtë kategori</Text>
             </TouchableOpacity>
 
-            {selectedMainCategory && dbSubcategories.filter(s => s.category_id === selectedMainCategory.id).map((sub) => {
+            {selectedMainCategory && subcategories.filter(s => s.category_id === selectedMainCategory.id).map((sub) => {
               const isSelected = selectedSubIds.includes(sub.id);
               return (
                 <TouchableOpacity
@@ -689,7 +689,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
                 setShowSubModal(false);
                 let queryText = "";
                 if (selectedSubIds.length > 0) {
-                  const selectedNames = dbSubcategories
+                  const selectedNames = subcategories
                     .filter(s => selectedSubIds.includes(s.id))
                     .map(s => s.name);
                   queryText = selectedNames.join(", ");
@@ -699,7 +699,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
                 
                 let finalSubIds = [...selectedSubIds];
                 if (finalSubIds.length === 0 && selectedMainCategory) {
-                  finalSubIds = dbSubcategories
+                  finalSubIds = subcategories
                     .filter(s => s.category_id === selectedMainCategory.id)
                     .map(s => s.id);
                 }

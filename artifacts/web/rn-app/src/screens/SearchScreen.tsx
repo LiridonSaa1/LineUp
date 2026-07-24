@@ -24,6 +24,8 @@ interface SearchScreenProps {
     time?: string
   }) => void;
   currentLocation?: string;
+  categories?: any[];
+  subcategories?: any[];
 }
 
 const CATEGORY_ICONS: Record<string, any> = {
@@ -75,7 +77,13 @@ const KOSOVO_PREDEFINED_PLACES = [
   { description: "Suharekë (Qendër)", geometry: { location: { lat: 42.3581, lng: 20.8250 } } },
 ];
 
-export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, currentLocation = "Lokacioni aktual" }) => {
+export const SearchScreen: React.FC<SearchScreenProps> = ({
+  onClose,
+  onSearch,
+  currentLocation = "Lokacioni aktual",
+  categories = [],
+  subcategories = []
+}) => {
   const [activePanel, setActivePanel] = useState<'main' | 'treatment' | 'location' | 'datetime'>('main');
 
   // Selection States
@@ -96,8 +104,6 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
   const [activeFilterTab, setActiveFilterTab] = useState('All');
 
   // Dynamic Categories
-  const [dbCategories, setDbCategories] = useState<any[]>([]);
-  const [dbSubcategories, setDbSubcategories] = useState<any[]>([]);
   const [dbShops, setDbShops] = useState<any[]>([]);
   const [dbBarbers, setDbBarbers] = useState<any[]>([]);
   const [selectedMainCategory, setSelectedMainCategory] = useState<any | null>(null);
@@ -130,14 +136,6 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
 
   const loadSearchOptions = async () => {
     try {
-      // Fetch Categories
-      const { data: catData } = await supabase.from('categories').select('*');
-      if (catData) setDbCategories(catData);
-
-      // Fetch Subcategories
-      const { data: subData } = await supabase.from('subcategories').select('*');
-      if (subData) setDbSubcategories(subData);
-
       // Fetch Barbershops (Venues)
       const { data: shopsData } = await supabase.from('barbershops').select('*').limit(30);
       if (shopsData) setDbShops(shopsData);
@@ -224,7 +222,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
     });
   };
 
-  const filteredSubcategories = dbSubcategories.filter(sub => 
+  const filteredSubcategories = subcategories.filter(sub => 
     !treatmentQuery || sub.name?.toLowerCase().includes(treatmentQuery.toLowerCase())
   );
   
@@ -361,7 +359,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
           <View className="mt-8">
             <Text className="text-xl font-bold text-[#161719] mb-4">Kategoritë</Text>
             <View className="flex-row flex-wrap justify-between">
-              {dbCategories.map((cat, i) => {
+              {categories.map((cat, i) => {
                 const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
                 return (
                   <TouchableOpacity
@@ -610,7 +608,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
           {/* Category Tabs */}
           <View className="border-b border-slate-100">
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-              {dbCategories.map(cat => {
+              {categories.map(cat => {
                 const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
                 const isSelected = selectedMainCategory?.id === cat.id;
                 return (
@@ -633,7 +631,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
             <TouchableOpacity
               onPress={() => {
                 if (selectedMainCategory) {
-                  const currentCategorySubIds = dbSubcategories
+                  const currentCategorySubIds = subcategories
                     .filter(s => s.category_id === selectedMainCategory.id)
                     .map(s => s.id);
                   
@@ -653,12 +651,12 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
                   });
                 }
               }}
-              className={`rounded-2xl py-4 items-center mb-4 border ${!selectedMainCategory || dbSubcategories.filter(s => s.category_id === selectedMainCategory?.id).every(s => selectedSubIds.includes(s.id)) ? 'bg-[#3473ef]/10 border-[#3473ef]' : 'bg-slate-50 border-slate-200'}`}
+              className={`rounded-2xl py-4 items-center mb-4 border ${!selectedMainCategory || subcategories.filter(s => s.category_id === selectedMainCategory?.id).every(s => selectedSubIds.includes(s.id)) ? 'bg-[#3473ef]/10 border-[#3473ef]' : 'bg-slate-50 border-slate-200'}`}
             >
-              <Text className={`font-black text-base ${!selectedMainCategory || dbSubcategories.filter(s => s.category_id === selectedMainCategory?.id).every(s => selectedSubIds.includes(s.id)) ? 'text-[#3473ef]' : 'text-[#64748b]'}`}>Të gjitha në këtë kategori</Text>
+              <Text className={`font-black text-base ${!selectedMainCategory || subcategories.filter(s => s.category_id === selectedMainCategory?.id).every(s => selectedSubIds.includes(s.id)) ? 'text-[#3473ef]' : 'text-[#64748b]'}`}>Të gjitha në këtë kategori</Text>
             </TouchableOpacity>
 
-            {selectedMainCategory && dbSubcategories.filter(s => s.category_id === selectedMainCategory.id).map((sub) => {
+            {selectedMainCategory && subcategories.filter(s => s.category_id === selectedMainCategory.id).map((sub) => {
               const isSelected = selectedSubIds.includes(sub.id);
               return (
                 <TouchableOpacity
@@ -685,17 +683,23 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
               onPress={() => {
                 setShowSubModal(false);
                 let queryText = "";
-                if (selectedSubIds.length > 0) {
-                  const selectedNames = dbSubcategories
-                    .filter(s => selectedSubIds.includes(s.id))
-                    .map(s => s.name);
-                  queryText = selectedNames.join(", ");
-                } else {
-                  queryText = selectedMainCategory?.name || "";
+                let finalSubIds = [...selectedSubIds];
+                if (finalSubIds.length === 0 && selectedMainCategory) {
+                  finalSubIds = subcategories
+                    .filter(s => s.category_id === selectedMainCategory.id)
+                    .map(s => s.id);
                 }
                 
-                if (onSearch && queryText) {
-                  onSearch(queryText);
+                if (onSearch) {
+                  onSearch({
+                    query: queryText,
+                    city: selectedLocation.address || currentLocation,
+                    lat: selectedLocation.lat,
+                    lng: selectedLocation.lng,
+                    date: selectedDate,
+                    time: selectedTime,
+                    subIds: finalSubIds
+                  });
                 }
               }}
               className="h-14 bg-black rounded-2xl items-center justify-center shadow-lg"

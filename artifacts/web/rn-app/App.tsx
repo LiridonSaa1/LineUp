@@ -108,10 +108,28 @@ export default function App() {
   const [showSearch, setShowSearch] = React.useState(false);
   const [showRegisterShop, setShowRegisterShop] = React.useState(false);
   const [showAddAd, setShowAddAd] = React.useState(false);
+  const [categories, setCategories] = React.useState<any[]>([]);
+  const [subcategories, setSubcategories] = React.useState<any[]>([]);
   const [selectedPlanId, setSelectedPlanId] = React.useState<string | undefined>(undefined);
   const [selectedLocation, setSelectedLocation] = React.useState("Lokacioni aktual");
 
   const tabPosition = useSharedValue(0);
+
+  React.useEffect(() => {
+    async function loadStaticData() {
+      try {
+        const [catRes, subRes] = await Promise.all([
+          supabase.from('categories').select('*'),
+          supabase.from('subcategories').select('*')
+        ]);
+        if (catRes.data) setCategories(catRes.data);
+        if (subRes.data) setSubcategories(subRes.data);
+      } catch (err) {
+        console.warn("Failed to load static categories/subcategories:", err);
+      }
+    }
+    loadStaticData();
+  }, []);
 
   React.useEffect(() => {
     // Check active session on startup
@@ -265,6 +283,8 @@ export default function App() {
                       setSelectedPlanId(planId);
                       setShowRegisterShop(true);
                     }}
+                    categories={categories}
+                    subcategories={subcategories}
                   />
                 )}
                 {activeTab === 1 && (
@@ -352,6 +372,8 @@ export default function App() {
                     onClose={() => setShowSearch(false)}
                     onSearch={handleSearch}
                     currentLocation={selectedLocation}
+                    categories={categories}
+                    subcategories={subcategories}
                   />
                 </View>
               </View>
