@@ -36,6 +36,7 @@ interface HomeScreenProps {
 export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLocation, onOpenSearch, onOpenAddAd, selectedLocation = "Lokacioni aktual", onSearch, onStartPlan }) => {
   const [loading, setLoading] = useState(true);
   const [recommendedShops, setRecommendedShops] = useState<any[]>([]);
+  const [newShops, setNewShops] = useState<any[]>([]);
   const [dbCategories, setDbCategories] = useState<any[]>([]);
   const [dbSubcategories, setDbSubcategories] = useState<any[]>([]);
   const [selectedMainCategory, setSelectedMainCategory] = useState<any | null>(null);
@@ -141,6 +142,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
 
         if (shopsData && shopsData.length > 0) {
           setRecommendedShops(shopsData);
+        }
+
+        // Fetch new shops (latest first)
+        const { data: newShopsData } = await supabase
+          .from('barbershops')
+          .select('*')
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+          .limit(6);
+        if (newShopsData) {
+          setNewShops(newShopsData);
         }
 
         const { data: liveAds } = await supabase
@@ -430,22 +442,24 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
       </View>
 
       {/* ── NEW TO LINEUP SECTION ───────────────────── */}
-      <View className="mt-4 px-6 mb-8">
-        <View className="flex-row items-center justify-between mb-4">
-          <Text className="text-2xl font-bold text-[#161719]">Të reja në LineUp</Text>
+      {newShops.length > 0 && (
+        <View className="mt-4 px-6 mb-8">
+          <View className="flex-row items-center justify-between mb-4">
+            <Text className="text-2xl font-bold text-[#161719]">Të reja në LineUp</Text>
+          </View>
+          <View className="overflow-hidden">
+            <ScrollView
+              ref={newToLineUpScrollRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              snapToInterval={(width - 48) * 0.63 + 16}
+              decelerationRate="fast"
+            >
+              {newShops.map(renderShopCard)}
+            </ScrollView>
+          </View>
         </View>
-        <View className="overflow-hidden">
-          <ScrollView
-            ref={newToLineUpScrollRef}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            snapToInterval={(width - 48) * 0.63 + 16}
-            decelerationRate="fast"
-          >
-            {recommendedShops.slice().reverse().map(renderShopCard)}
-          </ScrollView>
-        </View>
-      </View>
+      )}
 
       {/* ── HOW TO USE ────────────────────────────── */}
       <View className="mt-4 px-6 pb-20">
