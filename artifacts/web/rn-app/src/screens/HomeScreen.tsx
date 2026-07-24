@@ -179,48 +179,95 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
     loadData();
   }, []);
 
+  const renderRecommendedCard = (shop: any, index: number) => (
+    <TouchableOpacity
+      key={shop.id || index}
+      onPress={() => onSelectShop(shop)}
+      activeOpacity={0.95}
+      className="mr-4 overflow-hidden border border-white/60 shadow-sm"
+      style={{ width: (width - 48) * 0.7, height: 260, borderRadius: 28, backgroundColor: 'rgba(255, 255, 255, 0.4)' }}
+    >
+      <BlurView intensity={30} tint="light" className="flex-1">
+        <View className="relative w-full h-36">
+          <Image
+            source={{ uri: shop.imageUrl || shop.image_url || 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1000&auto=format&fit=crop&q=80' }}
+            className="w-full h-full"
+            resizeMode="cover"
+          />
+          <View className="absolute inset-0 bg-black/20" />
+          <View className="absolute top-3 left-3 bg-black/60 px-3 py-1.5 rounded-full flex-row items-center border border-white/20 backdrop-blur-md">
+            <Star size={12} color="#FFD700" fill="#FFD700" />
+            <Text className="text-white font-black text-xs ml-1.5">{shop.rating || '5.0'}</Text>
+          </View>
+          <View className="absolute bottom-[-16] right-4 w-12 h-12 bg-white rounded-full items-center justify-center shadow-lg border border-slate-50">
+            <Image source={{ uri: shop.logo_url || 'https://ui-avatars.com/api/?name=' + shop.name }} className="w-10 h-10 rounded-full" />
+          </View>
+        </View>
+
+        <View className="p-4 pt-5 flex-1 justify-between">
+          <View>
+            <Text className="text-xl font-black text-[#161719] mb-1" numberOfLines={1}>{shop.name}</Text>
+            <View className="flex-row items-center">
+              <MapPin size={12} color="#8789A3" />
+              <Text className="text-[#8789A3] font-bold text-xs ml-1" numberOfLines={1}>{shop.address || shop.city}</Text>
+            </View>
+          </View>
+          
+          <View className="flex-row items-center justify-between mt-3 pt-3 border-t border-white/40">
+            <Text className="text-[#3473ef] font-black text-sm uppercase tracking-wider">Top Rated</Text>
+            <View className="w-8 h-8 rounded-full bg-[#3473ef]/10 items-center justify-center">
+              <ArrowUpRight size={16} color="#3473ef" />
+            </View>
+          </View>
+        </View>
+      </BlurView>
+    </TouchableOpacity>
+  );
+
   const renderShopCard = (item: any) => (
     <TouchableOpacity
       key={item.id}
       onPress={() => onSelectShop(item)}
-      className="mr-4 mb-6"
-      style={{ width: (width - 48) * 0.63 }}
+      className="mr-4 mb-6 overflow-hidden border border-white/60 shadow-sm"
+      style={{ width: (width - 48) * 0.63, borderRadius: 28, backgroundColor: 'rgba(255, 255, 255, 0.4)' }}
     >
-      <View className="relative rounded-3xl overflow-hidden mb-3">
-        <Image
-          source={{ uri: item.imageUrl || "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1000&auto=format&fit=crop&q=80" }}
-          className="w-full h-48 object-cover"
-        />
-        <View
-          className="absolute top-3 left-3 overflow-hidden rounded-full border border-white/60"
-          style={{ borderRadius: 100 }}
-        >
-          <BlurView intensity={80} tint="light" className="px-3 py-1 bg-white/50">
-            <Text className="text-black text-[10px] font-bold">I zgjedhur</Text>
-          </BlurView>
+      <BlurView intensity={30} tint="light" className="p-3 flex-1">
+        <View className="relative rounded-2xl overflow-hidden mb-3">
+          <Image
+            source={{ uri: item.imageUrl || item.image_url || "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1000&auto=format&fit=crop&q=80" }}
+            className="w-full h-40 object-cover"
+          />
+          <View
+            className="absolute top-3 left-3 overflow-hidden rounded-full border border-white/60"
+            style={{ borderRadius: 100 }}
+          >
+            <BlurView intensity={80} tint="light" className="px-3 py-1 bg-white/50">
+              <Text className="text-black text-[10px] font-bold">I zgjedhur</Text>
+            </BlurView>
+          </View>
+          <TouchableOpacity
+            className="absolute top-3 right-3 overflow-hidden rounded-full border border-white/60"
+            style={{ borderRadius: 100 }}
+          >
+            <BlurView intensity={60} tint="light" className="w-8 h-8 items-center justify-center bg-white/30">
+              <Heart size={18} color="white" fill="white" />
+            </BlurView>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          className="absolute top-3 right-3 overflow-hidden rounded-full border border-white/60"
-          style={{ borderRadius: 100 }}
-        >
-          <BlurView intensity={60} tint="light" className="w-8 h-8 items-center justify-center bg-white/30">
-            <Heart size={18} color="white" fill="white" />
-          </BlurView>
-        </TouchableOpacity>
-      </View>
-      <View className="flex-row justify-between items-start">
-        <View className="flex-1 mr-2">
-          <Text className="text-lg font-bold text-[#161719]" numberOfLines={1}>{item.name}</Text>
-          <Text className="text-[#8789A3] text-sm mt-0.5" numberOfLines={1}>
-            {item.distance || ">50 km"} • {item.address || "Manastirski Livadi, Sofia"}
-          </Text>
-          <Text className="text-[#8789A3] text-sm mt-0.5">{item.category || "Sallon bukurie"} • {item.reviews || "1866"} vlerësime</Text>
+        <View className="flex-row justify-between items-start">
+          <View className="flex-1 mr-2">
+            <Text className="text-base font-black text-[#161719]" numberOfLines={1}>{item.name}</Text>
+            <Text className="text-[#8789A3] text-[11px] font-bold mt-0.5" numberOfLines={1}>
+              {item.distance || ">50 km"} • {item.address || item.city}
+            </Text>
+            <Text className="text-[#8789A3] text-[10px] font-bold mt-0.5">{item.category || "Sallon bukurie"} • {item.reviews || "186"} vlerësime</Text>
+          </View>
+          <View className="flex-row items-center bg-[#3473ef]/10 px-2 py-1 rounded-full">
+            <Star size={10} color="#3473ef" fill="#3473ef" />
+            <Text className="text-[#3473ef] font-black text-[10px] ml-1">{parseFloat(item.rating || "5.0").toFixed(1)}</Text>
+          </View>
         </View>
-        <View className="flex-row items-center bg-amber-50 px-2 py-1 rounded-lg">
-          <Star size={12} color="#fbbf24" fill="#fbbf24" />
-          <Text className="text-[#161719] font-bold text-xs ml-1">{parseFloat(item.rating || "0").toFixed(1)}</Text>
-        </View>
-      </View>
+      </BlurView>
     </TouchableOpacity>
   );
 
