@@ -312,8 +312,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
       {/* ── CATEGORIES GRID ──────────────────────────── */}
       <View className="px-6 mt-4">
         <View className="flex-row flex-wrap justify-between">
-          {(dbCategories.length > 0 ? dbCategories : CATEGORIES).map((cat, i) => {
-            const IconComponent = CATEGORY_ICONS[cat.name] || cat.icon || Scissors;
+          {dbCategories.map((cat, i) => {
+            const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
             return (
               <View key={i} className="items-center mb-6" style={{ width: '22%' }}>
                 <View
