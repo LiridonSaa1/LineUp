@@ -124,12 +124,29 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
     async function loadData() {
       setLoading(true);
       try {
-        let { data: shopsData, error: shopsError } = await supabase
-          .from('barbershops')
-          .select('*')
-          .eq('status', 'active')
-          .order('rating', { ascending: false })
-          .limit(6);
+        const [shopsRes, newShopsRes, adsRes, categoriesRes, subcategoriesRes] = await Promise.all([
+          supabase
+            .from('barbershops')
+            .select('*')
+            .eq('status', 'active')
+            .order('rating', { ascending: false })
+            .limit(6),
+          supabase
+            .from('barbershops')
+            .select('*')
+            .eq('status', 'active')
+            .order('created_at', { ascending: false })
+            .limit(6),
+          supabase
+            .from('advertisements')
+            .select('*')
+            .eq('status', 'active'),
+          supabase.from('categories').select('*'),
+          supabase.from('subcategories').select('*'),
+        ]);
+
+        let shopsData = shopsRes.data;
+        let shopsError = shopsRes.error;
 
         if (shopsError && (shopsError.code === 'PGRST205' || shopsError.message?.includes('barbershops'))) {
           const fallbackRes = await supabase
@@ -137,38 +154,27 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
             .select('*')
             .limit(6);
           shopsData = fallbackRes.data;
-          shopsError = fallbackRes.error;
         }
 
         if (shopsData && shopsData.length > 0) {
           setRecommendedShops(shopsData);
         }
 
-        // Fetch new shops (latest first)
-        const { data: newShopsData } = await supabase
-          .from('barbershops')
-          .select('*')
-          .eq('status', 'active')
-          .order('created_at', { ascending: false })
-          .limit(6);
-        if (newShopsData) {
-          setNewShops(newShopsData);
+        if (newShopsRes.data) {
+          setNewShops(newShopsRes.data);
         }
 
-        const { data: liveAds } = await supabase
-          .from('advertisements')
-          .select('*')
-          .eq('status', 'active');
-
-        if (liveAds && liveAds.length > 0) {
-          setAds(liveAds);
+        if (adsRes.data && adsRes.data.length > 0) {
+          setAds(adsRes.data);
         }
 
-        const { data: catData } = await supabase.from('categories').select('*');
-        if (catData) setDbCategories(catData);
-        
-        const { data: subData } = await supabase.from('subcategories').select('*');
-        if (subData) setDbSubcategories(subData);
+        if (categoriesRes.data) {
+          setDbCategories(categoriesRes.data);
+        }
+
+        if (subcategoriesRes.data) {
+          setDbSubcategories(subcategoriesRes.data);
+        }
 
       } catch (e) {
         console.warn("Failed to load home data:", e);
