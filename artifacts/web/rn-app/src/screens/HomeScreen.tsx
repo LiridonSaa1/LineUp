@@ -490,7 +490,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
 
       {/* ── NEW TO LINEUP SECTION ───────────────────── */}
       {newShops.length > 0 && (
-        <View className="mt-4 px-6 mb-8">
+        <View className="mt-4 px-6">
           <View className="flex-row items-center justify-between mb-4">
             <Text className="text-2xl font-bold text-[#161719]">Të reja në LineUp</Text>
           </View>
