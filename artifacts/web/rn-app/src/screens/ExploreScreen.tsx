@@ -47,12 +47,46 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
   onOpenSearch,
   initialCity = "Të gjitha",
   initialSearch = "",
-  initialCoords
+  initialCoords,
+  initialSubIds = []
 }) => {
   const [shops, setShops] = useState<any[]>([]);
+  const [filteredShops, setFilteredShops] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedShopMarker, setSelectedShopMarker] = useState<any>(null);
+
+  useEffect(() => {
+    let result = [...shops];
+
+    // 1. Filter by City
+    if (initialCity && initialCity !== "Të gjitha" && initialCity !== "Lokacioni aktual") {
+      result = result.filter(shop => shop.city?.toLowerCase() === initialCity.toLowerCase());
+    }
+
+    // 2. Filter by subcategory IDs (initialSubIds)
+    if (initialSubIds && initialSubIds.length > 0) {
+      result = result.filter(shop => {
+        if (Array.isArray(shop.subcategories) && shop.subcategories.length > 0) {
+          return shop.subcategories.some((id: string) => initialSubIds.includes(id));
+        }
+        return false;
+      });
+    }
+
+    // 3. Filter by Search Query (name, city, address)
+    if (initialSearch && initialSearch.trim().length > 0) {
+      const cleanSearch = initialSearch.toLowerCase().trim();
+      result = result.filter(shop => {
+        const nameMatch = shop.name?.toLowerCase().includes(cleanSearch);
+        const cityMatch = shop.city?.toLowerCase().includes(cleanSearch);
+        const addressMatch = shop.address?.toLowerCase().includes(cleanSearch);
+        return nameMatch || cityMatch || addressMatch;
+      });
+    }
+
+    setFilteredShops(result);
+  }, [shops, initialCity, initialSearch, initialSubIds]);
 
   const mapRef = useRef<MapView>(null);
 
@@ -193,7 +227,7 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
         customMapStyle={mapStyle}
         mapType="satellite"
       >
-        {shops.map((shop, index) => {
+        {filteredShops.map((shop, index) => {
           // Determine base coordinates: Use shop's lat/lng, or city's lat/lng, or default to Prishtina
           const baseCoords = (shop.latitude && shop.longitude)
             ? { lat: shop.latitude, lng: shop.longitude }
@@ -260,13 +294,23 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
             contentContainerStyle={{ paddingBottom: 180 }}
           >
             <Text className="text-[#8789A3] text-center font-bold text-sm mb-6">
-              {shops.length} vende në zonën e hartës
+              {filteredShops.length} vende në zonën e hartës
             </Text>
 
             {loading ? (
               <ActivityIndicator size="large" color="#6366f1" className="mt-10" />
+            ) : filteredShops.length === 0 ? (
+              <View className="items-center justify-center py-20 px-6">
+                <View className="w-20 h-20 rounded-full bg-slate-100 items-center justify-center mb-4">
+                  <Search size={32} color="#8789A3" />
+                </View>
+                <Text className="text-xl font-black text-[#161719] mb-2 text-center">Nuk u gjet asnjë sallon</Text>
+                <Text className="text-[#8789A3] text-center text-sm font-semibold leading-5">
+                  Provo të ndryshosh filtrat ose të kërkosh për diçka tjetër.
+                </Text>
+              </View>
             ) : (
-              shops.map((shop, i) => (
+              filteredShops.map((shop, i) => (
                 <View key={shop.id || i} className="mb-10 bg-white rounded-[40px] p-2 shadow-2xl shadow-black/20 border border-slate-50" style={{ elevation: 15 }}>
                   <TouchableOpacity
                     activeOpacity={0.9}

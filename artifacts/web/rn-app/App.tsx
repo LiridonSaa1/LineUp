@@ -253,7 +253,7 @@ export default function App() {
                     onOpenSearch={() => setShowSearch(true)}
                     onOpenAddAd={() => setShowAddAd(true)}
                     selectedLocation={selectedLocation}
-                    onSearch={(query) => handleSearch({ query, city: selectedLocation })}
+                    onSearch={(query, subIds) => handleSearch({ query, city: selectedLocation, subIds })}
                     onStartPlan={(planId) => {
                       setSelectedPlanId(planId);
                       setShowRegisterShop(true);

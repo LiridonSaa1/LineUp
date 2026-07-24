@@ -29,7 +29,7 @@ interface HomeScreenProps {
   onOpenSearch: () => void;
   onOpenAddAd: () => void;
   selectedLocation: string;
-  onSearch?: (query: string) => void;
+  onSearch?: (query: string, subIds?: string[]) => void;
   onStartPlan?: (planId: string) => void;
 }
 
@@ -312,8 +312,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
       {/* ── CATEGORIES GRID ──────────────────────────── */}
       <View className="px-6 mt-4">
         <View className="flex-row flex-wrap justify-between">
-          {dbCategories.map((cat, i) => {
-            const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
+          {(dbCategories.length > 0 ? dbCategories : CATEGORIES).map((cat, i) => {
+            const IconComponent = CATEGORY_ICONS[cat.name] || cat.icon || Scissors;
             return (
               <View key={i} className="items-center mb-6" style={{ width: '22%' }}>
                 <View
@@ -691,8 +691,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
                   queryText = selectedMainCategory?.name || "";
                 }
                 
-                if (onSearch && queryText) {
-                  onSearch(queryText);
+                let finalSubIds = [...selectedSubIds];
+                if (finalSubIds.length === 0 && selectedMainCategory) {
+                  finalSubIds = dbSubcategories
+                    .filter(s => s.category_id === selectedMainCategory.id)
+                    .map(s => s.id);
+                }
+                
+                if (onSearch) {
+                  onSearch(queryText, finalSubIds);
                 }
               }}
               className="h-14 bg-black rounded-2xl items-center justify-center shadow-lg"
