@@ -135,8 +135,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
 
   if (!user) {
     return (
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      <View
         className="flex-1 bg-[#F5F5F5]"
       >
         {/* Background Decorative Blobs */}
@@ -146,9 +145,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingBottom: 80, paddingTop: 40 }}>
           {/* Auth Header */}
           <View className="pb-8 px-6 items-center">
-             <Text className="text-3xl font-black text-[#161719] text-center tracking-tight mb-2">Mirëseerdhët përsëri</Text>
+             <Text className="text-3xl font-black text-[#161719] text-center tracking-tight mb-2">Welcome back</Text>
              <Text className="text-[#64748B] font-bold text-center text-sm leading-5 px-6">
-               Kyçuni në llogarinë tuaj për të vazhduar
+               Sign in to your account to continue
              </Text>
           </View>
 
@@ -266,7 +265,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
             }}
           />
         </Modal>
-      </KeyboardAvoidingView>
+      </View>
     );
   }
 

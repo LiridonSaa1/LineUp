@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, TextInput, ScrollView, Dimensions, FlatList, Keyboard } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, ScrollView, Dimensions, FlatList, Keyboard, Modal } from 'react-native';
 import { X, Search, MapPin, Calendar, Grid, Scissors, Hand, Eye, Sparkles, User, Smile, Waves, ArrowLeft, ChevronRight, AlertCircle, Check, ChevronLeft, Shield, Zap } from 'lucide-react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { withTiming } from 'react-native-reanimated';
@@ -26,18 +26,16 @@ interface SearchScreenProps {
   currentLocation?: string;
 }
 
-const CATEGORIES = [
-  { name: "Të gjitha", icon: Grid },
-  { name: "Haircut & Styling", icon: Scissors },
-  { name: "Hair Coloring", icon: Sparkles },
-  { name: "Hair Treatment", icon: Zap },
-  { name: "Beard & Grooming", icon: User },
-  { name: "Nails", icon: Hand },
-  { name: "Makeup", icon: Smile },
-  { name: "Brows & Lashes", icon: Eye },
-  { name: "Skin Care", icon: Shield },
-  { name: "Body Care", icon: Waves },
-];
+const CATEGORY_ICONS: Record<string, any> = {
+  'Flokë & Stilim': Scissors,
+  'Mjekër & Estetikë': User,
+  'Thonjtë': Hand,
+  'Grim & Bukuri': Smile,
+  'Kujdesi i Lëkurës': Shield,
+  'Spa & Relaks': Waves,
+  'Depilim': Zap,
+  'Raste të Veçanta': Sparkles
+};
 
 const TREATMENTS = [
   'Haircut & Styling',
@@ -96,6 +94,13 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
   // Filter States
   const [treatmentQuery, setTreatmentQuery] = useState("");
   const [activeFilterTab, setActiveFilterTab] = useState('All');
+
+  // Dynamic Categories
+  const [dbCategories, setDbCategories] = useState<any[]>([]);
+  const [dbSubcategories, setDbSubcategories] = useState<any[]>([]);
+  const [selectedMainCategory, setSelectedMainCategory] = useState<any | null>(null);
+  const [showSubModal, setShowSubModal] = useState(false);
+  const [selectedSubIds, setSelectedSubIds] = useState<string[]>([]);
 
   const autocompleteRef = useRef<any>(null);
 
@@ -189,7 +194,8 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
       lat: selectedLocation.lat,
       lng: selectedLocation.lng,
       date: selectedDate,
-      time: selectedTime
+      time: selectedTime,
+      subIds: selectedSubIds
     });
   };
 
@@ -318,17 +324,23 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
           <View className="mt-8">
             <Text className="text-xl font-bold text-[#161719] mb-4">Kategoritë</Text>
             <View className="flex-row flex-wrap justify-between">
-              {CATEGORIES.map((cat, i) => (
-                <TouchableOpacity
-                  key={i}
-                  onPress={() => handleSearchTrigger(cat.name)}
-                  className="bg-slate-50 border border-slate-100 rounded-2xl items-center justify-center py-6 mb-4"
-                  style={{ width: (width - 60) / 2 }}
-                >
-                  <cat.icon size={32} color="#161719" strokeWidth={1.5} />
-                  <Text className="text-[13px] font-bold text-[#161719] mt-3 text-center px-2">{cat.name}</Text>
-                </TouchableOpacity>
-              ))}
+              {dbCategories.map((cat, i) => {
+                const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
+                return (
+                  <TouchableOpacity
+                    key={i}
+                    onPress={() => {
+                      setSelectedMainCategory(cat);
+                      setShowSubModal(true);
+                    }}
+                    className="bg-slate-50 border border-slate-100 rounded-2xl items-center justify-center py-6 mb-4"
+                    style={{ width: (width - 60) / 2 }}
+                  >
+                    <IconComponent size={32} color="#161719" strokeWidth={1.5} />
+                    <Text className="text-[13px] font-bold text-[#161719] mt-3 text-center px-2">{cat.name}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
           <View className="h-32" />
@@ -484,6 +496,133 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onSearch, c
            <TouchableOpacity onPress={() => setActivePanel('main')} className="flex-[1.5] h-16 bg-black rounded-full items-center justify-center ml-2"><Text className="text-white text-lg font-black">Konfirmo</Text></TouchableOpacity>
         </View>
       </Animated.View>
-    </View>
+
+{/* Subcategory Modal */}
+    <Modal
+      visible={showSubModal}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={() => setShowSubModal(false)}
+    >
+      <View className="flex-1 bg-black/50 justify-end">
+        <TouchableOpacity
+          className="absolute inset-0"
+          activeOpacity={1}
+          onPress={() => setShowSubModal(false)}
+        />
+        <View className="bg-white rounded-t-[32px] h-[75%] overflow-hidden flex-col">
+          <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mt-3 mb-2" />
+          <View className="flex-row items-center justify-between px-6 py-4 border-b border-slate-50">
+            <View className="flex-row items-center">
+              <Text className="text-xl font-black text-[#161719]">Shërbimet</Text>
+            </View>
+            <TouchableOpacity onPress={() => setShowSubModal(false)} className="p-2 bg-slate-100 rounded-full">
+              <X size={20} color="#161719" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Category Tabs */}
+          <View className="border-b border-slate-100">
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+              {dbCategories.map(cat => {
+                const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
+                const isSelected = selectedMainCategory?.id === cat.id;
+                return (
+                  <TouchableOpacity
+                    key={cat.id}
+                    onPress={() => setSelectedMainCategory(cat)}
+                    className={`flex-row items-center px-4 py-2 rounded-full mr-2 ${isSelected ? 'bg-[#161719]' : 'bg-slate-100'}`}
+                  >
+                    <IconComponent size={14} color={isSelected ? "white" : "#64748b"} />
+                    <Text className={`ml-2 text-sm font-bold ${isSelected ? 'text-white' : 'text-slate-500'}`}>{cat.name}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+
+          <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 100 }} className="flex-1">
+            <Text className="text-sm font-bold text-[#8789A3] mb-4">Zgjidhni shërbimet për këtë kategori:</Text>
+            
+            <TouchableOpacity
+              onPress={() => {
+                if (selectedMainCategory) {
+                  const currentCategorySubIds = dbSubcategories
+                    .filter(s => s.category_id === selectedMainCategory.id)
+                    .map(s => s.id);
+                  
+                  setSelectedSubIds(prev => {
+                    const allSelected = currentCategorySubIds.every(id => prev.includes(id));
+                    if (allSelected) {
+                      // If all are selected, unselect them
+                      return prev.filter(id => !currentCategorySubIds.includes(id));
+                    } else {
+                      // Select all
+                      const newSelection = [...prev];
+                      currentCategorySubIds.forEach(id => {
+                        if (!newSelection.includes(id)) newSelection.push(id);
+                      });
+                      return newSelection;
+                    }
+                  });
+                }
+              }}
+              className={`rounded-2xl py-4 items-center mb-4 border ${!selectedMainCategory || dbSubcategories.filter(s => s.category_id === selectedMainCategory?.id).every(s => selectedSubIds.includes(s.id)) ? 'bg-[#3473ef]/10 border-[#3473ef]' : 'bg-slate-50 border-slate-200'}`}
+            >
+              <Text className={`font-black text-base ${!selectedMainCategory || dbSubcategories.filter(s => s.category_id === selectedMainCategory?.id).every(s => selectedSubIds.includes(s.id)) ? 'text-[#3473ef]' : 'text-[#64748b]'}`}>Të gjitha në këtë kategori</Text>
+            </TouchableOpacity>
+
+            {selectedMainCategory && dbSubcategories.filter(s => s.category_id === selectedMainCategory.id).map((sub) => {
+              const isSelected = selectedSubIds.includes(sub.id);
+              return (
+                <TouchableOpacity
+                  key={sub.id}
+                  onPress={() => {
+                    setSelectedSubIds(prev =>
+                      prev.includes(sub.id) ? prev.filter(id => id !== sub.id) : [...prev, sub.id]
+                    );
+                  }}
+                  className={`flex-row items-center py-4 border-b ${isSelected ? 'border-[#3473ef]/30' : 'border-slate-100'}`}
+                >
+                  <View className={`w-6 h-6 rounded-md border items-center justify-center mr-3 ${isSelected ? 'bg-[#3473ef] border-[#3473ef]' : 'bg-white border-slate-300'}`}>
+                    {isSelected && <Check size={14} color="white" strokeWidth={3} />}
+                  </View>
+                  <Text className={`text-base flex-1 ${isSelected ? 'font-black text-[#3473ef]' : 'font-bold text-[#161719]'}`}>{sub.name}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+
+          {/* Sticky Bottom Button */}
+          <View className="absolute bottom-0 left-0 right-0 p-6 bg-white border-t border-slate-50">
+            <TouchableOpacity
+              onPress={() => {
+                setShowSubModal(false);
+                let queryText = "";
+                if (selectedSubIds.length > 0) {
+                  const selectedNames = dbSubcategories
+                    .filter(s => selectedSubIds.includes(s.id))
+                    .map(s => s.name);
+                  queryText = selectedNames.join(", ");
+                } else {
+                  queryText = selectedMainCategory?.name || "";
+                }
+                
+                if (onSearch && queryText) {
+                  onSearch(queryText);
+                }
+              }}
+              className="h-14 bg-black rounded-2xl items-center justify-center shadow-lg"
+            >
+              <Text className="text-white font-black text-lg">
+                Kërko {selectedSubIds.length > 0 ? `(${selectedSubIds.length})` : ''}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+
+</View>
   );
 };

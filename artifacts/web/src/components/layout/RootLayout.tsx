@@ -122,7 +122,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
                   <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-white/35">
                     Reklamë Sponsorizuese
                   </span>
-                  <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/25 text-[9px] font-bold text-emerald-400 tracking-wide uppercase">
+                  <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/15 border border-primary/25 text-[9px] font-bold text-primary tracking-wide uppercase">
                     30 ditë Falas
                   </span>
                 </div>

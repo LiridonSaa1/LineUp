@@ -39,6 +39,7 @@ interface ExploreScreenProps {
   initialCity?: string;
   initialSearch?: string;
   initialCoords?: { lat?: number; lng?: number };
+  initialSubIds?: string[];
 }
 
 export const ExploreScreen: React.FC<ExploreScreenProps> = ({
@@ -51,6 +52,7 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
   const [shops, setShops] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [selectedShopMarker, setSelectedShopMarker] = useState<any>(null);
 
   const mapRef = useRef<MapView>(null);
 
@@ -67,6 +69,19 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
     } else {
       translateY.value = withTiming(height - SHEET_MIN_HEIGHT, { duration: 150 });
       runOnJS(setIsExpanded)(false);
+    }
+  };
+
+  
+  const handleMarkerPress = (shop: any) => {
+    setSelectedShopMarker(shop);
+    if (shop.latitude && shop.longitude) {
+      mapRef.current?.animateToRegion({
+        latitude: shop.latitude,
+        longitude: shop.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      }, 500);
     }
   };
 
@@ -255,7 +270,7 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
                 <View key={shop.id || i} className="mb-10 bg-white rounded-[40px] p-2 shadow-2xl shadow-black/20 border border-slate-50" style={{ elevation: 15 }}>
                   <TouchableOpacity
                     activeOpacity={0.9}
-                    onPress={() => onSelectShop(shop)}
+                    onPress={() => handleMarkerPress(shop)}
                     className="rounded-[34px] overflow-hidden bg-slate-50 mb-4"
                   >
                     <Image
@@ -278,7 +293,7 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
                       <Text className="text-xl font-black text-[#161719] flex-1 mr-4" numberOfLines={1}>{shop.name}</Text>
                       <View className="flex-row items-center bg-amber-50 px-2.5 py-1 rounded-xl">
                         <Star size={14} color="#fbbf24" fill="#fbbf24" />
-                        <Text className="text-[#161719] font-black text-sm ml-1.5">{parseFloat(shop.rating || "5.0").toFixed(1)}</Text>
+                        <Text className="text-[#161719] font-black text-sm ml-1.5">{parseFloat(shop.rating || "0").toFixed(1)}</Text>
                       </View>
                     </View>
 

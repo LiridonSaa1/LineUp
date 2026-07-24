@@ -58,7 +58,7 @@ export const RegisterShopScreen: React.FC<RegisterShopScreenProps> = ({ onClose,
         latitude: selectedPlace.lat,
         longitude: selectedPlace.lng,
         status: 'active',
-        rating: 5.0,
+        rating: 0,
         total_reviews: 0
       });
 

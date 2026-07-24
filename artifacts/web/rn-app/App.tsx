@@ -25,7 +25,7 @@ import { ActivityScreen } from "./src/screens/ActivityScreen";
 import { BarberDetailScreen } from "./src/screens/BarberDetailScreen";
 import { LocationScreen } from "./src/screens/LocationScreen";
 import { SearchScreen } from "./src/screens/SearchScreen";
-import { RegisterShopScreen } from "./src/screens/RegisterShopScreen";
+import { RegisterScreen } from "./src/screens/RegisterScreen";
 import { BarberDashboardScreen } from "./src/screens/BarberDashboardScreen";
 import { AdminDashboardScreen } from "./src/screens/AdminDashboardScreen";
 import { AddAdModal } from "./src/screens/AddAdModal";
@@ -102,11 +102,13 @@ export default function App() {
   const [user, setUser] = React.useState<any>(null);
   const [cityFilter, setCityFilter] = React.useState("Të gjitha");
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [searchSubIds, setSearchSubIds] = React.useState<string[]>([]);
   const [searchCoords, setSearchCoords] = React.useState<{ lat?: number; lng?: number }>({});
   const [showLocation, setShowLocation] = React.useState(false);
   const [showSearch, setShowSearch] = React.useState(false);
   const [showRegisterShop, setShowRegisterShop] = React.useState(false);
   const [showAddAd, setShowAddAd] = React.useState(false);
+  const [selectedPlanId, setSelectedPlanId] = React.useState<string | undefined>(undefined);
   const [selectedLocation, setSelectedLocation] = React.useState("Lokacioni aktual");
 
   const tabPosition = useSharedValue(0);
@@ -193,7 +195,8 @@ export default function App() {
     setActiveTab(1); // Switch to Explore/Search tab
   };
 
-  const handleSearch = (filters: { query: string; city: string; lat?: number; lng?: number }) => {
+  const handleSearch = (filters: { query: string; city: string; lat?: number; lng?: number; subIds?: string[] }) => {
+    if (filters.subIds) setSearchSubIds(filters.subIds);
     setSearchQuery(filters.query);
     setCityFilter(filters.city);
     setSearchCoords({ lat: filters.lat, lng: filters.lng });
@@ -250,10 +253,16 @@ export default function App() {
                     onOpenSearch={() => setShowSearch(true)}
                     onOpenAddAd={() => setShowAddAd(true)}
                     selectedLocation={selectedLocation}
+                    onSearch={(query) => handleSearch({ query, city: selectedLocation })}
+                    onStartPlan={(planId) => {
+                      setSelectedPlanId(planId);
+                      setShowRegisterShop(true);
+                    }}
                   />
                 )}
                 {activeTab === 1 && (
                   <ExploreScreen
+                    initialSubIds={searchSubIds}
                     onSelectShop={(shop) => setSelectedShop(shop)}
                     onOpenSearch={() => setShowSearch(true)}
                     initialCity={cityFilter}
@@ -295,7 +304,7 @@ export default function App() {
             {/* Location Selection Modal (Bottom Sheet Style) */}
             <Modal
               visible={showLocation}
-              animationType="none"
+              animationType="slide"
               transparent={true}
               onRequestClose={() => setShowLocation(false)}
             >
@@ -321,7 +330,7 @@ export default function App() {
             {/* Search Modal */}
             <Modal
               visible={showSearch}
-              animationType="none"
+              animationType="slide"
               transparent={true}
               onRequestClose={() => setShowSearch(false)}
             >
@@ -344,21 +353,32 @@ export default function App() {
             {/* Register Shop Modal */}
             <Modal
               visible={showRegisterShop}
-              animationType="none"
+              animationType="slide"
               transparent={true}
-              onRequestClose={() => setShowRegisterShop(false)}
+              onRequestClose={() => {
+                setShowRegisterShop(false);
+                setSelectedPlanId(undefined);
+              }}
             >
               <View className="flex-1 justify-end">
                 <TouchableOpacity
                   className="absolute inset-0 bg-black/40"
                   activeOpacity={1}
-                  onPress={() => setShowRegisterShop(false)}
+                  onPress={() => {
+                    setShowRegisterShop(false);
+                    setSelectedPlanId(undefined);
+                  }}
                 />
-                <View className="h-[88%] bg-white rounded-t-[40px] overflow-hidden">
-                  <RegisterShopScreen
-                    onClose={() => setShowRegisterShop(false)}
+                <View className="h-[95%] bg-white rounded-t-[40px] overflow-hidden">
+                  <RegisterScreen
+                    initialPlanId={selectedPlanId}
+                    onClose={() => {
+                      setShowRegisterShop(false);
+                      setSelectedPlanId(undefined);
+                    }}
                     onSuccess={() => {
                       setShowRegisterShop(false);
+                      setSelectedPlanId(undefined);
                       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                     }}
                   />
@@ -369,7 +389,7 @@ export default function App() {
             {/* Add Ad Modal */}
             <Modal
               visible={showAddAd}
-              animationType="none"
+              animationType="slide"
               transparent={true}
               onRequestClose={() => setShowAddAd(false)}
             >

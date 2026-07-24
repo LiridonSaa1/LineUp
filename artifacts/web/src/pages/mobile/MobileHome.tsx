@@ -359,7 +359,7 @@ export default function MobileHome() {
 
                     {/* Top Right Status & Rating */}
                     <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/90 text-white text-[9px] font-extrabold flex items-center gap-1 backdrop-blur-md shadow-xs">
+                      <span className="px-2 py-0.5 rounded-full bg-blue-600/90 text-white text-[9px] font-extrabold flex items-center gap-1 backdrop-blur-md shadow-xs">
                         <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" /> Hapur
                       </span>
                       <span className="px-2 py-0.5 rounded-full bg-slate-900/80 text-amber-400 text-[10px] font-black flex items-center gap-1 backdrop-blur-md border border-white/20">

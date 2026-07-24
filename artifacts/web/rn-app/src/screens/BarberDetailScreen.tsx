@@ -14,7 +14,7 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, on
   const shopName = shop?.name || "Classic Cuts Barber Shop";
   const city = shop?.city || "Prishtinë";
   const address = shop?.address || "10 Oxford Street, Soho, London, UK";
-  const rating = shop?.rating || "4.8";
+  const rating = shop?.rating || "0";
   const imageUrl = shop?.imageUrl || "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800&auto=format&fit=crop&q=80";
 
   return (

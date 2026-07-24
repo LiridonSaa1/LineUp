@@ -22,11 +22,39 @@ import {
   Star,
 } from "lucide-react";
 
+import { supabase } from "@/lib/supabase";
+
 const BarberDirectoryMap = lazy(() => import("@/components/map/GoogleBarbershopMap"));
 
 async function fetchBarbers(): Promise<BarberMapItem[]> {
+  try {
+    const { data: dbShops } = await supabase.from('barbershops').select('*');
+    if (dbShops && dbShops.length > 0) {
+      return dbShops.map((b: any) => ({
+        id: Number(b.id) || Date.now(),
+        name: b.name,
+        avatarUrl: b.avatar || b.cover_image || "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800&q=80",
+        rating: Number(b.rating) || 5.0,
+        shop: {
+          id: Number(b.id) || Date.now(),
+          name: b.name,
+          city: b.city || "Prishtinë",
+          address: b.address || b.city || "Kosovë",
+          imageUrl: b.avatar || b.cover_image || "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800&q=80",
+          rating: Number(b.rating) || 5.0,
+          latitude: Number(b.latitude) || 42.6629,
+          longitude: Number(b.longitude) || 21.1655,
+          openTime: "09:00",
+          closeTime: "20:00",
+        }
+      }));
+    }
+  } catch (e) {
+    console.warn("Supabase fetch exception:", e);
+  }
+
   const response = await fetch("/api/barbers");
-  if (!response.ok) throw new Error("Could not load barbers");
+  if (!response.ok) return [];
   return response.json();
 }
 

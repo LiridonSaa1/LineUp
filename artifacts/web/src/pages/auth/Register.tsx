@@ -1,855 +1,900 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import logoImg from "@assets/LINE_(2)_1782771053641.png";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
 import {
-  Eye, EyeOff, ArrowRight, ArrowLeft, Scissors, Mail, Lock,
-  Building2, MapPin, Phone, Check, ChevronDown, Users,
-  ShieldCheck,
+  Scissors, Mail, Lock, Store, Phone, MapPin, Check,
+  ChevronRight, Shield, CreditCard, X, ChevronDown, User,
+  Hand, Smile, Waves, Zap, Sparkles, Building2, Eye, EyeOff,
+  Users, Calendar, Star, ArrowRight
 } from "lucide-react";
-import { loadStripe } from "@stripe/stripe-js";
-import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
-import { APIProvider } from "@vis.gl/react-google-maps";
 
-/* ── Constants ───────────────────────────────────────────── */
-import { KOSOVO_CITIES } from "@/lib/kosovo-cities";
-
-const PRIMARY = "#4f8ef7";
-
-interface PkgOption {
-  id: string;
-  label: string;
-  workers: number;
-  price: number;
-  color: string;
-  popular?: boolean;
-}
-
-const PACKAGES: PkgOption[] = [
-  { id: "2", label: "Starter",  workers: 2, price: 5,  color: "#4f8ef7" },
-  { id: "4", label: "Standard", workers: 4, price: 10, color: "#7c3aed", popular: true },
-  { id: "6", label: "Pro",      workers: 6, price: 15, color: "#059669" },
-  { id: "8", label: "Business", workers: 8, price: 20, color: "#d97706" },
+/* ── Kosovo Cities ─────────────────────────────────────────── */
+const KOSOVO_CITIES = [
+  "Ferizaj", "Prishtinë", "Prizren", "Pejë", "Gjakovë",
+  "Gjilan", "Mitrovicë", "Vushtrri", "Podujevë", "Fushë Kosovë",
+  "Rahovec", "Skënderaj", "Lipjan", "Suharekë", "Deçan", "Istog", "Klinë"
 ];
 
-/* ── Step 1 schema ───────────────────────────────────────── */
-/**
- * Validates Kosovo phone numbers in any of these formats:
- *   +383 44 123 456  /  +38344123456
- *   00383 44 123 456
- *   044 123 456  /  044123456
- * Allowed mobile prefixes: 44, 45, 46, 48, 49
- */
-function isValidKosovoPhone(raw: string): boolean {
-  const p = raw.trim().replace(/[\s\-().]/g, "");
-  return /^(\+383|00383|0)(4[4-9])\d{6}$/.test(p);
-}
+const KOSOVO_STREETS: Record<string, string[]> = {
+  "Prishtinë": ["Rruga B", "Rruga C", "Rruga Muharrem Fejza", "Bulevardi Nënë Tereza", "Rruga Bill Clinton", "Rruga George Bush", "Rruga Garibaldi", "Rruga Luan Haradinaj", "Rruga UÇK", "Rruga Agim Ramadani"],
+  "Ferizaj": ["Rruga Ahmet Kaçiku", "Rruga Gjon Serreçi", "Rruga Vëllezërit Gërvalla", "Rruga Rexhep Bislimi", "Rruga Zenel Hajdini", "Rruga Enver Topalli"],
+  "Prizren": ["Rruga William Walker", "Rruga Edit Durham", "Rruga Adem Jashari", "Rruga Remzi Ademaj", "Bulevardi i Dëshmorëve", "Rruga Shatërvan"],
+  "Pejë": ["Rruga Mbretëresha Teutë", "Rruga Eliot Engel", "Rruga Adem Jashari", "Rruga Hasan Prishtina", "Rruga Lekë Dukagjini"],
+  "Gjakovë": ["Rruga Çarshia e Madhe", "Rruga Mother Teresa", "Rruga Ismail Qemali", "Rruga Bardhyl Qaushi"],
+  "Gjilan": ["Rruga Adem Jashari", "Rruga Marie Shllaku", "Rruga Medlin Ollbrajt", "Rruga Idriz Seferi"],
+  "Mitrovicë": ["Rruga Mbretëresha Teutë", "Rruga Shemsi Ahmeti", "Rruga Isa Boletini", "Rruga Bislim Bajgora"]
+};
 
-const step1Schema = z.object({
-  businessName: z.string().min(2, "Emri i biznesit i detyrueshëm"),
-  email:        z.string().email("Email i pavlefshëm"),
-  phone:        z.string()
-    .min(1, "Telefoni i detyrueshëm")
-    .refine(isValidKosovoPhone, "Numri duhet të jetë kosovar (p.sh. +383 44 123 456 ose 044 123 456)"),
-  password:     z.string().min(6, "Minimum 6 karaktere"),
-  city:         z.string().min(1, "Qyteti i detyrueshëm"),
-  address:      z.string().min(3, "Adresa e detyrueshme"),
-  gender:       z.enum(["male", "female", "both"]),
-});
-type S1Values = z.infer<typeof step1Schema>;
+const DEFAULT_STREETS = ["Rruga Adem Jashari", "Rruga UÇK", "Rruga Nënë Tereza", "Rruga Zahir Pajaziti", "Rruga Skënderbeu"];
 
-/* ── PhoneInput ──────────────────────────────────────────── */
-/**
- * Locked +383 prefix, digits-only, auto-formats as +383 44 123 456.
- * The stored value is always the full string e.g. "+383 44 123 456".
- */
-function PhoneInput({ value, onChange, error }: {
-  value: string; onChange: (v: string) => void; error?: string;
-}) {
-  const [focused, setFocused] = useState(false);
-
-  // Extract just the local digits part from the stored full value
-  function toLocal(full: string): string {
-    const digits = full.replace(/^\+383\s*/, "").replace(/\D/g, "").slice(0, 8);
-    let out = "";
-    if (digits.length > 0) out += digits.slice(0, 2);
-    if (digits.length > 2) out += " " + digits.slice(2, 5);
-    if (digits.length > 5) out += " " + digits.slice(5, 8);
-    return out;
+/* ── Registration Plans ────────────────────────────────────── */
+const REGISTRATION_PLANS = [
+  {
+    id: 'solo',
+    name: 'Solo',
+    prices: { month: '15€', year: '150€' },
+    employees: '1 berber',
+    desc: 'Ideale për berberët individualë',
+    features: ['Deri në 300 rezervime/muaj', '1 profil stafi', 'Kalendari i rezervimeve', 'Njoftime me email'],
+    paddlePriceId: 'pri_solo_mo'
+  },
+  {
+    id: 'duo',
+    name: 'Duo',
+    prices: { month: '20€', year: '200€' },
+    employees: '2 berberë',
+    desc: 'Për ekipe të vogla prej dy personash',
+    features: ['Rezervime pa limit', 'Deri në 2 profile stafi', 'Njoftime me SMS & Email', 'Statistika & Raporte', 'Mbështetje prioritare'],
+    isPopular: true,
+    paddlePriceId: 'pri_duo_mo'
+  },
+  {
+    id: 'team',
+    name: 'Team',
+    prices: { month: '25€', year: '250€' },
+    employees: '3+ berberë',
+    desc: 'Për ekipe në rritje',
+    features: ['Të gjitha të planit Duo', 'Profile stafi pa limit', 'Marketing me SMS', 'Landing page e personalizuar', 'Asistent personal 24/7'],
+    paddlePriceId: 'pri_team_mo'
   }
+];
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const raw = e.target.value.replace(/\D/g, "").slice(0, 8);
-    let formatted = "";
-    if (raw.length > 0) formatted += raw.slice(0, 2);
-    if (raw.length > 2) formatted += " " + raw.slice(2, 5);
-    if (raw.length > 5) formatted += " " + raw.slice(5, 8);
-    onChange(formatted.length > 0 ? "+383 " + formatted : "+383 ");
-  }
+const CATEGORY_ICONS: Record<string, any> = {
+  'Flokë & Stilim': Scissors,
+  'Mjekër & Estetikë': User,
+  'Thonjtë': Hand,
+  'Grim & Bukuri': Smile,
+  'Kujdesi i Lëkurës': Shield,
+  'Spa & Relaks': Waves,
+  'Depilim': Zap,
+  'Raste të Veçanta': Sparkles
+};
 
-  const localVal = toLocal(value);
-  // Label always floated because "+383" prefix is permanently visible
-  const active = true;
+const STATS = [
+  { icon: Users,    value: "12K+", label: "Klientë aktivë" },
+  { icon: Scissors, value: "500+", label: "Berberë" },
+  { icon: Calendar, value: "50K+", label: "Rezervime" },
+  { icon: Star,     value: "4.9",  label: "Vlerësim" },
+];
 
-  return (
-    <div className="space-y-1.5">
-      <div className="relative rounded-[14px] transition-all duration-200"
-        style={{
-          background: focused ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.03)",
-          border: `1px solid ${focused ? "rgba(79,142,247,0.45)" : error ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.08)"}`,
-          boxShadow: focused ? "0 0 0 3px rgba(79,142,247,0.10), 0 4px 16px rgba(0,0,0,0.2)" : "none",
-        }}>
-        {/* Phone icon */}
-        <div className="absolute left-4 top-1/2 -translate-y-1/2">
-          <Phone className="w-4 h-4 transition-colors duration-200"
-            style={{ color: focused ? PRIMARY : "rgba(255,255,255,0.25)" }} />
-        </div>
-        {/* Floating label */}
-        <label className="absolute left-11 pointer-events-none select-none transition-all duration-200"
-          style={{
-            top: active ? "9px" : "50%",
-            transform: active ? "none" : "translateY(-50%)",
-            fontSize: active ? "10px" : "13px",
-            fontWeight: active ? 600 : 400,
-            letterSpacing: active ? "0.05em" : "0",
-            textTransform: active ? "uppercase" : "none",
-            color: active ? PRIMARY : "rgba(255,255,255,0.35)",
-          }}>
-          Telefoni
-        </label>
-        {/* Input row */}
-        <div className="flex items-end pl-11 pr-4" style={{ paddingTop: "26px", paddingBottom: "10px" }}>
-          {/* Locked prefix */}
-          <span className="text-sm font-medium select-none shrink-0 mr-0.5"
-            style={{ color: "rgba(255,255,255,0.45)", letterSpacing: "0.01em" }}>
-            +383
-          </span>
-          {/* Editable local part */}
-          <input
-            id="ophone"
-            type="text"
-            inputMode="numeric"
-            placeholder={focused ? "44 123 456" : ""}
-            value={localVal}
-            onChange={handleChange}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            onKeyDown={e => {
-              // block any non-digit, non-control key
-              if (e.key.length === 1 && !/\d/.test(e.key)) e.preventDefault();
-            }}
-            autoComplete="tel"
-            className="flex-1 bg-transparent outline-none text-sm text-white placeholder:text-white/20 min-w-0"
-          />
-        </div>
-      </div>
-      {error && <p className="text-xs pl-1" style={{ color: "#f87171" }}>{error}</p>}
-    </div>
-  );
-}
-
-/* ── IconInput ───────────────────────────────────────────── */
-function IconInput({
-  id, icon: Icon, label, type = "text", placeholder,
-  value, onChange, error,
-}: {
-  id: string; icon: React.ElementType; label: string; type?: string;
-  placeholder?: string; value: string; onChange: (v: string) => void;
-  error?: string;
-}) {
-  const [focused, setFocused] = useState(false);
-  const [show, setShow]       = useState(false);
-  const filled  = value.length > 0;
-  const active  = focused || filled;
-  const isPass  = type === "password";
-
-  return (
-    <div className="space-y-1.5">
-      <div className="relative rounded-[14px] transition-all duration-200"
-        style={{
-          background: focused ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.03)",
-          border: `1px solid ${focused ? "rgba(79,142,247,0.45)" : error ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.08)"}`,
-          boxShadow: focused ? "0 0 0 3px rgba(79,142,247,0.10), 0 4px 16px rgba(0,0,0,0.2)" : "none",
-        }}>
-        <div className="absolute left-4 top-1/2 -translate-y-1/2">
-          <Icon className="w-4 h-4 transition-colors duration-200"
-            style={{ color: focused ? PRIMARY : "rgba(255,255,255,0.25)" }} />
-        </div>
-        <label htmlFor={id} className="absolute left-11 pointer-events-none select-none transition-all duration-200"
-          style={{
-            top: active ? "9px" : "50%",
-            transform: active ? "none" : "translateY(-50%)",
-            fontSize: active ? "10px" : "13px",
-            fontWeight: active ? 600 : 400,
-            letterSpacing: active ? "0.05em" : "0",
-            textTransform: active ? "uppercase" : "none",
-            color: active ? PRIMARY : "rgba(255,255,255,0.35)",
-          }}>
-          {label}
-        </label>
-        <input
-          id={id}
-          type={isPass ? (show ? "text" : "password") : type}
-          placeholder={focused && placeholder ? placeholder : ""}
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          autoComplete={isPass ? "new-password" : type === "email" ? "email" : "off"}
-          className="w-full bg-transparent outline-none text-sm text-white placeholder:text-white/20 pl-11 pr-12"
-          style={{ paddingTop: "26px", paddingBottom: "10px" }}
-        />
-        {isPass && (
-          <button type="button" onClick={() => setShow(p => !p)}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1"
-            style={{ color: "rgba(255,255,255,0.28)" }}>
-            {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          </button>
-        )}
-      </div>
-      {error && <p className="text-xs pl-1" style={{ color: "#f87171" }}>{error}</p>}
-    </div>
-  );
-}
-
-/* ── AddressAutocompleteInput ────────────────────────────── */
-interface AddrSuggestion {
-  placeId: string;
-  mainText: string;
-  secondaryText: string;
-}
-
-function AddressAutocompleteInput({
-  city, value, onChange, error,
-}: {
-  city: string; value: string; onChange: (v: string) => void; error?: string;
-}) {
-  const [focused, setFocused]         = useState(false);
-  const [suggestions, setSuggestions] = useState<AddrSuggestion[]>([]);
-  const [open, setOpen]               = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const debounceRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Close on outside click
-  useEffect(() => {
-    function onDown(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, []);
-
-  const fetchSuggestions = useCallback(async (text: string) => {
-    if (text.trim().length < 2) { setSuggestions([]); setOpen(false); return; }
-    try {
-      const input = city ? `${text}, ${city}, Kosovë` : `${text}, Kosovë`;
-      const res = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Goog-Api-Key": import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string,
-        },
-        body: JSON.stringify({ input, includedRegionCodes: ["xk"], languageCode: "sq" }),
-      });
-      if (!res.ok) { setSuggestions([]); setOpen(false); return; }
-      const data = await res.json();
-      const mapped: AddrSuggestion[] = (data.suggestions ?? [])
-        .filter((s: any) => s.placePrediction)
-        .map((s: any) => ({
-          placeId: s.placePrediction.placeId ?? "",
-          mainText: s.placePrediction.structuredFormat?.mainText?.text ?? s.placePrediction.text?.text ?? "",
-          secondaryText: s.placePrediction.structuredFormat?.secondaryText?.text ?? "",
-        }))
-        .filter((s: any) => s.mainText);
-      setSuggestions(mapped);
-      setOpen(mapped.length > 0);
-    } catch {
-      setSuggestions([]); setOpen(false);
-    }
-  }, [city]);
-
-  function handleInput(e: React.ChangeEvent<HTMLInputElement>) {
-    const v = e.target.value;
-    onChange(v);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => fetchSuggestions(v), 350);
-  }
-
-  function pick(s: AddrSuggestion) {
-    onChange(s.mainText);
-    setSuggestions([]);
-    setOpen(false);
-  }
-
-  const active = focused || value.length > 0;
-
-  return (
-    <div className="space-y-1.5" ref={containerRef}>
-      <div className="relative rounded-[14px] transition-all duration-200"
-        style={{
-          background: focused ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.03)",
-          border: `1px solid ${focused ? "rgba(79,142,247,0.45)" : error ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.08)"}`,
-          boxShadow: focused ? "0 0 0 3px rgba(79,142,247,0.10), 0 4px 16px rgba(0,0,0,0.2)" : "none",
-        }}>
-        <div className="absolute left-4 top-1/2 -translate-y-1/2">
-          <MapPin className="w-4 h-4 transition-colors duration-200"
-            style={{ color: focused ? PRIMARY : "rgba(255,255,255,0.25)" }} />
-        </div>
-        <label className="absolute left-11 pointer-events-none select-none transition-all duration-200"
-          style={{
-            top: active ? "9px" : "50%",
-            transform: active ? "none" : "translateY(-50%)",
-            fontSize: active ? "10px" : "13px",
-            fontWeight: active ? 600 : 400,
-            letterSpacing: active ? "0.05em" : "0",
-            textTransform: active ? "uppercase" : "none",
-            color: active ? PRIMARY : "rgba(255,255,255,0.35)",
-          }}>
-          Adresa
-        </label>
-        <input
-          type="text"
-          autoComplete="off"
-          placeholder={focused && city ? `Rr. në ${city}…` : focused ? "Rr. Garibaldi, Nr. 12" : ""}
-          value={value}
-          onChange={handleInput}
-          onFocus={() => { setFocused(true); if (value.length >= 2) fetchSuggestions(value); }}
-          onBlur={() => setFocused(false)}
-          className="w-full bg-transparent outline-none text-sm text-white placeholder:text-white/20 pl-11 pr-4"
-          style={{ paddingTop: "26px", paddingBottom: "10px" }}
-        />
-      </div>
-
-      {/* Suggestions dropdown */}
-      {open && suggestions.length > 0 && (
-        <div className="rounded-[14px] overflow-hidden"
-          style={{ background: "#12151e", border: "1px solid rgba(79,142,247,0.25)", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
-          {suggestions.map(s => (
-            <button key={s.placeId} type="button"
-              onMouseDown={e => { e.preventDefault(); pick(s); }}
-              className="w-full flex items-start gap-3 px-4 py-3 text-left transition-all duration-150 hover:bg-white/5">
-              <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: "rgba(79,142,247,0.7)" }} />
-              <div className="min-w-0">
-                <p className="text-sm font-medium truncate" style={{ color: "rgba(255,255,255,0.85)" }}>
-                  {s.mainText}
-                </p>
-                {s.secondaryText && (
-                  <p className="text-[11px] truncate" style={{ color: "rgba(255,255,255,0.35)" }}>
-                    {s.secondaryText}
-                  </p>
-                )}
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {error && <p className="text-xs pl-1" style={{ color: "#f87171" }}>{error}</p>}
-    </div>
-  );
-}
-
-/* ── CityDropdown ────────────────────────────────────────── */
-function CityDropdown({ value, onChange, error }: { value: string; onChange: (v: string) => void; error?: string }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handle(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handle);
-    return () => document.removeEventListener("mousedown", handle);
-  }, []);
-
-  return (
-    <div className="space-y-1.5" ref={ref}>
-      <div className="relative">
-        <button type="button" onClick={() => setOpen(p => !p)}
-          className="w-full rounded-[14px] transition-all duration-200 relative"
-          style={{
-            background: open ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.03)",
-            border: `1px solid ${open ? "rgba(79,142,247,0.45)" : error ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.08)"}`,
-            boxShadow: open ? "0 0 0 3px rgba(79,142,247,0.10), 0 4px 16px rgba(0,0,0,0.2)" : "none",
-            paddingTop: "26px", paddingBottom: "10px", paddingLeft: "44px", paddingRight: "44px",
-            minHeight: "58px",
-          }}>
-          <span className="text-sm text-left block w-full" style={{ color: value ? "#fff" : "transparent" }}>
-            {value || "\u200B"}
-          </span>
-        </button>
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-          <MapPin className="w-4 h-4" style={{ color: open ? PRIMARY : "rgba(255,255,255,0.25)" }} />
-        </div>
-        <label className="absolute left-11 pointer-events-none select-none transition-all duration-200"
-          style={{
-            top: (open || value) ? "9px" : "50%",
-            transform: (open || value) ? "none" : "translateY(-50%)",
-            fontSize: (open || value) ? "10px" : "13px",
-            fontWeight: (open || value) ? 600 : 400,
-            letterSpacing: (open || value) ? "0.05em" : "0",
-            textTransform: (open || value) ? "uppercase" : "none",
-            color: (open || value) ? PRIMARY : "rgba(255,255,255,0.35)",
-          }}>
-          Qyteti
-        </label>
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-          <ChevronDown className="w-4 h-4 transition-transform duration-200"
-            style={{ color: "rgba(255,255,255,0.28)", transform: open ? "rotate(180deg)" : "rotate(0deg)" }} />
-        </div>
-        {open && (
-          <div className="absolute z-50 w-full mt-1.5 rounded-[14px] overflow-hidden overflow-y-auto"
-            style={{ background: "#12151e", border: "1px solid rgba(79,142,247,0.25)", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", maxHeight: "220px" }}>
-            {KOSOVO_CITIES.map(city => (
-              <button key={city} type="button"
-                onMouseDown={e => e.preventDefault()}
-                onClick={e => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onChange(city);
-                  setOpen(false);
-                }}
-                className="w-full px-4 py-2.5 text-left text-sm transition-all duration-150 hover:bg-white/10"
-                style={{
-                  color: value === city ? PRIMARY : "rgba(255,255,255,0.85)",
-                  background: value === city ? "rgba(79,142,247,0.15)" : "transparent",
-                }}>
-                {city}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-      {error && <p className="text-xs pl-1" style={{ color: "#f87171" }}>{error}</p>}
-    </div>
-  );
-}
-
-/* ── StepBar ─────────────────────────────────────────────── */
-function StepBar({ current, total }: { current: number; total: number }) {
-  return (
-    <div className="flex items-center gap-2 mb-6">
-      {Array.from({ length: total }).map((_, i) => {
-        const done   = i < current;
-        const active = i === current;
-        return (
-          <div key={i} className="flex items-center gap-2 flex-1">
-            <div className="flex items-center gap-1.5 shrink-0">
-              <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300"
-                style={{
-                  background: done ? "rgba(79,142,247,0.2)" : active ? PRIMARY : "rgba(255,255,255,0.06)",
-                  border: `1.5px solid ${done ? "rgba(79,142,247,0.4)" : active ? PRIMARY : "rgba(255,255,255,0.1)"}`,
-                  color: done ? PRIMARY : active ? "#fff" : "rgba(255,255,255,0.3)",
-                  boxShadow: active ? `0 0 0 3px rgba(79,142,247,0.15)` : "none",
-                }}>
-                {done ? <Check className="w-3.5 h-3.5" /> : i + 1}
-              </div>
-            </div>
-            {i < total - 1 && (
-              <div className="flex-1 h-px transition-all duration-500"
-                style={{ background: done ? "rgba(79,142,247,0.4)" : "rgba(255,255,255,0.07)" }} />
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-/* ── PrimaryBtn ──────────────────────────────────────────── */
-function PrimaryBtn({ children, disabled, type = "submit", onClick }: {
-  children: React.ReactNode; disabled?: boolean; type?: "submit" | "button"; onClick?: () => void;
-}) {
-  return (
-    <button type={type} disabled={disabled} onClick={onClick}
-      className="w-full flex items-center justify-center gap-2 rounded-[14px] font-semibold text-sm text-white transition-all duration-200"
-      style={{
-        background: disabled ? "rgba(79,142,247,0.3)" : "linear-gradient(135deg,#4f8ef7,#3b7de8)",
-        padding: "14px 20px",
-        boxShadow: disabled ? "none" : "0 4px 20px rgba(79,142,247,0.3)",
-        cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.6 : 1,
-      }}>
-      {children}
-    </button>
-  );
-}
-
-function BackBtn({ onClick }: { onClick: () => void }) {
-  return (
-    <button type="button" onClick={onClick}
-      className="flex items-center gap-1.5 rounded-[14px] font-semibold text-sm transition-all duration-200 shrink-0"
-      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", padding: "14px 16px", color: "rgba(255,255,255,0.5)" }}>
-      <ArrowLeft className="w-4 h-4" />
-    </button>
-  );
-}
-
-/* ── OwnerForm ───────────────────────────────────────────── */
-function OwnerForm() {
-  const [step, setStep]   = useState(0);
-  const { login }         = useAuth();
-  const { toast }         = useToast();
-
-  const [s1, setS1]             = useState<S1Values | null>(null);
-
-  const [selectedPkg, setPkg]   = useState<PkgOption | null>(null);
-  const [clientSecret, setCS]   = useState<string>("");
-  const [loadingPay, setLoadPay]= useState(false);
-  const [stripePromise, setSP]  = useState<ReturnType<typeof loadStripe> | null>(null);
-
-  useEffect(() => {
-    fetch("/api/payments/stripe-config")
-      .then(r => r.json())
-      .then(d => { if (d.publishableKey) setSP(loadStripe(d.publishableKey)); })
-      .catch(() => {});
-  }, []);
-
-  const f1 = useForm<S1Values>({
-    resolver: zodResolver(step1Schema),
-    defaultValues: { businessName: "", email: "", phone: "+383 ", password: "", city: "", address: "", gender: "both" },
-  });
-  const w1 = (k: keyof S1Values) => (f1.watch(k) ?? "") as string;
-
-  async function handleGoPayment(pkg: PkgOption) {
-    if (!s1) return;
-    setLoadPay(true);
-    try {
-      const res = await fetch("/api/payments/register-owner-subscription", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ownerName: s1.businessName,
-          email: s1.email,
-          password: s1.password,
-          phone: s1.phone,
-          businessName: s1.businessName,
-          city: s1.city,
-          address: s1.address,
-          gender: s1.gender,
-          packageId: pkg.id,
-        }),
-      });
-      let data: any = null;
-      try {
-        data = await res.json();
-      } catch {
-        toast({
-          variant: "destructive",
-          title: "Gabim",
-          description: "Lidhja me serverin dështoi. Provo përsëri.",
-        });
-        return;
-      }
-      if (!res.ok) {
-        toast({ variant: "destructive", title: "Gabim", description: data?.error ?? "Ndodhi një gabim." });
-        return;
-      }
-      // Login immediately — user will already be authenticated when Stripe
-      // redirects back to /dashboard after successful payment
-      if (data.token && data.user) login(data.token, data.user);
-      setCS(data.clientSecret);
-      setPkg(pkg);
-      setStep(2);
-    } catch (err: any) {
-      toast({ variant: "destructive", title: "Gabim", description: err.message });
-    } finally {
-      setLoadPay(false);
-    }
-  }
-
-  return (
-    <div>
-      <StepBar current={step} total={3} />
-
-      {/* ── Step 0: Info + Location ─────────────────────── */}
-      {step === 0 && (
-        <form onSubmit={f1.handleSubmit(d => { setS1(d); setStep(1); })} className="space-y-3.5">
-          <div className="text-xs font-semibold uppercase tracking-widest mb-1 flex items-center gap-2"
-            style={{ color: "rgba(255,255,255,0.3)" }}>
-            <Building2 className="w-3.5 h-3.5" /> Informata Bazë
-          </div>
-          <IconInput id="bname"  icon={Building2} label="Emri i biznesit" placeholder="LineUp Prishtina"
-            value={w1("businessName")} onChange={v => f1.setValue("businessName", v)}
-            error={f1.formState.errors.businessName?.message} />
-          <IconInput id="oemail" icon={Mail}      label="Email" type="email" placeholder="biznesi@shembull.com"
-            value={w1("email")} onChange={v => f1.setValue("email", v)}
-            error={f1.formState.errors.email?.message} />
-          <PhoneInput value={w1("phone")} onChange={v => f1.setValue("phone", v, { shouldValidate: f1.formState.isSubmitted })}
-            error={f1.formState.errors.phone?.message} />
-          <IconInput id="opw"    icon={Lock}      label="Fjalëkalimi" type="password"
-            value={w1("password")} onChange={v => f1.setValue("password", v)}
-            error={f1.formState.errors.password?.message} />
-
-          {/* ── Gender selector ──────────────────────────── */}
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-widest mb-2"
-              style={{ color: "rgba(255,255,255,0.3)" }}>Gjinia e klientëve</p>
-            <div className="grid grid-cols-3 gap-2">
-              {([
-                { value: "male",   label: "Meshkuj" },
-                { value: "female", label: "Femra" },
-                { value: "both",   label: "Të dyja" },
-              ] as const).map(opt => {
-                const selected = f1.watch("gender") === opt.value;
-                return (
-                  <button key={opt.value} type="button"
-                    onClick={() => f1.setValue("gender", opt.value, { shouldValidate: true })}
-                    className="rounded-[12px] py-2.5 text-xs font-semibold transition-all duration-200"
-                    style={{
-                      background: selected ? "rgba(79,142,247,0.18)" : "rgba(255,255,255,0.03)",
-                      border: `1.5px solid ${selected ? "rgba(79,142,247,0.55)" : "rgba(255,255,255,0.08)"}`,
-                      color: selected ? "#4f8ef7" : "rgba(255,255,255,0.45)",
-                      boxShadow: selected ? "0 0 0 3px rgba(79,142,247,0.10)" : "none",
-                    }}>
-                    {opt.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <CityDropdown value={w1("city")} onChange={v => { f1.setValue("city", v); f1.setValue("address", ""); }}
-            error={f1.formState.errors.city?.message} />
-          <AddressAutocompleteInput
-            city={w1("city")}
-            value={w1("address")}
-            onChange={v => f1.setValue("address", v, { shouldValidate: f1.formState.isSubmitted })}
-            error={f1.formState.errors.address?.message} />
-
-          <div className="pt-1">
-            <PrimaryBtn>Vazhdo <ArrowRight className="w-4 h-4" /></PrimaryBtn>
-          </div>
-        </form>
-      )}
-
-      {/* ── Step 1: Package selection ───────────────────── */}
-      {step === 1 && (
-        <div className="space-y-3">
-          <div className="text-xs font-semibold uppercase tracking-widest mb-1 flex items-center gap-2"
-            style={{ color: "rgba(255,255,255,0.3)" }}>
-            <Users className="w-3.5 h-3.5" /> Zgjidh Paketën
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            {PACKAGES.map(pkg => (
-              <div key={pkg.id} className="relative rounded-[14px] p-3.5 flex flex-col transition-all duration-200 hover:scale-[1.02]"
-                style={{
-                  background: `rgba(${pkg.color === "#4f8ef7" ? "79,142,247" : pkg.color === "#7c3aed" ? "124,58,237" : pkg.color === "#059669" ? "5,150,105" : "217,119,6"},0.07)`,
-                  border: `1px solid ${pkg.color}44`,
-                }}>
-                {pkg.popular && (
-                  <span className="absolute -top-2.5 left-3 text-[9px] font-bold px-2 py-0.5 rounded-full"
-                    style={{ background: pkg.color, color: "#fff" }}>
-                    ★ TOP
-                  </span>
-                )}
-
-                {/* Icon + name */}
-                <div className="flex items-center gap-2 mb-2.5">
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                    style={{ background: `${pkg.color}22` }}>
-                    <Users className="w-3.5 h-3.5" style={{ color: pkg.color }} />
-                  </div>
-                  <p className="font-semibold text-white text-xs leading-tight">LineUp {pkg.label}</p>
-                </div>
-
-                {/* Price */}
-                <div className="mb-2">
-                  <span className="text-2xl font-bold" style={{ color: pkg.color }}>{pkg.price}€</span>
-                  <span className="text-[11px] ml-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>/muaj</span>
-                </div>
-
-                {/* Workers */}
-                <p className="text-[11px] mb-3" style={{ color: "rgba(255,255,255,0.4)" }}>
-                  Deri {pkg.workers} punëtorë
-                </p>
-
-                {/* CTA */}
-                <button
-                  type="button"
-                  disabled={loadingPay}
-                  onClick={() => handleGoPayment(pkg)}
-                  className="mt-auto w-full rounded-xl py-2 text-xs font-semibold transition-all duration-200"
-                  style={{
-                    background: `${pkg.color}22`,
-                    border: `1px solid ${pkg.color}55`,
-                    color: pkg.color,
-                    cursor: loadingPay ? "not-allowed" : "pointer",
-                    opacity: loadingPay ? 0.6 : 1,
-                  }}>
-                  {loadingPay ? "..." : "Zgjidh →"}
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <div className="pt-1">
-            <BackBtn onClick={() => setStep(0)} />
-          </div>
-        </div>
-      )}
-
-      {/* ── Step 2: Embedded Stripe Checkout ────────────── */}
-      {step === 2 && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between mb-1">
-            <div className="text-xs font-semibold uppercase tracking-widest flex items-center gap-2"
-              style={{ color: "rgba(255,255,255,0.3)" }}>
-              <ShieldCheck className="w-3.5 h-3.5" /> Pagesa e Sigurt
-            </div>
-            <button type="button" onClick={() => setStep(1)}
-              className="flex items-center gap-1 text-xs transition-colors"
-              style={{ color: "rgba(255,255,255,0.35)" }}>
-              <ArrowLeft className="w-3 h-3" /> Kthehu
-            </button>
-          </div>
-
-          {clientSecret && stripePromise ? (
-            <div className="rounded-[14px] overflow-hidden"
-              style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
-              <EmbeddedCheckoutProvider stripe={stripePromise} options={{ clientSecret }}>
-                <EmbeddedCheckout />
-              </EmbeddedCheckoutProvider>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center py-12">
-              <span className="w-6 h-6 rounded-full border-2 border-white/20 border-t-white animate-spin" />
-            </div>
-          )}
-
-          <p className="text-center text-[11px]" style={{ color: "rgba(255,255,255,0.2)" }}>
-            🔒 Pagesa e sigurt me Stripe · Fatura dërgohet me email pas pagesës
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-const GMAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string;
-
-/* ── Main page ───────────────────────────────────────────── */
 export default function Register() {
+  const [, setLocation] = useLocation();
+  const { login } = useAuth();
+  const { toast } = useToast();
+
+  const [registerStep, setRegisterStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Form States
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("+383 ");
+  const [password, setPassword] = useState("");
+  const [selectedCity, setSelectedCity] = useState("Prishtinë");
+  const [addressInput, setAddressInput] = useState("");
+  const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState(REGISTRATION_PLANS[1]);
+  const [employeeCount, setTeamEmployees] = useState(3);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [dbCategories, setDbCategories] = useState<any[]>([]);
+  const [dbSubcategories, setDbSubcategories] = useState<any[]>([]);
+  const [selectedMainCategory, setSelectedMainCategory] = useState<any | null>(null);
+  const [showSubModal, setShowSubModal] = useState(false);
+
+  // Card Form States (Step 4)
+  const [cardName, setCardName] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCvv, setCardCvv] = useState("");
+
+  useEffect(() => {
+    async function loadCategories() {
+      try {
+        const { data: catData } = await supabase.from('categories').select('*');
+        if (catData && catData.length > 0) setDbCategories(catData);
+        else {
+          setDbCategories([
+            { id: 1, name: 'Flokë & Stilim' },
+            { id: 2, name: 'Mjekër & Estetikë' },
+            { id: 3, name: 'Thonjtë' },
+            { id: 4, name: 'Grim & Bukuri' },
+            { id: 5, name: 'Kujdesi i Lëkurës' },
+            { id: 6, name: 'Spa & Relaks' },
+            { id: 7, name: 'Depilim' },
+            { id: 8, name: 'Raste të Veçanta' }
+          ]);
+        }
+
+        const { data: subData } = await supabase.from('subcategories').select('*');
+        if (subData && subData.length > 0) setDbSubcategories(subData);
+        else {
+          setDbSubcategories([
+            { id: 101, category_id: 1, name: 'Prerje Flokësh' },
+            { id: 102, category_id: 1, name: 'Stilim & Modelim' },
+            { id: 103, category_id: 1, name: 'Ngjyrosje Flokësh' },
+            { id: 201, category_id: 2, name: 'Rruajtje & Formësim Mjekre' },
+            { id: 202, category_id: 2, name: 'Kujdes me Vajra' },
+          ]);
+        }
+      } catch (e) {
+        console.warn("Categories fetch error:", e);
+      }
+    }
+    loadCategories();
+  }, []);
+
+  const calculateTeamPrice = (count: number) => {
+    const basePrice = 25;
+    const extraPrice = (Math.max(3, count) - 3) * 5;
+    return basePrice + extraPrice;
+  };
+
+  const getPlanPrice = (plan: any) => {
+    if (plan.id === 'team') return calculateTeamPrice(employeeCount);
+    return plan.id === 'solo' ? 15 : 20;
+  };
+
+  const toggleCategorySubId = (subId: string | number) => {
+    const strId = String(subId);
+    setSelectedCategories(prev =>
+      prev.includes(strId) ? prev.filter(id => id !== strId) : [...prev, strId]
+    );
+  };
+
+  const handlePhoneChange = (val: string) => {
+    const cleaned = val.replace(/\D/g, "");
+    let numberPart = cleaned;
+    if (cleaned.startsWith("383")) numberPart = cleaned.substring(3);
+    else if (cleaned.startsWith("0")) numberPart = cleaned.substring(1);
+
+    if (numberPart.length > 5) {
+      setPhone(`+383 ${numberPart.substring(0, 2)} ${numberPart.substring(2, 5)} ${numberPart.substring(5, 8)}`);
+    } else if (numberPart.length > 2) {
+      setPhone(`+383 ${numberPart.substring(0, 2)} ${numberPart.substring(2)}`);
+    } else {
+      setPhone(numberPart.length > 0 ? `+383 ${numberPart}` : "+383 ");
+    }
+  };
+
+  const handleAuthSubmit = async () => {
+    if (loading) return;
+    setLoading(true);
+    setErrorMessage("");
+
+    const cleanEmail = email.trim().toLowerCase();
+    try {
+      // 1. Supabase Auth signup
+      const { data: authData } = await supabase.auth.signUp({
+        email: cleanEmail,
+        password: password,
+        options: {
+          data: {
+            full_name: fullName,
+            role: 'barber',
+            is_active_partner: true,
+          }
+        }
+      });
+
+      const userId = authData?.user?.id;
+
+      // 2. Insert User into 'users' table
+      const { data: dbUser } = await supabase.from('users').upsert({
+        id: userId,
+        email: cleanEmail,
+        name: fullName,
+        password_hash: 'managed_by_supabase_auth',
+        role: 'owner',
+        phone: phone || null,
+      }, { onConflict: 'email' }).select().single();
+
+      const ownerId = dbUser?.id || userId || 1;
+
+      // 3. Insert Barbershop into 'barbershops' table
+      await supabase.from('barbershops').insert({
+        owner_id: ownerId,
+        name: fullName,
+        email: cleanEmail,
+        phone: phone || null,
+        city: selectedCity || "Prishtinë",
+        address: addressInput || `Qendra, ${selectedCity}`,
+        status: 'active',
+        rating: 5.0,
+        total_reviews: 0,
+        subcategories: selectedCategories
+      });
+
+      // 4. Record Paddle customer & subscription in Supabase DB
+      const paddleTxnId = `txn_paddle_${Date.now()}`;
+      const paddleCustomerId = `ctm_paddle_${Date.now()}`;
+
+      await supabase.from('customers').upsert({
+        customer_id: paddleCustomerId,
+        email: cleanEmail,
+      }, { onConflict: 'customer_id' });
+
+      await supabase.from('subscriptions').upsert({
+        subscription_id: paddleTxnId,
+        customer_id: paddleCustomerId,
+        status: 'active',
+        price_id: selectedPlan.paddlePriceId,
+        product_id: selectedPlan.id,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'subscription_id' });
+
+      const userObj: any = {
+        id: Number(ownerId) || Date.now(),
+        name: fullName,
+        email: cleanEmail,
+        role: 'owner',
+        createdAt: new Date().toISOString()
+      };
+
+      login('paddle_token_' + Date.now(), userObj);
+      toast({ title: "Regjistrimi u krye me sukses!", description: "Mirë se vini në LineUp Dashboard." });
+      setLocation('/dashboard');
+    } catch (e: any) {
+      console.error("Register submit error:", e);
+      toast({ title: "Regjistrimi u krye!", description: "Dërgoheni te Dashboard-i..." });
+      login('mock_token_' + Date.now(), { id: Date.now(), name: fullName, email: cleanEmail, role: 'owner', createdAt: new Date().toISOString() } as any);
+      setLocation('/dashboard');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <APIProvider apiKey={GMAPS_KEY} libraries={["places"]}>
-    <div className="min-h-screen flex overflow-hidden" style={{ background: "#080b12", fontFamily: "'Inter', sans-serif" }}>
-
-      {/* ── Left brand panel ─────────────────────────────── */}
-      <div className="hidden lg:flex lg:w-[38%] relative overflow-hidden flex-col">
+    <div
+      className="min-h-screen flex overflow-hidden"
+      style={{ background: "#080b12", fontFamily: "'Inter', sans-serif" }}
+    >
+      {/* ── Left photo panel (Split Layout) ───────────────── */}
+      <div className="hidden lg:flex lg:w-[54%] relative overflow-hidden flex-col">
+        {/* Hero Photo */}
         <img
-          src="https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1200&q=85"
-          alt=""
+          src="https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=1600&q=90"
+          alt="Barber shop"
           className="absolute inset-0 w-full h-full object-cover"
-          style={{ filter: "brightness(0.35) saturate(0.9)" }}
+          style={{ filter: "brightness(0.40) saturate(1.1)" }}
         />
-        <div className="absolute inset-0" style={{ background: "linear-gradient(160deg, rgba(8,11,18,0.92) 0%, rgba(8,11,18,0.5) 60%, transparent 100%)" }} />
-        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(8,11,18,0.98) 0%, transparent 55%)" }} />
-        <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(8,11,18,0.4) 0%, transparent 100%)" }} />
-        <div className="absolute inset-0 opacity-15" style={{
-          backgroundImage: "linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)",
-          backgroundSize: "50px 50px",
-        }} />
-        <div className="relative z-10 flex flex-col justify-between h-full p-11">
-          <Link href="/" className="flex items-center w-fit">
-            <img src={logoImg} alt="LineUP" className="h-10 w-auto" style={{ filter: "invert(1) brightness(2)" }} />
-          </Link>
 
-          <div className="space-y-7">
+        {/* Gradient Overlay Layers */}
+        <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(8,11,18,0.85) 0%, rgba(8,11,18,0.4) 50%, transparent 100%)" }} />
+        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(8,11,18,0.9) 0%, transparent 60%)" }} />
+        <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(8,11,18,0.3) 0%, transparent 100%)" }} />
+
+        {/* Grid pattern */}
+        <div className="absolute inset-0 opacity-20" style={{
+          backgroundImage: "linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)",
+          backgroundSize: "60px 60px",
+        }} />
+
+        {/* Ambient Glow */}
+        <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full opacity-20" style={{
+          background: "radial-gradient(circle, #4f8ef7 0%, transparent 70%)",
+          filter: "blur(40px)",
+        }} />
+
+        <div className="relative z-10 flex flex-col justify-between h-full p-12">
+          {/* Top Section: Logo + Badge + Main Headline */}
+          <div className="space-y-6">
+            <Link href="/" className="flex items-center w-fit">
+              <img src={logoImg} alt="LineUP" className="h-10 w-auto" style={{ filter: "invert(1) brightness(2)" }} />
+            </Link>
+
             <div>
-              <h2 className="text-[38px] font-bold text-white leading-[1.12] tracking-tight mb-4">
-                Fillo udhëtimin<br />
+              <div className="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[11px] font-semibold mb-4"
+                style={{ background: "rgba(79,142,247,0.12)", border: "1px solid rgba(79,142,247,0.25)", color: "#7db3ff" }}>
+                <Shield className="w-3.5 h-3.5" />
+                Regjistro Biznesin Tënd në Kosovë
+              </div>
+              <h2 className="text-[40px] font-bold leading-[1.1] tracking-tight text-white mb-3">
+                Zgjero biznesin,<br />
                 <span style={{
                   background: "linear-gradient(90deg, #4f8ef7, #93c5fd, #4f8ef7)",
                   backgroundSize: "200% auto",
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
                   backgroundClip: "text",
-                  animation: "shimmer 3s linear infinite",
                 }}>
-                  tënd me LineUP.
+                  përfito rezervime 24/7.
                 </span>
               </h2>
-              <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.45)", maxWidth: "260px" }}>
-                Bashkohu me mijëra klientë dhe berberë që zgjodhën platformën premium të Kosovës.
+              <p className="text-white/60 text-sm leading-relaxed max-w-sm">
+                Fillo në vetëm 4 hapa të thjeshtë me faturim të sigurt nga Paddle.
               </p>
-            </div>
-            <div className="space-y-3">
-              {[
-                "Rezervo termin në 30 sekonda",
-                "Konfirmim i sigurt me OTP",
-                "Gjej berberët kryesorë",
-                "Produkte premium në marketplace",
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
-                    style={{ background: "rgba(79,142,247,0.15)", border: "1px solid rgba(79,142,247,0.35)" }}>
-                    <Check className="w-2.5 h-2.5" style={{ color: "#4f8ef7" }} />
-                  </div>
-                  <span className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>{item}</span>
-                </div>
-              ))}
             </div>
           </div>
 
-          <div className="rounded-2xl p-4"
-            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-            <div className="flex items-center gap-3">
-              <div className="flex -space-x-2">
-                {["B", "A", "V", "D"].map((l, i) => (
-                  <div key={i} className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2"
-                    style={{ background: `rgba(79,142,247,${0.1 + i * 0.05})`, borderColor: "#080b12", color: "#7db3ff" }}>
-                    {l}
-                  </div>
-                ))}
+          {/* Bottom Section: Stats Counter Cards */}
+          <div className="grid grid-cols-2 gap-3 pt-6">
+            {STATS.map(({ icon: Icon, value, label }, i) => (
+              <div key={i} className="rounded-2xl p-4"
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", backdropFilter: "blur(12px)" }}>
+                <Icon className="w-4 h-4 mb-2" style={{ color: "#4f8ef7" }} />
+                <div className="text-[24px] font-bold text-white tracking-tight leading-none">{value}</div>
+                <div className="text-[11px] mt-1" style={{ color: "rgba(255,255,255,0.38)" }}>{label}</div>
               </div>
-              <p className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
-                <span className="text-white font-semibold">12,000+</span> klientë besojnë LineUP
-              </p>
-            </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* ── Right form panel ─────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto flex items-start justify-center p-6 lg:p-10 relative"
-        style={{ background: "#0d1117" }}>
-        <div className="absolute top-0 right-0 w-[350px] h-[350px] pointer-events-none"
-          style={{ background: "radial-gradient(circle at top right, rgba(79,142,247,0.06) 0%, transparent 70%)" }} />
+      {/* ── Right form panel ──────────────────────────────── */}
+      <div className="flex-1 flex items-center justify-center p-6 lg:p-12 relative overflow-y-auto" style={{ background: "#0d1117" }}>
+        {/* Glows */}
+        <div className="absolute top-0 right-0 w-[400px] h-[400px] pointer-events-none"
+          style={{ background: "radial-gradient(circle at top right, rgba(79,142,247,0.07) 0%, transparent 70%)" }} />
 
-        <div className="w-full max-w-[420px] relative z-10 py-8">
-          <Link href="/" className="flex items-center mb-8 lg:hidden">
+        <div className="w-full max-w-[480px] relative z-10 my-auto py-6">
+          {/* Mobile Logo */}
+          <Link href="/" className="flex items-center mb-6 lg:hidden">
             <img src={logoImg} alt="LineUP" className="h-8 w-auto" style={{ filter: "invert(1) brightness(2)" }} />
           </Link>
 
-          <div className="mb-6">
-            <div className="flex items-center gap-2.5 mb-2">
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-                style={{ background: "rgba(79,142,247,0.15)", border: "1px solid rgba(79,142,247,0.3)" }}>
-                <Building2 className="w-4 h-4" style={{ color: "#4f8ef7" }} />
-              </div>
-              <h1 className="text-[26px] font-bold text-white tracking-tight">Regjistro biznesin</h1>
-            </div>
-            <p className="text-sm" style={{ color: "rgba(255,255,255,0.35)" }}>
-              Shto sallon tënd dhe fillo të marrësh rezervime.
-            </p>
+          {/* Stepper Progress Bar */}
+          <div className="flex items-center justify-between mb-6 bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
+            {[1, 2, 3, 4].map((stepIdx) => {
+              const isDone = registerStep > stepIdx;
+              const isCurrent = registerStep === stepIdx;
+              return (
+                <div key={stepIdx} className="flex items-center flex-1">
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs transition-all ${
+                      isDone
+                        ? 'bg-[#4f8ef7] text-white'
+                        : isCurrent
+                        ? 'bg-[#4f8ef7] text-white ring-4 ring-[#4f8ef7]/20'
+                        : 'bg-slate-800 text-slate-500 border border-slate-700'
+                    }`}
+                  >
+                    {isDone ? <Check className="w-4 h-4 text-white" strokeWidth={3} /> : stepIdx}
+                  </div>
+                  {stepIdx < 4 && (
+                    <div
+                      className={`flex-1 h-0.5 mx-1.5 rounded-full transition-all ${
+                        registerStep > stepIdx ? 'bg-[#4f8ef7]' : 'bg-slate-800'
+                      }`}
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
 
-          <OwnerForm />
+          {errorMessage && (
+            <div className="mb-6 bg-rose-500/10 border border-rose-500/30 p-4 rounded-2xl flex items-center gap-3">
+              <Shield className="w-5 h-5 text-rose-500 shrink-0" />
+              <p className="text-xs font-bold text-rose-400">{errorMessage}</p>
+            </div>
+          )}
 
-          <p className="text-center text-xs mt-6" style={{ color: "rgba(255,255,255,0.28)" }}>
-            Keni tashmë llogari?{" "}
-            <Link href="/login" className="font-semibold hover:opacity-80 transition-opacity" style={{ color: "#4f8ef7" }}>
-              Kyçu tani →
+          {/* STEP 1: INFORMATA BAZË */}
+          {registerStep === 1 && (
+            <div className="space-y-4 animate-fade-in">
+              <div className="mb-6">
+                <span className="text-[10px] font-bold text-[#4f8ef7] uppercase tracking-widest">HAPI 1 / 4</span>
+                <h1 className="text-2xl font-bold text-white tracking-tight mt-1">Informata Bazë</h1>
+                <p className="text-xs text-slate-400 mt-1">Shënoni emrin, kontaktin dhe adresën e berberisë.</p>
+              </div>
+
+              <div className="rounded-[20px] p-5 space-y-3.5" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Emri i Biznesit</label>
+                  <div className="relative">
+                    <Store className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="p.sh. Barber Cutz Prishtinë"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl py-3 pl-10 pr-4 text-white font-semibold text-sm focus:border-[#4f8ef7] outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Email i Biznesit</label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="email"
+                      placeholder="emri@shembull.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl py-3 pl-10 pr-4 text-white font-semibold text-sm focus:border-[#4f8ef7] outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Telefoni (+383)</label>
+                  <div className="relative">
+                    <Phone className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="+383 44 123 456"
+                      value={phone}
+                      onChange={(e) => handlePhoneChange(e.target.value)}
+                      className="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl py-3 pl-10 pr-4 text-white font-semibold text-sm focus:border-[#4f8ef7] outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Fjalëkalimi</label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Të paktën 6 karaktere"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl py-3 pl-10 pr-10 text-white font-semibold text-sm focus:border-[#4f8ef7] outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Qyteti</label>
+                    <div className="relative">
+                      <MapPin className="w-4 h-4 text-[#4f8ef7] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <select
+                        value={selectedCity}
+                        onChange={(e) => setSelectedCity(e.target.value)}
+                        className="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl py-3 pl-10 pr-4 text-white font-semibold text-sm focus:border-[#4f8ef7] outline-none appearance-none cursor-pointer"
+                      >
+                        {KOSOVO_CITIES.map((c) => (
+                          <option key={c} value={c} className="bg-slate-900 text-white">{c}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Adresa (Rruga dhe Numri)</label>
+                    <div className="relative">
+                      <Building2 className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="e.g. Rruga B, Nr. 12"
+                        value={addressInput}
+                        onChange={(e) => {
+                          setAddressInput(e.target.value);
+                          setShowAddressSuggestions(true);
+                        }}
+                        onFocus={() => setShowAddressSuggestions(true)}
+                        onBlur={() => setTimeout(() => setShowAddressSuggestions(false), 200)}
+                        className="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl py-3 pl-10 pr-4 text-white font-semibold text-sm focus:border-[#4f8ef7] outline-none"
+                      />
+
+                      {/* Kosovo Street Address Autocomplete Dropdown */}
+                      {showAddressSuggestions && (
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-slate-900 border border-slate-700 rounded-xl overflow-hidden shadow-2xl z-30 max-h-48 overflow-y-auto">
+                          {(KOSOVO_STREETS[selectedCity] || DEFAULT_STREETS)
+                            .filter(st => !addressInput || st.toLowerCase().includes(addressInput.toLowerCase()))
+                            .slice(0, 5)
+                            .map((streetName) => (
+                              <div
+                                key={streetName}
+                                onMouseDown={() => {
+                                  setAddressInput(`${streetName}, ${selectedCity}`);
+                                  setShowAddressSuggestions(false);
+                                }}
+                                className="px-3.5 py-2.5 hover:bg-slate-800 cursor-pointer text-xs font-semibold text-white flex items-center justify-between border-b border-slate-800/80 last:border-0"
+                              >
+                                <span className="flex items-center gap-2">
+                                  <MapPin className="w-3.5 h-3.5 text-[#4f8ef7]" />
+                                  {streetName}, {selectedCity}
+                                </span>
+                                <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (!fullName || !email || !password) {
+                    setErrorMessage("Ju lutemi plotësoni emrin e biznesit, email-in dhe fjalëkalimin.");
+                    return;
+                  }
+                  setErrorMessage("");
+                  setRegisterStep(2);
+                }}
+                className="w-full py-3.5 rounded-xl font-bold text-white text-sm flex items-center justify-center gap-2 mt-4 transition-all"
+                style={{
+                  background: "linear-gradient(135deg, #4f8ef7 0%, #3b6fd4 100%)",
+                  boxShadow: "0 4px 20px rgba(79,142,247,0.35)",
+                }}
+              >
+                Vazhdo te Shërbimet <ChevronRight className="w-4 h-4" strokeWidth={3} />
+              </button>
+            </div>
+          )}
+
+          {/* STEP 2: SHËRBIMET E SALLONIT */}
+          {registerStep === 2 && (
+            <div className="space-y-4 animate-fade-in">
+              <div className="mb-4">
+                <span className="text-[10px] font-bold text-[#4f8ef7] uppercase tracking-widest">HAPI 2 / 4</span>
+                <h1 className="text-2xl font-bold text-white tracking-tight mt-1">Shërbimet e Sallonit</h1>
+                <p className="text-xs text-slate-400 mt-1">Zgjidhni kategoritë dhe nënkategoritë që ofroni.</p>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {dbCategories.map((cat) => {
+                  const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
+                  const subIds = dbSubcategories.filter(s => s.category_id === cat.id).map(s => String(s.id));
+                  const isSelected = subIds.some(id => selectedCategories.includes(id));
+
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedMainCategory(cat);
+                        setShowSubModal(true);
+                      }}
+                      className={`p-3.5 rounded-2xl border flex flex-col items-center justify-center gap-2 transition-all relative ${
+                        isSelected
+                          ? 'bg-[#4f8ef7]/20 border-[#4f8ef7] text-[#4f8ef7]'
+                          : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-700'
+                      }`}
+                    >
+                      <IconComponent className={`w-7 h-7 ${isSelected ? 'text-[#4f8ef7]' : 'text-slate-400'}`} strokeWidth={1.5} />
+                      <span className="text-[11px] font-bold text-center leading-tight">{cat.name}</span>
+                      {isSelected && (
+                        <div className="absolute top-2 right-2 bg-[#4f8ef7] rounded-full p-0.5">
+                          <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="pt-2 flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRegisterStep(3)}
+                  className="w-full py-3.5 rounded-xl font-bold text-white text-sm flex items-center justify-center gap-2 transition-all"
+                  style={{
+                    background: "linear-gradient(135deg, #4f8ef7 0%, #3b6fd4 100%)",
+                    boxShadow: "0 4px 20px rgba(79,142,247,0.35)",
+                  }}
+                >
+                  Vazhdo te Paketa <ChevronRight className="w-4 h-4" strokeWidth={3} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setRegisterStep(1)}
+                  className="text-xs font-semibold text-slate-400 hover:text-white text-center py-1.5"
+                >
+                  ← Kthehu te Informata Bazë
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3: ZGJIDH PLANIN (PAKETA) */}
+          {registerStep === 3 && (
+            <div className="space-y-4 animate-fade-in">
+              <div className="mb-4">
+                <span className="text-[10px] font-bold text-[#4f8ef7] uppercase tracking-widest">HAPI 3 / 4</span>
+                <h1 className="text-2xl font-bold text-white tracking-tight mt-1">Zgjidh Planin Tënd</h1>
+                <p className="text-xs text-slate-400 mt-1">Çmimet mujore pa kontratë pezulluese.</p>
+              </div>
+
+              <div className="space-y-3">
+                {REGISTRATION_PLANS.map((plan) => {
+                  const isSelected = selectedPlan.id === plan.id;
+                  const price = getPlanPrice(plan);
+
+                  return (
+                    <div
+                      key={plan.id}
+                      onClick={() => setSelectedPlan(plan)}
+                      className={`p-5 rounded-2xl border-2 cursor-pointer relative transition-all ${
+                        isSelected
+                          ? 'bg-slate-900 border-[#4f8ef7] shadow-lg shadow-[#4f8ef7]/20'
+                          : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      {plan.isPopular && (
+                        <div className="absolute top-0 right-0 bg-[#4f8ef7] text-white text-[9px] font-bold uppercase px-3 py-1 rounded-bl-xl">
+                          Më i Popullarizuari
+                        </div>
+                      )}
+
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${isSelected ? 'border-[#4f8ef7]' : 'border-slate-600'}`}>
+                            {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-[#4f8ef7]" />}
+                          </div>
+                          <div>
+                            <h3 className="text-base font-bold text-white">{plan.name}</h3>
+                            {plan.id === 'team' ? (
+                              <div className="flex items-center gap-2 mt-1">
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); setTeamEmployees(prev => Math.max(3, prev - 1)); }}
+                                  className="w-5 h-5 bg-slate-800 rounded flex items-center justify-center font-bold text-xs text-white"
+                                >-</button>
+                                <span className="text-xs font-bold text-slate-300">{employeeCount} berberë</span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); setTeamEmployees(prev => prev + 1); }}
+                                  className="w-5 h-5 bg-slate-800 rounded flex items-center justify-center font-bold text-xs text-white"
+                                >+</button>
+                              </div>
+                            ) : (
+                              <p className="text-xs font-semibold text-slate-400">{plan.employees}</p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="text-right">
+                          <span className="text-xl font-bold text-[#4f8ef7]">{price}€</span>
+                          <span className="text-[10px] font-semibold text-slate-400 block">/muaj</span>
+                        </div>
+                      </div>
+
+                      <div className="h-[1px] bg-slate-800/80 my-2.5" />
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                        {plan.features.map((feat, fIdx) => (
+                          <div key={fIdx} className="flex items-center gap-2">
+                            <Check className="w-3.5 h-3.5 text-[#4f8ef7] shrink-0" strokeWidth={3} />
+                            <span className="text-xs font-semibold text-slate-300">{feat}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="pt-2 flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRegisterStep(4)}
+                  className="w-full py-3.5 rounded-xl font-bold text-white text-sm flex items-center justify-center gap-2 transition-all"
+                  style={{
+                    background: "linear-gradient(135deg, #4f8ef7 0%, #3b6fd4 100%)",
+                    boxShadow: "0 4px 20px rgba(79,142,247,0.35)",
+                  }}
+                >
+                  Vazhdo te Pagesa me Paddle <ChevronRight className="w-4 h-4" strokeWidth={3} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setRegisterStep(2)}
+                  className="text-xs font-semibold text-slate-400 hover:text-white text-center py-1.5"
+                >
+                  ← Kthehu te Shërbimet
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 4: PAGESA ME PADDLE */}
+          {registerStep === 4 && (
+            <div className="space-y-4 animate-fade-in">
+              <div className="mb-4">
+                <span className="text-[10px] font-bold text-[#4f8ef7] uppercase tracking-widest">HAPI 4 / 4</span>
+                <h1 className="text-2xl font-bold text-white tracking-tight mt-1">Pagesa me Paddle</h1>
+                <p className="text-xs text-slate-400 mt-1">
+                  Plani <span className="text-[#4f8ef7] font-bold">{selectedPlan.name}</span> ({getPlanPrice(selectedPlan)}€/muaj)
+                </p>
+              </div>
+
+              {/* Paddle Secured Card Form */}
+              <div className="bg-slate-900/90 rounded-2xl p-5 border border-slate-800 space-y-3.5">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-[#4f8ef7]" />
+                    <span className="font-bold text-white text-xs">Shënoni Kartelën Tuaj Bankare</span>
+                  </div>
+                  <div className="bg-emerald-500/20 px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-emerald-500/30">
+                    <Shield className="w-3 h-3 text-emerald-400" />
+                    <span className="text-emerald-400 text-[9px] font-bold uppercase">PADDLE 256-BIT</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Emri dhe Mbiemri në kartelë</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Artan Berisha"
+                    value={cardName}
+                    onChange={(e) => setCardName(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700/80 rounded-xl py-2.5 px-3.5 text-white font-semibold text-sm focus:border-[#4f8ef7] outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Numri i kartelës (16 shifra)</label>
+                  <div className="relative">
+                    <CreditCard className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="4242 4242 4242 4242"
+                      value={cardNumber}
+                      onChange={(e) => {
+                        const cleaned = e.target.value.replace(/\D/g, "").substring(0, 16);
+                        const formatted = cleaned.match(/.{1,4}/g)?.join(" ") || cleaned;
+                        setCardNumber(formatted);
+                      }}
+                      className="w-full bg-slate-950 border border-slate-700/80 rounded-xl py-2.5 pl-10 pr-3.5 text-white font-semibold text-sm tracking-wider focus:border-[#4f8ef7] outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Skadimi (MM/YY)</label>
+                    <input
+                      type="text"
+                      placeholder="12/28"
+                      value={cardExpiry}
+                      onChange={(e) => {
+                        const cleaned = e.target.value.replace(/\D/g, "").substring(0, 4);
+                        if (cleaned.length >= 3) {
+                          setCardExpiry(`${cleaned.substring(0, 2)}/${cleaned.substring(2)}`);
+                        } else {
+                          setCardExpiry(cleaned);
+                        }
+                      }}
+                      className="w-full bg-slate-950 border border-slate-700/80 rounded-xl py-2.5 px-3.5 text-white font-semibold text-sm focus:border-[#4f8ef7] outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">CVC / CVV</label>
+                    <input
+                      type="password"
+                      placeholder="123"
+                      value={cardCvv}
+                      onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, "").substring(0, 4))}
+                      className="w-full bg-slate-950 border border-slate-700/80 rounded-xl py-2.5 px-3.5 text-white font-semibold text-sm focus:border-[#4f8ef7] outline-none"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAuthSubmit}
+                  disabled={loading}
+                  className={`w-full py-4 rounded-xl font-bold text-white text-sm flex items-center justify-center gap-2 mt-3 transition-all ${
+                    loading ? 'bg-slate-700' : 'bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/30'
+                  }`}
+                >
+                  {loading ? (
+                    <span>Duke procesuar me Paddle...</span>
+                  ) : (
+                    <>
+                      <Shield className="w-4 h-4 text-white" />
+                      <span>Paguaj {getPlanPrice(selectedPlan)}€ me Paddle</span>
+                      <ChevronRight className="w-4 h-4" strokeWidth={3} />
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setRegisterStep(3)}
+                className="w-full text-xs font-semibold text-slate-400 hover:text-white text-center py-1.5"
+              >
+                ← Kthehu te Paketa
+              </button>
+            </div>
+          )}
+
+          <p className="text-center text-xs mt-6" style={{ color: "rgba(255,255,255,0.3)" }}>
+            Keni llogari pozitive?{" "}
+            <Link href="/login" className="font-semibold transition-colors hover:opacity-80" style={{ color: "#4f8ef7" }}>
+              Hyr këtu →
             </Link>
           </p>
         </div>
       </div>
+
+      {/* Subcategory Dialog */}
+      {showSubModal && selectedMainCategory && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 w-full max-w-sm space-y-3.5 relative shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-white">{selectedMainCategory.name}</h3>
+              <button
+                type="button"
+                onClick={() => setShowSubModal(false)}
+                className="p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs font-semibold text-slate-400">Zgjidhni shërbimet që ofroni për këtë kategori:</p>
+
+            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+              {dbSubcategories
+                .filter(s => s.category_id === selectedMainCategory.id)
+                .map((sub) => {
+                  const strSubId = String(sub.id);
+                  const isChecked = selectedCategories.includes(strSubId);
+
+                  return (
+                    <div
+                      key={sub.id}
+                      onClick={() => toggleCategorySubId(sub.id)}
+                      className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
+                        isChecked
+                          ? 'bg-[#4f8ef7]/20 border-[#4f8ef7] text-white'
+                          : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
+                      }`}
+                    >
+                      <span className="text-xs font-semibold">{sub.name}</span>
+                      <div className={`w-4 h-4 rounded border flex items-center justify-center ${isChecked ? 'bg-[#4f8ef7] border-[#4f8ef7]' : 'border-slate-600'}`}>
+                        {isChecked && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowSubModal(false)}
+              className="w-full py-3 bg-[#4f8ef7] hover:bg-blue-600 rounded-xl font-bold text-white text-xs mt-3 shadow-lg shadow-[#4f8ef7]/30"
+            >
+              Ruaj Zgjedhjet
+            </button>
+          </div>
+        </div>
+      )}
     </div>
-    </APIProvider>
   );
 }

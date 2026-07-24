@@ -5,6 +5,19 @@ import { supabase } from "@/config/supabase";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { WebView } from "react-native-webview";
 import { createPaddleTransaction, PADDLE_CONFIG } from "../config/paddle";
+import { CategoryAccordion, Category, Subcategory } from "../components/CategoryAccordion";
+import { BlurView } from 'expo-blur';
+
+const CATEGORY_ICONS: Record<string, any> = {
+  'Flokë & Stilim': Scissors,
+  'Mjekër & Estetikë': User,
+  'Thonjtë': Hand,
+  'Grim & Bukuri': Smile,
+  'Kujdesi i Lëkurës': Shield,
+  'Spa & Relaks': Waves,
+  'Depilim': Zap,
+  'Raste të Veçanta': Sparkles
+};
 
 const KOSOVO_CITIES = [
   { formatted_address: "Ferizaj", city: "Ferizaj", street: "", postal_code: "70000", country: "Kosovë", latitude: 42.3703, longitude: 21.1559 },
@@ -93,17 +106,7 @@ const REGISTRATION_PLANS = [
   }
 ];
 
-const ALBANIAN_CATEGORIES = [
-  { id: '1', name: "Prerje & Stilim", icon: Scissors },
-  { id: '2', name: "Ngjyrosje Flokësh", icon: Sparkles },
-  { id: '3', name: "Trajtim Flokësh", icon: Zap },
-  { id: '4', name: "Mjekër & Estetikë", icon: User },
-  { id: '5', name: "Thonjtë", icon: Hand },
-  { id: '6', name: "Grim / Makeup", icon: Smile },
-  { id: '7', name: "Vetulla & Qerpikë", icon: Eye },
-  { id: '8', name: "Kujdesi i Lëkurës", icon: Shield },
-  { id: '9', name: "Masazh & Trup", icon: Waves },
-];
+
 
 const PADDLE_CLIENT_TOKEN = PADDLE_CONFIG.CLIENT_TOKEN;
 const PADDLE_VENDOR_ID = 12345; // This can remain as mock or move to config
@@ -111,11 +114,12 @@ const PADDLE_VENDOR_ID = 12345; // This can remain as mock or move to config
 interface PaddleCheckoutProps {
   email: string;
   transactionId?: string;
+  priceId?: string;
   onSuccess: (data: any) => void;
   onCancel: () => void;
 }
 
-const PaddleCheckout = ({ email, transactionId, onSuccess, onCancel }: PaddleCheckoutProps) => {
+const PaddleCheckout = ({ email, transactionId, priceId, onSuccess, onCancel }: PaddleCheckoutProps) => {
   const html = `
     <!DOCTYPE html>
     <html>
@@ -159,8 +163,7 @@ const PaddleCheckout = ({ email, transactionId, onSuccess, onCancel }: PaddleChe
             if ('${transactionId || ""}') {
               checkoutOptions.transactionId = '${transactionId}';
             } else {
-              // Fallback to manual items if no transactionId
-              checkoutOptions.items = [{ priceId: 'pri_01solo_mo', quantity: 1 }];
+              checkoutOptions.items = [{ priceId: '${priceId || "pri_01ky8e821v11dc6f2nf9jnq5v8"}', quantity: 1 }];
               checkoutOptions.customer = { email: '${email}' };
             }
 
@@ -268,14 +271,15 @@ const CityPicker = memo(({ selectedCity, onSelect }: CityPickerProps) => {
               </View>
             </View>
 
-            <FlatList
-              data={filteredCities}
-              keyExtractor={(item) => item.city}
-              keyboardShouldPersistTaps="always"
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
               contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}
-              renderItem={({ item }) => (
+            >
+              {filteredCities.map((item) => (
                 <TouchableOpacity
+                  key={item.city}
                   onPress={() => {
+                    Keyboard.dismiss();
                     onSelect(item.city);
                     setShowPicker(false);
                     setSearch("");
@@ -288,8 +292,8 @@ const CityPicker = memo(({ selectedCity, onSelect }: CityPickerProps) => {
                   <Text className={`font-bold text-lg flex-1 ${selectedCity === item.city ? 'text-[#3473ef]' : 'text-[#161719]'}`}>{item.city}</Text>
                   {selectedCity === item.city && <Check size={20} color="#3473ef" strokeWidth={3} />}
                 </TouchableOpacity>
-              )}
-            />
+              ))}
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -390,10 +394,11 @@ const AddressPicker = memo(({
 
 interface RegisterScreenProps {
   onClose: () => void;
-  onSuccess: (userData: any) => void;
+  onSuccess: (userData?: any) => void;
+  initialPlanId?: string;
 }
 
-export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSuccess }) => {
+export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSuccess, initialPlanId }) => {
   const [registerStep, setRegisterStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -406,6 +411,24 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
     Keyboard.dismiss();
   }, [registerStep]);
 
+  const [dbCategories, setDbCategories] = useState<Category[]>([]);
+  const [dbSubcategories, setDbSubcategories] = useState<Subcategory[]>([]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const { data: catData, error: catErr } = await supabase.from('categories').select('*');
+        if (catData) setDbCategories(catData);
+        
+        const { data: subData, error: subErr } = await supabase.from('subcategories').select('*');
+        if (subData) setDbSubcategories(subData);
+      } catch (err) {
+        console.error("Failed to fetch categories:", err);
+      }
+    };
+    fetchCategories();
+  }, []);
+
   // Form State
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -413,10 +436,14 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
   const [phone, setPhone] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
   const [selectedPlace, setSelectedPlace] = useState<{ address: string; lat: number; lng: number } | null>(null);
-  const [selectedPlan, setSelectedPlan] = useState(REGISTRATION_PLANS[1]);
+  
+  const [selectedPlan, setSelectedPlan] = useState(initialPlanId ? REGISTRATION_PLANS.find(p => p.id === initialPlanId) || REGISTRATION_PLANS[1] : REGISTRATION_PLANS[1]);
+  
   const [billingCycle, setBillingCycle] = useState<'month' | 'year'>('month');
   const [employeeCount, setTeamEmployees] = useState(3);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedMainCategory, setSelectedMainCategory] = useState<any | null>(null);
+  const [showSubModal, setShowSubModal] = useState(false);
 
   const toggleCategory = (catName: string) => {
     setSelectedCategories(prev =>
@@ -449,7 +476,12 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
 
   const isEmailValid = (em: string) => {
     const clean = em.trim().toLowerCase();
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean);
+    // Validate email format and check allowed domains
+    const isValidFormat = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean);
+    const allowedDomains = ['@gmail.com', '@outlook.com', '@pronto.me'];
+    const hasAllowedDomain = allowedDomains.some(domain => clean.endsWith(domain));
+    
+    return isValidFormat && hasAllowedDomain;
   };
 
   const isPhoneValid = (ph: string) => {
@@ -526,9 +558,9 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
         latitude: selectedPlace?.lat || 42.6629,
         longitude: selectedPlace?.lng || 21.1655,
         status: 'active',
-        rating: 5.0,
+        rating: 0,
         total_reviews: 0,
-        categories: selectedCategories // Ruajmë kategoritë e zgjedhura
+        subcategories: selectedCategories
       });
 
       if (shopError) {
@@ -577,13 +609,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
       });
     } catch (e: any) {
       console.error("[RegisterScreen] Registration submit error:", e?.message || e);
-      // Fallback success so screen never locks up
-      onSuccess({
-        id: String(Date.now()),
-        name: fullName,
-        email: cleanEmail,
-        role: 'barber',
-      });
+      setErrorMessage(e?.message || "Ndodhi një gabim gjatë regjistrimit.");
     } finally {
       setLoading(false);
     }
@@ -597,7 +623,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
       return;
     }
     if (!isEmailValid(email)) {
-      setErrorMessage("Ju lutemi shkruani një email valide (p.sh. emri@shembull.com).");
+      setErrorMessage("Ju lutemi shkruani një email valide (@gmail.com, @outlook.com, ose @pronto.me).");
       return;
     }
     setErrorMessage("");
@@ -619,19 +645,26 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
       const planPriceNum = selectedPlan?.id === 'team' ? calculateTeamPrice(employeeCount, billingCycle) : (billingCycle === 'month' ? 20 : 200);
 
       console.log("[RegisterScreen] Creating dynamic transaction for plan:", selectedPlan.id);
-      const res = await createPaddleTransaction({
-        email: email.trim().toLowerCase(),
-        planId: selectedPlan.id as any,
-        amount: planPriceNum,
-        customerName: fullName
-      });
+      let res;
+      try {
+        res = await createPaddleTransaction({
+          email: email.trim().toLowerCase(),
+          planId: selectedPlan.id as any,
+          amount: planPriceNum,
+          customerName: fullName
+        });
+      } catch (paddleErr) {
+        console.warn("Paddle API failed (likely CORS), falling back to client-side items.", paddleErr);
+      }
 
       if (res?.data?.id) {
         setPaddleTransactionId(res.data.id);
-        goToStep(3);
       } else {
-        throw new Error("Dështoi krijimi i transaksionit në Paddle. Kontrolloni API Key.");
+        console.warn("Paddle API failed (likely CORS), falling back to client-side items.");
       }
+      
+      // Always go to Step 4 to show the UI
+      goToStep(4);
     } catch (err: any) {
       setErrorMessage(err.message);
     } finally {
@@ -640,15 +673,18 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      className="flex-1 bg-[#F5F5F5]"
+    <View
+      className="flex-1 bg-white"
     >
+      {/* Background Decorative Blobs */}
+      <View className="absolute top-[-50] left-[-50] w-64 h-64 bg-[#3473ef]/15 rounded-full blur-3xl" />
+      <View className="absolute top-[200] right-[-100] w-80 h-80 bg-[#f47458]/15 rounded-full blur-3xl" />
+
       <ScrollView
         ref={scrollViewRef}
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 100, paddingTop: 40 }}
+        contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingBottom: 100, paddingTop: 40 }}
         keyboardShouldPersistTaps="handled"
       >
         {/* Header section with Close Button */}
@@ -670,7 +706,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
           </Pressable>
         </View>
 
-        {/* Steps Progress Indicator (1: Informata, 2: Paketa, 3: Pagesa) */}
+        {/* Steps Progress Indicator (1: Informata, 2: Paketa, 3: Shërbimet, 4: Pagesa) */}
         <View className="flex-row justify-center items-center px-8 py-4 mb-4">
           <View className={`w-8 h-8 rounded-full items-center justify-center ${registerStep >= 1 ? 'bg-[#3473ef]' : 'bg-slate-200'}`}>
             {registerStep > 1 ? <Check size={16} color="white" strokeWidth={3} /> : <Text className="font-black text-xs text-white">1</Text>}
@@ -681,7 +717,11 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
           </View>
           <View className={`flex-1 h-0.5 mx-2 ${registerStep >= 3 ? 'bg-[#3473ef]' : 'bg-slate-300'}`} />
           <View className={`w-8 h-8 rounded-full items-center justify-center ${registerStep >= 3 ? 'bg-[#3473ef]' : 'bg-slate-200'}`}>
-            <Text className={`font-black text-xs ${registerStep >= 3 ? 'text-white' : 'text-slate-500'}`}>3</Text>
+            {registerStep > 3 ? <Check size={16} color="white" strokeWidth={3} /> : <Text className={`font-black text-xs ${registerStep >= 3 ? 'text-white' : 'text-slate-500'}`}>3</Text>}
+          </View>
+          <View className={`flex-1 h-0.5 mx-2 ${registerStep >= 4 ? 'bg-[#3473ef]' : 'bg-slate-300'}`} />
+          <View className={`w-8 h-8 rounded-full items-center justify-center ${registerStep >= 4 ? 'bg-[#3473ef]' : 'bg-slate-200'}`}>
+            <Text className={`font-black text-xs ${registerStep >= 4 ? 'text-white' : 'text-slate-500'}`}>4</Text>
           </View>
         </View>
 
@@ -710,30 +750,54 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
                   onBlur={() => setFocusedField(null)}
                 />
                 {fullName !== "" && (
-                  <Pressable onPress={() => setFullName("")} className="p-2">
+                  <TouchableOpacity onPress={() => setFullName("")} className="p-2">
                     <X size={16} color="#8789A3" />
-                  </Pressable>
+                  </TouchableOpacity>
                 )}
               </View>
 
-              <View className={`bg-white rounded-2xl px-4 h-14 flex-row items-center border ${focusedField === 'email' ? 'border-[#3473ef]' : 'border-slate-200'}`}>
-                <Mail size={20} color={focusedField === 'email' ? '#3473ef' : '#8789A3'} />
-                <TextInput
-                  placeholder="Email i biznesit"
-                  value={email}
-                  onChangeText={setEmail}
-                  className="flex-1 ml-3 font-bold text-[#161719] text-base"
-                  placeholderTextColor="#94A3B8"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  onFocus={() => setFocusedField('email')}
-                  onBlur={() => setFocusedField(null)}
-                />
-                {email !== "" && (
-                  <Pressable onPress={() => setEmail("")} className="p-2">
-                    <X size={16} color="#8789A3" />
-                  </Pressable>
+              <View>
+                <View className={`bg-white rounded-2xl px-4 h-14 flex-row items-center border ${
+                  email.length > 0 && isEmailValid(email)
+                    ? 'border-[#10b981]'
+                    : email.length > 0 && focusedField === 'email' && !isEmailValid(email)
+                    ? 'border-orange-400'
+                    : focusedField === 'email'
+                    ? 'border-[#3473ef]'
+                    : 'border-slate-200'
+                }`}>
+                  <Mail size={20} color={
+                    email.length > 0 && isEmailValid(email) ? '#10b981' :
+                    email.length > 0 && focusedField === 'email' && !isEmailValid(email) ? '#fb923c' :
+                    focusedField === 'email' ? '#3473ef' : '#8789A3'
+                  } />
+                  <TextInput
+                    placeholder="Email i biznesit"
+                    value={email}
+                    onChangeText={setEmail}
+                    className="flex-1 ml-3 font-bold text-[#161719] text-base"
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    onFocus={() => setFocusedField('email')}
+                    onBlur={() => setFocusedField(null)}
+                  />
+                  {email !== "" && isEmailValid(email) && (
+                    <View className="mr-2">
+                      <Check size={20} color="#10b981" strokeWidth={3} />
+                    </View>
+                  )}
+                  {email !== "" && (
+                    <TouchableOpacity onPress={() => setEmail("")} className="p-2">
+                      <X size={16} color="#8789A3" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+                {email !== "" && !isEmailValid(email) && focusedField === 'email' && (
+                  <Text className="text-orange-500 font-bold text-xs mt-1.5 ml-2">
+                    Kërkohet: @gmail.com, @outlook.com, ose @pronto.me
+                  </Text>
                 )}
               </View>
 
@@ -811,40 +875,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
                 }}
               />
 
-              {/* Multi-Category Selection Grid */}
-              <View className="mt-4">
-                <Text className="text-[11px] font-black text-[#8789A3] uppercase tracking-widest mb-4 ml-1">ZGJIDH PROFILIN E SALLONIT (1 ose më shumë)</Text>
-                <View className="flex-row flex-wrap justify-between">
-                  {ALBANIAN_CATEGORIES.map((cat) => {
-                    const isSelected = selectedCategories.includes(cat.name);
-                    const Icon = cat.icon;
-                    return (
-                      <TouchableOpacity
-                        key={cat.id}
-                        onPress={() => toggleCategory(cat.name)}
-                        activeOpacity={0.7}
-                        style={{ width: '31%', marginBottom: 12 }}
-                        className={`items-center justify-center py-4 rounded-[24px] border ${isSelected ? 'bg-[#3473ef]/10 border-[#3473ef]' : 'bg-white border-slate-100 shadow-sm shadow-slate-200'}`}
-                      >
-                        <View className={`w-10 h-10 rounded-full items-center justify-center mb-2 ${isSelected ? 'bg-[#3473ef]' : 'bg-slate-50'}`}>
-                          <Icon size={20} color={isSelected ? "white" : "#64748B"} strokeWidth={2.2} />
-                        </View>
-                        <Text
-                          numberOfLines={2}
-                          className={`text-center font-bold text-[10px] px-1 ${isSelected ? 'text-[#3473ef]' : 'text-slate-500'}`}
-                        >
-                          {cat.name}
-                        </Text>
-                        {isSelected && (
-                          <View className="absolute top-2 right-2 bg-[#3473ef] rounded-full p-0.5">
-                            <Check size={8} color="white" strokeWidth={5} />
-                          </View>
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
+              {/* Dynamic Categories Selection - MOVED TO STEP 3 */}
             </View>
 
             <Pressable
@@ -862,17 +893,80 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
               }}
               className="bg-[#3473ef] h-14 rounded-2xl items-center justify-center flex-row gap-2 mt-4 shadow-lg shadow-[#3473ef]/30 active:bg-blue-600"
             >
-              <Text className="text-white text-base font-black tracking-wide">Vazhdo te Paketa</Text>
+              <Text className="text-white text-base font-black tracking-wide">Vazhdo te Shërbimet</Text>
               <ChevronRight size={18} color="white" strokeWidth={3} />
             </Pressable>
           </View>
         )}
 
-        {/* STEP 2: Zgjidh Planin */}
+        {/* STEP 2: Zgjidh Shërbimet */}
         {registerStep === 2 && (
-          <View className="px-6 gap-y-5">
-            <View className="items-center mt-2">
-              <Text className="text-[11px] font-black text-[#8789A3] uppercase tracking-widest text-center mb-1">HAPI 2: ZGJIDH PLANIN TËND</Text>
+          <View className="px-6 flex-1 mt-2">
+            <View className="items-center mb-6">
+              <Text className="text-[11px] font-black text-[#8789A3] uppercase tracking-widest text-center mb-1">HAPI 2: SHËRBIMET E SALLONIT</Text>
+              <Text className="text-slate-500 text-xs font-bold text-center">Zgjidhni shërbimet që ofroni për klientët</Text>
+            </View>
+
+            <View className="flex-row flex-wrap justify-between">
+              {dbCategories.map((cat, i) => {
+                const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
+                const catSubIds = dbSubcategories.filter(s => s.category_id === cat.id).map(s => s.id);
+                const isSelected = catSubIds.some(id => selectedCategories.includes(id));
+
+                return (
+                  <View key={cat.id} className="items-center mb-6" style={{ width: '31%' }}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSelectedMainCategory(cat);
+                        setShowSubModal(true);
+                      }}
+                      activeOpacity={0.7}
+                      className={`w-full aspect-square rounded-[24px] items-center justify-center border shadow-sm mb-2 ${
+                        isSelected 
+                          ? 'bg-[#3473ef]/10 border-[#3473ef]' 
+                          : 'bg-white border-slate-200 shadow-slate-200'
+                      }`}
+                    >
+                      <IconComponent size={32} color={isSelected ? "#3473ef" : "#161719"} strokeWidth={1.5} />
+                      {isSelected && (
+                        <View className="absolute top-2 right-2 bg-[#3473ef] rounded-full p-0.5">
+                          <Check size={10} color="white" strokeWidth={4} />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                    <Text className={`text-[10px] text-center font-bold leading-3 ${isSelected ? 'text-[#3473ef]' : 'text-[#161719]'}`} numberOfLines={2}>
+                      {cat.name}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+
+            <Pressable
+              onPress={() => goToStep(3)}
+              disabled={selectedCategories.length === 0}
+              className={`h-16 rounded-2xl shadow-xl items-center justify-center flex-row gap-2 mt-8 ${
+                selectedCategories.length === 0 ? 'bg-slate-400' : 'bg-[#3473ef] shadow-[#3473ef]/30 active:bg-blue-600'
+              }`}
+            >
+              <Text className="text-white text-lg font-black tracking-wide">Vazhdo te Paketa</Text>
+              <ChevronRight size={20} color="white" strokeWidth={3} />
+            </Pressable>
+
+            <Pressable
+              onPress={() => goToStep(1)}
+              className="py-6 items-center"
+            >
+              <Text className="text-slate-500 font-black text-xs">← Kthehu te Informata Bazë</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {/* STEP 3: Zgjidh Planin */}
+        {registerStep === 3 && (
+          <View className="px-6 gap-y-5 mt-2">
+            <View className="items-center">
+              <Text className="text-[11px] font-black text-[#8789A3] uppercase tracking-widest text-center mb-1">HAPI 3: ZGJIDH PLANIN TËND</Text>
               <Text className="text-slate-500 text-xs font-bold text-center mb-4">Çmimet mujore pa kontratë pezulluese</Text>
             </View>
             
@@ -962,36 +1056,37 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
               })}
             </View>
 
-            {/* CONTINUE TO PADDLE PAYMENT BUTTON */}
             <Pressable
               onPress={handleStartPayment}
               disabled={preparingCheckout}
-              className={`h-16 rounded-2xl shadow-xl items-center justify-center flex-row gap-2 mt-4 ${preparingCheckout ? 'bg-slate-400' : 'bg-[#3473ef] shadow-[#3473ef]/30 active:bg-blue-600'}`}
+              className={`h-16 rounded-2xl shadow-xl items-center justify-center flex-row gap-2 mt-8 ${
+                preparingCheckout ? 'bg-slate-400' : 'bg-[#3473ef] shadow-[#3473ef]/30 active:bg-blue-600'
+              }`}
             >
               {preparingCheckout ? (
                 <ActivityIndicator color="white" />
               ) : (
                 <>
-                  <Text className="text-white text-lg font-black tracking-wide">Vazhdo te Pagesa me Paddle</Text>
+                  <Text className="text-white text-lg font-black tracking-wide">Vazhdo te Pagesa</Text>
                   <ChevronRight size={20} color="white" strokeWidth={3} />
                 </>
               )}
             </Pressable>
 
             <Pressable
-              onPress={() => goToStep(1)}
-              className="py-3 items-center"
+              onPress={() => goToStep(2)}
+              className="py-6 items-center"
             >
-              <Text className="text-slate-500 font-black text-xs">← Kthehu te Informata Bazë</Text>
+              <Text className="text-slate-500 font-black text-xs">← Kthehu te Shërbimet</Text>
             </Pressable>
           </View>
         )}
 
-        {/* STEP 3: Pagesa me Paddle */}
-        {registerStep === 3 && (
+        {/* STEP 4: Pagesa me Paddle */}
+        {registerStep === 4 && (
           <View className="flex-1" style={{ minHeight: Dimensions.get('window').height * 0.75 }}>
             <View className="px-6 items-center mt-2 mb-6">
-              <Text className="text-[11px] font-black text-[#8789A3] uppercase tracking-widest text-center mb-1">HAPI 3: PAGESA ME PADDLE</Text>
+              <Text className="text-[11px] font-black text-[#8789A3] uppercase tracking-widest text-center mb-1">HAPI 4: PAGESA ME PADDLE</Text>
               <Text className="text-slate-700 text-sm font-bold text-center">
                 Plani: <Text className="text-[#3473ef] font-black">{selectedPlan?.name || 'Duo'}</Text> ({getPriceDisplay(selectedPlan)}/{billingCycle === 'month' ? 'muaj' : 'vit'})
               </Text>
@@ -1001,17 +1096,18 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
               <PaddleCheckout
                 email={email}
                 transactionId={paddleTransactionId || undefined}
+                priceId={selectedPlan?.paddlePriceId?.[billingCycle]}
                 onSuccess={(data) => {
                   console.log("[RegisterScreen] Paddle success callback triggered");
                   handleAuthSubmit();
                 }}
-                onCancel={() => goToStep(2)}
+                onCancel={() => goToStep(3)}
               />
             </View>
 
             <View className="bg-white pb-8">
               <Pressable
-                onPress={() => goToStep(2)}
+                onPress={() => goToStep(3)}
                 className="py-6 items-center"
               >
                 <Text className="text-slate-400 font-black text-xs uppercase tracking-widest">Anulo dhe kthehu</Text>
@@ -1020,6 +1116,64 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
           </View>
         )}
       </ScrollView>
-    </KeyboardAvoidingView>
+
+      {/* Subcategory Modal */}
+      <Modal
+        visible={showSubModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowSubModal(false)}
+      >
+        <View className="flex-1 bg-black/50 justify-end">
+          <TouchableOpacity
+            className="absolute inset-0"
+            activeOpacity={1}
+            onPress={() => setShowSubModal(false)}
+          />
+          <View className="bg-white rounded-t-[32px] h-[75%] overflow-hidden flex-col">
+            <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mt-3 mb-2" />
+            <View className="flex-row items-center justify-between px-6 py-4 border-b border-slate-50">
+              <View className="flex-row items-center">
+                {selectedMainCategory && (
+                  React.createElement(CATEGORY_ICONS[selectedMainCategory.name] || Scissors, { size: 24, color: "#161719", className: "mr-3" })
+                )}
+                <Text className="text-xl font-black text-[#161719] ml-3">{selectedMainCategory?.name}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowSubModal(false)} className="p-2 bg-slate-100 rounded-full">
+                <X size={20} color="#161719" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 100 }} className="flex-1">
+              <Text className="text-sm font-bold text-[#8789A3] mb-4">Zgjidhni shërbimet (mund të zgjidhni më shumë se një):</Text>
+              
+              {selectedMainCategory && dbSubcategories.filter(s => s.category_id === selectedMainCategory.id).map((sub) => {
+                const isSelected = selectedCategories.includes(sub.id);
+                return (
+                  <TouchableOpacity
+                    key={sub.id}
+                    onPress={() => toggleCategory(sub.id)}
+                    className={`flex-row items-center py-4 border-b ${isSelected ? 'border-[#3473ef]/30' : 'border-slate-100'}`}
+                  >
+                    <View className={`w-6 h-6 rounded-md border items-center justify-center mr-3 ${isSelected ? 'bg-[#3473ef] border-[#3473ef]' : 'bg-white border-slate-300'}`}>
+                      {isSelected && <Check size={14} color="white" strokeWidth={3} />}
+                    </View>
+                    <Text className={`text-base flex-1 ${isSelected ? 'font-black text-[#3473ef]' : 'font-bold text-[#161719]'}`}>{sub.name}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            <View className="absolute bottom-0 left-0 right-0 p-6 bg-white border-t border-slate-50">
+              <TouchableOpacity
+                onPress={() => setShowSubModal(false)}
+                className="h-14 bg-black rounded-2xl items-center justify-center shadow-lg"
+              >
+                <Text className="text-white font-black text-lg">Ruaj Zgjedhjet</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 };

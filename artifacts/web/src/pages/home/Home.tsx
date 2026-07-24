@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { KOSOVO_CITIES } from "@/lib/kosovo-cities";
 import { useState, useEffect, useRef } from "react";
+import { supabase } from "@/lib/supabase";
 import { useListTopBarbershops, useListBarbershops, useListProducts } from "@workspace/api-client-react";
 import { useCart } from "@/context/CartContext";
 import { useToast } from "@/hooks/use-toast";
@@ -745,7 +746,7 @@ function ShopCard({ shop, index }: { shop: any; index: number }) {
             <div
               className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold backdrop-blur-sm ${
                 isOpen
-                  ? "bg-emerald-500/90 text-white"
+                  ? "bg-primary/90 text-white"
                   : "bg-black/60 text-white/60"
               }`}
             >
@@ -1607,11 +1608,11 @@ function HowItWorks() {
               className="absolute -bottom-4 -left-6 bg-card border border-border/60 rounded-2xl px-4 py-3 shadow-xl flex items-center gap-3 animate-float-slow"
               style={{ animationDelay: "1.5s" }}
             >
-              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                <Shield className="w-4 h-4 text-emerald-500" />
+              <div className="w-8 h-8 rounded-xl bg-primary/15 flex items-center justify-center">
+                <Shield className="w-4 h-4 text-primary" />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-emerald-600">
+                <p className="text-[10px] font-bold text-primary">
                   ✓ Takimi konfirmuar
                 </p>
                 <p className="text-[9px] text-muted-foreground mt-0.5">
@@ -1630,7 +1631,7 @@ function HowItWorks() {
 const CARD_ACCENTS = [
   { glow: "from-amber-500/20 to-orange-400/10",  border: "hover:border-amber-400/50",  iconBg: "bg-amber-500/15",  iconText: "text-amber-400" },
   { glow: "from-sky-500/20 to-blue-400/10",       border: "hover:border-sky-400/50",    iconBg: "bg-sky-500/15",    iconText: "text-sky-400" },
-  { glow: "from-emerald-500/20 to-green-400/10",  border: "hover:border-emerald-400/50",iconBg: "bg-emerald-500/15",iconText: "text-emerald-400" },
+  { glow: "from-blue-500/20 to-indigo-400/10",   border: "hover:border-blue-400/50",   iconBg: "bg-blue-500/15",   iconText: "text-blue-400" },
   { glow: "from-violet-500/20 to-purple-400/10",  border: "hover:border-violet-400/50", iconBg: "bg-violet-500/15", iconText: "text-violet-400" },
   { glow: "from-cyan-500/20 to-sky-400/10",       border: "hover:border-cyan-400/50",   iconBg: "bg-cyan-500/15",   iconText: "text-cyan-400" },
   { glow: "from-pink-500/20 to-rose-400/10",      border: "hover:border-pink-400/50",   iconBg: "bg-pink-500/15",   iconText: "text-pink-400" },
@@ -1675,7 +1676,6 @@ function GroomingProductCard({ product, index }: { product: any; index: number }
                 src={product.imageUrl}
                 alt={product.name}
                 className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
-                style={{ mixBlendMode: "multiply" }}
               />
             ) : (
               <div className={`w-20 h-20 rounded-2xl ${accent.iconBg} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
@@ -1857,11 +1857,37 @@ export default function Home() {
     citiesCount: number;
   } | null>(null);
 
+  const [supabaseShops, setSupabaseShops] = useState<any[]>([]);
+
   useEffect(() => {
     fetch("/api/stats/public")
       .then((r) => r.json())
       .then((d) => setPublicStats(d))
       .catch(() => {});
+
+    async function loadSupabaseShops() {
+      try {
+        const { data } = await supabase.from('barbershops').select('*');
+        if (data && data.length > 0) {
+          const mapped = data.map((b: any) => ({
+            id: String(b.id),
+            name: b.name,
+            address: b.address || b.city || "Kosovë",
+            city: b.city || "Prishtinë",
+            rating: Number(b.rating) || 5.0,
+            reviewCount: Number(b.total_reviews) || 12,
+            imageUrl: b.avatar || b.cover_image || "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800&q=80",
+            phone: b.phone || "+383 44 123 456",
+            openTime: "09:00",
+            closeTime: "20:00",
+          }));
+          setSupabaseShops(mapped);
+        }
+      } catch (e) {
+        console.warn("Home Supabase fetch note:", e);
+      }
+    }
+    loadSupabaseShops();
   }, []);
 
   const { data: topShopsData, isLoading: isLoadingTop } = useListTopBarbershops({
@@ -1874,11 +1900,10 @@ export default function Home() {
     city !== "all" ? { city, status: "active", limit: 50 } : { limit: 0 },
   );
 
-  const isLoading = city === "all" ? isLoadingTop : isLoadingCity;
-  const topShops =
-    city === "all"
-      ? (Array.isArray(topShopsData) ? topShopsData : [])
-      : (cityShopsData?.data ?? []);
+  const isLoading = city === "all" ? (isLoadingTop && supabaseShops.length === 0) : isLoadingCity;
+  const topShops = supabaseShops.length > 0 
+    ? (city !== "all" ? supabaseShops.filter(s => s.city.toLowerCase() === city.toLowerCase()) : supabaseShops)
+    : (city === "all" ? (Array.isArray(topShopsData) ? topShopsData : []) : (cityShopsData?.data ?? []));
 
   // Only show cities that actually have at least one active barbershop
   const availableCities = Array.from(
@@ -2176,10 +2201,10 @@ export default function Home() {
               icon={Users}
               index={2}
               color={{
-                bg: "bg-emerald-500/10",
-                text: "text-emerald-500",
-                border: "border-emerald-500/15 hover:border-emerald-500/40",
-                glow: "bg-emerald-400/20",
+                bg: "bg-sky-500/10",
+                text: "text-sky-500",
+                border: "border-sky-500/15 hover:border-sky-500/40",
+                glow: "bg-sky-400/20",
               }}
             />
             <StatCard
@@ -2411,25 +2436,25 @@ export default function Home() {
       <section
         id="disponueshem"
         className="py-24 relative overflow-hidden"
-        style={{ background: "linear-gradient(160deg, #0a1628 0%, #0d2137 40%, #071a14 75%, #050e0a 100%)" }}
+        style={{ background: "linear-gradient(160deg, #0a1628 0%, #0d2137 40%, #0a1c38 75%, #050d1a 100%)" }}
       >
         {/* Top divider */}
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
         {/* Ambient glow blobs */}
-        <div className="absolute -top-32 left-1/4 w-96 h-96 bg-emerald-500/8 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-emerald-600/6 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute top-1/2 left-0 w-64 h-64 bg-teal-500/5 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -top-32 left-1/4 w-96 h-96 bg-primary/8 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-blue-600/6 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-1/2 left-0 w-64 h-64 bg-cyan-500/5 rounded-full blur-2xl pointer-events-none" />
 
         <div className="container px-6 max-w-7xl mx-auto relative z-10">
           {/* Header */}
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-4">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-xs font-bold text-emerald-400 tracking-widest uppercase">I disponueshëm në</span>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-4">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              <span className="text-xs font-bold text-primary tracking-widest uppercase">I disponueshëm në</span>
             </div>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-white">
               Qyteti juaj është{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-blue-300">
                 i mbuluar
               </span>
             </h2>
@@ -2442,7 +2467,7 @@ export default function Home() {
         </div>
 
         {/* Bottom divider */}
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
       </section>
 
       {/* ── OWNER CTA ────────────────────────────────────── */}

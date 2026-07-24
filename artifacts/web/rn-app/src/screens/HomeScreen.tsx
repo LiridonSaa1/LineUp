@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, Dimensions, Linking } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, Dimensions, Linking, Modal } from "react-native";
 import { Scissors, MapPin, Search, ChevronDown, Heart, Star, Grid, Eye, Waves, Hand, Sparkles, Smile, User, Syringe, Zap, Shield, Check, ArrowRight, ArrowUpRight, Plus, ExternalLink, Megaphone } from "lucide-react-native";
 import { BlurView } from 'expo-blur';
 import Animated, {
@@ -8,19 +8,40 @@ import Animated, {
 } from "react-native-reanimated";
 import { supabase } from "@/config/supabase";
 
+import { X } from "lucide-react-native";
+
 const { width } = Dimensions.get("window");
+
+const CATEGORY_ICONS: Record<string, any> = {
+  'Flokë & Stilim': Scissors,
+  'Mjekër & Estetikë': User,
+  'Thonjtë': Hand,
+  'Grim & Bukuri': Smile,
+  'Kujdesi i Lëkurës': Shield,
+  'Spa & Relaks': Waves,
+  'Depilim': Zap,
+  'Raste të Veçanta': Sparkles
+};
 
 interface HomeScreenProps {
   onSelectShop: (shop: any) => void;
   onOpenLocation: () => void;
   onOpenSearch: () => void;
   onOpenAddAd: () => void;
-  selectedLocation?: string;
+  selectedLocation: string;
+  onSearch?: (query: string) => void;
+  onStartPlan?: (planId: string) => void;
 }
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLocation, onOpenSearch, onOpenAddAd, selectedLocation = "Lokacioni aktual" }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLocation, onOpenSearch, onOpenAddAd, selectedLocation = "Lokacioni aktual", onSearch, onStartPlan }) => {
   const [loading, setLoading] = useState(true);
   const [recommendedShops, setRecommendedShops] = useState<any[]>([]);
+  const [dbCategories, setDbCategories] = useState<any[]>([]);
+  const [dbSubcategories, setDbSubcategories] = useState<any[]>([]);
+  const [selectedMainCategory, setSelectedMainCategory] = useState<any | null>(null);
+  const [showSubModal, setShowSubModal] = useState(false);
+  const [selectedSubIds, setSelectedSubIds] = useState<string[]>([]);
+
   const [ads, setAds] = useState<any[]>([
     {
       business_name: "Vehees",
@@ -130,6 +151,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
         if (liveAds && liveAds.length > 0) {
           setAds(liveAds);
         }
+
+        const { data: catData } = await supabase.from('categories').select('*');
+        if (catData) setDbCategories(catData);
+        
+        const { data: subData } = await supabase.from('subcategories').select('*');
+        if (subData) setDbSubcategories(subData);
+
       } catch (e) {
         console.warn("Failed to load home data:", e);
       } finally {
@@ -178,7 +206,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
         </View>
         <View className="flex-row items-center bg-amber-50 px-2 py-1 rounded-lg">
           <Star size={12} color="#fbbf24" fill="#fbbf24" />
-          <Text className="text-[#161719] font-bold text-xs ml-1">{parseFloat(item.rating || "5.0").toFixed(1)}</Text>
+          <Text className="text-[#161719] font-bold text-xs ml-1">{parseFloat(item.rating || "0").toFixed(1)}</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -225,24 +253,28 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
       {/* ── CATEGORIES GRID ──────────────────────────── */}
       <View className="px-6 mt-4">
         <View className="flex-row flex-wrap justify-between">
-          {CATEGORIES.map((cat, i) => {
-            const Icon = cat.icon;
+          {dbCategories.map((cat, i) => {
+            const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
             return (
-              <View key={i} className="items-center mb-6" style={{ width: '18%' }}>
+              <View key={i} className="items-center mb-6" style={{ width: '22%' }}>
                 <View
                   className="overflow-hidden border border-white/60 shadow-sm mb-2"
-                  style={{ borderRadius: 28, backgroundColor: 'rgba(255, 255, 255, 0.2)' }}
+                  style={{ borderRadius: 28, backgroundColor: 'rgba(255, 255, 255, 0.4)' }}
                 >
-                  <BlurView intensity={30} tint="light" className="w-20 h-20 items-center justify-center">
+                  <BlurView intensity={30} tint="light" className="w-[70px] h-[70px] items-center justify-center">
                     <TouchableOpacity
                       activeOpacity={0.7}
                       className="items-center justify-center w-full h-full"
+                      onPress={() => {
+                        setSelectedMainCategory(cat);
+                        setShowSubModal(true);
+                      }}
                     >
-                      <Icon size={36} color="#161719" strokeWidth={1.8} />
+                      <IconComponent size={32} color="#161719" strokeWidth={1.5} />
                     </TouchableOpacity>
                   </BlurView>
                 </View>
-                <Text className="text-[10px] text-center font-bold text-[#161719] leading-3" numberOfLines={2}>{cat.name}</Text>
+                <Text className="text-[11px] text-center font-bold text-[#161719] leading-3" numberOfLines={2}>{cat.name}</Text>
               </View>
             );
           })}
@@ -263,7 +295,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
           className="rounded-[28px] overflow-hidden shadow-sm"
         >
           {ads.map((ad, i) => {
-            const isCleanBanner = ad.only_button || ad.onlyButton;
+            const isCleanBanner = ad.only_button || ad.onlyButton || ad.business_name === 'Vehees' || ad.business_name === 'noasim' || ad.business_name === 'Noasim';
             return (
               <TouchableOpacity
                 key={i}
@@ -324,6 +356,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
               employees="1 berber"
               desc="Ideale për berberët individualë"
               icon={User}
+              onPress={() => onStartPlan && onStartPlan('solo')}
             />
             <PricingCard
               title="Duo"
@@ -332,6 +365,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
               desc="Për ekipe të vogla prej dy personash"
               icon={Scissors}
               isPopular
+              onPress={() => onStartPlan && onStartPlan('duo')}
             />
             <View
               className="mr-4 bg-white overflow-hidden shadow-sm border border-slate-100"
@@ -383,7 +417,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
                   <Text className="text-[#3473ef]/60 text-[8px] font-black uppercase mt-2 text-center">Ndrysho numrin për të kalkuluar</Text>
                 </View>
 
-                <TouchableOpacity className="h-10 bg-black rounded-2xl items-center justify-center shadow-md active:scale-95 mt-auto">
+                <TouchableOpacity 
+                  onPress={() => onStartPlan && onStartPlan('team')}
+                  className="h-10 bg-black rounded-2xl items-center justify-center shadow-md active:scale-95 mt-auto"
+                >
                   <Text className="text-white font-black text-sm">Fillo Tani</Text>
                 </TouchableOpacity>
               </View>
@@ -469,11 +506,137 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectShop, onOpenLoca
       </View>
 
     </ScrollView>
+
+    {/* Subcategory Modal */}
+    <Modal
+      visible={showSubModal}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={() => setShowSubModal(false)}
+    >
+      <View className="flex-1 bg-black/50 justify-end">
+        <TouchableOpacity
+          className="absolute inset-0"
+          activeOpacity={1}
+          onPress={() => setShowSubModal(false)}
+        />
+        <View className="bg-white rounded-t-[32px] h-[75%] overflow-hidden flex-col">
+          <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mt-3 mb-2" />
+          <View className="flex-row items-center justify-between px-6 py-4 border-b border-slate-50">
+            <View className="flex-row items-center">
+              <Text className="text-xl font-black text-[#161719]">Shërbimet</Text>
+            </View>
+            <TouchableOpacity onPress={() => setShowSubModal(false)} className="p-2 bg-slate-100 rounded-full">
+              <X size={20} color="#161719" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Category Tabs */}
+          <View className="border-b border-slate-100">
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+              {dbCategories.map(cat => {
+                const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
+                const isSelected = selectedMainCategory?.id === cat.id;
+                return (
+                  <TouchableOpacity
+                    key={cat.id}
+                    onPress={() => setSelectedMainCategory(cat)}
+                    className={`flex-row items-center px-4 py-2 rounded-full mr-2 ${isSelected ? 'bg-[#161719]' : 'bg-slate-100'}`}
+                  >
+                    <IconComponent size={14} color={isSelected ? "white" : "#64748b"} />
+                    <Text className={`ml-2 text-sm font-bold ${isSelected ? 'text-white' : 'text-slate-500'}`}>{cat.name}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+
+          <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 100 }} className="flex-1">
+            <Text className="text-sm font-bold text-[#8789A3] mb-4">Zgjidhni shërbimet për këtë kategori:</Text>
+            
+            <TouchableOpacity
+              onPress={() => {
+                if (selectedMainCategory) {
+                  const currentCategorySubIds = dbSubcategories
+                    .filter(s => s.category_id === selectedMainCategory.id)
+                    .map(s => s.id);
+                  
+                  setSelectedSubIds(prev => {
+                    const allSelected = currentCategorySubIds.every(id => prev.includes(id));
+                    if (allSelected) {
+                      // If all are selected, unselect them
+                      return prev.filter(id => !currentCategorySubIds.includes(id));
+                    } else {
+                      // Select all
+                      const newSelection = [...prev];
+                      currentCategorySubIds.forEach(id => {
+                        if (!newSelection.includes(id)) newSelection.push(id);
+                      });
+                      return newSelection;
+                    }
+                  });
+                }
+              }}
+              className={`rounded-2xl py-4 items-center mb-4 border ${!selectedMainCategory || dbSubcategories.filter(s => s.category_id === selectedMainCategory?.id).every(s => selectedSubIds.includes(s.id)) ? 'bg-[#3473ef]/10 border-[#3473ef]' : 'bg-slate-50 border-slate-200'}`}
+            >
+              <Text className={`font-black text-base ${!selectedMainCategory || dbSubcategories.filter(s => s.category_id === selectedMainCategory?.id).every(s => selectedSubIds.includes(s.id)) ? 'text-[#3473ef]' : 'text-[#64748b]'}`}>Të gjitha në këtë kategori</Text>
+            </TouchableOpacity>
+
+            {selectedMainCategory && dbSubcategories.filter(s => s.category_id === selectedMainCategory.id).map((sub) => {
+              const isSelected = selectedSubIds.includes(sub.id);
+              return (
+                <TouchableOpacity
+                  key={sub.id}
+                  onPress={() => {
+                    setSelectedSubIds(prev =>
+                      prev.includes(sub.id) ? prev.filter(id => id !== sub.id) : [...prev, sub.id]
+                    );
+                  }}
+                  className={`flex-row items-center py-4 border-b ${isSelected ? 'border-[#3473ef]/30' : 'border-slate-100'}`}
+                >
+                  <View className={`w-6 h-6 rounded-md border items-center justify-center mr-3 ${isSelected ? 'bg-[#3473ef] border-[#3473ef]' : 'bg-white border-slate-300'}`}>
+                    {isSelected && <Check size={14} color="white" strokeWidth={3} />}
+                  </View>
+                  <Text className={`text-base flex-1 ${isSelected ? 'font-black text-[#3473ef]' : 'font-bold text-[#161719]'}`}>{sub.name}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+
+          {/* Sticky Bottom Button */}
+          <View className="absolute bottom-0 left-0 right-0 p-6 bg-white border-t border-slate-50">
+            <TouchableOpacity
+              onPress={() => {
+                setShowSubModal(false);
+                let queryText = "";
+                if (selectedSubIds.length > 0) {
+                  const selectedNames = dbSubcategories
+                    .filter(s => selectedSubIds.includes(s.id))
+                    .map(s => s.name);
+                  queryText = selectedNames.join(", ");
+                } else {
+                  queryText = selectedMainCategory?.name || "";
+                }
+                
+                if (onSearch && queryText) {
+                  onSearch(queryText);
+                }
+              }}
+              className="h-14 bg-black rounded-2xl items-center justify-center shadow-lg"
+            >
+              <Text className="text-white font-black text-lg">
+                Kërko {selectedSubIds.length > 0 ? `(${selectedSubIds.length})` : ''}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
   </View>
 );
 };
 
-const PricingCard = ({ title, price, employees, desc, icon: Icon, isPopular = false }: any) => (
+const PricingCard = ({ title, price, employees, desc, icon: Icon, isPopular = false, onPress }: any) => (
   <View
     className="mr-4 bg-white overflow-hidden shadow-sm border border-slate-100"
     style={{ width: (width - 48) * 0.7, borderRadius: 28, height: 185 }}
@@ -509,7 +672,10 @@ const PricingCard = ({ title, price, employees, desc, icon: Icon, isPopular = fa
         </View>
       </View>
 
-      <TouchableOpacity className="h-10 bg-black rounded-2xl items-center justify-center shadow-md active:scale-95 mt-auto">
+      <TouchableOpacity 
+        onPress={onPress}
+        className="h-10 bg-black rounded-2xl items-center justify-center shadow-md active:scale-95 mt-auto"
+      >
         <Text className="text-white font-black text-sm">Fillo Tani</Text>
       </TouchableOpacity>
     </View>

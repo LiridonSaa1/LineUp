@@ -14,6 +14,26 @@ import { supabase } from '@/config/supabase';
 const { width, height } = Dimensions.get('window');
 const USER_ID = 'demo_user_123'; // Placeholder until Auth is implemented
 
+const KOSOVO_CITIES = [
+  { city: "Ferizaj" },
+  { city: "Prishtinë" },
+  { city: "Prizren" },
+  { city: "Pejë" },
+  { city: "Gjakovë" },
+  { city: "Gjilan" },
+  { city: "Mitrovicë" },
+  { city: "Vushtrri" },
+  { city: "Podujevë" },
+  { city: "Fushë Kosovë" },
+  { city: "Rahovec" },
+  { city: "Skënderaj" },
+  { city: "Lipjan" },
+  { city: "Suharekë" },
+  { city: "Deçan" },
+  { city: "Istog" },
+  { city: "Klinë" },
+];
+
 // IMPORTANT: Replace this with your actual Google Maps API Key
 const GOOGLE_MAPS_KEY = 'AIzaSyD9DOb-ko2C84TUlBVuPVILNaf3Jhkl-yg';
 
@@ -257,6 +277,29 @@ export const LocationScreen: React.FC<LocationScreenProps> = ({ onBack, onSelect
                   ))}
                 </View>
               )}
+
+              {/* Main Cities Section */}
+              <View className="mb-8">
+                <Text className="text-xl font-bold text-[#161719] mb-4">Qytetet</Text>
+                <View className="bg-white rounded-3xl p-2 border border-slate-100">
+                  {KOSOVO_CITIES.map((item, index) => (
+                    <TouchableOpacity
+                      key={item.city}
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        handleSelect(item.city);
+                      }}
+                      className={`flex-row items-center py-4 px-3 ${index !== KOSOVO_CITIES.length - 1 ? 'border-b border-slate-50' : ''}`}
+                    >
+                      <MapPin size={20} color="#8789A3" />
+                      <Text className="flex-1 ml-3 text-base font-bold text-[#161719]">
+                        {item.city}
+                      </Text>
+                      <ChevronRight size={18} color="#cbd5e1" />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
             </View>
           ) : (
              <View className="mb-10">
