@@ -102,7 +102,10 @@ export default function App() {
   const [user, setUser] = React.useState<any>(null);
   const [cityFilter, setCityFilter] = React.useState("Të gjitha");
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [searchCategoryName, setSearchCategoryName] = React.useState("");
   const [searchSubIds, setSearchSubIds] = React.useState<string[]>([]);
+  const [searchDate, setSearchDate] = React.useState("Anytime");
+  const [searchTime, setSearchTime] = React.useState("Anytime");
   const [searchCoords, setSearchCoords] = React.useState<{ lat?: number; lng?: number }>({});
   const [showLocation, setShowLocation] = React.useState(false);
   const [showSearch, setShowSearch] = React.useState(false);
@@ -213,14 +216,21 @@ export default function App() {
     setActiveTab(1); // Switch to Explore/Search tab
   };
 
-  const handleSearch = (filters: { query: string; city: string; lat?: number; lng?: number; subIds?: string[] }) => {
+  const handleSearch = (filters: { query: string; city: string; lat?: number; lng?: number; subIds?: string[]; categoryName?: string; date?: string; time?: string; shouldClose?: boolean }) => {
     if (filters.subIds) setSearchSubIds(filters.subIds);
     setSearchQuery(filters.query);
+    setSearchCategoryName(filters.categoryName || "");
+    setSearchDate(filters.date || "Anytime");
+    setSearchTime(filters.time || "Anytime");
     setCityFilter(filters.city);
     setSearchCoords({ lat: filters.lat, lng: filters.lng });
     setSelectedLocation(filters.city);
-    setShowSearch(false);
-    setActiveTab(1); // Switch to Explore tab
+
+    if (filters.shouldClose !== false) {
+      setShowSearch(false);
+      setActiveTab(1); // Switch to Explore tab
+    }
+
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
@@ -235,13 +245,6 @@ export default function App() {
 
   const onTabPress = (index: number) => {
     setActiveTab(index);
-    if (index === 1) {
-      setSearchQuery("");
-      setSearchSubIds([]);
-      setCityFilter("Të gjitha");
-      setSearchCoords(undefined);
-      setSelectedLocation("Lokacioni aktual");
-    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
@@ -268,7 +271,12 @@ export default function App() {
         ) : (
           <>
             {selectedShop ? (
-              <BarberDetailScreen shop={selectedShop} onBack={() => setSelectedShop(null)} />
+              <BarberDetailScreen
+                shop={selectedShop}
+                user={user}
+                onLogin={(userData) => setUser(userData)}
+                onBack={() => setSelectedShop(null)}
+              />
             ) : (
               <View className="flex-1">
                 {activeTab === 0 && (
@@ -278,7 +286,7 @@ export default function App() {
                     onOpenSearch={() => setShowSearch(true)}
                     onOpenAddAd={() => setShowAddAd(true)}
                     selectedLocation={selectedLocation}
-                    onSearch={(query, subIds) => handleSearch({ query, city: selectedLocation, subIds })}
+                    onSearch={(query, subIds, categoryName) => handleSearch({ query, city: selectedLocation, subIds, categoryName })}
                     onStartPlan={(planId) => {
                       setSelectedPlanId(planId);
                       setShowRegisterShop(true);
@@ -295,6 +303,7 @@ export default function App() {
                     initialCity={cityFilter}
                     initialSearch={searchQuery}
                     initialCoords={searchCoords}
+                    initialCategoryName={searchCategoryName}
                   />
                 )}
                 {activeTab === 2 && (
@@ -374,6 +383,11 @@ export default function App() {
                     currentLocation={selectedLocation}
                     categories={categories}
                     subcategories={subcategories}
+                    initialQuery={searchQuery}
+                    initialDate={searchDate}
+                    initialTime={searchTime}
+                    initialSubIds={searchSubIds}
+                    initialCategoryName={searchCategoryName}
                   />
                 </View>
               </View>

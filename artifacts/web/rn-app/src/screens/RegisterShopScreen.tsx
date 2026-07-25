@@ -37,8 +37,7 @@ export const RegisterShopScreen: React.FC<RegisterShopScreenProps> = ({ onClose,
         .upsert({
           email: cleanEmail,
           name: shopName,
-          role: 'owner',
-          password_hash: 'temp_pass'
+          role: 'owner'
         })
         .select()
         .single();
@@ -59,7 +58,8 @@ export const RegisterShopScreen: React.FC<RegisterShopScreenProps> = ({ onClose,
         longitude: selectedPlace.lng,
         status: 'active',
         rating: 0,
-        total_reviews: 0
+        total_reviews: 0,
+        category: category
       });
 
       if (!error) {
