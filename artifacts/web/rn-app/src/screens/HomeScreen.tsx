@@ -81,7 +81,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       only_button: true
     }
   ]);
-  const recommendedScrollRef = useRef<ScrollView>(null);
+  const recommendedScrollRef = useRef<any>(null);
   const newToLineUpScrollRef = useRef<ScrollView>(null);
   const adsScrollRef = useRef<ScrollView>(null);
   const autoScrollIndex = useRef(0);

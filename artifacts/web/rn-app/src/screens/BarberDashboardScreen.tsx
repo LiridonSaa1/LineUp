@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, Dimensions, ActivityIndicator, Platform, Alert, Switch, TextInput } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, Dimensions, ActivityIndicator, Platform, Alert, Switch, TextInput, Modal } from 'react-native';
 import {
   Users,
   Calendar,
@@ -47,6 +47,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { uploadFile } from '../utils/storage';
 import { PaddleCheckout } from '../components/PaddleCheckout';
 import { createPaddleTransaction } from '../config/paddle';
+import { getShopPlanDetails } from '../utils/planLimits';
 
 const { width } = Dimensions.get('window');
 
@@ -183,19 +184,14 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
       }
       setRealShopId(sId);
 
-      // Fetch Plan & Limit
-      const { data: subData } = await supabase
-        .from('subscriptions')
-        .select('product_id, employee_limit')
-        .eq('customer_id', user.id) // Or use a way to link customer to shop
-        .maybeSingle();
-
-      if (subData) {
-        setCurrentPlan(subData.product_id);
-        setEmployeeLimit(subData.employee_limit || (subData.product_id === 'solo' ? 1 : subData.product_id === 'duo' ? 2 : 100));
+      // Fetch Plan & Limit for this specific barbershop
+      if (sId) {
+        const planInfo = await getShopPlanDetails(sId);
+        setCurrentPlan(planInfo.planId);
+        setEmployeeLimit(planInfo.maxBarbers);
       } else {
-        // Fallback for demo
-        setEmployeeLimit(user.role === 'owner' ? 2 : 1);
+        setCurrentPlan('solo');
+        setEmployeeLimit(1);
       }
 
       const { data: dbBarbers } = await supabase.from('barbers').select('*').eq('shop_id', sId);
@@ -238,7 +234,7 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
   const handleAddPortfolioPhoto = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         quality: 0.7,
       });
@@ -248,15 +244,35 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
         const publicUrl = await uploadFile(result.assets[0].uri);
         const newPhoto = { url: publicUrl, category: selectedPhotoCategory };
         const updated = [...portfolioPhotos, newPhoto];
+        const photoUrlsArray = updated.map(p => typeof p === 'string' ? p : p.url);
 
-        const { error } = await supabase
+        // Update 'barbershops' table in Supabase
+        let { error } = await supabase
           .from('barbershops')
-          .update({ portfolio_urls: updated })
+          .update({
+            portfolio_urls: updated,
+            photos: photoUrlsArray
+          })
           .eq('id', realShopId);
 
-        if (error) throw error;
+        if (error) {
+          // Fallback if one of the columns doesn't exist in Supabase schema
+          const { error: err2 } = await supabase
+            .from('barbershops')
+            .update({ portfolio_urls: updated })
+            .eq('id', realShopId);
+
+          if (err2) {
+            const { error: err3 } = await supabase
+              .from('barbershops')
+              .update({ photos: photoUrlsArray })
+              .eq('id', realShopId);
+            if (err3) throw err3;
+          }
+        }
+
         setPortfolioPhotos(updated);
-        Alert.alert("Sukses", "Fotoja u shtua në portofol.");
+        Alert.alert("Sukses", "Fotoja u shtua me sukses në tabelën e berberisë!");
       }
     } catch (e: any) {
       Alert.alert("Gabim", "Dështoi shtimi i fotos: " + e.message);
@@ -268,13 +284,29 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
   const handleDeletePortfolioPhoto = async (index: number) => {
     setSavingPortfolio(true);
     const updated = portfolioPhotos.filter((_, i) => i !== index);
+    const photoUrlsArray = updated.map(p => typeof p === 'string' ? p : p.url);
     try {
-      const { error } = await supabase
+      let { error } = await supabase
         .from('barbershops')
-        .update({ portfolio_urls: updated })
+        .update({
+          portfolio_urls: updated,
+          photos: photoUrlsArray
+        })
         .eq('id', realShopId);
 
-      if (error) throw error;
+      if (error) {
+        const { error: err2 } = await supabase
+          .from('barbershops')
+          .update({ portfolio_urls: updated })
+          .eq('id', realShopId);
+        if (err2) {
+          await supabase
+            .from('barbershops')
+            .update({ photos: photoUrlsArray })
+            .eq('id', realShopId);
+        }
+      }
+
       setPortfolioPhotos(updated);
     } catch (e: any) {
       Alert.alert("Gabim", "Dështoi fshirja e fotos.");
@@ -286,7 +318,7 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
   const handleUpdateShopImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [16, 9],
         quality: 0.8,
@@ -303,7 +335,7 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
 
         if (error) throw error;
         setShopImageUrl(publicUrl);
-        Alert.alert("Sukses", "Fotoja e kartelës u përditësua.");
+        Alert.alert("Sukses", "Fotoja e kartelës u ruajt në Supabase (tabela barbershops).");
       }
     } catch (e: any) {
       Alert.alert("Gabim", "Dështoi përditësimi i fotos së kartelës: " + e.message);
@@ -327,7 +359,6 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
     setIsPreparingUpgrade(true);
 
     try {
-      console.log(`[Dashboard] Triggering direct upgrade to ${nextPlanId}...`);
       const res = await createPaddleTransaction({
         email: user.email,
         planId: nextPlanId,
@@ -465,22 +496,31 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
                 <View className="flex-row justify-between items-center mb-6 px-1">
                   <View>
                     <Text className="text-xl font-black text-[#161719]">Ekipi juaj</Text>
-                    <Text className="text-slate-400 font-bold text-xs">{employees.length} profesionistë aktivë</Text>
+                    <Text className="text-slate-400 font-bold text-xs">
+                      {employees.length}/{employeeLimit} berberë • Plani {(currentPlan || 'solo').toUpperCase()}
+                    </Text>
                   </View>
                   <TouchableOpacity
-                    onPress={() => {
-                      if (employees.length >= employeeLimit) {
-                        Alert.alert(
-                          "Limit i Arritur",
-                          "Keni arritur limitin e berberëve. Duhet ta bësh upgrade për të vazhduar.",
-                          [
-                            { text: "Anulo", style: "cancel" },
-                            { text: "Nrregull", onPress: triggerUpgradeFlow }
-                          ]
-                        );
-                      } else {
-                        setShowAddStaffModal(true);
+                    onPress={async () => {
+                      const sId = realShopId || user?.id;
+                      if (sId) {
+                        const planInfo = await getShopPlanDetails(sId);
+                        setCurrentPlan(planInfo.planId);
+                        setEmployeeLimit(planInfo.maxBarbers);
+
+                        if (employees.length >= planInfo.maxBarbers) {
+                          Alert.alert(
+                            "Limit i Arritur",
+                            `Plani juaj aktiv (${planInfo.planName}) lejon vetëm ${planInfo.maxBarbers} berber(ë).\nAktualisht keni ${employees.length} berber(ë). A dëshironi ta përmirësoni planin (Upgrade)?`,
+                            [
+                              { text: "Anulo", style: "cancel" },
+                              { text: "Përmirëso Planin", onPress: triggerUpgradeFlow }
+                            ]
+                          );
+                          return;
+                        }
                       }
+                      setShowAddStaffModal(true);
                     }}
                     className="w-12 h-12 bg-[#3473ef] rounded-2xl items-center justify-center shadow-lg shadow-[#3473ef]/30"
                   >

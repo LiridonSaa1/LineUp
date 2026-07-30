@@ -14,6 +14,9 @@ import { withTiming } from "react-native-reanimated";
 import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BlurView } from 'expo-blur';
 import { supabase } from "@/config/supabase";
+import { GoogleMap, LoadScript, Marker as WebMarker } from '@react-google-maps/api';
+
+const GOOGLE_MAPS_KEY = 'AIzaSyD9DOb-ko2C84TUlBVuPVILNaf3Jhkl-yg';
 
 let MapView: any = null;
 let Marker: any = null;
@@ -26,7 +29,7 @@ if (Platform.OS !== 'web') {
     Marker = Maps.Marker;
     PROVIDER_GOOGLE = Maps.PROVIDER_GOOGLE;
   } catch (e) {
-    console.warn('react-native-maps error:', e);
+    // Suppress warning
   }
 }
 
@@ -88,6 +91,55 @@ interface ExploreScreenProps {
   onToggleFavorite?: (shop: any) => void;
 }
 
+const INITIAL_REGION = {
+  latitude: 42.6629,
+  longitude: 21.1655,
+  latitudeDelta: 0.1,
+  longitudeDelta: 0.1,
+};
+
+const WebMapView = ({ shops, onSelectShop }: { shops: any[], onSelectShop: (shop: any) => void }) => {
+  const containerStyle = {
+    width: '100%',
+    height: '100%'
+  };
+
+  return (
+    <LoadScript googleMapsApiKey={GOOGLE_MAPS_KEY}>
+      <GoogleMap
+        mapContainerStyle={containerStyle}
+        center={{ lat: INITIAL_REGION.latitude, lng: INITIAL_REGION.longitude }}
+        zoom={9}
+        options={{
+          styles: mapStyle,
+          mapTypeId: 'satellite',
+          disableDefaultUI: true,
+          zoomControl: true,
+        }}
+      >
+        {shops.map((shop, index) => {
+          const baseCoords = (shop.latitude && shop.longitude)
+            ? { lat: shop.latitude, lng: shop.longitude }
+            : getCoordsForCity(shop.city) || CITY_COORDS["Prishtinë"];
+
+          const isFallback = !shop.latitude || !shop.longitude;
+          const lat = baseCoords.lat + (isFallback ? (index % 10) * 0.001 : 0);
+          const lng = baseCoords.lng + (isFallback ? (Math.floor(index / 10)) * 0.001 : 0);
+
+          return (
+            <WebMarker
+              key={shop.id}
+              position={{ lat, lng }}
+              title={shop.name}
+              onClick={() => onSelectShop(shop)}
+            />
+          );
+        })}
+      </GoogleMap>
+    </LoadScript>
+  );
+};
+
 export const ExploreScreen: React.FC<ExploreScreenProps> = ({
   onSelectShop,
   onOpenSearch,
@@ -115,7 +167,6 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
     const cleanCity = normalizeCity(initialCity);
     if (cleanCity && cleanCity !== normalizeCity("të gjitha") && cleanCity !== normalizeCity("lokacioni aktual")) {
       result = result.filter(shop => normalizeCity(shop.city) === cleanCity);
-      console.log("[ExploreScreen] After City filter:", result.length);
     }
 
     // 2. Filter by subcategory IDs (initialSubIds) or Category Name
@@ -134,7 +185,6 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
 
         return matchesSubId || matchesCategory;
       });
-      console.log("[ExploreScreen] After Category/Subcategories filter:", result.length);
     }
 
     // 3. Filter by Search Query (name, city, address)
@@ -146,14 +196,12 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
         const addressMatch = shop.address?.toLowerCase().includes(cleanSearch);
         return nameMatch || cityMatch || addressMatch;
       });
-      console.log("[ExploreScreen] After Search filter:", result.length);
     }
 
-    console.log("[ExploreScreen] Final filtered shops count:", result.length);
     setFilteredShops(result);
   }, [shops, initialCity, initialSearch, initialSubIds]);
 
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<any>(null);
 
   const translateY = useSharedValue(height - SHEET_MIN_HEIGHT);
   const context = useSharedValue(0);
@@ -283,17 +331,14 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
     loadShops();
   }, []);
 
-  const INITIAL_REGION = {
-    latitude: 42.6629,
-    longitude: 21.1655,
-    latitudeDelta: 0.1,
-    longitudeDelta: 0.1,
-  };
-
   return (
     <GestureHandlerRootView className="flex-1">
       {/* ── MAP LAYER ────────────────────────────────────── */}
-      {Platform.OS === 'web' || !MapView ? (
+      {Platform.OS === 'web' ? (
+        <View style={{ width, height, position: 'absolute', inset: 0 }}>
+          <WebMapView shops={filteredShops} onSelectShop={handleMarkerPress} />
+        </View>
+      ) : !MapView ? (
         <View style={{ width, height, backgroundColor: '#0f172a' }} className="flex-1 items-center justify-center p-6">
           <MapIcon size={48} color="#60a5fa" />
           <Text className="text-white font-black text-xl mt-3">Harta e Berberive në Kosovë</Text>

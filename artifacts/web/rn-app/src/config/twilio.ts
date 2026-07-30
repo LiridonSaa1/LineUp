@@ -1,8 +1,17 @@
-const TWILIO_ACCOUNT_SID = process.env.EXPO_PUBLIC_TWILIO_ACCOUNT_SID || "";
-const TWILIO_AUTH_TOKEN = process.env.EXPO_PUBLIC_TWILIO_AUTH_TOKEN || "";
 const TWILIO_VERIFY_SERVICE_SID = process.env.EXPO_PUBLIC_TWILIO_VERIFY_SERVICE_SID || "";
 
-const base64Auth = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
+const getAuthHeader = () => {
+  const accountSid = process.env.EXPO_PUBLIC_TWILIO_ACCOUNT_SID || "";
+  const authToken = process.env.EXPO_PUBLIC_TWILIO_AUTH_TOKEN || "";
+  const credentials = `${accountSid}:${authToken}`;
+  let encoded = "";
+  if (typeof btoa === "function") {
+    encoded = btoa(credentials);
+  } else if (typeof Buffer !== "undefined") {
+    encoded = Buffer.from(credentials).toString("base64");
+  }
+  return `Basic ${encoded}`;
+};
 
 export const sendTwilioOTP = async (phoneNumber: string) => {
   try {
@@ -14,7 +23,7 @@ export const sendTwilioOTP = async (phoneNumber: string) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': `Basic ${base64Auth}`,
+          'Authorization': getAuthHeader(),
         },
         body: new URLSearchParams({
           To: formattedPhone,
@@ -44,7 +53,7 @@ export const verifyTwilioOTP = async (phoneNumber: string, code: string) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': `Basic ${base64Auth}`,
+          'Authorization': getAuthHeader(),
         },
         body: new URLSearchParams({
           To: formattedPhone,

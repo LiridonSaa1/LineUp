@@ -3,6 +3,8 @@ import { View, Text, TouchableOpacity, TextInput, ScrollView, ActivityIndicator,
 import { X, Megaphone, MapPin, Camera, Check, ChevronDown, Info, Search, Building2, Calendar, Sparkles, Zap, Award } from 'lucide-react-native';
 import { AddressAutocomplete } from '../components/AddressAutocomplete';
 import { supabase } from '@/config/supabase';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadFile } from '../utils/storage';
 
 const { width, height } = Dimensions.get("window");
 const GOOGLE_MAPS_KEY = 'AIzaSyD9DOb-ko2C84TUlBVuPVILNaf3Jhkl-yg';
@@ -71,35 +73,24 @@ export const AddAdModal: React.FC<AddAdModalProps> = ({ onClose, onSuccess }) =>
 
   const filteredCities = CITIES.filter(c => c.toLowerCase().includes(citySearch.toLowerCase()));
 
-  const handlePickImage = () => {
-    // Allows selecting from gallery or high-res demo banners
-    const sampleBanners = [
-      "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=1000&auto=format&fit=crop&q=80",
-      "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1000&auto=format&fit=crop&q=80",
-      "https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=1000&auto=format&fit=crop&q=80",
-      "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1000&auto=format&fit=crop&q=80"
-    ];
+  const handlePickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [2, 1],
+        quality: 0.8,
+      });
 
-    if (typeof document !== 'undefined') {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'image/*';
-      input.onchange = (e: any) => {
-        const file = e.target?.files?.[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            if (event.target?.result) {
-              setAdImage(event.target.result as string);
-            }
-          };
-          reader.readAsDataURL(file);
-        }
-      };
-      input.click();
-    } else {
-      const randomBanner = sampleBanners[Math.floor(Math.random() * sampleBanners.length)];
-      setAdImage(randomBanner);
+      if (!result.canceled && result.assets[0].uri) {
+        setLoading(true);
+        const publicUrl = await uploadFile(result.assets[0].uri);
+        setAdImage(publicUrl);
+        setLoading(false);
+      }
+    } catch (e: any) {
+      Alert.alert("Gabim", "Dështoi ngarkimi i fotos: " + e.message);
+      setLoading(false);
     }
   };
 
@@ -116,6 +107,7 @@ export const AddAdModal: React.FC<AddAdModalProps> = ({ onClose, onSuccess }) =>
         longitude: selectedPlace.lng,
         plan_id: selectedPlan.id,
         price: parseFloat(selectedPlan.price.replace('€', '')),
+        image_url: adImage,
         status: 'pending'
       });
 

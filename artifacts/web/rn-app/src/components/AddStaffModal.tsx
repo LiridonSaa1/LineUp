@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, TextInput, Modal, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Keyboard } from 'react-native';
-import { X, User, Mail, Lock, ShieldCheck, Check, Briefcase } from 'lucide-react-native';
+import { X, User, Mail, Lock, ShieldCheck, Check, Briefcase, Award } from 'lucide-react-native';
 import { supabase } from '@/config/supabase';
 import { createClient } from '@supabase/supabase-js';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
+import { getShopPlanDetails, ShopPlanDetails } from '../utils/planLimits';
 
 // Secondary client to perform admin/Auth operations using service_role key
 const SUPABASE_URL = 'https://cnlhqxegzphtlvtgijuj.supabase.co';
@@ -31,7 +32,7 @@ export const AddStaffModal: React.FC<AddStaffModalProps> = ({
   onClose,
   shopId,
   onSuccess,
-  employeeLimit = 100,
+  employeeLimit = 1,
   currentStaffCount = 0
 }) => {
   const [loading, setLoading] = useState(false);
@@ -40,12 +41,28 @@ export const AddStaffModal: React.FC<AddStaffModalProps> = ({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [planDetails, setPlanDetails] = useState<ShopPlanDetails | null>(null);
+
+  useEffect(() => {
+    if (visible && shopId) {
+      getShopPlanDetails(shopId).then(details => {
+        setPlanDetails(details);
+      });
+    }
+  }, [visible, shopId]);
 
   const handleAddStaff = async () => {
     Keyboard.dismiss();
 
-    if (currentStaffCount >= employeeLimit) {
-      Alert.alert("Limit i Arritur", `Paketa juaj lejon vetëm ${employeeLimit} berberë. Ju lutem kaloni në një paketë më të lartë.`);
+    // Check active plan rule directly for this barbershop
+    const latestPlanDetails = await getShopPlanDetails(shopId);
+    setPlanDetails(latestPlanDetails);
+
+    if (!latestPlanDetails.canAddBarber || latestPlanDetails.currentBarberCount >= latestPlanDetails.maxBarbers) {
+      Alert.alert(
+        "Limit i Arritur",
+        `Plani juaj aktiv (${latestPlanDetails.planName}) lejon vetëm ${latestPlanDetails.maxBarbers} berber(ë).\nAktualisht keni ${latestPlanDetails.currentBarberCount} berber(ë). Ju lutem bëni upgrade planin tuaj për të shtuar berberë të tjerë.`
+      );
       return;
     }
 
@@ -181,7 +198,7 @@ export const AddStaffModal: React.FC<AddStaffModalProps> = ({
         >
           <View className="w-12 h-1.5 bg-slate-100 rounded-full self-center mb-8" />
 
-          <View className="flex-row justify-between items-center mb-8">
+          <View className="flex-row justify-between items-center mb-6">
             <View>
               <Text className="text-3xl font-black text-[#161719] tracking-tight">Shto Staf</Text>
               <Text className="text-slate-400 font-bold text-sm mt-1">Zgjero ekipin tënd sot</Text>
@@ -193,6 +210,24 @@ export const AddStaffModal: React.FC<AddStaffModalProps> = ({
               <X size={24} color="#161719" strokeWidth={2.5} />
             </TouchableOpacity>
           </View>
+
+          {planDetails && (
+            <View className={`p-4 rounded-2xl mb-6 flex-row items-center justify-between border ${planDetails.canAddBarber ? 'bg-blue-50/60 border-blue-100' : 'bg-rose-50 border-rose-100'}`}>
+              <View className="flex-row items-center flex-1">
+                <View className={`w-8 h-8 rounded-xl items-center justify-center mr-3 ${planDetails.canAddBarber ? 'bg-[#3473ef]/10' : 'bg-rose-500/10'}`}>
+                  <Award size={16} color={planDetails.canAddBarber ? '#3473ef' : '#ef4444'} />
+                </View>
+                <View className="flex-1">
+                  <Text className={`font-black text-xs uppercase tracking-wider ${planDetails.canAddBarber ? 'text-[#3473ef]' : 'text-rose-600'}`}>
+                    Plani Aktiv: {planDetails.planName}
+                  </Text>
+                  <Text className="text-slate-500 font-bold text-[11px] mt-0.5">
+                    {planDetails.currentBarberCount} nga {planDetails.maxBarbers} berber(ë) të përdorur
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )}
 
           <ScrollView showsVerticalScrollIndicator={false} className="max-h-[500px]" keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
             <View className="gap-y-6">

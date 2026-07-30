@@ -63,7 +63,7 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
           { text: "Anulo", style: "cancel" },
           {
             text: "Dërgo OTP",
-            onPress: (val) => {
+            onPress: (val?: string) => {
               if (val) {
                 setPhone(val);
                 triggerTwilioOtpSend(val);
@@ -133,23 +133,32 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
         if (myServices && myServices.length > 0) {
           const mapped = myServices.map((s: any) => {
             const sub = s.subcategories;
-            let price = 15;
-            let duration = "30 min";
-            
             const name = sub?.name || "";
-            if (name.includes("Mjek") || name.includes("Mustaqe") || name.includes("Larje") || name.includes("Riparim")) {
-              price = 10;
-              duration = "15 min";
-            } else if (name.includes("Paketa") || name.includes("Keratinë") || name.includes("Zgjatime") || name.includes("Ngjyrosje")) {
-              price = 35;
-              duration = "60 min";
+            let price = s.price || 15;
+            let durationMins = s.duration_minutes || sub?.duration_minutes || 30;
+            
+            if (!s.price) {
+              if (name.includes("Mjek") || name.includes("Mustaqe") || name.includes("Larje") || name.includes("Riparim")) {
+                price = 10;
+              } else if (name.includes("Paketa") || name.includes("Keratinë") || name.includes("Zgjatime") || name.includes("Ngjyrosje")) {
+                price = 35;
+              }
+            }
+
+            if (!s.duration_minutes && !sub?.duration_minutes) {
+              if (name.includes("Mjek") || name.includes("Mustaqe") || name.includes("Larje")) {
+                durationMins = 15;
+              } else if (name.includes("Keratinë") || name.includes("Balayage") || name.includes("Ngjyrosje")) {
+                durationMins = 60;
+              }
             }
             
             return {
-              id: sub?.id,
-              name: sub?.name,
+              id: sub?.id || s.subcategory_id,
+              name: sub?.name || "Shërbim",
               price: price,
-              duration: duration
+              duration: `${durationMins} min`,
+              durationMinutes: durationMins
             };
           });
           setAvailableServices(mapped);

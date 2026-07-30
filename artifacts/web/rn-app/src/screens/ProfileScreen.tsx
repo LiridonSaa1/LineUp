@@ -22,6 +22,7 @@ import {
   Globe,
   Headphones,
   CheckCircle2,
+  Check,
   Users,
   TrendingUp,
   X,
@@ -33,8 +34,10 @@ import {
   Info,
   Trash2,
   ChevronLeft,
+  ChevronDown,
   Briefcase,
   AlertTriangle,
+  AlertCircle,
   Clock,
   Flag
 } from "lucide-react-native";
@@ -164,6 +167,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [categories, setCategories] = useState<any[]>([]);
   const [subcategories, setSubcategories] = useState<any[]>([]);
   const [selectedEmployeeSubcats, setSelectedEmployeeSubcats] = useState<string[]>([]);
+  const [serviceDurations, setServiceDurations] = useState<Record<string, number>>({});
+  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [employeeSchedule, setEmployeeSchedule] = useState<any[]>([]);
   const [savingSchedule, setSavingSchedule] = useState(false);
 
@@ -174,45 +179,125 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       setCategories(cats || []);
       setSubcategories(subs || []);
 
-      const { data: myServices } = await supabase
+      if (!user?.id) return;
+
+      const { data: myServices, error } = await supabase
         .from('barber_services')
-        .select('subcategory_id')
+        .select('*') // Select all to avoid column existence errors
         .eq('barber_id', user.id);
-      
+
+      if (error) throw error;
+
       const subcatIds = myServices?.map(s => s.subcategory_id) || [];
+      const durations: Record<string, number> = {};
+      myServices?.forEach(s => {
+        if (s.subcategory_id) {
+          // Fallback to 30 if column duration_minutes doesn't exist yet
+          durations[s.subcategory_id] = (s as any).duration_minutes || 30;
+        }
+      });
       setSelectedEmployeeSubcats(subcatIds);
+      setServiceDurations(durations);
+
+      // Expand the first category by default if none expanded
+      if (cats && cats.length > 0 && expandedCategories.length === 0) {
+        setExpandedCategories([cats[0].id]);
+      }
     } catch (err) {
       console.warn("Error fetching employee services:", err);
     }
   };
 
-  const toggleEmployeeService = async (subcatId: string) => {
-    const isSelected = selectedEmployeeSubcats.includes(subcatId);
-    let updated = [...selectedEmployeeSubcats];
+  useEffect(() => {
+    if (activeModal === 'employeeServices' && user?.id) {
+      fetchEmployeeServicesData();
+    }
+  }, [activeModal, user?.id]);
+
+  const updateServiceDuration = async (subcatId: string, durationMinutes: number) => {
+    setServiceDurations(prev => ({ ...prev, [subcatId]: durationMinutes }));
+    try {
+      // We use a safe update that won't crash if the column is missing
+      // (though it will still return an error from Supabase)
+      const { error } = await supabase
+        .from('barber_services')
+        .update({ duration_minutes: durationMinutes } as any)
+        .eq('barber_id', user.id)
+        .eq('subcategory_id', subcatId);
+
+      if (error) {
+        console.warn("[Profile] Could not save duration. Did you add the column in Supabase?", error.message);
+      }
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch (e) {
+      console.error("[Profile] updateServiceDuration error:", e);
+    }
+  };
+
+  const toggleEmployeeService = async (subcatId: string, defaultDuration: number = 30) => {
+    // Check local state first for instant UI feedback
+    const isCurrentlySelected = selectedEmployeeSubcats.includes(subcatId);
     
     try {
-      if (isSelected) {
+      if (isCurrentlySelected) {
+        // Deselect: Remove from DB
         const { error } = await supabase
           .from('barber_services')
           .delete()
           .eq('barber_id', user.id)
           .eq('subcategory_id', subcatId);
+
         if (error) throw error;
-        updated = updated.filter(id => id !== subcatId);
+
+        setSelectedEmployeeSubcats(prev => prev.filter(id => id !== subcatId));
       } else {
-        const { error } = await supabase
-          .from('barber_services')
-          .insert({
-            barber_id: user.id,
-            subcategory_id: subcatId
-          });
-        if (error) throw error;
-        updated.push(subcatId);
+        // Select: Use UPSERT to handle potential existing records and avoid unique constraint error
+        const currentDur = serviceDurations[subcatId] || defaultDuration;
+
+        const insertData: any = {
+          barber_id: user.id,
+          subcategory_id: subcatId
+        };
+
+        // Only include duration if we have reason to believe the column exists or just try it
+        // To be safe, we'll try to include it. If it fails, we'll try without it.
+        try {
+          const { error } = await supabase
+            .from('barber_services')
+            .upsert({
+              ...insertData,
+              duration_minutes: currentDur
+            }, { onConflict: 'barber_id,subcategory_id' });
+
+          if (error && error.message.includes('duration_minutes')) {
+             // Fallback for missing column
+             const { error: err2 } = await supabase
+              .from('barber_services')
+              .upsert(insertData, { onConflict: 'barber_id,subcategory_id' });
+             if (err2) throw err2;
+          } else if (error) {
+            throw error;
+          }
+        } catch (innerErr) {
+           const { error: err2 } = await supabase
+            .from('barber_services')
+            .upsert(insertData, { onConflict: 'barber_id,subcategory_id' });
+           if (err2) throw err2;
+        }
+
+        if (!selectedEmployeeSubcats.includes(subcatId)) {
+          setSelectedEmployeeSubcats(prev => [...prev, subcatId]);
+        }
+        if (!serviceDurations[subcatId]) {
+          setServiceDurations(prev => ({ ...prev, [subcatId]: currentDur }));
+        }
       }
-      setSelectedEmployeeSubcats(updated);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch (err: any) {
-      Alert.alert("Gabim", err.message || "Dështoi përditësimi i shërbimit.");
+      console.error("[Profile] toggleEmployeeService error:", err);
+      // Re-fetch to sync state with DB if error occurred
+      fetchEmployeeServicesData();
+      Alert.alert("Gabim", "Dështoi përditësimi i shërbimit: " + err.message);
     }
   };
 
@@ -436,7 +521,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   }, [user]);
 
   useEffect(() => {
-    if (user) fetchOwnerStats();
+    if (user) {
+      fetchOwnerStats();
+      if (user.role === 'employee' || user.role === 'staf' || user.role === 'staff' || user.role === 'barber') {
+        fetchEmployeeServicesData();
+      }
+    }
   }, [user, fetchOwnerStats]);
 
   const handleAuthSubmit = async () => {
@@ -519,8 +609,33 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     );
   };
 
+  const isEmployeeRole = user?.role === 'employee' || user?.role === 'staf' || user?.role === 'staff' || user?.role === 'barber';
+
+  const promptNoServicesAlert = () => {
+    Alert.alert(
+      "⚠️ Nuk keni zgjedhur asnjë shërbim",
+      "Nuk mund të pranohen rezervime nga klientët sepse nuk keni zgjedhur asnjë shërbim! Klikoni 'Në rregull' për të zgjedhur shërbimet tuaja.",
+      [
+        { text: "Më vonë", style: "cancel" },
+        {
+          text: "Në rregull",
+          onPress: () => {
+            fetchEmployeeServicesData();
+            setActiveModal('employeeServices');
+          }
+        }
+      ]
+    );
+  };
+
   const handleAction = (label: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    if (isEmployeeRole && selectedEmployeeSubcats.length === 0 && label !== 'EmployeeServices') {
+      promptNoServicesAlert();
+      return;
+    }
+
     if (label === 'Profile') setActiveModal('profile');
     if (label === 'Plans') {
       setUpgradeStep(1);
@@ -538,7 +653,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     if (label === 'Language') setActiveModal('language');
     if (label === 'Orari') setActiveModal('orari');
     if (label === 'EmployeeServices') {
-      fetchEmployeeServicesData();
       setActiveModal('employeeServices');
     }
     if (label === 'EmployeeSchedule') {
@@ -580,8 +694,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const handleUpgradeSuccess = async (paddleData: any) => {
     setLoading(true);
     try {
-      console.log("[Profile] Payment success, updating subscription in DB...");
-
       // Update or Insert subscription record
       const { error } = await supabase.from('subscriptions').upsert({
         customer_id: user.id,
@@ -671,12 +783,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           </View>
           <View className="ml-6 flex-1">
             <Text className="text-slate-400 font-black text-[10px] uppercase tracking-[2px] mb-1">
-              {user.role === 'owner' ? 'Pronar i Biznesit' : user.role === 'barber' ? 'Berber' : user.role === 'super_admin' ? 'Super Admin' : 'Klient'}
+              {user.role === 'owner' ? 'Pronar i Biznesit' : user.role === 'barber' ? 'Berber' : user.role === 'super_admin' ? 'Super Admin' : (user.role === 'employee' || user.role === 'staf' || user.role === 'staff') ? 'Punëtor i verifikuar' : 'Klient'}
             </Text>
             <Text className="text-3xl font-black text-[#161719] tracking-tight mb-1">{user.name}</Text>
             <View className="flex-row items-center bg-indigo-50 px-2.5 py-1 rounded-full self-start">
                <CheckCircle2 size={12} color="#3473ef" strokeWidth={3} />
-               <Text className="text-[#3473ef] font-black text-[10px] ml-1.5 uppercase">Partner i Verifikuar</Text>
+               <Text className="text-[#3473ef] font-black text-[10px] ml-1.5 uppercase">
+                 {(user.role === 'employee' || user.role === 'staf' || user.role === 'staff' || user.role === 'barber') ? 'Punëtor i Verifikuar' : 'Partner i Verifikuar'}
+               </Text>
             </View>
           </View>
         </Animated.View>
@@ -711,7 +825,27 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       </View>
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
-        <View className="px-6 pt-10">
+        <View className="px-6 pt-6">
+           {isEmployeeRole && selectedEmployeeSubcats.length === 0 && (
+             <TouchableOpacity
+               onPress={promptNoServicesAlert}
+               className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-[28px] mb-6 flex-row items-center justify-between"
+             >
+               <View className="flex-1 pr-3 flex-row items-center">
+                 <AlertCircle size={24} color="#f59e0b" />
+                 <View className="ml-3 flex-1">
+                   <Text className="font-black text-amber-800 text-sm">Nuk keni asnjë shërbim të zgjedhur!</Text>
+                   <Text className="text-amber-700 font-bold text-xs mt-0.5">
+                     Klientët nuk mund të bëjnë rezervime me ju sepse nuk keni zgjedhur shërbimet.
+                   </Text>
+                 </View>
+               </View>
+               <View className="bg-amber-500 px-3 py-2 rounded-2xl">
+                 <Text className="text-white font-black text-xs">Në rregull</Text>
+               </View>
+             </TouchableOpacity>
+           )}
+
            <Text className="text-slate-400 font-black text-[11px] uppercase tracking-[2px] mb-4 ml-2">Personal</Text>
            <View className="bg-white/40 rounded-[32px] overflow-hidden shadow-sm">
               <BlurView intensity={20} tint="light" style={StyleSheet.absoluteFill} />
@@ -1248,8 +1382,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                          <FileText size={22} color="#6366f1" />
                        </View>
                        <View>
-                         <Text className="text-2xl font-black text-[#161719]">Lista e Shërbimeve</Text>
-                         <Text className="text-slate-400 font-bold text-xs">Cilët shërbime ofroni në sallon</Text>
+                         <Text className="text-2xl font-black text-[#161719]">Lista e Sherbimeve</Text>
+                         <Text className="text-slate-400 font-bold text-xs">Cilet sherbime ofroni ne sallon</Text>
                        </View>
                      </View>
                      <TouchableOpacity onPress={() => setActiveModal(null)} className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-sm">
@@ -1259,31 +1393,137 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
                    <ScrollView showsVerticalScrollIndicator={false} className="flex-1" keyboardShouldPersistTaps="handled">
                      {categories.map((cat) => {
-                       const catSubs = subcategories.filter(s => s.category_id === cat.id);
-                       if (catSubs.length === 0) return null;
-                       
+                       const catSubs = subcategories.filter(s => s.category_id === cat.id)
+                       if (catSubs.length === 0) return null
+
+                       const isExpanded = expandedCategories.includes(cat.id);
+                       const selectedCount = catSubs.filter(s => selectedEmployeeSubcats.includes(s.id)).length;
+
                        return (
-                         <View key={cat.id} className="mb-6">
-                           <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">{cat.name}</Text>
-                           <View className="bg-white rounded-[32px] p-2 shadow-sm border border-slate-100">
-                             {catSubs.map((sub, idx) => {
-                               const isChecked = selectedEmployeeSubcats.includes(sub.id);
-                               return (
-                                 <TouchableOpacity 
-                                   key={sub.id} 
-                                   onPress={() => toggleEmployeeService(sub.id)}
-                                   className={`flex-row items-center p-4 ${idx < catSubs.length - 1 ? 'border-b border-slate-50' : ''}`}
-                                 >
-                                   <Text className="flex-1 font-bold text-[#161719] text-sm">{sub.name}</Text>
-                                   <View className={`w-6 h-6 rounded-full border items-center justify-center ${isChecked ? 'bg-[#3473ef] border-[#3473ef]' : 'border-slate-200'}`}>
-                                     {isChecked && <CheckCircle2 size={14} color="white" />}
-                                   </View>
-                                 </TouchableOpacity>
+                         <View key={cat.id} className="mb-4">
+                           <TouchableOpacity
+                             activeOpacity={0.7}
+                             onPress={() => {
+                               setExpandedCategories(prev =>
+                                 isExpanded ? prev.filter(id => id !== cat.id) : [...prev, cat.id]
                                );
-                             })}
-                           </View>
+                               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                             }}
+                             className={`flex-row items-center justify-between p-5 rounded-[24px] border ${isExpanded ? 'bg-indigo-50 border-indigo-100' : 'bg-white border-slate-100 shadow-sm'}`}
+                           >
+                             <View className="flex-row items-center flex-1">
+                               <View className={`w-10 h-10 rounded-xl items-center justify-center mr-3 ${isExpanded ? 'bg-white' : 'bg-slate-50'}`}>
+                                 <Briefcase size={20} color={isExpanded ? '#3473ef' : '#94A3B8'} />
+                               </View>
+                               <View>
+                                 <Text className={`text-base font-black ${isExpanded ? 'text-[#161719]' : 'text-[#161719]'}`}>{cat.name}</Text>
+                                 {selectedCount > 0 && (
+                                   <Text className="text-[10px] font-black text-[#3473ef] uppercase tracking-widest mt-0.5">{selectedCount} shërbime të zgjedhura</Text>
+                                 )}
+                               </View>
+                             </View>
+                             <View className={`w-8 h-8 rounded-full items-center justify-center ${isExpanded ? 'bg-indigo-100' : 'bg-slate-50'}`}>
+                               {isExpanded ? <ChevronDown size={18} color="#3473ef" /> : <ChevronRight size={18} color="#94A3B8" />}
+                             </View>
+                           </TouchableOpacity>
+
+                           {isExpanded && (
+                             <Animated.View entering={FadeInDown} className="mt-2 bg-white rounded-[32px] p-2 shadow-sm border border-slate-100">
+                               {catSubs.map((sub, idx) => {
+                                 const isChecked = selectedEmployeeSubcats.includes(sub.id)
+                                 const currentDuration = serviceDurations[sub.id] || 30;
+                                 return (
+                                   <View
+                                     key={sub.id}
+                                     className={`p-4 ${idx < catSubs.length - 1 ? 'border-b border-slate-50' : ''}`}
+                                   >
+                                     <TouchableOpacity
+                                       onPress={() => toggleEmployeeService(sub.id, currentDuration)}
+                                       className="flex-row items-center justify-between"
+                                     >
+                                       <View className="flex-1 pr-3">
+                                         <Text className="font-bold text-[#161719] text-sm">{sub.name}</Text>
+                                         <Text className="text-xs font-semibold text-[#3473ef] mt-0.5">
+                                           ⏱️ Kohëzgjatja: {currentDuration} min
+                                         </Text>
+                                       </View>
+                                       <View className={`w-7 h-7 rounded-full border items-center justify-center ${isChecked ? 'bg-[#3473ef] border-[#3473ef]' : 'border-slate-200 bg-slate-50'}`}>
+                                         {isChecked && <Check size={16} color="white" strokeWidth={3} />}
+                                       </View>
+                                     </TouchableOpacity>
+
+                                     {isChecked && (
+                                       <View className="mt-4 pt-4 border-t border-slate-100">
+                                         <View className="flex-row items-center mb-3">
+                                           <Clock size={13} color="#3473ef" />
+                                           <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1.5">Zgjidh kohëzgjatjen e punës:</Text>
+                                         </View>
+
+                                         <View className="flex-row items-center gap-2 flex-wrap">
+                                           {[15, 30, 45, 60, 90].map((dur) => {
+                                             const isDurSelected = currentDuration === dur
+                                             return (
+                                               <TouchableOpacity
+                                                 key={dur}
+                                                 onPress={() => updateServiceDuration(sub.id, dur)}
+                                                 className={`px-4 py-2 rounded-xl border ${
+                                                   isDurSelected
+                                                     ? 'bg-[#161719] border-[#161719]'
+                                                     : 'bg-white border-slate-200'
+                                                 }`}
+                                               >
+                                                 <Text className={`text-xs font-black ${isDurSelected ? 'text-white' : 'text-slate-600'}`}>
+                                                   {dur} min
+                                                 </Text>
+                                               </TouchableOpacity>
+                                             )
+                                           })}
+
+                                           <View className="flex-row items-center gap-x-2">
+                                             <TouchableOpacity
+                                               onPress={() => updateServiceDuration(sub.id, Math.max(5, currentDuration - 5))}
+                                               className="w-9 h-9 bg-slate-100 rounded-xl items-center justify-center active:bg-slate-200"
+                                             >
+                                               <Text className="font-black text-lg text-[#161719]">-</Text>
+                                             </TouchableOpacity>
+
+                                             <View className={`flex-row items-center h-9 rounded-xl px-3 border ${![15, 30, 45, 60, 90].includes(currentDuration) ? 'bg-[#3473ef]/5 border-[#3473ef]' : 'bg-slate-50 border-slate-200'}`}>
+                                               <TextInput
+                                                 keyboardType="numeric"
+                                                 value={currentDuration > 0 ? String(currentDuration) : ''}
+                                                 onChangeText={(text) => {
+                                                   const cleanText = text.replace(/[^0-9]/g, '')
+                                                   const num = parseInt(cleanText, 10)
+                                                   if (!isNaN(num) && num > 0) {
+                                                     updateServiceDuration(sub.id, num)
+                                                   } else if (cleanText === '') {
+                                                     setServiceDurations(prev => ({...prev, [sub.id]: 0}))
+                                                   }
+                                                 }}
+                                                 className="font-black text-xs text-[#161719] min-w-[30px] text-center p-0"
+                                                 placeholder="0"
+                                                 placeholderTextColor="#94a3b8"
+                                               />
+                                               <Text className="text-[10px] font-black text-slate-400 ml-1">min</Text>
+                                             </View>
+
+                                             <TouchableOpacity
+                                               onPress={() => updateServiceDuration(sub.id, currentDuration + 5)}
+                                               className="w-9 h-9 bg-slate-100 rounded-xl items-center justify-center active:bg-slate-200"
+                                             >
+                                               <Text className="font-black text-lg text-[#161719]">+</Text>
+                                             </TouchableOpacity>
+                                           </View>
+                                         </View>
+                                       </View>
+                                     )}
+                                   </View>
+                                 )
+                               })}
+                             </Animated.View>
+                           )}
                          </View>
-                       );
+                       )
                      })}
                    </ScrollView>
                  </View>

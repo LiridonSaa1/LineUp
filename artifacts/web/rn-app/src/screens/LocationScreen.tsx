@@ -5,7 +5,8 @@ import { BlurView } from 'expo-blur';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
-  withSpring
+  withSpring,
+  FadeIn
 } from 'react-native-reanimated';
 import { withTiming } from 'react-native-reanimated';
 import { AddressAutocomplete } from '../components/AddressAutocomplete';
@@ -131,7 +132,7 @@ export const LocationScreen: React.FC<LocationScreenProps> = ({ onBack, onSelect
     if (!selectedPlace) return;
 
     try {
-      const updateData = addressType === 'home'
+      const updateData: any = addressType === 'home'
         ? { home_address: selectedPlace.address, user_id: USER_ID }
         : { work_address: selectedPlace.address, user_id: USER_ID };
 
@@ -352,7 +353,7 @@ export const LocationScreen: React.FC<LocationScreenProps> = ({ onBack, onSelect
              />
 
              {selectedPlace && (
-                <Animated.View entering={withTiming} className="bg-[#6366f1]/5 p-5 rounded-3xl border border-[#6366f1]/20 mb-8">
+                <Animated.View entering={FadeIn} className="bg-[#6366f1]/5 p-5 rounded-3xl border border-[#6366f1]/20 mb-8">
                    <Text className="text-xs font-black text-[#6366f1] uppercase mb-2">Selected Location</Text>
                    <View className="flex-row items-start">
                       <MapPin size={20} color="#6366f1" className="mt-1 mr-3" />

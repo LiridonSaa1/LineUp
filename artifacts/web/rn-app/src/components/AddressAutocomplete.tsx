@@ -372,7 +372,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
           }}
           placeholder={placeholder}
           placeholderTextColor="#8789A3"
-          disabled={disabled}
+          editable={!disabled}
           className={`w-full bg-white border border-slate-200 rounded-2xl pl-12 pr-10 h-14 text-base font-bold text-[#161719] shadow-xs ${inputClassName}`}
         />
 
