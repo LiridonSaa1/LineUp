@@ -11,6 +11,7 @@ export interface PlaceDetails {
   country: string;
   latitude?: number;
   longitude?: number;
+  place_id?: string;
 }
 
 export interface AddressAutocompleteProps {
@@ -263,6 +264,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
               street: p.structured_formatting?.main_text || p.description,
               postal_code: "",
               country: "Kosovë",
+              place_id: p.place_id,
             }));
           }
 
@@ -316,10 +318,33 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
 
   const handleSelectSuggestion = async (item: PlaceDetails) => {
     console.log("[AddressAutocomplete] Selected address:", item.formatted_address);
-    setQuery(item.formatted_address);
     setIsOpen(false);
     setSuggestions([]);
-    onSelectAddress(item);
+
+    let finalItem = { ...item };
+
+    // If coordinates are missing and we have a place_id, fetch them from Google Place Details API
+    if ((!finalItem.latitude || !finalItem.longitude) && finalItem.place_id) {
+      setLoading(true);
+      try {
+        const detailsRes = await fetch(
+          `https://maps.googleapis.com/maps/api/place/details/json?place_id=${finalItem.place_id}&fields=geometry&key=${apiKey}`
+        );
+        const detailsData = await detailsRes.json();
+        if (detailsData.status === 'OK' && detailsData.result?.geometry?.location) {
+          finalItem.latitude = detailsData.result.geometry.location.lat;
+          finalItem.longitude = detailsData.result.geometry.location.lng;
+          console.log("[AddressAutocomplete] Precise coords fetched:", finalItem.latitude, finalItem.longitude);
+        }
+      } catch (err) {
+        console.warn("Place Details fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    setQuery(finalItem.formatted_address);
+    onSelectAddress(finalItem);
   };
 
   return (

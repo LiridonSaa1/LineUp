@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, TextInput, ScrollView, Dimensions, FlatList, Keyboard, Modal } from 'react-native';
-import { X, Search, MapPin, Calendar, Grid, Scissors, Hand, Eye, Sparkles, User, Smile, Waves, ArrowLeft, ChevronRight, AlertCircle, Check, ChevronLeft, Shield, Zap } from 'lucide-react-native';
+import { X, Search, MapPin, Calendar, Grid, Scissors, Hand, Eye, Sparkles, User, Smile, Waves, ArrowLeft, ChevronRight, AlertCircle, Check, ChevronLeft, Shield, Zap, ChevronDown, ChevronUp } from 'lucide-react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { withTiming } from 'react-native-reanimated';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
@@ -21,11 +21,19 @@ interface SearchScreenProps {
     lat?: number;
     lng?: number;
     date?: string;
-    time?: string
+    time?: string;
+    subIds?: string[];
+    categoryName?: string;
+    shouldClose?: boolean;
   }) => void;
   currentLocation?: string;
   categories?: any[];
   subcategories?: any[];
+  initialQuery?: string;
+  initialDate?: string;
+  initialTime?: string;
+  initialSubIds?: string[];
+  initialCategoryName?: string;
 }
 
 const CATEGORY_ICONS: Record<string, any> = {
@@ -51,50 +59,30 @@ const TREATMENTS = [
   'Body Care'
 ];
 
-const KOSOVO_PREDEFINED_PLACES = [
-  { description: "Prishtinë (Qendër)", geometry: { location: { lat: 42.6629, lng: 21.1655 } } },
-  { description: "Prishtinë - Dardania", geometry: { location: { lat: 42.6550, lng: 21.1520 } } },
-  { description: "Prishtinë - Bregu i Diellit", geometry: { location: { lat: 42.6580, lng: 21.1750 } } },
-  { description: "Prishtinë - Rruga B", geometry: { location: { lat: 42.6560, lng: 21.1820 } } },
-  { description: "Prishtinë - Rruga C", geometry: { location: { lat: 42.6500, lng: 21.1850 } } },
-  { description: "Prishtinë - Pejton", geometry: { location: { lat: 42.6590, lng: 21.1580 } } },
-  { description: "Prishtinë - Arbëri (Dragodan)", geometry: { location: { lat: 42.6680, lng: 21.1550 } } },
-  { description: "Prishtinë - Ulpianë", geometry: { location: { lat: 42.6510, lng: 21.1610 } } },
-  { description: "Prizren (Qendër / Shatërvan)", geometry: { location: { lat: 42.2139, lng: 20.7397 } } },
-  { description: "Prizren - Bazhdarhane", geometry: { location: { lat: 42.2200, lng: 20.7420 } } },
-  { description: "Pejë (Qendër)", geometry: { location: { lat: 42.6593, lng: 20.2883 } } },
-  { description: "Pejë - Karagaç", geometry: { location: { lat: 42.6540, lng: 20.2910 } } },
-  { description: "Gjakovë (Qarshia e Madhe)", geometry: { location: { lat: 42.3803, lng: 20.4308 } } },
-  { description: "Gjilan (Qendër)", geometry: { location: { lat: 42.4635, lng: 21.4678 } } },
-  { description: "Mitrovicë (Qendër)", geometry: { location: { lat: 42.8914, lng: 20.8660 } } },
-  { description: "Ferizaj (Qendër)", geometry: { location: { lat: 42.3703, lng: 21.1559 } } },
-  { description: "Vushtrri (Qendër)", geometry: { location: { lat: 42.8231, lng: 20.9675 } } },
-  { description: "Podujevë (Qendër)", geometry: { location: { lat: 42.9114, lng: 21.1903 } } },
-  { description: "Fushë Kosovë (Qendër)", geometry: { location: { lat: 42.6340, lng: 21.0963 } } },
-  { description: "Rahovec (Qendër)", geometry: { location: { lat: 42.3994, lng: 20.6553 } } },
-  { description: "Skënderaj (Qendër)", geometry: { location: { lat: 42.7478, lng: 20.7878 } } },
-  { description: "Lipjan (Qendër)", geometry: { location: { lat: 42.5217, lng: 21.1258 } } },
-  { description: "Suharekë (Qendër)", geometry: { location: { lat: 42.3581, lng: 20.8250 } } },
-];
-
 export const SearchScreen: React.FC<SearchScreenProps> = ({
   onClose,
   onSearch,
   currentLocation = "Lokacioni aktual",
   categories = [],
-  subcategories = []
+  subcategories = [],
+  initialQuery = "",
+  initialDate = "Anytime",
+  initialTime = "Anytime",
+  initialSubIds = [],
+  initialCategoryName = ""
 }) => {
   const [activePanel, setActivePanel] = useState<'main' | 'treatment' | 'location' | 'datetime'>('main');
 
   // Selection States
-  const [selectedTreatment, setSelectedTreatment] = useState("");
+  const [selectedTreatment, setSelectedTreatment] = useState(initialQuery);
+  const [selectedCategoryName, setSelectedCategoryName] = useState(initialCategoryName);
   const [selectedLocation, setSelectedLocation] = useState({
     address: currentLocation === "Lokacioni aktual" ? "" : currentLocation,
     lat: undefined as number | undefined,
     lng: undefined as number | undefined
   });
-  const [selectedDate, setSelectedDate] = useState("Anytime");
-  const [selectedTime, setSelectedTime] = useState("Anytime");
+  const [selectedDate, setSelectedDate] = useState(initialDate);
+  const [selectedTime, setSelectedTime] = useState(initialTime);
 
   // Recents State
   const [recents, setRecents] = useState<string[]>([]);
@@ -108,15 +96,14 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
   const [dbBarbers, setDbBarbers] = useState<any[]>([]);
   const [selectedMainCategory, setSelectedMainCategory] = useState<any | null>(null);
   const [showSubModal, setShowSubModal] = useState(false);
-  const [selectedSubIds, setSelectedSubIds] = useState<string[]>([]);
+  const [selectedSubIds, setSelectedSubIds] = useState<string[]>(initialSubIds);
+  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
 
   const autocompleteRef = useRef<any>(null);
 
   // Calendar States
   const [currentCalendarDate, setCurrentCalendarDate] = useState(new Date(2026, 6, 22));
   const [selectedCalendarDay, setSelectedCalendarDay] = useState<number | null>(22);
-
-  const [cityBias, setCityBias] = useState<{ lat: number; lng: number }>({ lat: 42.6629, lng: 21.1655 });
 
   // Animation Shared Values
   const treatmentX = useSharedValue(width);
@@ -136,11 +123,9 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
 
   const loadSearchOptions = async () => {
     try {
-      // Fetch Barbershops (Venues)
       const { data: shopsData } = await supabase.from('barbershops').select('*').limit(30);
       if (shopsData) setDbShops(shopsData);
 
-      // Fetch Barbers (Professionals)
       const { data: barbersData } = await supabase.from('barbers').select('*').limit(30);
       if (barbersData) setDbBarbers(barbersData);
     } catch (e) {
@@ -218,7 +203,8 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
       lng: selectedLocation.lng,
       date: selectedDate,
       time: selectedTime,
-      subIds: selectedSubIds
+      subIds: selectedSubIds,
+      categoryName: selectedCategoryName
     });
   };
 
@@ -288,6 +274,17 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
     return days;
   };
 
+  const getTreatmentDisplay = () => {
+    if (selectedTreatment) return selectedTreatment;
+    if (selectedSubIds.length > 0) {
+      if (selectedSubIds.length === 1) {
+        return subcategories.find(s => s.id === selectedSubIds[0])?.name || "1 trajtim";
+      }
+      return `${selectedSubIds.length} trajtime të zgjedhura`;
+    }
+    return selectedCategoryName || "Any treatments, venues or professionals";
+  };
+
   return (
     <View className="flex-1 bg-white">
       {/* --- MAIN PANEL --- */}
@@ -306,9 +303,9 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
               onPress={() => setActivePanel('treatment')}
               className="flex-row items-center bg-white border border-slate-200 rounded-2xl px-4 h-14 shadow-sm shadow-black/5"
             >
-              <Search size={20} color={selectedTreatment ? "#6366f1" : "#8789A3"} />
-              <Text className={`flex-1 ml-3 text-base font-medium ${selectedTreatment ? 'text-[#161719]' : 'text-[#8789A3]'}`}>
-                {selectedTreatment || "Any treatments, venues or professionals"}
+              <Search size={20} color={selectedTreatment || selectedCategoryName || selectedSubIds.length > 0 ? "#6366f1" : "#8789A3"} />
+              <Text className={`flex-1 ml-3 text-base font-medium ${selectedTreatment || selectedCategoryName || selectedSubIds.length > 0 ? 'text-[#161719]' : 'text-[#8789A3]'}`}>
+                {getTreatmentDisplay()}
               </Text>
             </TouchableOpacity>
 
@@ -332,6 +329,39 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
               </Text>
             </TouchableOpacity>
           </View>
+
+          <TouchableOpacity
+            onPress={() => {
+              setSelectedTreatment("");
+              setSelectedCategoryName("");
+              setSelectedSubIds([]);
+              setSelectedDate("Anytime");
+              setSelectedTime("Anytime");
+              setSelectedCalendarDay(null);
+              setTreatmentQuery("");
+              setSelectedLocation({
+                address: "",
+                lat: undefined,
+                lng: undefined
+              });
+
+              // Sync with App.tsx global state without closing the modal
+              onSearch({
+                query: "",
+                city: "Lokacioni aktual",
+                lat: undefined,
+                lng: undefined,
+                date: "Anytime",
+                time: "Anytime",
+                subIds: [],
+                categoryName: "",
+                shouldClose: false
+              });
+            }}
+            className="mt-4 self-start px-1"
+          >
+            <Text className="text-[#3473ef] font-bold text-sm underline">Pastro filtrat</Text>
+          </TouchableOpacity>
 
           {recents.length > 0 && (
             <View className="mt-8">
@@ -395,91 +425,198 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
           <TouchableOpacity onPress={() => setActivePanel('main')} className="mr-4"><ArrowLeft size={24} color="black" /></TouchableOpacity>
           <Text className="text-xl font-bold text-[#161719]">Kërko</Text>
         </View>
-        <ScrollView className="flex-1 px-6">
-          <View className="flex-row items-center border border-[#6366f1] rounded-2xl px-4 h-14 bg-white mb-6">
-            <Search size={20} color="#8789A3" />
-            <TextInput
-              placeholder="Kërko"
-              className="flex-1 ml-3 text-lg font-medium"
-              value={treatmentQuery}
-              onChangeText={setTreatmentQuery}
-            />
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-8">
-            {['Të gjitha', 'Trajtimet', 'Sallonet', 'Profesionistët'].map((p) => (
-              <TouchableOpacity
-                key={p}
-                onPress={() => setActiveFilterTab(p)}
-                className={`px-6 py-2.5 rounded-full mr-2 border ${activeFilterTab === p ? 'bg-black border-black' : 'bg-white border-slate-200'}`}
-              >
-                <Text className={`font-bold ${activeFilterTab === p ? 'text-white' : 'text-[#161719]'}`}>{p}</Text>
-              </TouchableOpacity>
-            ))}
+          <ScrollView className="flex-1 px-6">
+            <View className="flex-row items-center border border-[#6366f1] rounded-2xl px-4 h-14 bg-white mb-6">
+              <Search size={20} color="#8789A3" />
+              <TextInput
+                placeholder="Kërko"
+                className="flex-1 ml-3 text-lg font-medium"
+                value={treatmentQuery}
+                onChangeText={setTreatmentQuery}
+              />
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-8">
+              {['Të gjitha', 'Trajtimet', 'Sallonet', 'Profesionistët'].map((p) => (
+                <TouchableOpacity
+                  key={p}
+                  onPress={() => setActiveFilterTab(p)}
+                  className={`px-6 py-2.5 rounded-full mr-2 border ${activeFilterTab === p ? 'bg-black border-black' : 'bg-white border-slate-200'}`}
+                >
+                  <Text className={`font-bold ${activeFilterTab === p ? 'text-white' : 'text-[#161719]'}`}>{p}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* Subcategories (Trajtimet) - Grouped by Category */}
+            {(activeFilterTab === 'Të gjitha' || activeFilterTab === 'Trajtimet') && categories.length > 0 && (
+              <View className="mb-6">
+                <View className="flex-row justify-between items-center mb-4">
+                  <Text className="text-xl font-bold">Trajtimet</Text>
+                  {selectedSubIds.length > 0 && (
+                    <TouchableOpacity onPress={() => setSelectedSubIds([])}>
+                      <Text className="text-[#3473ef] font-bold">Pastro</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {categories.map((cat) => {
+                  const isExpanded = expandedCategories.includes(cat.id);
+                  const catSubcategories = subcategories.filter(s => s.category_id === cat.id && (!treatmentQuery || s.name?.toLowerCase().includes(treatmentQuery.toLowerCase())));
+
+                  if (catSubcategories.length === 0) return null;
+
+                  const catSubIds = catSubcategories.map(s => s.id);
+                  const selectedCount = catSubIds.filter(id => selectedSubIds.includes(id)).length;
+                  const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
+
+                  return (
+                    <View key={cat.id} className="mb-4 bg-slate-50 rounded-2xl overflow-hidden border border-slate-100">
+                      <TouchableOpacity
+                        onPress={() => {
+                          setExpandedCategories(prev =>
+                            prev.includes(cat.id) ? prev.filter(id => id !== cat.id) : [...prev, cat.id]
+                          );
+                        }}
+                        className="flex-row items-center justify-between p-4"
+                      >
+                        <View className="flex-row items-center flex-1">
+                          <View className="w-10 h-10 rounded-xl bg-white items-center justify-center mr-3 shadow-sm shadow-slate-200">
+                            <IconComponent size={20} color="#161719" strokeWidth={1.5} />
+                          </View>
+                          <Text className="text-[15px] font-bold text-[#161719] flex-1">{cat.name}</Text>
+                          {selectedCount > 0 && (
+                            <View className="bg-[#3473ef] px-2 py-0.5 rounded-full mr-3">
+                              <Text className="text-white font-bold text-xs">{selectedCount}</Text>
+                            </View>
+                          )}
+                        </View>
+                        {isExpanded ? <ChevronUp size={20} color="#8789A3" /> : <ChevronDown size={20} color="#8789A3" />}
+                      </TouchableOpacity>
+
+                      {isExpanded && (
+                        <View className="px-4 pb-4 bg-white border-t border-slate-100">
+                          <TouchableOpacity
+                            onPress={() => {
+                              setSelectedSubIds(prev => {
+                                const allSelected = catSubIds.every(id => prev.includes(id));
+                                if (allSelected) {
+                                  return prev.filter(id => !catSubIds.includes(id));
+                                } else {
+                                  const newSelection = [...prev];
+                                  catSubIds.forEach(id => {
+                                    if (!newSelection.includes(id)) newSelection.push(id);
+                                  });
+                                  return newSelection;
+                                }
+                              });
+                              setSelectedCategoryName("");
+                              setSelectedTreatment("");
+                            }}
+                            className="flex-row items-center py-3 border-b border-slate-50"
+                          >
+                            <Text className={`font-black text-sm flex-1 ${catSubIds.every(id => selectedSubIds.includes(id)) ? 'text-[#3473ef]' : 'text-[#64748b]'}`}>Të gjitha në këtë kategori</Text>
+                          </TouchableOpacity>
+
+                          {catSubcategories.map(sub => {
+                            const isSelected = selectedSubIds.includes(sub.id);
+                            return (
+                              <TouchableOpacity
+                                key={sub.id}
+                                onPress={() => {
+                                  setSelectedSubIds(prev =>
+                                    prev.includes(sub.id) ? prev.filter(id => id !== sub.id) : [...prev, sub.id]
+                                  );
+                                  setSelectedCategoryName("");
+                                  setSelectedTreatment("");
+                                }}
+                                className="flex-row items-center py-3 border-b border-slate-50"
+                              >
+                                <View className={`w-5 h-5 rounded border items-center justify-center mr-3 ${isSelected ? 'bg-[#3473ef] border-[#3473ef]' : 'bg-white border-slate-300'}`}>
+                                  {isSelected && <Check size={12} color="white" strokeWidth={3} />}
+                                </View>
+                                <Text className={`text-[14px] flex-1 ${isSelected ? 'font-black text-[#3473ef]' : 'font-bold text-[#161719]'}`}>{sub.name}</Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
+            {/* Sallonet (Venues) */}
+            {(activeFilterTab === 'Të gjitha' || activeFilterTab === 'Sallonet') && filteredShops.length > 0 && (
+              <View className="mb-6">
+                <Text className="text-xl font-bold mb-4">Sallonet</Text>
+                {filteredShops.map((shop, idx) => (
+                  <TouchableOpacity key={shop.id || idx} onPress={() => {
+                    setSelectedTreatment(shop.name);
+                    setSelectedCategoryName("");
+                    setSelectedSubIds([]);
+                    setActivePanel('main');
+                  }} className="flex-row items-center mb-4">
+                    <View className="w-10 h-10 rounded-full bg-[#3473ef]/10 items-center justify-center mr-4">
+                      <MapPin size={20} color="#3473ef" />
+                    </View>
+                    <View>
+                      <Text className="text-[17px] font-bold text-[#161719]">{shop.name}</Text>
+                      {shop.city && <Text className="text-xs text-gray-400 font-semibold">{shop.city}</Text>}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {/* Profesionistët (Barbers) */}
+            {(activeFilterTab === 'Të gjitha' || activeFilterTab === 'Profesionistët') && filteredBarbers.length > 0 && (
+              <View className="mb-6">
+                <Text className="text-xl font-bold mb-4">Profesionistët</Text>
+                {filteredBarbers.map((barber, idx) => (
+                  <TouchableOpacity key={barber.id || idx} onPress={() => {
+                    setSelectedTreatment(barber.name);
+                    setSelectedCategoryName("");
+                    setSelectedSubIds([]);
+                    setActivePanel('main');
+                  }} className="flex-row items-center mb-4">
+                    <View className="w-10 h-10 rounded-full bg-[#3473ef]/10 items-center justify-center mr-4">
+                      <User size={20} color="#3473ef" />
+                    </View>
+                    <Text className="text-[17px] font-bold text-[#161719]">{barber.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {/* Fallback to hardcoded list if database didn't return any values */}
+            {filteredSubcategories.length === 0 && filteredShops.length === 0 && filteredBarbers.length === 0 && filteredTreatments.length > 0 && (
+              <View className="mb-6">
+                <Text className="text-xl font-bold mb-4">Trajtimet</Text>
+                {filteredTreatments.map((t) => (
+                  <TouchableOpacity key={t} onPress={() => { setSelectedTreatment(t); setActivePanel('main'); }} className="flex-row items-center mb-6">
+                    <View className="w-10 h-10 rounded-full bg-[#3473ef]/10 items-center justify-center mr-4">
+                      <Scissors size={20} color="#3473ef" />
+                    </View>
+                    <Text className="text-[17px] font-bold text-[#161719]">{t}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+            <View className="h-32" />
           </ScrollView>
-
-          {/* Subcategories (Trajtimet) */}
-          {(activeFilterTab === 'Të gjitha' || activeFilterTab === 'Trajtimet') && filteredSubcategories.length > 0 && (
-            <View className="mb-6">
-              <Text className="text-xl font-bold mb-4">Trajtimet</Text>
-              {filteredSubcategories.map((t, idx) => (
-                <TouchableOpacity key={t.id || idx} onPress={() => { setSelectedTreatment(t.name); setActivePanel('main'); }} className="flex-row items-center mb-4">
-                  <View className="w-10 h-10 rounded-full bg-[#3473ef]/10 items-center justify-center mr-4">
-                    <Scissors size={20} color="#3473ef" />
-                  </View>
-                  <Text className="text-[17px] font-bold text-[#161719]">{t.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-
-          {/* Sallonet (Venues) */}
-          {(activeFilterTab === 'Të gjitha' || activeFilterTab === 'Sallonet') && filteredShops.length > 0 && (
-            <View className="mb-6">
-              <Text className="text-xl font-bold mb-4">Sallonet</Text>
-              {filteredShops.map((shop, idx) => (
-                <TouchableOpacity key={shop.id || idx} onPress={() => { setSelectedTreatment(shop.name); setActivePanel('main'); }} className="flex-row items-center mb-4">
-                  <View className="w-10 h-10 rounded-full bg-[#3473ef]/10 items-center justify-center mr-4">
-                    <MapPin size={20} color="#3473ef" />
-                  </View>
-                  <View>
-                    <Text className="text-[17px] font-bold text-[#161719]">{shop.name}</Text>
-                    {shop.city && <Text className="text-xs text-gray-400 font-semibold">{shop.city}</Text>}
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-
-          {/* Profesionistët (Barbers) */}
-          {(activeFilterTab === 'Të gjitha' || activeFilterTab === 'Profesionistët') && filteredBarbers.length > 0 && (
-            <View className="mb-6">
-              <Text className="text-xl font-bold mb-4">Profesionistët</Text>
-              {filteredBarbers.map((barber, idx) => (
-                <TouchableOpacity key={barber.id || idx} onPress={() => { setSelectedTreatment(barber.name); setActivePanel('main'); }} className="flex-row items-center mb-4">
-                  <View className="w-10 h-10 rounded-full bg-[#3473ef]/10 items-center justify-center mr-4">
-                    <User size={20} color="#3473ef" />
-                  </View>
-                  <Text className="text-[17px] font-bold text-[#161719]">{barber.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-
-          {/* Fallback to hardcoded list if database didn't return any values */}
-          {filteredSubcategories.length === 0 && filteredShops.length === 0 && filteredBarbers.length === 0 && filteredTreatments.length > 0 && (
-            <View className="mb-6">
-              <Text className="text-xl font-bold mb-4">Trajtimet</Text>
-              {filteredTreatments.map((t) => (
-                <TouchableOpacity key={t} onPress={() => { setSelectedTreatment(t); setActivePanel('main'); }} className="flex-row items-center mb-6">
-                  <View className="w-10 h-10 rounded-full bg-[#3473ef]/10 items-center justify-center mr-4">
-                    <Scissors size={20} color="#3473ef" />
-                  </View>
-                  <Text className="text-[17px] font-bold text-[#161719]">{t}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </ScrollView>
+        {activeFilterTab === 'Trajtimet' || activeFilterTab === 'Të gjitha' ? (
+          <View className="p-6 border-t border-slate-100 bg-white">
+            <TouchableOpacity
+              onPress={() => setActivePanel('main')}
+              className="bg-black h-14 rounded-2xl items-center justify-center shadow-lg"
+            >
+              <Text className="text-white font-black text-lg">
+                Konfirmo {selectedSubIds.length > 0 ? `(${selectedSubIds.length})` : ''}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
       </Animated.View>
 
       {/* --- LOCATION PANEL --- */}
@@ -682,7 +819,6 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
             <TouchableOpacity
               onPress={() => {
                 setShowSubModal(false);
-                let queryText = "";
                 let finalSubIds = [...selectedSubIds];
                 if (finalSubIds.length === 0 && selectedMainCategory) {
                   finalSubIds = subcategories
@@ -692,13 +828,14 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
                 
                 if (onSearch) {
                   onSearch({
-                    query: queryText,
+                    query: "",
                     city: selectedLocation.address || currentLocation,
                     lat: selectedLocation.lat,
                     lng: selectedLocation.lng,
                     date: selectedDate,
                     time: selectedTime,
-                    subIds: finalSubIds
+                    subIds: finalSubIds,
+                    categoryName: selectedMainCategory?.name || ""
                   });
                 }
               }}

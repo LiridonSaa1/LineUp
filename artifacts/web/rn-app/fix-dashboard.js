@@ -7,7 +7,6 @@ import {
   Users,
   Calendar,
   TrendingUp,
-  Settings,
   Plus,
   ChevronRight,
   Bell,
@@ -186,22 +185,6 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
                 <TrendingUp size={32} color="#3473ef" className="mb-2" />
                 <Text className="text-white font-bold text-center text-xs">+12% vs Dje</Text>
               </View>
-            </View>
-
-            <Text className="text-lg font-black text-[#161719] mb-4">Veprime të shpejta</Text>
-            <View className="flex-row gap-4 mb-8">
-              <TouchableOpacity className="flex-1 bg-white border border-slate-100 p-4 rounded-2xl items-center flex-row shadow-sm">
-                <View className="w-10 h-10 bg-black rounded-full items-center justify-center mr-3">
-                  <Plus size={20} color="white" />
-                </View>
-                <Text className="font-bold text-[#161719] flex-1">Shto Takim</Text>
-              </TouchableOpacity>
-              <TouchableOpacity className="flex-1 bg-white border border-slate-100 p-4 rounded-2xl items-center flex-row shadow-sm">
-                <View className="w-10 h-10 bg-slate-100 rounded-full items-center justify-center mr-3">
-                  <Settings size={20} color="#161719" />
-                </View>
-                <Text className="font-bold text-[#161719] flex-1">Cilësimet</Text>
-              </TouchableOpacity>
             </View>
           </View>
         )}

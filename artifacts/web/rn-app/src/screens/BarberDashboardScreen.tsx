@@ -105,8 +105,20 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
   const [currentPlan, setCurrentPlan] = useState<string | null>('solo');
   const [shopSchedule, setShopSchedule] = useState<any[]>([]);
 
+  const daysOfWeek = ['Die', 'Hën', 'Mar', 'Mër', 'Enj', 'Pre', 'Sht'];
+  const getNext14Days = () => {
+    const days = [];
+    const today = new Date();
+    for (let i = -3; i < 11; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      days.push(date);
+    }
+    return days;
+  };
+
   const isOwner = user?.role === 'owner' || user?.role === 'super_admin' || user?.role === 'barber'; // Assuming owner
-  const tabs = isOwner ? ['Pasqyra', 'Stafi', 'Orari & Festat'] : ['Pasqyra', 'Takimet', 'Orari'];
+  const tabs = isOwner ? ['Pasqyra', 'Stafi'] : ['Pasqyra', 'Takimet'];
   const TAB_WIDTH = (width - 48) / tabs.length;
   const tabPosition = useSharedValue(0);
 
@@ -116,14 +128,28 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
     totalStaff: 0,
     targetRevenue: 500
   });
+  const [selectedDateStr, setSelectedDateStr] = useState(new Date().toISOString().split('T')[0]);
   const [realShopId, setRealShopId] = useState<string | null>(null);
 
   const loadDashboardData = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const { data: shopData } = await supabase.from('barbershops').select('id').eq('owner_id', user.id).maybeSingle();
-      const sId = shopData?.id || user.id;
+      let sId = null;
+      let employeeBarberId = null;
+
+      if (user.role === 'employee') {
+        const { data: barberData } = await supabase
+          .from('barbers')
+          .select('id, shop_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        sId = barberData?.shop_id;
+        employeeBarberId = barberData?.id;
+      } else {
+        const { data: shopData } = await supabase.from('barbershops').select('id').eq('owner_id', user.id).maybeSingle();
+        sId = shopData?.id || user.id;
+      }
       setRealShopId(sId);
 
       const { data: dbBarbers } = await supabase.from('barbers').select('*').eq('shop_id', sId);
@@ -132,16 +158,21 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
       const { data: dbSchedules } = await supabase.from('barber_schedules').select('*').eq('barber_id', sId);
       setShopSchedule(dbSchedules || []);
 
-      const today = new Date().toISOString().split('T')[0];
-      const { data: appts } = await supabase.from('appointments').select('*, users(name), barbers(name)').eq('shop_id', sId).eq('date', today).order('time', { ascending: true });
+      let apptsQuery = supabase.from('appointments').select('*, users(name, phone, email)').eq('shop_id', sId).neq('status', 'cancelled');
+      if (user.role === 'employee' && employeeBarberId) {
+        apptsQuery = apptsQuery.eq('barber_id', employeeBarberId);
+      }
+      const { data: appts } = await apptsQuery.order('time', { ascending: true });
       setAppointments(appts || []);
 
-      const confirmedAppts = appts?.filter((a: any) => a.status === 'confirmed') || [];
+      const today = new Date().toISOString().split('T')[0];
+      const todayAppts = appts?.filter((a: any) => a.date === today) || [];
+      const confirmedAppts = todayAppts.filter((a: any) => a.status === 'confirmed');
       const revenue = confirmedAppts.reduce((sum: number, a: any) => sum + (parseInt(a.price) || 15), 0);
 
       setStats({
         todayRevenue: revenue,
-        activeBookings: appts?.length || 0,
+        activeBookings: todayAppts.length,
         totalStaff: dbBarbers?.length || 0,
         targetRevenue: 500
       });
@@ -239,67 +270,125 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
           </View>
         )}
 
-        {/* TAB 1: Stafi */}
+        {/* TAB 1: Stafi / Takimet */}
         {activeTabIndex === 1 && (
           <View className="px-6">
-            <View className="flex-row justify-between items-center mb-6 px-1">
-              <View><Text className="text-xl font-black text-[#161719]">Ekipi juaj</Text><Text className="text-slate-400 font-bold text-xs">{employees.length} profesionistë aktivë</Text></View>
-              <TouchableOpacity onPress={() => setShowAddStaffModal(true)} className="w-12 h-12 bg-[#3473ef] rounded-2xl items-center justify-center shadow-lg shadow-[#3473ef]/30"><Plus size={24} color="white" strokeWidth={3} /></TouchableOpacity>
-            </View>
+            {isOwner ? (
+              <>
+                <View className="flex-row justify-between items-center mb-6 px-1">
+                  <View><Text className="text-xl font-black text-[#161719]">Ekipi juaj</Text><Text className="text-slate-400 font-bold text-xs">{employees.length} profesionistë aktivë</Text></View>
+                  <TouchableOpacity onPress={() => setShowAddStaffModal(true)} className="w-12 h-12 bg-[#3473ef] rounded-2xl items-center justify-center shadow-lg shadow-[#3473ef]/30"><Plus size={24} color="white" strokeWidth={3} /></TouchableOpacity>
+                </View>
 
-            <View className="gap-y-4">
-              {employees.map((emp, i) => (
-                <Animated.View key={emp.id} entering={FadeInDown.delay(i * 100)}>
-                  <View className="bg-white p-5 rounded-[32px] border border-slate-100 shadow-sm flex-row items-center">
-                    <View className="w-16 h-16 rounded-[22px] mr-4 bg-slate-100 items-center justify-center border border-slate-200"><UserIcon size={28} color="#94A3B8" /></View>
-                    <View className="flex-1"><Text className="font-black text-[#161719] text-base mb-0.5">{emp.name}</Text><Text className="text-slate-400 font-bold text-xs">{emp.role}</Text></View>
-                    <View className="items-end bg-slate-50 px-4 py-3 rounded-2xl border border-slate-100"><Text className="font-black text-lg text-[#3473ef] leading-5">0</Text><Text className="text-[#8789A3] font-bold text-[8px] uppercase tracking-tighter">Termine</Text></View>
-                  </View>
-                </Animated.View>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* TAB 2: Orari & Festat */}
-        {activeTabIndex === 2 && (
-          <View className="px-6">
-            <View className="mb-10">
-              <View className="flex-row items-center mb-6 ml-1"><View className="w-10 h-10 bg-indigo-50 rounded-xl items-center justify-center mr-3"><Clock size={22} color="#6366f1" /></View><View><Text className="text-xl font-black text-[#161719]">Orari i Sallonit</Text><Text className="text-slate-400 font-bold text-xs">Përcakto orët e punës së biznesit</Text></View></View>
-              <View className="bg-white rounded-[40px] p-6 shadow-xl shadow-slate-100 border border-slate-50">
-                {['E Hënë', 'E Martë', 'E Mërkurë', 'E Enjte', 'E Premte', 'E Shtunë', 'E Diel'].map((day, idx) => {
-                  const daySched = shopSchedule.find(s => s.day_of_week === idx) || { is_closed: idx === 6, start_time: '09:00', end_time: '18:00' };
-                  return (
-                    <View key={idx} className={`flex-row items-center py-4 ${idx < 6 ? 'border-b border-slate-50' : ''}`}>
-                      <Text className="flex-1 font-black text-[#161719] text-sm">{day}</Text>
-                      <View className="flex-row items-center gap-3">
-                        {!daySched.is_closed ? (
-                          <View className="bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100"><Text className="font-bold text-[#161719] text-[10px]">{daySched.start_time} - {daySched.end_time}</Text></View>
-                        ) : (
-                          <Text className="text-rose-500 font-black text-[10px] uppercase mr-2">Mbyllur</Text>
-                        )}
-                        <Switch value={!daySched.is_closed} trackColor={{ false: '#e2e8f0', true: '#3473ef' }} />
+                <View className="gap-y-4">
+                  {employees.map((emp, i) => (
+                    <Animated.View key={emp.id} entering={FadeInDown.delay(i * 100)}>
+                      <View className="bg-white p-5 rounded-[32px] border border-slate-100 shadow-sm flex-row items-center">
+                        <View className="w-16 h-16 rounded-[22px] mr-4 bg-slate-100 items-center justify-center border border-slate-200"><UserIcon size={28} color="#94A3B8" /></View>
+                        <View className="flex-1"><Text className="font-black text-[#161719] text-base mb-0.5">{emp.name}</Text><Text className="text-slate-400 font-bold text-xs">{emp.role}</Text></View>
+                        <View className="items-end bg-slate-50 px-4 py-3 rounded-2xl border border-slate-100"><Text className="font-black text-lg text-[#3473ef] leading-5">0</Text><Text className="text-[#8789A3] font-bold text-[8px] uppercase tracking-tighter">Termine</Text></View>
                       </View>
-                    </View>
-                  );
-                })}
-              </View>
-            </View>
+                    </Animated.View>
+                  ))}
+                </View>
+              </>
+            ) : (
+              <>
+                <View className="mb-4 px-1">
+                  <Text className="text-xl font-black text-[#161719]">Kalendari i rezervimeve</Text>
+                  <Text className="text-slate-400 font-bold text-xs">Terminet tuaja të caktuara sipas ditëve</Text>
+                </View>
 
-            <View className="mb-10">
-              <View className="flex-row items-center mb-6 ml-1"><View className="w-10 h-10 bg-amber-50 rounded-xl items-center justify-center mr-3"><Flag size={22} color="#f59e0b" /></View><View><Text className="text-xl font-black text-[#161719]">Festat Zyrtare 2026</Text><Text className="text-slate-400 font-bold text-xs">Kosova</Text></View></View>
-              <View className="bg-white rounded-[40px] p-2 shadow-xl shadow-slate-100 border border-slate-50">
-                 {KOSOVO_HOLIDAYS_2026.map((h, i) => (
-                   <View key={i} className={`flex-row items-center p-5 ${i < KOSOVO_HOLIDAYS_2026.length - 1 ? 'border-b border-slate-50' : ''}`}>
-                      <View className="w-12 h-12 bg-slate-50 rounded-2xl items-center justify-center mr-4"><Text className="text-2xl">{h.icon}</Text></View>
-                      <View className="flex-1"><Text className="font-black text-[#161719] text-base">{h.name}</Text><Text className="text-[#3473ef] font-black text-[10px] uppercase tracking-wider mt-1">{h.date}</Text></View>
-                      <View className="w-8 h-8 rounded-full bg-emerald-50 items-center justify-center"><CheckCircle2 size={14} color="#10b981" /></View>
-                   </View>
-                 ))}
-              </View>
-            </View>
+                {/* Horizontal Day Selector */}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-6 py-2">
+                  {getNext14Days().map((d, index) => {
+                    const dateStr = d.toISOString().split('T')[0];
+                    const isSelected = dateStr === selectedDateStr;
+                    const dayNum = d.getDate();
+                    const dayName = daysOfWeek[d.getDay()];
+                    const isToday = dateStr === new Date().toISOString().split('T')[0];
+                    
+                    return (
+                      <TouchableOpacity
+                        key={index}
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          setSelectedDateStr(dateStr);
+                        }}
+                        className={`mr-3 w-16 h-20 rounded-3xl items-center justify-center border ${
+                          isSelected 
+                            ? 'bg-[#3473ef] border-[#3473ef] shadow-lg shadow-blue-200' 
+                            : 'bg-white border-slate-100 shadow-sm'
+                        }`}
+                      >
+                        <Text className={`font-black text-[9px] uppercase ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>
+                          {dayName}
+                        </Text>
+                        <Text className={`text-xl font-black mt-1 ${isSelected ? 'text-white' : 'text-[#161719]'}`}>
+                          {dayNum}
+                        </Text>
+                        {isToday && !isSelected && (
+                          <View className="w-1.5 h-1.5 bg-[#3473ef] rounded-full mt-1" />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+
+                {/* Day Appointments list */}
+                <View className="gap-y-4">
+                  {appointments.filter(a => a.date === selectedDateStr).length > 0 ? (
+                    appointments.filter(a => a.date === selectedDateStr).map((appt, i) => (
+                      <Animated.View key={appt.id} entering={FadeInDown.delay(i * 100)}>
+                        <View className="bg-white p-5 rounded-[32px] border border-slate-100 shadow-sm flex-row items-center justify-between">
+                          <View className="flex-1 pr-4">
+                            <View className="flex-row items-center mb-2">
+                              <View className="bg-blue-50 px-2.5 py-1 rounded-lg">
+                                <Text className="text-[#3473ef] font-black text-xs">
+                                  {appt.time ? appt.time.substring(0, 5) : '00:00'}
+                                </Text>
+                              </View>
+                              <View className="bg-indigo-50 px-2.5 py-1 rounded-lg ml-2">
+                                <Text className="text-indigo-600 font-black text-[9px] uppercase tracking-wider">
+                                  {appt.status}
+                                </Text>
+                              </View>
+                            </View>
+                            <Text className="font-black text-[#161719] text-base mb-1">
+                              {appt.users?.name || 'Klient i LineUp'}
+                            </Text>
+                            <Text className="text-slate-400 font-bold text-xs">
+                              {appt.service || 'Shërbim i përgjithshëm'}
+                            </Text>
+                            {appt.users?.phone && (
+                              <Text className="text-slate-400 font-bold text-[10px] mt-1">
+                                Tel: {appt.users.phone}
+                              </Text>
+                            )}
+                          </View>
+                          <View className="items-end">
+                            <Text className="font-black text-lg text-[#161719]">
+                              {appt.price ? `${appt.price}€` : '15€'}
+                            </Text>
+                          </View>
+                        </View>
+                      </Animated.View>
+                    ))
+                  ) : (
+                    <View className="items-center justify-center py-20 bg-white rounded-[32px] border border-slate-100 shadow-sm">
+                      <Calendar size={48} color="#CBD5E1" strokeWidth={1.5} />
+                      <Text className="text-slate-400 font-bold mt-4">
+                        Nuk ka rezervime për këtë ditë.
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </>
+            )}
           </View>
         )}
+
+
       </ScrollView>
 
       <AddStaffModal visible={showAddStaffModal} onClose={() => setShowAddStaffModal(false)} shopId={realShopId || user.id} onSuccess={loadDashboardData} />

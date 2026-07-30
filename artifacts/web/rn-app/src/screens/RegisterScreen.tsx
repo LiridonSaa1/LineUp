@@ -398,6 +398,8 @@ interface RegisterScreenProps {
   initialPlanId?: string;
 }
 
+import { DEFAULT_CATEGORIES, DEFAULT_SUBCATEGORIES } from "../config/defaultCategories";
+
 export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSuccess, initialPlanId }) => {
   const [registerStep, setRegisterStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -411,17 +413,17 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
     Keyboard.dismiss();
   }, [registerStep]);
 
-  const [dbCategories, setDbCategories] = useState<Category[]>([]);
-  const [dbSubcategories, setDbSubcategories] = useState<Subcategory[]>([]);
+  const [dbCategories, setDbCategories] = useState<Category[]>(DEFAULT_CATEGORIES as any);
+  const [dbSubcategories, setDbSubcategories] = useState<Subcategory[]>(DEFAULT_SUBCATEGORIES as any);
 
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         const { data: catData, error: catErr } = await supabase.from('categories').select('*');
-        if (catData) setDbCategories(catData);
+        if (catData && catData.length > 0) setDbCategories(catData);
         
         const { data: subData, error: subErr } = await supabase.from('subcategories').select('*');
-        if (subData) setDbSubcategories(subData);
+        if (subData && subData.length > 0) setDbSubcategories(subData);
       } catch (err) {
         console.error("Failed to fetch categories:", err);
       }
@@ -560,7 +562,8 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
         status: 'active',
         rating: 0,
         total_reviews: 0,
-        subcategories: selectedCategories
+        subcategories: selectedCategories,
+        category: selectedMainCategory?.name || 'Barber'
       });
 
       if (shopError) {

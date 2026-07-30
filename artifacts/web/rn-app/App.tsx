@@ -1,6 +1,6 @@
 import React from "react";
 import { StatusBar } from "expo-status-bar";
-import { View, TouchableOpacity, Text, Dimensions, Platform, Modal } from "react-native";
+import { View, TouchableOpacity, Text, Dimensions, Platform, Modal, Alert } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Home, Search, Calendar, User } from "lucide-react-native";
 import * as Haptics from 'expo-haptics';
@@ -30,6 +30,8 @@ import { BarberDashboardScreen } from "./src/screens/BarberDashboardScreen";
 import { AdminDashboardScreen } from "./src/screens/AdminDashboardScreen";
 import { AddAdModal } from "./src/screens/AddAdModal";
 import { supabase } from "./src/config/supabase";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { DEFAULT_CATEGORIES, DEFAULT_SUBCATEGORIES } from "./src/config/defaultCategories";
 import "./global.css";
 
 const { width } = Dimensions.get("window");
@@ -111,22 +113,97 @@ export default function App() {
   const [showSearch, setShowSearch] = React.useState(false);
   const [showRegisterShop, setShowRegisterShop] = React.useState(false);
   const [showAddAd, setShowAddAd] = React.useState(false);
-  const [categories, setCategories] = React.useState<any[]>([]);
-  const [subcategories, setSubcategories] = React.useState<any[]>([]);
+  const [categories, setCategories] = React.useState<any[]>(DEFAULT_CATEGORIES);
+  const [subcategories, setSubcategories] = React.useState<any[]>(DEFAULT_SUBCATEGORIES);
   const [selectedPlanId, setSelectedPlanId] = React.useState<string | undefined>(undefined);
   const [selectedLocation, setSelectedLocation] = React.useState("Lokacioni aktual");
 
   const tabPosition = useSharedValue(0);
+  const [favorites, setFavorites] = React.useState<any[]>([]);
+
+  React.useEffect(() => {
+    async function loadFavorites() {
+      if (!user?.id) {
+        setFavorites([]);
+        return;
+      }
+      try {
+        const { data, error } = await supabase
+          .from('favorites')
+          .select('*')
+          .eq('user_id', user.id);
+        if (data) setFavorites(data);
+      } catch (err) {
+        console.warn("Failed to load favorites in App.tsx:", err);
+      }
+    }
+    loadFavorites();
+  }, [user]);
+
+  const handleToggleFavorite = async (shop: any) => {
+    if (!user) {
+      Alert.alert("Llogaria kërkohet", "Ju lutem kyçuni për të shtuar në të ruajtura.");
+      return;
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    const isFav = favorites.some(f => f.shop_id === shop.id || f.shop_id === Number(shop.id));
+    if (isFav) {
+      const updated = favorites.filter(f => f.shop_id !== shop.id && f.shop_id !== Number(shop.id));
+      setFavorites(updated);
+      try {
+        await supabase
+          .from('favorites')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('shop_id', shop.id);
+      } catch (err) {
+        console.warn("Failed to remove favorite in database:", err);
+      }
+    } else {
+      const newFav = { user_id: user.id, shop_id: shop.id };
+      setFavorites([...favorites, newFav]);
+      try {
+        await supabase
+          .from('favorites')
+          .insert({
+            user_id: user.id,
+            shop_id: shop.id
+          });
+      } catch (err) {
+        console.warn("Failed to insert favorite in database:", err);
+      }
+    }
+  };
 
   React.useEffect(() => {
     async function loadStaticData() {
       try {
+        // Try to load cached data first for instant loads
+        const cachedCats = await AsyncStorage.getItem('cached_categories');
+        const cachedSubs = await AsyncStorage.getItem('cached_subcategories');
+        
+        if (cachedCats) {
+          setCategories(JSON.parse(cachedCats));
+        }
+        if (cachedSubs) {
+          setSubcategories(JSON.parse(cachedSubs));
+        }
+
+        // Fetch fresh data in background from Supabase
         const [catRes, subRes] = await Promise.all([
           supabase.from('categories').select('*'),
           supabase.from('subcategories').select('*')
         ]);
-        if (catRes.data) setCategories(catRes.data);
-        if (subRes.data) setSubcategories(subRes.data);
+        
+        if (catRes.data && catRes.data.length > 0) {
+          setCategories(catRes.data);
+          await AsyncStorage.setItem('cached_categories', JSON.stringify(catRes.data));
+        }
+        if (subRes.data && subRes.data.length > 0) {
+          setSubcategories(subRes.data);
+          await AsyncStorage.setItem('cached_subcategories', JSON.stringify(subRes.data));
+        }
       } catch (err) {
         console.warn("Failed to load static categories/subcategories:", err);
       }
@@ -276,6 +353,8 @@ export default function App() {
                 user={user}
                 onLogin={(userData) => setUser(userData)}
                 onBack={() => setSelectedShop(null)}
+                favorites={favorites}
+                onToggleFavorite={handleToggleFavorite}
               />
             ) : (
               <View className="flex-1">
@@ -293,6 +372,8 @@ export default function App() {
                     }}
                     categories={categories}
                     subcategories={subcategories}
+                    favorites={favorites}
+                    onToggleFavorite={handleToggleFavorite}
                   />
                 )}
                 {activeTab === 1 && (
@@ -304,6 +385,8 @@ export default function App() {
                     initialSearch={searchQuery}
                     initialCoords={searchCoords}
                     initialCategoryName={searchCategoryName}
+                    favorites={favorites}
+                    onToggleFavorite={handleToggleFavorite}
                   />
                 )}
                 {activeTab === 2 && (

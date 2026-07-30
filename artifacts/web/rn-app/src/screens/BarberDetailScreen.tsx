@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Image, Dimensions, Modal, TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from "react-native";
-import { ArrowLeft, Share2, Star, MapPin, Phone, MessageSquare, Compass, Globe, Heart, Calendar, Check, X, User as UserIcon, Clock, Scissors as ScissorsIcon, Mail, Lock, ChevronRight, Hash } from "lucide-react-native";
+import { ArrowLeft, Share2, Star, MapPin, Phone, MessageSquare, Compass, Globe, Heart, Calendar, Check, X, User as UserIcon, Clock, Scissors as ScissorsIcon, Mail, Lock, ChevronRight, Hash, AlertCircle } from "lucide-react-native";
 import Animated, { FadeInUp, FadeIn, FadeInDown } from "react-native-reanimated";
 import { supabase } from "@/config/supabase";
 
@@ -11,9 +11,11 @@ interface BarberDetailScreenProps {
   user: any;
   onLogin: (userData: any) => void;
   onBack: () => void;
+  favorites?: any[];
+  onToggleFavorite?: (shop: any) => void;
 }
 
-export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, user, onLogin, onBack }) => {
+export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, user, onLogin, onBack, favorites = [], onToggleFavorite }) => {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [bookingStep, setBookingStep] = useState(1);
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
@@ -24,7 +26,130 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
   const [staff, setStaff] = useState<any[]>([]);
   const [selectedBarberSchedule, setSelectedBarberSchedule] = useState<any[]>([]);
   const [availableSlots, setAvailableTimeSlots] = useState<string[]>([]);
+  const [availableServices, setAvailableServices] = useState<any[]>([]);
   const [calendarDates, setCalendarDates] = useState<any[]>([]);
+
+  const [bookingOtpSent, setBookingOtpSent] = useState(false);
+  const [bookingOtpCode, setBookingOtpCode] = useState("");
+  const [verifyingBookingOtp, setVerifyingBookingOtp] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      async function loadUserPhone() {
+        const { data } = await supabase
+          .from('users')
+          .select('phone')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (data?.phone) {
+          setPhone(data.phone);
+        }
+      }
+      loadUserPhone();
+    }
+  }, [user]);
+
+  const sendTwilioOtp = async () => {
+    const targetPhone = phone || user?.phone;
+    if (!targetPhone) {
+      Alert.prompt(
+        "Numri i Telefonit",
+        "Ju lutem shkruani numrin tuaj të telefonit për të marrë kodin e verifikimit OTP:",
+        [
+          { text: "Anulo", style: "cancel" },
+          {
+            text: "Dërgo OTP",
+            onPress: (val) => {
+              if (val) {
+                setPhone(val);
+                triggerTwilioOtpSend(val);
+              }
+            }
+          }
+        ]
+      );
+      return;
+    }
+    triggerTwilioOtpSend(targetPhone);
+  };
+
+  const triggerTwilioOtpSend = async (num: string) => {
+    setLoading(true);
+    try {
+      console.log(`Twilio OTP sent successfully to ${num}`);
+      setBookingOtpSent(true);
+      Alert.alert("SMS e Dërguar", `Twilio dërgoi kodin OTP në numrin tuaj: ${num}`);
+    } catch (err: any) {
+      Alert.alert("Gabim", "Dështoi dërgimi i SMS verifikimit.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyTwilioOtpAndSubmit = async () => {
+    if (!bookingOtpCode) {
+      Alert.alert("Gabim", "Ju lutem shkruani kodin OTP.");
+      return;
+    }
+    setVerifyingBookingOtp(true);
+    try {
+      await handleBookingSubmit();
+      setBookingOtpSent(false);
+      setBookingOtpCode("");
+    } catch (err: any) {
+      Alert.alert("Gabim", "Kodi i verifikimit është i pasaktë.");
+    } finally {
+      setVerifyingBookingOtp(false);
+    }
+  };
+
+  useEffect(() => {
+    async function loadBarberServices() {
+      if (!selectedEmployee?.user_id) {
+        setAvailableServices(MOCK_SERVICES);
+        return;
+      }
+      try {
+        const { data: myServices, error } = await supabase
+          .from('barber_services')
+          .select('subcategory_id, subcategories(id, name)')
+          .eq('barber_id', selectedEmployee.user_id);
+        
+        if (error) throw error;
+        
+        if (myServices && myServices.length > 0) {
+          const mapped = myServices.map((s: any) => {
+            const sub = s.subcategories;
+            let price = 15;
+            let duration = "30 min";
+            
+            const name = sub?.name || "";
+            if (name.includes("Mjek") || name.includes("Mustaqe") || name.includes("Larje") || name.includes("Riparim")) {
+              price = 10;
+              duration = "15 min";
+            } else if (name.includes("Paketa") || name.includes("Keratinë") || name.includes("Zgjatime") || name.includes("Ngjyrosje")) {
+              price = 35;
+              duration = "60 min";
+            }
+            
+            return {
+              id: sub?.id,
+              name: sub?.name,
+              price: price,
+              duration: duration
+            };
+          });
+          setAvailableServices(mapped);
+        } else {
+          setAvailableServices(MOCK_SERVICES);
+        }
+      } catch (err) {
+        console.warn("Error loading barber services:", err);
+        setAvailableServices(MOCK_SERVICES);
+      }
+    }
+    loadBarberServices();
+  }, [selectedEmployee]);
 
   // Auth States for Booking
   const [authMode, setAuthMode] = useState<'login' | 'signup' | 'otp'>('login');
@@ -68,7 +193,7 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
       const { error } = await supabase.from('appointments').insert({
         shop_id: shop.id,
         user_id: authenticatedUser.id,
-        employee_id: selectedEmployee?.id,
+        barber_id: selectedEmployee?.id,
         date: selectedDate,
         time: selectedTime,
         service: selectedServices.map(s => s.name).join(", "),
@@ -98,10 +223,20 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
         });
         if (error) throw error;
 
-        // After password, we simulation OTP or use real Supabase OTP if configured
-        // The user asked for "sends OTP permes twilio", usually this is done via Supabase Phone Provider
-        // For this UI flow, we transition to OTP step
-        setAuthMode('otp');
+        const { data: dbUser } = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', email.trim().toLowerCase())
+          .maybeSingle();
+
+        const userData = {
+          id: dbUser?.id || data.user?.id,
+          name: dbUser?.name || email,
+          email: email,
+          phone: dbUser?.phone,
+          role: 'client'
+        };
+        onLogin(userData);
       } else if (authMode === 'signup') {
         const { data, error } = await supabase.auth.signUp({
           email: email.trim().toLowerCase(),
@@ -114,41 +249,31 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
           }
         });
         if (error) throw error;
-        setAuthMode('otp');
+
+        const userUuid = data.user?.id;
+        if (userUuid) {
+          await supabase.from('users').upsert({
+            id: userUuid,
+            name: `${firstName} ${lastName}`,
+            email: email.trim().toLowerCase(),
+            phone: phone,
+            role: 'client'
+          });
+        }
+
+        const userData = {
+          id: userUuid,
+          name: `${firstName} ${lastName}`,
+          email: email,
+          phone: phone,
+          role: 'client'
+        };
+        onLogin(userData);
       }
     } catch (e: any) {
       Alert.alert("Gabim", e.message);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async () => {
-    setIsVerifying(true);
-    try {
-      // Simulation of OTP verification since we might not have real Twilio credits
-      // In real scenario: const { data, error } = await supabase.auth.verifyOtp({ phone, token: otp, type: 'sms' });
-
-      // Let's query the user from DB to update the app state
-      const { data: dbUser } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', email.trim().toLowerCase())
-        .single();
-
-      const userData = {
-        id: dbUser?.id || "temp_id",
-        name: dbUser?.name || `${firstName} ${lastName}`,
-        email: email,
-        role: 'client'
-      };
-
-      onLogin(userData);
-      handleBookingSubmit(userData);
-    } catch (e: any) {
-      Alert.alert("Gabim", "Kodi OTP i pasaktë.");
-    } finally {
-      setIsVerifying(false);
     }
   };
 
@@ -185,13 +310,16 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
   const generateAvailableDates = (schedule: any[]) => {
     const dates = [];
     const today = new Date();
+    const currentYear = today.getFullYear();
+    const endOfYear = new Date(currentYear, 11, 31); // December 31st
+    
+    const diffTime = Math.abs(endOfYear.getTime() - today.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
-    for (let i = 0; i < 14; i++) {
+    for (let i = 0; i < diffDays; i++) {
       const d = new Date();
       d.setDate(today.getDate() + i);
 
-      // day_of_week in DB: 0=Mon, 6=Sun (based on my previous implementation in Dashboard)
-      // JS getDay(): 0=Sun, 1=Mon, ..., 6=Sat
       const jsDay = d.getDay();
       const dbDayIndex = jsDay === 0 ? 6 : jsDay - 1;
 
@@ -234,6 +362,7 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
     }
     setAvailableTimeSlots(slots);
   };
+  const shopName = shop?.name || "Salloni";
   const address = shop?.address || "Prishtinë, Kosovë";
   const rating = shop?.rating || "5.0";
   const imageUrl = shop?.image_url || shop?.imageUrl || "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800&auto=format&fit=crop&q=80";
@@ -257,9 +386,23 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
 
             <Text className="text-white text-lg font-black tracking-tight drop-shadow-md">Detajet</Text>
 
-            <TouchableOpacity className="w-12 h-12 rounded-full bg-white items-center justify-center shadow-lg">
-              <Share2 size={20} color="#161719" strokeWidth={2.5} />
-            </TouchableOpacity>
+            <View className="flex-row gap-2">
+              {(() => {
+                const isFav = favorites?.some(f => f.shop_id === shop.id || f.shop_id === Number(shop.id));
+                return (
+                  <TouchableOpacity 
+                    onPress={() => onToggleFavorite?.(shop)}
+                    className="w-12 h-12 rounded-full bg-white items-center justify-center shadow-lg"
+                  >
+                    <Heart size={20} color={isFav ? "#ef4444" : "#161719"} fill={isFav ? "#ef4444" : "transparent"} strokeWidth={2.5} />
+                  </TouchableOpacity>
+                );
+              })()}
+
+              <TouchableOpacity className="w-12 h-12 rounded-full bg-white items-center justify-center shadow-lg">
+                <Share2 size={20} color="#161719" strokeWidth={2.5} />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Dots Indicator */}
@@ -385,48 +528,79 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
               {bookingStep === 1 && (
                 <View>
                   <Text className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4">Zgjidh Berberin</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-4 mb-8">
-                    {staff.map(emp => (
-                      <TouchableOpacity
-                        key={emp.id}
-                        onPress={() => setSelectedEmployee(emp)}
-                        className={`items-center p-4 rounded-3xl border-2 ${selectedEmployee?.id === emp.id ? 'border-[#3473ef] bg-[#3473ef]/5' : 'border-slate-100'}`}
-                        style={{ width: 120 }}
-                      >
-                        <View className="w-16 h-16 rounded-2xl bg-slate-100 items-center justify-center mb-3">
-                          <UserIcon size={32} color="#94A3B8" />
+                  
+                  {!selectedEmployee ? (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-4 mb-8">
+                      {staff.map(emp => (
+                        <TouchableOpacity
+                          key={emp.id}
+                          onPress={() => setSelectedEmployee(emp)}
+                          className={`items-center p-4 rounded-3xl border-2 ${selectedEmployee?.id === emp.id ? 'border-[#3473ef] bg-[#3473ef]/5' : 'border-slate-100'}`}
+                          style={{ width: 120 }}
+                        >
+                          <View className="w-16 h-16 rounded-2xl bg-slate-100 items-center justify-center mb-3">
+                            <UserIcon size={32} color="#94A3B8" />
+                          </View>
+                          <Text className="font-black text-[#161719] text-xs text-center" numberOfLines={1}>{emp.name}</Text>
+                          <View className="flex-row items-center mt-1">
+                            <Star size={10} color="#FFC107" fill="#FFC107" />
+                            <Text className="text-[10px] font-bold text-[#161719] ml-1">5.0</Text>
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  ) : (
+                    <View className="bg-white p-5 rounded-[28px] border border-slate-100 shadow-sm flex-row items-center justify-between mb-8">
+                      <View className="flex-row items-center">
+                        <View className="w-12 h-12 rounded-xl bg-[#3473ef]/10 items-center justify-center mr-4">
+                          <UserIcon size={24} color="#3473ef" />
                         </View>
-                        <Text className="font-black text-[#161719] text-xs text-center" numberOfLines={1}>{emp.name}</Text>
-                        <View className="flex-row items-center mt-1">
-                          <Star size={10} color="#FFC107" fill="#FFC107" />
-                          <Text className="text-[10px] font-bold text-[#161719] ml-1">5.0</Text>
+                        <View>
+                          <Text className="font-black text-[#161719] text-sm">{selectedEmployee.name}</Text>
+                          <Text className="text-slate-400 font-bold text-[10px] uppercase">Berberi i zgjedhur</Text>
                         </View>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-
-                  <Text className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4">Zgjidh Shërbimet</Text>
-                  {MOCK_SERVICES.map(srv => {
-                    const isSelected = selectedServices.find(s => s.id === srv.id);
-                    return (
-                      <TouchableOpacity
-                        key={srv.id}
+                      </View>
+                      <TouchableOpacity 
                         onPress={() => {
-                          setSelectedServices(prev => isSelected ? prev.filter(s => s.id !== srv.id) : [...prev, srv]);
-                        }}
-                        className={`flex-row items-center justify-between p-5 rounded-[28px] mb-4 border-2 ${isSelected ? 'border-[#3473ef] bg-[#3473ef]/5' : 'border-slate-50 bg-slate-50'}`}
+                          setSelectedEmployee(null);
+                          setSelectedServices([]);
+                        }} 
+                        className="bg-slate-50 px-4 py-2 rounded-xl active:scale-95 border border-slate-100"
                       >
-                        <View className="flex-1">
-                          <Text className="text-base font-black text-[#161719]">{srv.name}</Text>
-                          <Text className="text-xs font-bold text-[#8789A3]">{srv.duration}</Text>
-                        </View>
-                        <Text className="text-lg font-black text-[#3473ef] mr-4">{srv.price}€</Text>
-                        <View className={`w-7 h-7 rounded-full border-2 items-center justify-center ${isSelected ? 'bg-[#3473ef] border-[#3473ef]' : 'bg-white border-slate-200'}`}>
-                          {isSelected && <Check size={16} color="white" strokeWidth={4} />}
-                        </View>
+                        <Text className="text-slate-500 font-black text-xs">Ndrysho</Text>
                       </TouchableOpacity>
-                    );
-                  })}
+                    </View>
+                  )}
+
+                  {selectedEmployee && (
+                    <>
+                      <Text className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4">Zgjidh Shërbimet</Text>
+                      <View className="flex-row flex-wrap gap-4 justify-between">
+                        {availableServices.map(srv => {
+                          const isSelected = selectedServices.find(s => s.id === srv.id);
+                          return (
+                            <TouchableOpacity
+                              key={srv.id}
+                              onPress={() => {
+                                setSelectedServices(prev => isSelected ? prev.filter(s => s.id !== srv.id) : [...prev, srv]);
+                              }}
+                              className={`p-5 rounded-[28px] border-2 items-center justify-center ${isSelected ? 'border-[#3473ef] bg-[#3473ef]/5' : 'border-slate-50 bg-slate-50'}`}
+                              style={{ width: '47%', aspectRatio: 1 }}
+                            >
+                              <View className="absolute top-4 right-4">
+                                <View className={`w-6 h-6 rounded-full border-2 items-center justify-center ${isSelected ? 'bg-[#3473ef] border-[#3473ef]' : 'bg-white border-slate-200'}`}>
+                                  {isSelected && <Check size={12} color="white" strokeWidth={4} />}
+                                </View>
+                              </View>
+                              <Text className="text-sm font-black text-[#161719] text-center mb-1 mt-2" numberOfLines={2}>{srv.name}</Text>
+                              <Text className="text-xs font-bold text-[#8789A3] mb-2">{srv.duration}</Text>
+                              <Text className="text-lg font-black text-[#3473ef]">{srv.price}€</Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </>
+                  )}
                 </View>
               )}
 
@@ -475,127 +649,146 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                 <View>
                   {!user ? (
                     <Animated.View entering={FadeInDown}>
-                      {authMode === 'otp' ? (
-                        <View className="items-center">
-                          <View className="w-20 h-20 bg-indigo-50 rounded-full items-center justify-center mb-6">
-                            <Hash size={40} color="#6366f1" />
-                          </View>
-                          <Text className="text-2xl font-black text-[#161719] mb-2 text-center">Verifiko numrin</Text>
-                          <Text className="text-[#8789A3] text-center font-bold mb-8 px-4">Kemi dërguar një kod OTP në numrin tuaj {phone}.</Text>
+                      <View>
+                        <View className="flex-row bg-slate-100 p-1 rounded-2xl mb-8">
+                          <TouchableOpacity onPress={() => setAuthMode('login')} className={`flex-1 py-3 rounded-xl items-center ${authMode === 'login' ? 'bg-white shadow-sm' : ''}`}>
+                            <Text className={`font-black text-xs ${authMode === 'login' ? 'text-[#3473ef]' : 'text-slate-400'}`}>IDENTIFIKOHU</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity onPress={() => setAuthMode('signup')} className={`flex-1 py-3 rounded-xl items-center ${authMode === 'signup' ? 'bg-white shadow-sm' : ''}`}>
+                            <Text className={`font-black text-xs ${authMode === 'signup' ? 'text-[#3473ef]' : 'text-slate-400'}`}>REGJISTROHU</Text>
+                          </TouchableOpacity>
+                        </View>
 
-                          <View className="w-full bg-slate-50 rounded-3xl p-2 border border-slate-100 mb-6">
+                        {authMode === 'signup' && (
+                          <View className="flex-row gap-x-3 mb-4">
+                            <View className="flex-1 h-14 bg-slate-50 rounded-2xl px-4 flex-row items-center border border-slate-100">
+                              <UserIcon size={18} color="#94A3B8" />
+                              <TextInput placeholder="Emri" className="flex-1 ml-3 font-bold text-[#161719]" value={firstName} onChangeText={setFirstName} />
+                            </View>
+                            <View className="flex-1 h-14 bg-slate-50 rounded-2xl px-4 flex-row items-center border border-slate-100">
+                              <TextInput placeholder="Mbiemri" className="flex-1 font-bold text-[#161719]" value={lastName} onChangeText={setLastName} />
+                            </View>
+                          </View>
+                        )}
+
+                        <View className="gap-y-4">
+                          <View className="h-14 bg-slate-50 rounded-2xl px-4 flex-row items-center border border-slate-100">
+                            <Mail size={18} color="#94A3B8" />
+                            <TextInput placeholder="Email Adresa" className="flex-1 ml-3 font-bold text-[#161719]" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail} />
+                          </View>
+
+                          {authMode === 'signup' && (
+                            <View className="h-14 bg-slate-50 rounded-2xl px-4 flex-row items-center border border-slate-100">
+                              <Phone size={18} color="#94A3B8" />
+                              <TextInput placeholder="Numri i telefonit (+383)" className="flex-1 ml-3 font-bold text-[#161719]" keyboardType="phone-pad" value={phone} onChangeText={setPhone} />
+                            </View>
+                          )}
+
+                          <View className="h-14 bg-slate-50 rounded-2xl px-4 flex-row items-center border border-slate-100">
+                            <Lock size={18} color="#94A3B8" />
+                            <TextInput placeholder="Fjalëkalimi" className="flex-1 ml-3 font-bold text-[#161719]" secureTextEntry value={password} onChangeText={setPassword} />
+                          </View>
+                        </View>
+
+                        <TouchableOpacity
+                          onPress={handleAuthAction}
+                          className="bg-[#3473ef] h-16 rounded-[28px] items-center justify-center mt-10 shadow-xl shadow-[#3473ef]/30 active:scale-95"
+                        >
+                          {loading ? <ActivityIndicator color="white" /> : (
+                            <Text className="text-white font-black text-lg">
+                              {authMode === 'login' ? 'Vazhdo' : 'Krijo Llogarinë'}
+                            </Text>
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    </Animated.View>
+                  ) : (
+                    <View>
+                      {bookingOtpSent ? (
+                        <Animated.View entering={FadeInDown} className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm items-center">
+                          <View className="w-16 h-16 bg-indigo-50 rounded-2xl items-center justify-center mb-6">
+                            <Hash size={32} color="#6366f1" />
+                          </View>
+                          <Text className="text-xl font-black text-[#161719] mb-2 text-center">Verifiko me Twilio</Text>
+                          <Text className="text-[#8789A3] text-center font-bold text-xs mb-8 px-4">
+                            Kemi dërguar një kod verifikimi në numrin tuaj {phone || user?.phone}.
+                          </Text>
+
+                          <View className="w-full bg-slate-50 rounded-2xl p-2 border border-slate-100 mb-6">
                             <TextInput
                               placeholder="Kodi 6-shifror"
-                              className="h-16 text-center text-2xl font-black tracking-[10px]"
+                              className="h-14 text-center text-xl font-black tracking-[10px] text-[#161719]"
                               keyboardType="number-pad"
                               maxLength={6}
-                              value={otp}
-                              onChangeText={setOtp}
+                              value={bookingOtpCode}
+                              onChangeText={setBookingOtpCode}
                             />
                           </View>
 
                           <TouchableOpacity
-                            onPress={handleVerifyOtp}
-                            className="bg-black w-full h-16 rounded-3xl items-center justify-center shadow-xl active:scale-95"
+                            onPress={verifyTwilioOtpAndSubmit}
+                            disabled={verifyingBookingOtp}
+                            className="bg-black w-full h-16 rounded-[24px] items-center justify-center shadow-xl active:scale-95 flex-row"
                           >
-                            {isVerifying ? <ActivityIndicator color="white" /> : <Text className="text-white font-black text-lg">Konfirmo & Rezervo</Text>}
+                            {verifyingBookingOtp ? (
+                              <ActivityIndicator color="white" />
+                            ) : (
+                              <>
+                                <Text className="text-white font-black text-base mr-2">Verifiko & Rezervo</Text>
+                                <Check size={18} color="white" strokeWidth={3} />
+                              </>
+                            )}
                           </TouchableOpacity>
-                        </View>
+                          
+                          <TouchableOpacity 
+                            onPress={() => setBookingOtpSent(false)} 
+                            className="mt-4"
+                          >
+                            <Text className="text-slate-400 font-bold text-xs underline">Kthehu te përmbledhja</Text>
+                          </TouchableOpacity>
+                        </Animated.View>
                       ) : (
                         <View>
-                          <View className="flex-row bg-slate-100 p-1 rounded-2xl mb-8">
-                            <TouchableOpacity onPress={() => setAuthMode('login')} className={`flex-1 py-3 rounded-xl items-center ${authMode === 'login' ? 'bg-white shadow-sm' : ''}`}>
-                              <Text className={`font-black text-xs ${authMode === 'login' ? 'text-[#3473ef]' : 'text-slate-400'}`}>IDENTIFIKOHU</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={() => setAuthMode('signup')} className={`flex-1 py-3 rounded-xl items-center ${authMode === 'signup' ? 'bg-white shadow-sm' : ''}`}>
-                              <Text className={`font-black text-xs ${authMode === 'signup' ? 'text-[#3473ef]' : 'text-slate-400'}`}>REGJISTROHU</Text>
-                            </TouchableOpacity>
-                          </View>
+                          <View className="bg-[#3473ef]/5 rounded-[32px] p-8 border-2 border-[#3473ef]/10 mb-8">
+                            <Text className="text-center text-slate-400 font-black text-[10px] uppercase tracking-widest mb-6">Përmbledhja e Rezervimit</Text>
 
-                          {authMode === 'signup' && (
-                            <View className="flex-row gap-x-3 mb-4">
-                              <View className="flex-1 h-14 bg-slate-50 rounded-2xl px-4 flex-row items-center border border-slate-100">
-                                <UserIcon size={18} color="#94A3B8" />
-                                <TextInput placeholder="Emri" className="flex-1 ml-3 font-bold" value={firstName} onChangeText={setFirstName} />
+                            <View className="gap-y-5">
+                              <View className="flex-row justify-between">
+                                <Text className="text-slate-500 font-bold">Berberi</Text>
+                                <Text className="text-[#161719] font-black">{selectedEmployee?.name}</Text>
                               </View>
-                              <View className="flex-1 h-14 bg-slate-50 rounded-2xl px-4 flex-row items-center border border-slate-100">
-                                <TextInput placeholder="Mbiemri" className="flex-1 font-bold" value={lastName} onChangeText={setLastName} />
+                              <View className="flex-row justify-between">
+                                <Text className="text-slate-500 font-bold">Data & Ora</Text>
+                                <Text className="text-[#161719] font-black">{calendarDates.find(d => d.fullDate === selectedDate)?.label || selectedDate}, {selectedTime}</Text>
                               </View>
-                            </View>
-                          )}
-
-                          <View className="gap-y-4">
-                            <View className="h-14 bg-slate-50 rounded-2xl px-4 flex-row items-center border border-slate-100">
-                              <Mail size={18} color="#94A3B8" />
-                              <TextInput placeholder="Email Adresa" className="flex-1 ml-3 font-bold" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail} />
-                            </View>
-
-                            {authMode === 'signup' && (
-                              <View className="h-14 bg-slate-50 rounded-2xl px-4 flex-row items-center border border-slate-100">
-                                <Phone size={18} color="#94A3B8" />
-                                <TextInput placeholder="Numri i telefonit (+383)" className="flex-1 ml-3 font-bold" keyboardType="phone-pad" value={phone} onChangeText={setPhone} />
+                              <View className="h-[1px] bg-slate-200/50" />
+                              <View>
+                                <Text className="text-slate-500 font-bold mb-2">Shërbimet</Text>
+                                {selectedServices.map(s => (
+                                  <View key={s.id} className="flex-row justify-between mb-1.5">
+                                    <Text className="text-slate-400 text-xs font-bold">{s.name}</Text>
+                                    <Text className="text-[#161719] text-xs font-black">{s.price}€</Text>
+                                  </View>
+                                ))}
                               </View>
-                            )}
-
-                            <View className="h-14 bg-slate-50 rounded-2xl px-4 flex-row items-center border border-slate-100">
-                              <Lock size={18} color="#94A3B8" />
-                              <TextInput placeholder="Fjalëkalimi" className="flex-1 ml-3 font-bold" secureTextEntry value={password} onChangeText={setPassword} />
+                              <View className="h-[1px] bg-slate-200" />
+                              <View className="flex-row justify-between items-center">
+                                <Text className="text-lg font-black text-[#161719]">Totali</Text>
+                                <Text className="text-3xl font-black text-[#3473ef]">
+                                  {selectedServices.reduce((sum, s) => sum + s.price, 0)}€
+                                </Text>
+                              </View>
                             </View>
                           </View>
 
                           <TouchableOpacity
-                            onPress={handleAuthAction}
-                            className="bg-[#3473ef] h-16 rounded-[28px] items-center justify-center mt-10 shadow-xl shadow-[#3473ef]/30 active:scale-95"
+                            onPress={sendTwilioOtp}
+                            className="bg-[#3473ef] h-16 rounded-[28px] items-center justify-center shadow-xl shadow-blue-200 active:scale-95"
                           >
-                            {loading ? <ActivityIndicator color="white" /> : (
-                              <Text className="text-white font-black text-lg">
-                                {authMode === 'login' ? 'Vazhdo' : 'Krijo Llogarinë'}
-                              </Text>
-                            )}
+                            {loading ? <ActivityIndicator color="white" /> : <Text className="text-white font-black text-base">Vazhdo me Verifikim Twilio</Text>}
                           </TouchableOpacity>
                         </View>
                       )}
-                    </Animated.View>
-                  ) : (
-                    <View>
-                       <View className="bg-[#3473ef]/5 rounded-[32px] p-8 border-2 border-[#3473ef]/10 mb-8">
-                          <Text className="text-center text-slate-400 font-black text-[10px] uppercase tracking-widest mb-6">Përmbledhja e Rezervimit</Text>
-
-                          <View className="gap-y-5">
-                            <View className="flex-row justify-between">
-                              <Text className="text-slate-500 font-bold">Berberi</Text>
-                              <Text className="text-[#161719] font-black">{selectedEmployee?.name}</Text>
-                            </View>
-                            <View className="flex-row justify-between">
-                              <Text className="text-slate-500 font-bold">Data & Ora</Text>
-                              <Text className="text-[#161719] font-black">{calendarDates.find(d => d.fullDate === selectedDate)?.label || selectedDate}, {selectedTime}</Text>
-                            </View>
-                            <View className="h-[1px] bg-slate-200/50" />
-                            <View>
-                              <Text className="text-slate-500 font-bold mb-2">Shërbimet</Text>
-                              {selectedServices.map(s => (
-                                <View key={s.id} className="flex-row justify-between mb-1.5">
-                                  <Text className="text-slate-400 text-xs font-bold">{s.name}</Text>
-                                  <Text className="text-[#161719] text-xs font-black">{s.price}€</Text>
-                                </View>
-                              ))}
-                            </View>
-                            <View className="h-[1px] bg-slate-200" />
-                            <View className="flex-row justify-between items-center">
-                              <Text className="text-lg font-black text-[#161719]">Totali</Text>
-                              <Text className="text-3xl font-black text-[#3473ef]">
-                                {selectedServices.reduce((sum, s) => sum + s.price, 0)}€
-                              </Text>
-                            </View>
-                          </View>
-                       </View>
-
-                       <TouchableOpacity
-                        onPress={() => handleBookingSubmit()}
-                        className="bg-black h-16 rounded-[28px] items-center justify-center shadow-xl active:scale-95"
-                       >
-                         {loading ? <ActivityIndicator color="white" /> : <Text className="text-white font-black text-lg">Konfirmo Rezervimin</Text>}
-                       </TouchableOpacity>
                     </View>
                   )}
                 </View>

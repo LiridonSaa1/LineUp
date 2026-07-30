@@ -29,10 +29,12 @@ interface HomeScreenProps {
   onOpenSearch: () => void;
   onOpenAddAd: () => void;
   selectedLocation: string;
-  onSearch?: (query: string, subIds?: string[]) => void;
+  onSearch?: (query: string, subIds?: string[], categoryName?: string) => void;
   onStartPlan?: (planId: string) => void;
   categories?: any[];
   subcategories?: any[];
+  favorites?: any[];
+  onToggleFavorite?: (shop: any) => void;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
@@ -44,7 +46,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onSearch,
   onStartPlan,
   categories = [],
-  subcategories = []
+  subcategories = [],
+  favorites = [],
+  onToggleFavorite
 }) => {
   const [loading, setLoading] = useState(true);
   const [recommendedShops, setRecommendedShops] = useState<any[]>([]);
@@ -52,6 +56,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [selectedMainCategory, setSelectedMainCategory] = useState<any | null>(null);
   const [showSubModal, setShowSubModal] = useState(false);
   const [selectedSubIds, setSelectedSubIds] = useState<string[]>([]);
+
 
   const [ads, setAds] = useState<any[]>([
     {
@@ -251,14 +256,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <Text className="text-black text-[10px] font-bold">I zgjedhur</Text>
             </BlurView>
           </View>
-          <TouchableOpacity
-            className="absolute top-3 right-3 overflow-hidden rounded-full border border-white/60"
-            style={{ borderRadius: 100 }}
-          >
-            <BlurView intensity={60} tint="light" className="w-8 h-8 items-center justify-center bg-white/30">
-              <Heart size={18} color="white" fill="white" />
-            </BlurView>
-          </TouchableOpacity>
+          {(() => {
+            const isFav = favorites?.some(f => f.shop_id === item.id || f.shop_id === Number(item.id));
+            return (
+              <TouchableOpacity
+                onPress={() => onToggleFavorite?.(item)}
+                className="absolute top-3 right-3 overflow-hidden rounded-full border border-white/60"
+                style={{ borderRadius: 100 }}
+              >
+                <BlurView intensity={60} tint="light" className="w-8 h-8 items-center justify-center bg-white/30">
+                  <Heart size={18} color={isFav ? "#ef4444" : "white"} fill={isFav ? "#ef4444" : "transparent"} />
+                </BlurView>
+              </TouchableOpacity>
+            );
+          })()}
         </View>
         <View className="flex-row justify-between items-start">
           <View className="flex-1 mr-2">
@@ -687,16 +698,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <TouchableOpacity
               onPress={() => {
                 setShowSubModal(false);
-                let queryText = "";
-                if (selectedSubIds.length > 0) {
-                  const selectedNames = subcategories
-                    .filter(s => selectedSubIds.includes(s.id))
-                    .map(s => s.name);
-                  queryText = selectedNames.join(", ");
-                } else {
-                  queryText = selectedMainCategory?.name || "";
-                }
-                
+
                 let finalSubIds = [...selectedSubIds];
                 if (finalSubIds.length === 0 && selectedMainCategory) {
                   finalSubIds = subcategories
@@ -705,7 +707,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 }
                 
                 if (onSearch) {
-                  onSearch(queryText, finalSubIds);
+                  // We pass empty query to avoid filtering by "Haircut" in name/address
+                  // and instead rely on category/subcategory IDs
+                  onSearch("", finalSubIds, selectedMainCategory?.name || "");
                 }
               }}
               className="h-14 bg-black rounded-2xl items-center justify-center shadow-lg"

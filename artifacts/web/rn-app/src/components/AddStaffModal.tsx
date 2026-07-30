@@ -5,11 +5,11 @@ import { supabase } from '@/config/supabase';
 import { createClient } from '@supabase/supabase-js';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 
-// Secondary client to perform signUp without persisting session (keeps owner logged in)
+// Secondary client to perform admin/Auth operations using service_role key
 const SUPABASE_URL = 'https://cnlhqxegzphtlvtgijuj.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNubGhxeGVnenBodGx2dGdpanVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MTA2NDAsImV4cCI6MjA5Nzk4NjY0MH0.AiT2pha9udGDx7og-e7f9XJyHZUJJClIEj43YEyy-Pc';
+const SUPABASE_SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNubGhxeGVnenBodGx2dGdpanVqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MjQxMDY0MCwiZXhwIjoyMDk3OTg2NjQwfQ.V925IRdcMhKmVuYeHhXrmEpskvjEHeU5NL9Or0OyUKo';
 
-const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+const adminAuthClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: {
     persistSession: false,
     autoRefreshToken: false,
@@ -43,34 +43,80 @@ export const AddStaffModal: React.FC<AddStaffModalProps> = ({ visible, onClose, 
       const fullName = `${firstName} ${lastName}`;
       const cleanEmail = email.toLowerCase().trim();
 
-      console.log('Attempting to create real Auth account for:', cleanEmail);
+      console.log('Attempting to create or resolve Auth account for:', cleanEmail);
+      let authId = null;
 
-      // 1. Create real Supabase Auth account using the secondary client
-      const { data: authData, error: authError } = await authClient.auth.signUp({
+      // 1. Create user using the admin client (bypasses active session issues)
+      const { data: authData, error: authError } = await adminAuthClient.auth.admin.createUser({
         email: cleanEmail,
         password: password,
-        options: {
-          data: {
-            full_name: fullName,
-            role: 'employee'
-          }
+        email_confirm: true,
+        user_metadata: {
+          full_name: fullName,
+          role: 'employee'
         }
       });
 
       if (authError) {
-        throw new Error(`Gabim gjatë krijimit të llogarisë Auth: ${authError.message}`);
+        if (authError.message.includes('already registered') || authError.message.includes('already exists') || authError.message.includes('conflict') || authError.status === 422) {
+          // The user is already in Auth! Let's query listUsers to retrieve their UUID
+          const { data: listData, error: listErr } = await adminAuthClient.auth.admin.listUsers();
+          if (listErr) {
+            throw new Error(`Dështoi listimi i përdoruesve: ${listErr.message}`);
+          }
+          
+          const foundUser = listData?.users?.find(u => u.email?.toLowerCase() === cleanEmail);
+          if (foundUser) {
+            authId = foundUser.id;
+            console.log('Found existing user in Auth list:', authId);
+          } else {
+            throw new Error(`Gabim gjatë regjistrimit të stafit: ${authError.message}`);
+          }
+        } else {
+          throw new Error(`Gabim gjatë krijimit të llogarisë Auth: ${authError.message}`);
+        }
+      } else {
+        authId = authData.user?.id;
       }
 
-      const authId = authData.user?.id;
       if (!authId) throw new Error("Dështoi marrja e ID-së nga Supabase Auth.");
 
-      console.log('Auth account created successfully. ID:', authId);
+      console.log('Auth ID resolved:', authId);
 
-      // 2. Create entry in 'barbers' table FIRST
-      const { error: barberError } = await supabase
+      // Check if this user is already added as a barber in this shop
+      const { data: existingBarber } = await supabase
+        .from('barbers')
+        .select('id')
+        .eq('user_id', authId)
+        .maybeSingle();
+
+      if (existingBarber) {
+        throw new Error("Ky përdorues është tashmë i regjistruar si staf.");
+      }
+
+      console.log('Now creating/updating user account...');
+
+      // 2. Upsert into 'users' table FIRST (using admin client to guarantee write)
+      const { error: userError } = await adminAuthClient
+        .from('users')
+        .upsert({
+          id: authId,
+          email: cleanEmail,
+          name: fullName,
+          role: 'employee'
+        });
+
+      if (userError) {
+          throw new Error(`Gabim gjatë sinkronizimit të përdoruesit: ${userError.message}`);
+      }
+
+      console.log('User profile created/updated. Now creating barber profile...');
+
+      // 3. Create entry in 'barbers' table SECOND (using admin client to guarantee write)
+      const { error: barberError } = await adminAuthClient
         .from('barbers')
         .insert({
-          id: authId, // Use the same Auth ID for the barber profile
+          user_id: authId,
           shop_id: shopId,
           name: fullName
         });
@@ -78,24 +124,8 @@ export const AddStaffModal: React.FC<AddStaffModalProps> = ({ visible, onClose, 
       if (barberError) {
         console.error('Supabase error adding to barbers:', barberError);
         let customMsg = barberError.message;
-        if (barberError.code === '23503') customMsg = "ID e dyqanit është e pasaktë.";
+        if (barberError.code === '23503') customMsg = "Salloni ose ID e dyqanit është e pasaktë.";
         throw new Error(customMsg);
-      }
-
-      console.log('Barber profile created. Now creating user account...');
-
-      // 3. Upsert into 'users' table SECOND
-      const { error: userError } = await supabase
-        .from('users')
-        .upsert({
-          id: authId,
-          email: cleanEmail,
-          name: fullName,
-          role: 'employee'
-        }, { onConflict: 'email' });
-
-      if (userError) {
-          throw new Error(`Gabim gjatë sinkronizimit të përdoruesit: ${userError.message}`);
       }
 
       Alert.alert('Sukses', `Stafi ${fullName} u shtua me sukses.`);

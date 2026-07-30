@@ -33,6 +33,35 @@ const CITY_COORDS: Record<string, { lat: number; lng: number }> = {
   "Podujevë": { lat: 42.9114, lng: 21.1903 },
 };
 
+// Robust city matching helper
+const normalizeCity = (city: string) => {
+  if (!city) return "";
+  return city
+    .toLowerCase()
+    .trim()
+    .replace(/ë/g, "e")
+    .replace(/ç/g, "c")
+    .replace(/[^a-z]/g, "");
+};
+
+const getCoordsForCity = (cityName: string) => {
+  const normalizedSearch = normalizeCity(cityName);
+  if (!normalizedSearch) return null;
+
+  // Try direct match first
+  for (const [city, coords] of Object.entries(CITY_COORDS)) {
+    if (normalizeCity(city) === normalizedSearch) return coords;
+  }
+
+  // Try partial match
+  for (const [city, coords] of Object.entries(CITY_COORDS)) {
+    if (normalizedSearch.includes(normalizeCity(city)) || normalizeCity(city).includes(normalizedSearch)) {
+      return coords;
+    }
+  }
+  return null;
+};
+
 interface ExploreScreenProps {
   onSelectShop: (shop: any) => void;
   onOpenSearch: () => void;
@@ -40,6 +69,9 @@ interface ExploreScreenProps {
   initialSearch?: string;
   initialCoords?: { lat?: number; lng?: number };
   initialSubIds?: string[];
+  initialCategoryName?: string;
+  favorites?: any[];
+  onToggleFavorite?: (shop: any) => void;
 }
 
 export const ExploreScreen: React.FC<ExploreScreenProps> = ({
@@ -48,7 +80,10 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
   initialCity = "Të gjitha",
   initialSearch = "",
   initialCoords,
-  initialSubIds = []
+  initialSubIds = [],
+  initialCategoryName = "",
+  favorites = [],
+  onToggleFavorite
 }) => {
   const [shops, setShops] = useState<any[]>([]);
   const [filteredShops, setFilteredShops] = useState<any[]>([]);
@@ -63,22 +98,29 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
     let result = [...shops];
 
     // 1. Filter by City
-    const cleanCity = initialCity?.toLowerCase().trim();
-    if (cleanCity && cleanCity !== "të gjitha" && cleanCity !== "lokacioni aktual") {
-      result = result.filter(shop => shop.city?.toLowerCase() === cleanCity);
+    const cleanCity = normalizeCity(initialCity);
+    if (cleanCity && cleanCity !== normalizeCity("të gjitha") && cleanCity !== normalizeCity("lokacioni aktual")) {
+      result = result.filter(shop => normalizeCity(shop.city) === cleanCity);
       console.log("[ExploreScreen] After City filter:", result.length);
     }
 
-    // 2. Filter by subcategory IDs (initialSubIds)
+    // 2. Filter by subcategory IDs (initialSubIds) or Category Name
     const activeSubIds = (initialSubIds || []).filter(id => id && id.toString().trim().length > 0);
-    if (activeSubIds.length > 0) {
+    const hasCategoryFilter = activeSubIds.length > 0 || (initialCategoryName && initialCategoryName.trim().length > 0);
+
+    if (hasCategoryFilter) {
       result = result.filter(shop => {
-        if (Array.isArray(shop.subcategories) && shop.subcategories.length > 0) {
-          return shop.subcategories.some((id: string) => activeSubIds.includes(id));
-        }
-        return false;
+        // Match by subcategory ID
+        const matchesSubId = activeSubIds.length > 0 && Array.isArray(shop.subcategories) &&
+                            shop.subcategories.some((id: string) => activeSubIds.includes(id));
+
+        // Match by category name (fallback)
+        const matchesCategory = initialCategoryName &&
+                               shop.category?.toLowerCase() === initialCategoryName.toLowerCase();
+
+        return matchesSubId || matchesCategory;
       });
-      console.log("[ExploreScreen] After Subcategories filter:", result.length);
+      console.log("[ExploreScreen] After Category/Subcategories filter:", result.length);
     }
 
     // 3. Filter by Search Query (name, city, address)
@@ -184,11 +226,21 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
       mapRef.current?.animateToRegion({
         latitude: initialCoords.lat,
         longitude: initialCoords.lng,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
+        latitudeDelta: 0.02,
+        longitudeDelta: 0.02,
       }, 1000);
+    } else if (initialCity && initialCity !== "Të gjitha" && initialCity !== "Lokacioni aktual") {
+      const cityCoords = getCoordsForCity(initialCity);
+      if (cityCoords) {
+        mapRef.current?.animateToRegion({
+          latitude: cityCoords.lat,
+          longitude: cityCoords.lng,
+          latitudeDelta: 0.08,
+          longitudeDelta: 0.08,
+        }, 1000);
+      }
     }
-  }, [initialCoords]);
+  }, [initialCoords, initialCity]);
 
   useEffect(() => {
     async function loadShops() {
@@ -240,7 +292,7 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
           // Determine base coordinates: Use shop's lat/lng, or city's lat/lng, or default to Prishtina
           const baseCoords = (shop.latitude && shop.longitude)
             ? { lat: shop.latitude, lng: shop.longitude }
-            : CITY_COORDS[shop.city] || CITY_COORDS["Prishtinë"];
+            : getCoordsForCity(shop.city) || CITY_COORDS["Prishtinë"];
 
           // Add a small stable offset if we are using fallback coordinates to avoid perfect overlap
           const isFallback = !shop.latitude || !shop.longitude;
@@ -253,6 +305,7 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
               coordinate={{ latitude: lat, longitude: lng }}
               title={shop.name}
               description={shop.address}
+              onPress={() => handleMarkerPress(shop)}
             />
           );
         })}
@@ -323,16 +376,24 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
                 <View key={shop.id || i} className="mb-10 bg-white rounded-[40px] p-2 shadow-2xl shadow-black/20 border border-slate-50" style={{ elevation: 15 }}>
                   <TouchableOpacity
                     activeOpacity={0.9}
-                    onPress={() => handleMarkerPress(shop)}
+                    onPress={() => onSelectShop(shop)}
                     className="rounded-[34px] overflow-hidden bg-slate-50 mb-4"
                   >
                     <Image
                       source={{ uri: shop.imageUrl || "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800&auto=format&fit=crop&q=80" }}
                       className="w-full h-72 object-cover"
                     />
-                    <TouchableOpacity className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/20 backdrop-blur-md items-center justify-center border border-white/30">
-                      <Heart size={20} color="white" fill="transparent" />
-                    </TouchableOpacity>
+                    {(() => {
+                      const isFav = favorites?.some(f => f.shop_id === shop.id || f.shop_id === Number(shop.id));
+                      return (
+                        <TouchableOpacity
+                          onPress={() => onToggleFavorite?.(shop)}
+                          className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/20 backdrop-blur-md items-center justify-center border border-white/30"
+                        >
+                          <Heart size={20} color={isFav ? "#ef4444" : "white"} fill={isFav ? "#ef4444" : "transparent"} />
+                        </TouchableOpacity>
+                      );
+                    })()}
 
                     {/* Pagination dots indicator mock */}
                     <View className="absolute bottom-4 left-0 right-0 flex-row justify-center gap-1.5">
@@ -340,7 +401,11 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
                     </View>
                   </TouchableOpacity>
 
-                  <View className="px-5 pb-5">
+                  <TouchableOpacity
+                    activeOpacity={0.9}
+                    onPress={() => onSelectShop(shop)}
+                    className="px-5 pb-5"
+                  >
                     {/* Row 1: Name and Rating */}
                     <View className="flex-row justify-between items-center mb-3">
                       <Text className="text-xl font-black text-[#161719] flex-1 mr-4" numberOfLines={1}>{shop.name}</Text>
@@ -362,7 +427,7 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
                     <Text className="text-[#3473ef] text-xs font-black uppercase tracking-widest">
                       {shop.reviews || "12"} vlerësime
                     </Text>
-                  </View>
+                  </TouchableOpacity>
                 </View>
               ))
             )}
