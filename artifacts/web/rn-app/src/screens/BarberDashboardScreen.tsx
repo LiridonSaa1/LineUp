@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, Dimensions, ActivityIndicator, Platform, Alert, Switch } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, Dimensions, ActivityIndicator, Platform, Alert, Switch, TextInput } from 'react-native';
 import {
   Users,
   Calendar,
@@ -21,7 +21,13 @@ import {
   BarChart3,
   CalendarDays,
   Flag,
-  Info
+  Info,
+  XCircle,
+  Globe,
+  Instagram,
+  MapPin,
+  MessageCircle,
+  Phone
 } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
@@ -36,6 +42,11 @@ import Animated, {
 } from 'react-native-reanimated';
 import { supabase } from '@/config/supabase';
 import { AddStaffModal } from '../components/AddStaffModal';
+import { DEFAULT_CATEGORIES } from '../config/defaultCategories';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadFile } from '../utils/storage';
+import { PaddleCheckout } from '../components/PaddleCheckout';
+import { createPaddleTransaction } from '../config/paddle';
 
 const { width } = Dimensions.get('window');
 
@@ -103,7 +114,23 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
   const [selectedStaffFilter, setSelectedStaffFilter] = useState<string | null>(null);
   const [showAddStaffModal, setShowAddStaffModal] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<string | null>('solo');
+  const [employeeLimit, setEmployeeLimit] = useState(1);
   const [shopSchedule, setShopSchedule] = useState<any[]>([]);
+  const [portfolioPhotos, setPortfolioPhotos] = useState<any[]>([]); // Array of {url, category}
+  const [newPhotoUrl, setNewPhotoUrl] = useState('');
+  const [selectedPhotoCategory, setSelectedPhotoCategory] = useState(DEFAULT_CATEGORIES[0].name);
+  const [savingPortfolio, setSavingPortfolio] = useState(false);
+
+  // Shop Card Image states
+  const [shopImageUrl, setShopImageUrl] = useState<string | null>(null);
+  const [newCardPhotoUrl, setNewCardPhotoUrl] = useState('');
+  const [updatingCardPhoto, setUpdatingCardPhoto] = useState(false);
+
+  // Upgrade Plan States
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [isPreparingUpgrade, setIsPreparingUpgrade] = useState(false);
+  const [upgradeTransactionId, setUpgradeTransactionId] = useState<string | null>(null);
+  const [targetUpgradePlan, setTargetUpgradePlan] = useState<any>(null);
 
   const daysOfWeek = ['Die', 'Hën', 'Mar', 'Mër', 'Enj', 'Pre', 'Sht'];
   const getNext14Days = () => {
@@ -118,7 +145,7 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
   };
 
   const isOwner = user?.role === 'owner' || user?.role === 'super_admin' || user?.role === 'barber'; // Assuming owner
-  const tabs = isOwner ? ['Pasqyra', 'Stafi'] : ['Pasqyra', 'Takimet'];
+  const tabs = isOwner ? ['Pasqyra', 'Stafi', 'Portfolio'] : ['Pasqyra', 'Takimet'];
   const TAB_WIDTH = (width - 48) / tabs.length;
   const tabPosition = useSharedValue(0);
 
@@ -147,10 +174,29 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
         sId = barberData?.shop_id;
         employeeBarberId = barberData?.id;
       } else {
-        const { data: shopData } = await supabase.from('barbershops').select('id').eq('owner_id', user.id).maybeSingle();
+        const { data: shopData } = await supabase.from('barbershops').select('*').eq('owner_id', user.id).maybeSingle();
         sId = shopData?.id || user.id;
+        if (shopData) {
+          setPortfolioPhotos(shopData.portfolio_urls || []);
+          setShopImageUrl(shopData.image_url);
+        }
       }
       setRealShopId(sId);
+
+      // Fetch Plan & Limit
+      const { data: subData } = await supabase
+        .from('subscriptions')
+        .select('product_id, employee_limit')
+        .eq('customer_id', user.id) // Or use a way to link customer to shop
+        .maybeSingle();
+
+      if (subData) {
+        setCurrentPlan(subData.product_id);
+        setEmployeeLimit(subData.employee_limit || (subData.product_id === 'solo' ? 1 : subData.product_id === 'duo' ? 2 : 100));
+      } else {
+        // Fallback for demo
+        setEmployeeLimit(user.role === 'owner' ? 2 : 1);
+      }
 
       const { data: dbBarbers } = await supabase.from('barbers').select('*').eq('shop_id', sId);
       setEmployees(dbBarbers || []);
@@ -188,6 +234,142 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
 
   const handleTabPress = (index: number) => { setActiveTabIndex(index); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); };
   const indicatorStyle = useAnimatedStyle(() => ({ transform: [{ translateX: tabPosition.value }] }));
+
+  const handleAddPortfolioPhoto = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.7,
+      });
+
+      if (!result.canceled && result.assets[0].uri) {
+        setSavingPortfolio(true);
+        const publicUrl = await uploadFile(result.assets[0].uri);
+        const newPhoto = { url: publicUrl, category: selectedPhotoCategory };
+        const updated = [...portfolioPhotos, newPhoto];
+
+        const { error } = await supabase
+          .from('barbershops')
+          .update({ portfolio_urls: updated })
+          .eq('id', realShopId);
+
+        if (error) throw error;
+        setPortfolioPhotos(updated);
+        Alert.alert("Sukses", "Fotoja u shtua në portofol.");
+      }
+    } catch (e: any) {
+      Alert.alert("Gabim", "Dështoi shtimi i fotos: " + e.message);
+    } finally {
+      setSavingPortfolio(false);
+    }
+  };
+
+  const handleDeletePortfolioPhoto = async (index: number) => {
+    setSavingPortfolio(true);
+    const updated = portfolioPhotos.filter((_, i) => i !== index);
+    try {
+      const { error } = await supabase
+        .from('barbershops')
+        .update({ portfolio_urls: updated })
+        .eq('id', realShopId);
+
+      if (error) throw error;
+      setPortfolioPhotos(updated);
+    } catch (e: any) {
+      Alert.alert("Gabim", "Dështoi fshirja e fotos.");
+    } finally {
+      setSavingPortfolio(false);
+    }
+  };
+
+  const handleUpdateShopImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [16, 9],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0].uri) {
+        setUpdatingCardPhoto(true);
+        const publicUrl = await uploadFile(result.assets[0].uri);
+
+        const { error } = await supabase
+          .from('barbershops')
+          .update({ image_url: publicUrl })
+          .eq('id', realShopId);
+
+        if (error) throw error;
+        setShopImageUrl(publicUrl);
+        Alert.alert("Sukses", "Fotoja e kartelës u përditësua.");
+      }
+    } catch (e: any) {
+      Alert.alert("Gabim", "Dështoi përditësimi i fotos së kartelës: " + e.message);
+    } finally {
+      setUpdatingCardPhoto(false);
+    }
+  };
+
+  const triggerUpgradeFlow = async () => {
+    // Determine next plan
+    let nextPlanId: 'duo' | 'team' = 'duo';
+    if (currentPlan === 'duo') nextPlanId = 'team';
+
+    const plan = {
+      id: nextPlanId,
+      name: nextPlanId.charAt(0).toUpperCase() + nextPlanId.slice(1),
+      price: nextPlanId === 'duo' ? 20 : 25
+    };
+
+    setTargetUpgradePlan(plan);
+    setIsPreparingUpgrade(true);
+
+    try {
+      console.log(`[Dashboard] Triggering direct upgrade to ${nextPlanId}...`);
+      const res = await createPaddleTransaction({
+        email: user.email,
+        planId: nextPlanId,
+        amount: plan.price,
+        customerName: user.name
+      });
+
+      if (res?.data?.id) {
+        setUpgradeTransactionId(res.data.id);
+        setShowUpgradeModal(true);
+      }
+    } catch (err: any) {
+      Alert.alert("Gabim", "Dështoi krijimi i pagesës: " + err.message);
+    } finally {
+      setIsPreparingUpgrade(false);
+    }
+  };
+
+  const handleUpgradeSuccess = async () => {
+    setLoading(true);
+    try {
+      // Update subscription in DB
+      const { error } = await supabase.from('subscriptions').upsert({
+        customer_id: user.id,
+        status: 'active',
+        product_id: targetUpgradePlan.id,
+        subscription_id: upgradeTransactionId || `txn_${Date.now()}`,
+        employee_limit: targetUpgradePlan.id === 'duo' ? 2 : 100,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'customer_id' });
+
+      if (error) throw error;
+
+      setShowUpgradeModal(false);
+      Alert.alert("Sukses", `Plani u përmirësua me sukses në ${targetUpgradePlan.name}!`);
+      loadDashboardData();
+    } catch (e: any) {
+      Alert.alert("Gabim", "Pagesa u krye por dështoi përditësimi i limitit: " + e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -227,7 +409,12 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
         </View>
       </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 120 }}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* TAB 0: Pasqyra */}
         {activeTabIndex === 0 && (
           <View className="px-6">
@@ -276,8 +463,33 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
             {isOwner ? (
               <>
                 <View className="flex-row justify-between items-center mb-6 px-1">
-                  <View><Text className="text-xl font-black text-[#161719]">Ekipi juaj</Text><Text className="text-slate-400 font-bold text-xs">{employees.length} profesionistë aktivë</Text></View>
-                  <TouchableOpacity onPress={() => setShowAddStaffModal(true)} className="w-12 h-12 bg-[#3473ef] rounded-2xl items-center justify-center shadow-lg shadow-[#3473ef]/30"><Plus size={24} color="white" strokeWidth={3} /></TouchableOpacity>
+                  <View>
+                    <Text className="text-xl font-black text-[#161719]">Ekipi juaj</Text>
+                    <Text className="text-slate-400 font-bold text-xs">{employees.length} profesionistë aktivë</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (employees.length >= employeeLimit) {
+                        Alert.alert(
+                          "Limit i Arritur",
+                          "Keni arritur limitin e berberëve. Duhet ta bësh upgrade për të vazhduar.",
+                          [
+                            { text: "Anulo", style: "cancel" },
+                            { text: "Nrregull", onPress: triggerUpgradeFlow }
+                          ]
+                        );
+                      } else {
+                        setShowAddStaffModal(true);
+                      }
+                    }}
+                    className="w-12 h-12 bg-[#3473ef] rounded-2xl items-center justify-center shadow-lg shadow-[#3473ef]/30"
+                  >
+                    {isPreparingUpgrade ? (
+                      <ActivityIndicator size="small" color="white" />
+                    ) : (
+                      <Plus size={24} color="white" strokeWidth={3} />
+                    )}
+                  </TouchableOpacity>
                 </View>
 
                 <View className="gap-y-4">
@@ -388,10 +600,187 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
           </View>
         )}
 
+        {/* TAB 2: Portfolio */}
+        {activeTabIndex === 2 && (
+          <View className="px-6">
+            <View className="mb-8 px-1">
+              <Text className="text-xl font-black text-[#161719]">Portofoli i punës</Text>
+              <Text className="text-slate-400 font-bold text-xs">Shfaqni fotot e fundit për klientët</Text>
+            </View>
+
+            {/* ── CARD PHOTO SECTION ────────────────── */}
+            <View className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm mb-8">
+              <View className="flex-row items-center mb-6">
+                <View className="w-10 h-10 bg-indigo-50 rounded-xl items-center justify-center mr-3">
+                  <Star size={20} color="#3473ef" />
+                </View>
+                <View>
+                  <Text className="text-lg font-black text-[#161719]">Fotoja Kryesore (Kartela)</Text>
+                  <Text className="text-slate-400 font-bold text-[10px]">Kjo foto shfaqet në faqen kryesore</Text>
+                </View>
+              </View>
+
+              <View className="w-full h-40 rounded-2xl overflow-hidden mb-6 bg-slate-50 border border-slate-100">
+                <Image
+                  source={{ uri: shopImageUrl || 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1000&auto=format&fit=crop&q=80' }}
+                  className="w-full h-full object-cover"
+                />
+                <View className="absolute top-2 left-2 bg-black/60 px-2 py-1 rounded-lg">
+                  <Text className="text-white text-[8px] font-black uppercase">Preview Aktuale</Text>
+                </View>
+              </View>
+
+              <View className="flex-row items-center gap-x-3">
+                <TouchableOpacity
+                  onPress={handleUpdateShopImage}
+                  disabled={updatingCardPhoto}
+                  className={`flex-1 h-14 rounded-2xl flex-row items-center justify-center shadow-lg ${updatingCardPhoto ? 'bg-slate-200' : 'bg-[#161719] shadow-black/20'}`}
+                >
+                  {updatingCardPhoto ? (
+                    <ActivityIndicator size="small" color="white" />
+                  ) : (
+                    <>
+                      <Plus size={18} color="white" strokeWidth={3} className="mr-2" />
+                      <Text className="text-white font-black text-xs">Ndrysho foton e kartelës</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm mb-8">
+              <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 ml-1">Kategoria dhe Ngarkimi i Fotos</Text>
+
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-2 mb-4">
+                {DEFAULT_CATEGORIES.map((cat) => (
+                  <TouchableOpacity
+                    key={cat.id}
+                    onPress={() => setSelectedPhotoCategory(cat.name)}
+                    className={`px-4 py-2 rounded-xl border ${selectedPhotoCategory === cat.name ? 'bg-[#3473ef] border-[#3473ef]' : 'bg-slate-50 border-slate-100'}`}
+                  >
+                    <Text className={`font-bold text-xs ${selectedPhotoCategory === cat.name ? 'text-white' : 'text-[#8789A3]'}`}>{cat.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <View className="flex-row gap-x-3">
+                <TouchableOpacity
+                  onPress={handleAddPortfolioPhoto}
+                  disabled={savingPortfolio}
+                  className={`flex-1 h-14 rounded-2xl flex-row items-center justify-center shadow-lg ${savingPortfolio ? 'bg-slate-200' : 'bg-[#3473ef] shadow-blue-200'}`}
+                >
+                  {savingPortfolio ? (
+                    <ActivityIndicator size="small" color="white" />
+                  ) : (
+                    <>
+                      <Plus size={20} color="white" strokeWidth={3} className="mr-2" />
+                      <Text className="text-white font-black text-sm">Shto Foto nga Galeria</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View className="gap-y-8">
+              {DEFAULT_CATEGORIES.map((cat) => {
+                const catPhotos = portfolioPhotos.filter(p => (typeof p === 'string' ? false : p.category === cat.name));
+                if (catPhotos.length === 0) return null;
+
+                return (
+                  <View key={cat.id}>
+                    <Text className="text-[11px] font-black text-slate-400 uppercase tracking-[2px] mb-4 ml-1">{cat.name}</Text>
+                    <View className="flex-row flex-wrap gap-4">
+                      {catPhotos.map((photo, i) => (
+                        <View key={i} className="w-[47%] aspect-square rounded-[28px] overflow-hidden relative border border-slate-100 shadow-sm">
+                          <Image source={{ uri: photo.url }} className="w-full h-full object-cover" />
+                          <TouchableOpacity
+                            onPress={() => {
+                              const globalIndex = portfolioPhotos.findIndex(p => p.url === photo.url && p.category === photo.category);
+                              handleDeletePortfolioPhoto(globalIndex);
+                            }}
+                            className="absolute top-2 right-2 w-8 h-8 bg-black/40 rounded-full items-center justify-center border border-white/20"
+                          >
+                            <XCircle size={16} color="white" />
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                );
+              })}
+
+              {/* Handle legacy string photos if any */}
+              {portfolioPhotos.some(p => typeof p === 'string') && (
+                <View>
+                  <Text className="text-[11px] font-black text-slate-400 uppercase tracking-[2px] mb-4 ml-1">Tjera (Pa kategori)</Text>
+                  <View className="flex-row flex-wrap gap-4">
+                    {portfolioPhotos.filter(p => typeof p === 'string').map((url, i) => (
+                      <View key={i} className="w-[47%] aspect-square rounded-[28px] overflow-hidden relative border border-slate-100 shadow-sm">
+                        <Image source={{ uri: url }} className="w-full h-full object-cover" />
+                        <TouchableOpacity
+                          onPress={() => {
+                            const globalIndex = portfolioPhotos.findIndex(p => p === url);
+                            handleDeletePortfolioPhoto(globalIndex);
+                          }}
+                          className="absolute top-2 right-2 w-8 h-8 bg-black/40 rounded-full items-center justify-center border border-white/20"
+                        >
+                          <XCircle size={16} color="white" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {portfolioPhotos.length === 0 && (
+                <View className="w-full py-20 items-center justify-center bg-slate-50 rounded-[32px] border border-dashed border-slate-200">
+                  <Info size={32} color="#CBD5E1" />
+                  <Text className="text-slate-400 font-bold mt-4">Nuk keni asnjë foto në portofol.</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
 
       </ScrollView>
 
-      <AddStaffModal visible={showAddStaffModal} onClose={() => setShowAddStaffModal(false)} shopId={realShopId || user.id} onSuccess={loadDashboardData} />
+      <AddStaffModal
+        visible={showAddStaffModal}
+        onClose={() => setShowAddStaffModal(false)}
+        shopId={realShopId || user.id}
+        onSuccess={loadDashboardData}
+        employeeLimit={employeeLimit}
+        currentStaffCount={employees.length}
+      />
+
+      {/* Direct Upgrade Modal */}
+      <Modal visible={showUpgradeModal} animationType="slide" transparent={true}>
+        <View className="flex-1 bg-black/60 justify-end">
+          <TouchableOpacity activeOpacity={1} onPress={() => setShowUpgradeModal(false)} className="absolute inset-0" />
+          <View className="bg-white rounded-t-[48px] h-[90%] overflow-hidden">
+            <View className="w-12 h-1.5 bg-slate-100 rounded-full self-center mt-3 mb-6" />
+            <View className="px-8 pb-6 flex-row justify-between items-center">
+              <View>
+                <Text className="text-2xl font-black text-[#161719]">Upgrade i Shpejtë</Text>
+                <Text className="text-slate-400 font-bold text-xs mt-1">Kaloni në planin {targetUpgradePlan?.name}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowUpgradeModal(false)} className="w-10 h-10 bg-slate-50 rounded-full items-center justify-center">
+                <XCircle size={20} color="#161719" />
+              </TouchableOpacity>
+            </View>
+
+            <View className="flex-1">
+              <PaddleCheckout
+                email={user.email}
+                transactionId={upgradeTransactionId || undefined}
+                onSuccess={handleUpgradeSuccess}
+                onCancel={() => setShowUpgradeModal(false)}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };

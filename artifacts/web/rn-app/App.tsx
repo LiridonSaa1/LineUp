@@ -130,7 +130,7 @@ export default function App() {
       try {
         const { data, error } = await supabase
           .from('favorites')
-          .select('*')
+          .select('*, barbershops(*)')
           .eq('user_id', user.id);
         if (data) setFavorites(data);
       } catch (err) {
@@ -415,6 +415,11 @@ export default function App() {
                       setUser(null);
                     }}
                     onOpenRegisterShop={() => setShowRegisterShop(true)}
+                    favorites={favorites}
+                    onToggleFavorite={handleToggleFavorite}
+                    onSelectShop={(shop) => {
+                      setSelectedShop(shop);
+                    }}
                   />
                 )}
               </View>

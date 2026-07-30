@@ -54,6 +54,8 @@ import barberToolsBg from "@assets/vintage-equipment-of-barber-shop-on-wood-back
 import barberCutout from "@assets/bearded-handsome-barber-holding-comb-and-scissors-2023-11-27-_1782486060662.webp";
 import brushImg from "@assets/download_1782414907276.png";
 import razorImg from "@assets/download_1782414908403.png";
+import veheesBanner from "@assets/vehees_banner.jpg";
+import noasimBanner from "@assets/noasim_banner.jpg";
 
 /* ── Owner subscription packages (mirrors Register.tsx) ────── */
 const OWNER_PACKAGES = [
@@ -1302,135 +1304,252 @@ function AdvertiseModal({ open, onClose }: { open: boolean; onClose: () => void 
 }
 
 function BannerAds() {
-  const [current, setCurrent] = useState(0);
   const [adModalOpen, setAdModalOpen] = useState(false);
-  const [ads, setAds] = useState<any[]>([]);
-  const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
-    fetch("/api/ads")
-      .then((r) => r.json())
-      .then((data) => { setAds(Array.isArray(data) ? data : []); setLoaded(true); })
-      .catch(() => setLoaded(true));
-  }, []);
-
-  useEffect(() => {
-    if (ads.length < 2) return;
-    const t = setInterval(() => setCurrent((c) => (c + 1) % ads.length), 4500);
-    return () => clearInterval(t);
-  }, [ads.length]);
-
-  const BG_GRADIENTS = [
-    "from-[#0f0c29] via-[#302b63] to-[#24243e]",
-    "from-[#1a1a2e] via-[#16213e] to-[#0f3460]",
-    "from-[#0d0d0d] via-[#1a0a00] to-[#2d1500]",
-    "from-[#0f172a] via-[#1e293b] to-[#0f172a]",
-  ];
-  const BADGE_COLORS = ["bg-primary", "bg-blue-500", "bg-amber-500", "bg-primary"];
-  const CTA_COLORS = [
-    "bg-primary hover:bg-primary/90",
-    "bg-blue-500 hover:bg-blue-600",
-    "bg-amber-500 hover:bg-amber-600",
-    "bg-primary hover:bg-primary/90",
+  const DEFAULT_ADS = [
+    {
+      id: 1,
+      business: "Vehees",
+      url: "https://vehees.com/",
+      imageUrl: veheesBanner
+    },
+    {
+      id: 2,
+      business: "noasim",
+      url: "https://noasim.com/guides",
+      imageUrl: noasimBanner
+    }
   ];
 
   return (
     <>
       <AdvertiseModal open={adModalOpen} onClose={() => setAdModalOpen(false)} />
 
-      {loaded && ads.length === 0 ? (
-        /* ── Placeholder when no ads ── */
-        <div
-          className="relative w-full overflow-hidden rounded-2xl border border-dashed border-primary/25 bg-gradient-to-r from-primary/5 via-background to-primary/5 flex items-center justify-between px-8 gap-6 cursor-pointer group"
-          style={{ height: "110px" }}
-          onClick={() => setAdModalOpen(true)}
-        >
-          <div className="flex items-center gap-5">
-            <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
-              <Megaphone className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-primary/60 mb-0.5">
-                Hapësirë reklamimi
-              </p>
-              <p className="font-black text-lg text-foreground leading-tight">
-                Reklamoni biznesin tuaj këtu
-              </p>
-              <p className="text-muted-foreground text-xs mt-0.5">
-                Arrini mijëra klientë në Kosovë · Nga €9/javë
-              </p>
-            </div>
-          </div>
-          <button
-            className="shrink-0 bg-primary text-white text-sm font-bold px-6 py-2.5 rounded-full shadow-lg shadow-primary/20 transition-all duration-200 hover:scale-105 whitespace-nowrap"
-            onClick={(e) => { e.stopPropagation(); setAdModalOpen(true); }}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+        {DEFAULT_ADS.map((a, i) => (
+          <div
+            key={a.id || i}
+            onClick={() => { if (a.url) window.open(a.url, '_blank'); }}
+            className="relative w-full overflow-hidden rounded-3xl shadow-2xl border border-white/10 h-[200px] sm:h-[240px] md:h-[260px] cursor-pointer group hover:scale-[1.015] transition-all duration-300"
           >
-            Fillo Tani
-          </button>
-        </div>
-      ) : (
-        /* ── Rotating banner when ads exist ── */
-        <div className="relative w-full overflow-hidden rounded-2xl shadow-2xl" style={{ height: "110px" }}>
-          {ads.map((a, i) => {
-            const bg = BG_GRADIENTS[i % BG_GRADIENTS.length];
-            const badgeColor = BADGE_COLORS[i % BADGE_COLORS.length];
-            const ctaColor = CTA_COLORS[i % CTA_COLORS.length];
-            return (
-              <div
-                key={a.id}
-                className={`absolute inset-0 transition-opacity duration-700 ${i === current ? "opacity-100" : "opacity-0"}`}
-              >
-                {a.imageUrl && (
-                  <img src={a.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: "center 30%" }} />
-                )}
-                <div className={`absolute inset-0 bg-gradient-to-r ${bg} ${a.imageUrl ? "opacity-85" : "opacity-95"}`} />
-                <div className="relative h-full flex items-center justify-between px-8 gap-6">
-                  <div className="flex items-center gap-5 min-w-0">
-                    {a.badge && (
-                      <span className={`shrink-0 text-[10px] font-black tracking-widest uppercase px-2.5 py-1 rounded-md text-white ${badgeColor}`}>
-                        {a.badge}
-                      </span>
-                    )}
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50 mb-0.5">
-                        {a.city ? `${a.business} · ${a.city}` : a.business}
-                      </p>
-                      <p className="text-white font-black text-lg leading-tight truncate">
-                        {a.headline || a.business}
-                      </p>
-                      {a.message && <p className="text-white/55 text-xs mt-0.5 truncate">{a.message}</p>}
-                    </div>
-                  </div>
-                  <button className={`shrink-0 ${ctaColor} text-white text-sm font-bold px-6 py-2.5 rounded-full shadow-lg transition-all duration-200 hover:scale-105 whitespace-nowrap`}>
-                    {a.cta || "Zbulo Tani"}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-          {ads.length > 1 && (
-            <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-              {ads.map((_, i) => (
-                <button key={i} onClick={() => setCurrent(i)}
-                  className={`rounded-full transition-all duration-300 ${i === current ? "w-5 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/35"}`}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Advertise CTA — always visible below banner */}
-      <div className="mt-3 flex items-center justify-end">
-        <button
-          onClick={() => setAdModalOpen(true)}
-          className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-primary/10 hover:bg-primary/15 border border-primary/25 text-primary text-xs font-bold transition-all duration-200 hover:scale-105 hover:shadow-lg hover:shadow-primary/10"
-        >
-          <Megaphone className="w-3.5 h-3.5" />
-          Reklamo dyqanin tënd
-        </button>
+            {a.imageUrl && (
+              <img
+                src={a.imageUrl}
+                alt={a.business}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+            )}
+          </div>
+        ))}
       </div>
     </>
+  );
+}
+
+/* ── PricingSection ─────────────────────────────────────── */
+function PricingSection() {
+  const [billingCycle, setBillingCycle] = useState<'month' | 'year'>('month');
+  const [teamEmployees, setTeamEmployees] = useState(3);
+
+  const calculateTeamPrice = (count: number, cycle: 'month' | 'year') => {
+    const base = cycle === 'month' ? 25 : 250;
+    const extra = (Math.max(3, count) - 3) * (cycle === 'month' ? 5 : 50);
+    return base + extra;
+  };
+
+  return (
+    <section id="paketat" className="py-24 relative overflow-hidden bg-[#080b12]">
+      <div className="container px-4 sm:px-6 max-w-7xl mx-auto relative z-10">
+        <div className="text-center max-w-2xl mx-auto mb-12">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-4">
+            <Sparkles className="w-3.5 h-3.5 text-primary" />
+            <span className="text-xs font-bold text-primary tracking-widest uppercase">Paketat e Shërbimit</span>
+          </div>
+          <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight mb-4">
+            Paketat & Planet e Çmimeve
+          </h2>
+          <p className="text-slate-400 text-base mb-8">
+            Zgjidhni planin ideal për berberinë tuaj — Çmime mujore ose vjetore pa kontratë pezulluese.
+          </p>
+
+          {/* Billing Cycle Switcher (Mujore vs Vjetore) */}
+          <div className="inline-flex items-center p-1.5 bg-slate-900 border border-slate-800 rounded-2xl gap-2 shadow-xl">
+            <button
+              onClick={() => setBillingCycle('month')}
+              className={`px-6 py-2.5 rounded-xl font-bold text-xs transition-all ${
+                billingCycle === 'month' ? 'bg-[#4f8ef7] text-white shadow-lg shadow-[#4f8ef7]/30' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Faturim Mujor
+            </button>
+            <button
+              onClick={() => setBillingCycle('year')}
+              className={`px-6 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${
+                billingCycle === 'year' ? 'bg-[#4f8ef7] text-white shadow-lg shadow-[#4f8ef7]/30' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <span>Faturim Vjetor</span>
+              <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full text-[10px] font-black uppercase">
+                2 Muaj Falas
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          {/* Solo Plan */}
+          <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-8 flex flex-col justify-between hover:border-slate-700 transition-all">
+            <div>
+              <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">PËR INDIVIDUALË</span>
+              <h3 className="text-2xl font-black text-white mt-1">Solo</h3>
+              <p className="text-xs text-slate-400 mt-1">Ideale për berberët individualë</p>
+
+              <div className="my-6">
+                <span className="text-4xl font-black text-[#4f8ef7]">
+                  {billingCycle === 'month' ? '15€' : '150€'}
+                </span>
+                <span className="text-xs text-slate-400 ml-1 font-bold">
+                  /{billingCycle === 'month' ? 'muaj' : 'vit'}
+                </span>
+              </div>
+
+              <div className="space-y-3 pt-4 border-t border-slate-800">
+                <div className="flex items-center gap-2.5 text-xs text-slate-300 font-semibold">
+                  <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
+                  <span>Deri në 300 rezervime/muaj</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-slate-300 font-semibold">
+                  <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
+                  <span>1 profil stafi (1 berber)</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-slate-300 font-semibold">
+                  <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
+                  <span>Kalendari i rezervimeve</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-slate-300 font-semibold">
+                  <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
+                  <span>Njoftime me email</span>
+                </div>
+              </div>
+            </div>
+
+            <Link href="/register" className="w-full py-4 mt-8 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white text-sm font-bold text-center transition-all block">
+              Zgjidh Planin Solo
+            </Link>
+          </div>
+
+          {/* Duo Plan (Popular) */}
+          <div className="bg-slate-900 border-2 border-[#4f8ef7] rounded-3xl p-8 flex flex-col justify-between relative shadow-2xl shadow-[#4f8ef7]/15">
+            <div className="absolute -top-3.5 right-6 bg-[#4f8ef7] text-white text-[10px] font-black uppercase px-3.5 py-1 rounded-full tracking-widest shadow-md">
+              Më i Popullarizuari
+            </div>
+
+            <div>
+              <span className="text-[11px] font-black text-[#4f8ef7] uppercase tracking-widest">PËR SALLONE</span>
+              <h3 className="text-2xl font-black text-white mt-1">Duo</h3>
+              <p className="text-xs text-slate-400 mt-1">Për ekipe të vogla prej 2 personash</p>
+
+              <div className="my-6">
+                <span className="text-4xl font-black text-[#4f8ef7]">
+                  {billingCycle === 'month' ? '20€' : '200€'}
+                </span>
+                <span className="text-xs text-slate-400 ml-1 font-bold">
+                  /{billingCycle === 'month' ? 'muaj' : 'vit'}
+                </span>
+              </div>
+
+              <div className="space-y-3 pt-4 border-t border-slate-800">
+                <div className="flex items-center gap-2.5 text-xs text-slate-200 font-semibold">
+                  <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
+                  <span>Rezervime pa limit</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-slate-200 font-semibold">
+                  <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
+                  <span>Deri në 2 profile stafi</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-slate-200 font-semibold">
+                  <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
+                  <span>Njoftime me SMS & Email</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-slate-200 font-semibold">
+                  <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
+                  <span>Statistika & Raporte</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-slate-200 font-semibold">
+                  <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
+                  <span>Mbështetje prioritare</span>
+                </div>
+              </div>
+            </div>
+
+            <Link href="/register" className="w-full py-4 mt-8 rounded-2xl bg-[#4f8ef7] hover:bg-blue-600 text-white text-sm font-black text-center shadow-lg shadow-[#4f8ef7]/30 transition-all block">
+              Zgjidh Planin Duo
+            </Link>
+          </div>
+
+          {/* Team Plan */}
+          <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-8 flex flex-col justify-between hover:border-slate-700 transition-all">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">PËR EKIPE TË MËDHA</span>
+                
+                {/* Employee counter */}
+                <div className="flex items-center gap-2 bg-slate-800/80 px-2.5 py-1 rounded-xl border border-slate-700">
+                  <button
+                    onClick={() => setTeamEmployees(prev => Math.max(3, prev - 1))}
+                    className="w-5 h-5 bg-slate-700 rounded-md font-bold text-xs text-white flex items-center justify-center hover:bg-slate-600"
+                  >-</button>
+                  <span className="text-xs font-bold text-slate-200">{teamEmployees} berberë</span>
+                  <button
+                    onClick={() => setTeamEmployees(prev => prev + 1)}
+                    className="w-5 h-5 bg-slate-700 rounded-md font-bold text-xs text-white flex items-center justify-center hover:bg-slate-600"
+                  >+</button>
+                </div>
+              </div>
+
+              <h3 className="text-2xl font-black text-white mt-1">Team</h3>
+              <p className="text-xs text-slate-400 mt-1">Për ekipe në rritje ({teamEmployees} berberë)</p>
+
+              <div className="my-6">
+                <span className="text-4xl font-black text-[#4f8ef7]">
+                  {calculateTeamPrice(teamEmployees, billingCycle)}€
+                </span>
+                <span className="text-xs text-slate-400 ml-1 font-bold">
+                  /{billingCycle === 'month' ? 'muaj' : 'vit'}
+                </span>
+              </div>
+
+              <div className="space-y-3 pt-4 border-t border-slate-800">
+                <div className="flex items-center gap-2.5 text-xs text-slate-300 font-semibold">
+                  <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
+                  <span>Të gjitha të planit Duo</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-slate-300 font-semibold">
+                  <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
+                  <span>Profile stafi pa limit</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-slate-300 font-semibold">
+                  <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
+                  <span>Marketing me SMS</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-slate-300 font-semibold">
+                  <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
+                  <span>Landing page e personalizuar</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-[#4f8ef7] font-semibold">
+                  <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
+                  <span>Asistent personal 24/7</span>
+                </div>
+              </div>
+            </div>
+
+            <Link href="/register" className="w-full py-4 mt-8 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white text-sm font-bold text-center transition-all block">
+              Zgjidh Planin Team
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -2387,50 +2506,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── PRODUCTS ─────────────────────────────────────── */}
-      <section id="shop" className="py-24 bg-background relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/15 to-transparent" />
-        {/* Floating brush decoration */}
-        <div
-          className="absolute -right-28 top-1/2 -translate-y-1/2 pointer-events-none select-none opacity-[0.055] animate-float"
-          aria-hidden="true"
-        >
-          <img
-            src={brushImg}
-            alt=""
-            className="w-[500px] h-[500px] object-contain"
-            style={{ transform: "rotate(-18deg)", animationDuration: "8s" }}
-          />
-        </div>
-
-        <div className="container px-4 sm:px-6 max-w-7xl mx-auto relative z-10">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-12">
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-5 h-[2px] bg-primary rounded-full" />
-                <span className="text-xs font-bold text-primary tracking-widest uppercase">Grooming Shop</span>
-                <div className="w-5 h-[2px] bg-primary rounded-full" />
-              </div>
-              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight">
-                Produktet më të mira<br />
-                <span className="text-shimmer">për grooming</span>
-              </h2>
-              <p className="text-muted-foreground mt-2">
-                Pomadë, gel, vaj mjekre — drejtpërdrejt nga berberët tuaj.
-              </p>
-            </div>
-            <Link
-              href="/marketplace"
-              className="hidden md:flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary/80 transition-colors group shrink-0"
-            >
-              Shiko të gjitha{" "}
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-            </Link>
-          </div>
-
-          <GroomingProductGrid />
-        </div>
-      </section>
+      {/* ── PRICING PLANS SECTION (Interactive matching rn-app) ── */}
+      <PricingSection />
 
       {/* ── CITIES ───────────────────────────────────────── */}
       <section
@@ -2470,123 +2547,7 @@ export default function Home() {
         <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
       </section>
 
-      {/* ── OWNER CTA ────────────────────────────────────── */}
-      <section
-        id="reklama"
-        className="py-28 relative overflow-hidden"
-        style={{ background: "linear-gradient(135deg, #0c1445 0%, #1a1060 40%, #0d1b3e 70%, #081229 100%)" }}
-      >
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
 
-        {/* Subtle grid overlay */}
-        <div
-          className="absolute inset-0 opacity-[0.04] pointer-events-none"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)",
-            backgroundSize: "52px 52px",
-          }}
-        />
-
-        {/* Razor — floating left background */}
-        <div
-          className="absolute -left-10 top-1/2 -translate-y-1/2 pointer-events-none select-none opacity-[0.18] animate-float-slow"
-          style={{ animationDuration: "8s" }}
-          aria-hidden="true"
-        >
-          <img
-            src={razorImg}
-            alt=""
-            className="w-[320px] h-[320px] object-contain"
-            style={{ transform: "rotate(-25deg)" }}
-          />
-        </div>
-
-        {/* Brush — floating right background */}
-        <div
-          className="absolute -right-8 bottom-10 pointer-events-none select-none opacity-[0.15] animate-float"
-          style={{ animationDuration: "6.5s", animationDelay: "2s" }}
-          aria-hidden="true"
-        >
-          <img
-            src={brushImg}
-            alt=""
-            className="w-[240px] h-[240px] object-contain"
-            style={{ transform: "rotate(22deg)" }}
-          />
-        </div>
-
-        {/* Center glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-primary/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="container px-6 max-w-3xl mx-auto relative z-10 text-center">
-          <div className="inline-flex items-center gap-2 bg-white/8 border border-white/12 px-4 py-2 rounded-full text-xs font-semibold text-primary mb-8">
-            <TrendingUp className="w-3.5 h-3.5" />
-            Për pronarët e berberive
-          </div>
-
-          <h2 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white tracking-tight leading-[1.06] mb-6">
-            Zhvillo dyqanin tënd
-            <br />
-            <span className="text-shimmer">me Line UP.</span>
-          </h2>
-
-          <p className="text-xl text-white/55 mb-8 max-w-2xl mx-auto leading-relaxed">
-            Bëhuni i dukshëm nga mijëra klientë në të gjithë Kosovën. Menaxhoni
-            rezervimet, ekipin, produktet dhe të ardhurat — të gjitha në një panel.
-          </p>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto mb-10 text-left">
-            {OWNER_PACKAGES.map(pkg => (
-              <div
-                key={pkg.id}
-                className="relative rounded-2xl p-4 flex flex-col bg-white/[0.05] border border-white/12 backdrop-blur-sm transition-transform hover:-translate-y-1"
-              >
-                {pkg.popular && (
-                  <span
-                    className="absolute -top-2.5 left-4 text-[10px] font-bold px-2 py-0.5 rounded-full text-white"
-                    style={{ background: pkg.color }}
-                  >
-                    ★ MË E KËRKUARA
-                  </span>
-                )}
-                <div className="flex items-center gap-2 mb-3">
-                  <div
-                    className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                    style={{ background: `${pkg.color}26` }}
-                  >
-                    <Users className="w-3.5 h-3.5" style={{ color: pkg.color }} />
-                  </div>
-                  <p className="font-semibold text-white text-sm leading-tight">{pkg.label}</p>
-                </div>
-                <div className="mb-1.5">
-                  <span className="text-2xl font-extrabold text-white">{pkg.price}€</span>
-                  <span className="text-xs text-white/40 ml-1">/muaj</span>
-                </div>
-                <p className="text-xs text-white/50">Deri {pkg.workers} punëtorë</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              href="/register"
-              className="btn-pill inline-flex items-center justify-center gap-2 px-9 py-4 bg-primary text-white font-bold text-base shadow-2xl shadow-primary/40 hover:shadow-primary/60 transition-shadow"
-            >
-              <Sparkles className="w-4 h-4" />
-              Partnero me ne
-            </Link>
-            <Link
-              href="/barbershops"
-              className="btn-pill inline-flex items-center justify-center gap-2 px-9 py-4 bg-white/8 border border-white/15 text-white text-base font-semibold hover:bg-white/14 transition-colors"
-            >
-              <Play className="w-4 h-4" />
-              Shiko si funksionon
-            </Link>
-          </div>
-        </div>
-      </section>
 
       {/* ── CONTACT FORM ─────────────────────────────────── */}
       <SharedContactSection />

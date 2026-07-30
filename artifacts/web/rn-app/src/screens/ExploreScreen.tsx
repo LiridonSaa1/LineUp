@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, Dimensions, Platform } from "react-native";
 import { Search, MapPin, List, Map as MapIcon, Star, Heart, ArrowUpRight, ChevronDown, Check, SlidersHorizontal } from "lucide-react-native";
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -15,6 +14,21 @@ import { withTiming } from "react-native-reanimated";
 import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BlurView } from 'expo-blur';
 import { supabase } from "@/config/supabase";
+
+let MapView: any = null;
+let Marker: any = null;
+let PROVIDER_GOOGLE: any = null;
+
+if (Platform.OS !== 'web') {
+  try {
+    const Maps = require('react-native-maps');
+    MapView = Maps.default;
+    Marker = Maps.Marker;
+    PROVIDER_GOOGLE = Maps.PROVIDER_GOOGLE;
+  } catch (e) {
+    console.warn('react-native-maps error:', e);
+  }
+}
 
 const { width, height } = Dimensions.get("window");
 const SHEET_MIN_HEIGHT = height * 0.35; // Lower position
@@ -279,37 +293,43 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
   return (
     <GestureHandlerRootView className="flex-1">
       {/* ── MAP LAYER ────────────────────────────────────── */}
-      <MapView
-        ref={mapRef}
-        provider={PROVIDER_GOOGLE}
-        style={{ width, height }}
-        initialRegion={INITIAL_REGION}
-        className="flex-1"
-        customMapStyle={mapStyle}
-        mapType="satellite"
-      >
-        {filteredShops.map((shop, index) => {
-          // Determine base coordinates: Use shop's lat/lng, or city's lat/lng, or default to Prishtina
-          const baseCoords = (shop.latitude && shop.longitude)
-            ? { lat: shop.latitude, lng: shop.longitude }
-            : getCoordsForCity(shop.city) || CITY_COORDS["Prishtinë"];
+      {Platform.OS === 'web' || !MapView ? (
+        <View style={{ width, height, backgroundColor: '#0f172a' }} className="flex-1 items-center justify-center p-6">
+          <MapIcon size={48} color="#60a5fa" />
+          <Text className="text-white font-black text-xl mt-3">Harta e Berberive në Kosovë</Text>
+          <Text className="text-slate-400 text-xs font-bold mt-1 text-center max-w-xs">Zgjidhni një berberi nga lista me poshtë për të parë detajet dhe rezervuar.</Text>
+        </View>
+      ) : (
+        <MapView
+          ref={mapRef}
+          provider={PROVIDER_GOOGLE}
+          style={{ width, height }}
+          initialRegion={INITIAL_REGION}
+          className="flex-1"
+          customMapStyle={mapStyle}
+          mapType="satellite"
+        >
+          {filteredShops.map((shop, index) => {
+            const baseCoords = (shop.latitude && shop.longitude)
+              ? { lat: shop.latitude, lng: shop.longitude }
+              : getCoordsForCity(shop.city) || CITY_COORDS["Prishtinë"];
 
-          // Add a small stable offset if we are using fallback coordinates to avoid perfect overlap
-          const isFallback = !shop.latitude || !shop.longitude;
-          const lat = baseCoords.lat + (isFallback ? (index % 10) * 0.001 : 0);
-          const lng = baseCoords.lng + (isFallback ? (Math.floor(index / 10)) * 0.001 : 0);
+            const isFallback = !shop.latitude || !shop.longitude;
+            const lat = baseCoords.lat + (isFallback ? (index % 10) * 0.001 : 0);
+            const lng = baseCoords.lng + (isFallback ? (Math.floor(index / 10)) * 0.001 : 0);
 
-          return (
-            <Marker
-              key={shop.id}
-              coordinate={{ latitude: lat, longitude: lng }}
-              title={shop.name}
-              description={shop.address}
-              onPress={() => handleMarkerPress(shop)}
-            />
-          );
-        })}
-      </MapView>
+            return (
+              <Marker
+                key={shop.id}
+                coordinate={{ latitude: lat, longitude: lng }}
+                title={shop.name}
+                description={shop.address}
+                onPress={() => handleMarkerPress(shop)}
+              />
+            );
+          })}
+        </MapView>
+      )}
 
       {/* ── FLOATING SEARCH HEADER ────────────────────────── */}
       <View className="absolute top-14 left-6 right-6 z-50">
@@ -380,8 +400,8 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
                     className="rounded-[34px] overflow-hidden bg-slate-50 mb-4"
                   >
                     <Image
-                      source={{ uri: shop.imageUrl || "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800&auto=format&fit=crop&q=80" }}
-                      className="w-full h-72 object-cover"
+                      source={{ uri: shop.imageUrl || shop.image_url || "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800&auto=format&fit=crop&q=80" }}
+                      className="w-full h-60 object-cover"
                     />
                     {(() => {
                       const isFav = favorites?.some(f => f.shop_id === shop.id || f.shop_id === Number(shop.id));

@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Image, Dimensions, Modal, TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Image, Dimensions, Modal, TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Keyboard, Linking } from "react-native";
 import { ArrowLeft, Share2, Star, MapPin, Phone, MessageSquare, Compass, Globe, Heart, Calendar, Check, X, User as UserIcon, Clock, Scissors as ScissorsIcon, Mail, Lock, ChevronRight, Hash, AlertCircle } from "lucide-react-native";
 import Animated, { FadeInUp, FadeIn, FadeInDown } from "react-native-reanimated";
 import { supabase } from "@/config/supabase";
+import { sendTwilioOTP, verifyTwilioOTP } from "@/config/twilio";
+import { DEFAULT_CATEGORIES } from "../config/defaultCategories";
 
 const { width } = Dimensions.get("window");
 
@@ -28,6 +30,8 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
   const [availableSlots, setAvailableTimeSlots] = useState<string[]>([]);
   const [availableServices, setAvailableServices] = useState<any[]>([]);
   const [calendarDates, setCalendarDates] = useState<any[]>([]);
+  const [showAllPhotos, setShowAllPhotos] = useState(false);
+  const [activePhotoCategory, setActivePhotoCategory] = useState("Të gjitha");
 
   const [bookingOtpSent, setBookingOtpSent] = useState(false);
   const [bookingOtpCode, setBookingOtpCode] = useState("");
@@ -74,30 +78,39 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
   };
 
   const triggerTwilioOtpSend = async (num: string) => {
+    Keyboard.dismiss();
     setLoading(true);
     try {
+      await sendTwilioOTP(num);
       console.log(`Twilio OTP sent successfully to ${num}`);
       setBookingOtpSent(true);
-      Alert.alert("SMS e Dërguar", `Twilio dërgoi kodin OTP në numrin tuaj: ${num}`);
+      setBookingStep(4);
+      Alert.alert("SMS e Dërguar", `Kemi dërguar kodin e verifikimit në numrin tuaj: ${num}`);
     } catch (err: any) {
-      Alert.alert("Gabim", "Dështoi dërgimi i SMS verifikimit.");
+      Alert.alert("Gabim", err.message || "Dështoi dërgimi i SMS verifikimit.");
     } finally {
       setLoading(false);
     }
   };
 
   const verifyTwilioOtpAndSubmit = async () => {
+    Keyboard.dismiss();
     if (!bookingOtpCode) {
       Alert.alert("Gabim", "Ju lutem shkruani kodin OTP.");
       return;
     }
     setVerifyingBookingOtp(true);
     try {
+      const targetPhone = phone || user?.phone;
+      if (!targetPhone) throw new Error("Numri i telefonit nuk u gjet.");
+
+      await verifyTwilioOTP(targetPhone, bookingOtpCode);
+
       await handleBookingSubmit();
       setBookingOtpSent(false);
       setBookingOtpCode("");
     } catch (err: any) {
-      Alert.alert("Gabim", "Kodi i verifikimit është i pasaktë.");
+      Alert.alert("Gabim", err.message || "Kodi i verifikimit është i pasaktë.");
     } finally {
       setVerifyingBookingOtp(false);
     }
@@ -214,13 +227,21 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
   };
 
   const handleAuthAction = async () => {
+    Keyboard.dismiss();
     setLoading(true);
     try {
       if (authMode === 'login') {
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const authPromise = supabase.auth.signInWithPassword({
           email: email.trim().toLowerCase(),
           password
         });
+
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Lidhja me serverin zgjati shumë. Ju lutem provoni përsëri.")), 10000)
+        );
+
+        const { data, error }: any = await Promise.race([authPromise, timeoutPromise]);
+
         if (error) throw error;
 
         const { data: dbUser } = await supabase
@@ -237,8 +258,9 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
           role: 'client'
         };
         onLogin(userData);
+        if (dbUser?.phone) triggerTwilioOtpSend(dbUser.phone);
       } else if (authMode === 'signup') {
-        const { data, error } = await supabase.auth.signUp({
+        const authPromise = supabase.auth.signUp({
           email: email.trim().toLowerCase(),
           password,
           options: {
@@ -248,6 +270,13 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
             }
           }
         });
+
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Lidhja me serverin zgjati shumë. Ju lutem provoni përsëri.")), 10000)
+        );
+
+        const { data, error }: any = await Promise.race([authPromise, timeoutPromise]);
+
         if (error) throw error;
 
         const userUuid = data.user?.id;
@@ -269,6 +298,7 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
           role: 'client'
         };
         onLogin(userData);
+        if (phone) triggerTwilioOtpSend(phone);
       }
     } catch (e: any) {
       Alert.alert("Gabim", e.message);
@@ -366,13 +396,25 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
   const address = shop?.address || "Prishtinë, Kosovë";
   const rating = shop?.rating || "5.0";
   const imageUrl = shop?.image_url || shop?.imageUrl || "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800&auto=format&fit=crop&q=80";
+  const portfolioData = shop?.portfolio_urls || [];
+  const photos = portfolioData.length > 0
+    ? portfolioData.map((p: any) => typeof p === 'string' ? p : p.url)
+    : [
+        "https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1517832606299-7ae9b720a186?w=500&auto=format&fit=crop&q=80",
+      ];
+
+  const filteredPhotos = activePhotoCategory === "Të gjitha"
+    ? portfolioData
+    : portfolioData.filter((p: any) => p.category === activePhotoCategory);
 
   return (
     <View className="flex-1 bg-[#F8F9FE]">
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
         
         {/* Full Image Banner with Floating Header Controls */}
-        <View className="h-96 relative bg-slate-900">
+        <View className="h-80 relative bg-slate-900">
           <Image source={{ uri: imageUrl }} className="w-full h-full object-cover" />
           
           {/* Header Action Row */}
@@ -437,15 +479,31 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
           {/* Action Row Buttons: Call, Message, Direction, Website */}
           <View className="flex-row gap-3 mb-8">
             {[
-              { label: "Thirr", icon: Phone },
-              { label: "Mesazh", icon: MessageSquare },
-              { label: "Drejtimi", icon: Compass },
-              { label: "Uebfaqja", icon: Globe },
+              { label: "Thirr", icon: Phone, action: () => {
+                if (shop.phone) Linking.openURL(`tel:${shop.phone}`);
+                else Alert.alert("Nuk ka numër", "Ky sallon nuk ka regjistruar numër telefoni.");
+              }},
+              { label: "Mesazh", icon: MessageSquare, action: () => {
+                if (shop.instagram) Linking.openURL(`https://instagram.com/${shop.instagram.replace('@', '')}`);
+                else Alert.alert("Nuk ka Instagram", "Ky sallon nuk ka regjistruar llogari Instagram.");
+              }},
+              { label: "Drejtimi", icon: Compass, action: () => {
+                const addr = encodeURIComponent(shop.address || shop.city);
+                Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${addr}`);
+              }},
+              { label: "Uebfaqja", icon: Globe, action: () => {
+                if (shop.website) {
+                  let url = shop.website;
+                  if (!url.startsWith('http')) url = 'https://' + url;
+                  Linking.openURL(url);
+                } else Alert.alert("Nuk ka uebfaqe", "Ky sallon nuk ka regjistruar uebfaqe.");
+              }},
             ].map((btn, i) => {
               const Icon = btn.icon;
               return (
                 <TouchableOpacity 
                   key={i} 
+                  onPress={btn.action}
                   className="flex-1 bg-[#EBF2FF] py-4 rounded-2xl items-center justify-center border border-[#3473ef]/10 active:scale-95"
                 >
                   <Icon size={20} color="#3473ef" strokeWidth={2.2} className="mb-1" />
@@ -458,17 +516,13 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
           {/* Our Recent Work Section */}
           <View className="flex-row items-center justify-between mb-4">
             <Text className="text-lg font-black text-[#161719]">Puna jonë e fundit</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowAllPhotos(true)}>
               <Text className="text-xs font-black text-[#3473ef]">Shiko të gjitha »</Text>
             </TouchableOpacity>
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-4">
-            {(shop.photos && shop.photos.length > 0 ? shop.photos : [
-              "https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=500&auto=format&fit=crop&q=80",
-              "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=500&auto=format&fit=crop&q=80",
-              "https://images.unsplash.com/photo-1517832606299-7ae9b720a186?w=500&auto=format&fit=crop&q=80",
-            ]).map((img: string, idx: number) => (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-4" snapToInterval={192} decelerationRate="fast">
+            {photos.map((img: string, idx: number) => (
               <View key={idx} className="w-44 h-32 rounded-2xl overflow-hidden mr-4 relative bg-slate-200">
                 <Image source={{ uri: img }} className="w-full h-full object-cover" />
                 <TouchableOpacity className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-white/80 items-center justify-center">
@@ -499,10 +553,11 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
         onRequestClose={() => setShowBookingModal(false)}
       >
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          className="flex-1 bg-black/60 justify-end"
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
+          className="bg-black/60 justify-end"
         >
-          <View className="bg-white rounded-t-[48px] h-[90%] overflow-hidden">
+          <View className="bg-white rounded-t-[48px] flex-1 mt-20 overflow-hidden">
             <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mt-3 mb-2" />
 
             {/* Modal Header */}
@@ -514,15 +569,21 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
               ) : <View className="w-10" />}
 
               <Text className="text-xl font-black text-[#161719]">
-                {bookingStep === 1 ? 'Stafi & Shërbimi' : bookingStep === 2 ? 'Koha & Data' : 'Konfirmimi'}
+                {bookingStep === 1 ? 'Stafi & Shërbimi' : bookingStep === 2 ? 'Koha & Data' : bookingStep === 3 ? 'Konfirmimi' : 'Verifikimi'}
               </Text>
 
-              <TouchableOpacity onPress={() => { setShowBookingModal(false); setBookingStep(1); }} className="p-2 bg-slate-50 rounded-full">
+              <TouchableOpacity onPress={() => { setShowBookingModal(false); setBookingStep(1); setBookingOtpSent(false); }} className="p-2 bg-slate-50 rounded-full">
                 <X size={20} color="#161719" />
               </TouchableOpacity>
             </View>
 
-            <ScrollView className="flex-1 px-8 pt-6" showsVerticalScrollIndicator={false}>
+            <ScrollView
+              className="flex-1 px-8 pt-6"
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{ flexGrow: 1 }}
+              removeClippedSubviews={false}
+            >
 
               {/* STEP 1: Staff & Service */}
               {bookingStep === 1 && (
@@ -648,15 +709,17 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
               {bookingStep === 3 && (
                 <View>
                   {!user ? (
-                    <Animated.View entering={FadeInDown}>
+                    <View>
                       <View>
-                        <View className="flex-row bg-slate-100 p-1 rounded-2xl mb-8">
-                          <TouchableOpacity onPress={() => setAuthMode('login')} className={`flex-1 py-3 rounded-xl items-center ${authMode === 'login' ? 'bg-white shadow-sm' : ''}`}>
-                            <Text className={`font-black text-xs ${authMode === 'login' ? 'text-[#3473ef]' : 'text-slate-400'}`}>IDENTIFIKOHU</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity onPress={() => setAuthMode('signup')} className={`flex-1 py-3 rounded-xl items-center ${authMode === 'signup' ? 'bg-white shadow-sm' : ''}`}>
-                            <Text className={`font-black text-xs ${authMode === 'signup' ? 'text-[#3473ef]' : 'text-slate-400'}`}>REGJISTROHU</Text>
-                          </TouchableOpacity>
+                        <View className="mb-6 items-center">
+                          <Text className="text-2xl font-black text-[#161719] mb-2">
+                            {authMode === 'login' ? 'Identifikohu' : 'Regjistrohu'}
+                          </Text>
+                          <Text className="text-slate-400 font-bold text-xs text-center">
+                            {authMode === 'login'
+                              ? 'Shënoni të dhënat tuaja për të vazhduar me rezervimin'
+                              : 'Krijoni një llogari për të rezervuar takimin tuaj'}
+                          </Text>
                         </View>
 
                         {authMode === 'signup' && (
@@ -692,105 +755,123 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
 
                         <TouchableOpacity
                           onPress={handleAuthAction}
-                          className="bg-[#3473ef] h-16 rounded-[28px] items-center justify-center mt-10 shadow-xl shadow-[#3473ef]/30 active:scale-95"
+                          disabled={loading}
+                          className={`bg-[#3473ef] h-16 rounded-[28px] items-center justify-center mt-10 shadow-xl shadow-[#3473ef]/30 active:scale-95 ${loading ? 'opacity-70' : ''}`}
                         >
                           {loading ? <ActivityIndicator color="white" /> : (
                             <Text className="text-white font-black text-lg">
-                              {authMode === 'login' ? 'Vazhdo' : 'Krijo Llogarinë'}
+                              {authMode === 'login' ? 'Identifikohu' : 'Krijo Llogarinë'}
                             </Text>
                           )}
                         </TouchableOpacity>
+
+                        <TouchableOpacity
+                          onPress={() => {
+                            Keyboard.dismiss();
+                            setAuthMode(authMode === 'login' ? 'signup' : 'login');
+                          }}
+                          className="mt-6 py-2 items-center"
+                        >
+                          <Text className="text-[#3473ef] font-black text-sm">
+                            {authMode === 'login' ? 'Nuk keni llogari? Regjistrohuni' : 'Keni llogari? Identifikohuni'}
+                          </Text>
+                        </TouchableOpacity>
                       </View>
-                    </Animated.View>
+                    </View>
                   ) : (
                     <View>
-                      {bookingOtpSent ? (
-                        <Animated.View entering={FadeInDown} className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm items-center">
-                          <View className="w-16 h-16 bg-indigo-50 rounded-2xl items-center justify-center mb-6">
-                            <Hash size={32} color="#6366f1" />
+                      <View className="bg-[#3473ef]/5 rounded-[32px] p-8 border-2 border-[#3473ef]/10 mb-8">
+                        <Text className="text-center text-slate-400 font-black text-[10px] uppercase tracking-widest mb-6">Përmbledhja e Rezervimit</Text>
+
+                        <View className="gap-y-5">
+                          <View className="flex-row justify-between">
+                            <Text className="text-slate-500 font-bold">Berberi</Text>
+                            <Text className="text-[#161719] font-black">{selectedEmployee?.name}</Text>
                           </View>
-                          <Text className="text-xl font-black text-[#161719] mb-2 text-center">Verifiko me Twilio</Text>
-                          <Text className="text-[#8789A3] text-center font-bold text-xs mb-8 px-4">
-                            Kemi dërguar një kod verifikimi në numrin tuaj {phone || user?.phone}.
-                          </Text>
-
-                          <View className="w-full bg-slate-50 rounded-2xl p-2 border border-slate-100 mb-6">
-                            <TextInput
-                              placeholder="Kodi 6-shifror"
-                              className="h-14 text-center text-xl font-black tracking-[10px] text-[#161719]"
-                              keyboardType="number-pad"
-                              maxLength={6}
-                              value={bookingOtpCode}
-                              onChangeText={setBookingOtpCode}
-                            />
+                          <View className="flex-row justify-between">
+                            <Text className="text-slate-500 font-bold">Data & Ora</Text>
+                            <Text className="text-[#161719] font-black">{calendarDates.find(d => d.fullDate === selectedDate)?.label || selectedDate}, {selectedTime}</Text>
                           </View>
-
-                          <TouchableOpacity
-                            onPress={verifyTwilioOtpAndSubmit}
-                            disabled={verifyingBookingOtp}
-                            className="bg-black w-full h-16 rounded-[24px] items-center justify-center shadow-xl active:scale-95 flex-row"
-                          >
-                            {verifyingBookingOtp ? (
-                              <ActivityIndicator color="white" />
-                            ) : (
-                              <>
-                                <Text className="text-white font-black text-base mr-2">Verifiko & Rezervo</Text>
-                                <Check size={18} color="white" strokeWidth={3} />
-                              </>
-                            )}
-                          </TouchableOpacity>
-                          
-                          <TouchableOpacity 
-                            onPress={() => setBookingOtpSent(false)} 
-                            className="mt-4"
-                          >
-                            <Text className="text-slate-400 font-bold text-xs underline">Kthehu te përmbledhja</Text>
-                          </TouchableOpacity>
-                        </Animated.View>
-                      ) : (
-                        <View>
-                          <View className="bg-[#3473ef]/5 rounded-[32px] p-8 border-2 border-[#3473ef]/10 mb-8">
-                            <Text className="text-center text-slate-400 font-black text-[10px] uppercase tracking-widest mb-6">Përmbledhja e Rezervimit</Text>
-
-                            <View className="gap-y-5">
-                              <View className="flex-row justify-between">
-                                <Text className="text-slate-500 font-bold">Berberi</Text>
-                                <Text className="text-[#161719] font-black">{selectedEmployee?.name}</Text>
+                          <View className="h-[1px] bg-slate-200/50" />
+                          <View>
+                            <Text className="text-slate-500 font-bold mb-2">Shërbimet</Text>
+                            {selectedServices.map(s => (
+                              <View key={s.id} className="flex-row justify-between mb-1.5">
+                                <Text className="text-slate-400 text-xs font-bold">{s.name}</Text>
+                                <Text className="text-[#161719] text-xs font-black">{s.price}€</Text>
                               </View>
-                              <View className="flex-row justify-between">
-                                <Text className="text-slate-500 font-bold">Data & Ora</Text>
-                                <Text className="text-[#161719] font-black">{calendarDates.find(d => d.fullDate === selectedDate)?.label || selectedDate}, {selectedTime}</Text>
-                              </View>
-                              <View className="h-[1px] bg-slate-200/50" />
-                              <View>
-                                <Text className="text-slate-500 font-bold mb-2">Shërbimet</Text>
-                                {selectedServices.map(s => (
-                                  <View key={s.id} className="flex-row justify-between mb-1.5">
-                                    <Text className="text-slate-400 text-xs font-bold">{s.name}</Text>
-                                    <Text className="text-[#161719] text-xs font-black">{s.price}€</Text>
-                                  </View>
-                                ))}
-                              </View>
-                              <View className="h-[1px] bg-slate-200" />
-                              <View className="flex-row justify-between items-center">
-                                <Text className="text-lg font-black text-[#161719]">Totali</Text>
-                                <Text className="text-3xl font-black text-[#3473ef]">
-                                  {selectedServices.reduce((sum, s) => sum + s.price, 0)}€
-                                </Text>
-                              </View>
-                            </View>
+                            ))}
                           </View>
-
-                          <TouchableOpacity
-                            onPress={sendTwilioOtp}
-                            className="bg-[#3473ef] h-16 rounded-[28px] items-center justify-center shadow-xl shadow-blue-200 active:scale-95"
-                          >
-                            {loading ? <ActivityIndicator color="white" /> : <Text className="text-white font-black text-base">Vazhdo me Verifikim Twilio</Text>}
-                          </TouchableOpacity>
+                          <View className="h-[1px] bg-slate-200" />
+                          <View className="flex-row justify-between items-center">
+                            <Text className="text-lg font-black text-[#161719]">Totali</Text>
+                            <Text className="text-3xl font-black text-[#3473ef]">
+                              {selectedServices.reduce((sum, s) => sum + s.price, 0)}€
+                            </Text>
+                          </View>
                         </View>
-                      )}
+                      </View>
+
+                      <TouchableOpacity
+                        onPress={sendTwilioOtp}
+                        disabled={loading}
+                        className={`bg-[#3473ef] h-16 rounded-[28px] items-center justify-center shadow-xl shadow-blue-200 active:scale-95 ${loading ? 'opacity-70' : ''}`}
+                      >
+                        {loading ? <ActivityIndicator color="white" /> : <Text className="text-white font-black text-base">Vazhdo me Verifikim Twilio</Text>}
+                      </TouchableOpacity>
                     </View>
                   )}
+                </View>
+              )}
+
+              {/* STEP 4: OTP Verification */}
+              {bookingStep === 4 && (
+                <View>
+                  <View className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm items-center">
+                    <View className="w-16 h-16 bg-indigo-50 rounded-2xl items-center justify-center mb-6">
+                      <Hash size={32} color="#6366f1" />
+                    </View>
+                    <Text className="text-xl font-black text-[#161719] mb-2 text-center">Verifiko me Twilio</Text>
+                    <Text className="text-[#8789A3] text-center font-bold text-xs mb-8 px-4">
+                      Kemi dërguar një kod verifikimi në numrin tuaj {phone || user?.phone}.
+                    </Text>
+
+                    <View className="w-full bg-slate-50 rounded-2xl p-2 border border-slate-100 mb-6">
+                      <TextInput
+                        placeholder="Kodi 6-shifror"
+                        className="h-14 text-center text-xl font-black tracking-[10px] text-[#161719]"
+                        keyboardType="number-pad"
+                        maxLength={6}
+                        value={bookingOtpCode}
+                        onChangeText={setBookingOtpCode}
+                      />
+                    </View>
+
+                    <TouchableOpacity
+                      onPress={verifyTwilioOtpAndSubmit}
+                      disabled={verifyingBookingOtp}
+                      className="bg-black w-full h-16 rounded-[24px] items-center justify-center shadow-xl active:scale-95 flex-row"
+                    >
+                      {verifyingBookingOtp ? (
+                        <ActivityIndicator color="white" />
+                      ) : (
+                        <>
+                          <Text className="text-white font-black text-base mr-2">Verifiko & Rezervo</Text>
+                          <Check size={18} color="white" strokeWidth={3} />
+                        </>
+                      )}
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => {
+                        setBookingOtpSent(false);
+                        setBookingStep(3);
+                      }}
+                      className="mt-4"
+                    >
+                      <Text className="text-slate-400 font-bold text-xs underline">Kthehu te përmbledhja</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               )}
 
@@ -801,7 +882,15 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
             {bookingStep < 3 && (
               <View className="p-8 bg-white border-t border-slate-50">
                 <TouchableOpacity
-                  onPress={() => setBookingStep(bookingStep + 1)}
+                  onPress={() => {
+                    if (bookingStep === 2 && user) {
+                      const targetPhone = phone || user?.phone;
+                      if (targetPhone) {
+                        triggerTwilioOtpSend(targetPhone);
+                      }
+                    }
+                    setBookingStep(bookingStep + 1);
+                  }}
                   disabled={(bookingStep === 1 && (!selectedEmployee || selectedServices.length === 0)) || (bookingStep === 2 && (!selectedDate || !selectedTime))}
                   className={`h-16 rounded-[28px] items-center justify-center shadow-xl flex-row ${
                     ((bookingStep === 1 && (!selectedEmployee || selectedServices.length === 0)) || (bookingStep === 2 && (!selectedDate || !selectedTime)))
@@ -815,6 +904,64 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
             )}
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* --- ALL PHOTOS MODAL --- */}
+      <Modal
+        visible={showAllPhotos}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowAllPhotos(false)}
+      >
+        <View className="flex-1 bg-black justify-center">
+          <View className="flex-row justify-between items-center px-6 pt-14 pb-4 absolute top-0 left-0 right-0 z-50 bg-black/50">
+            <TouchableOpacity onPress={() => setShowAllPhotos(false)} className="w-10 h-10 rounded-full bg-white/20 items-center justify-center">
+              <X size={20} color="white" />
+            </TouchableOpacity>
+            <Text className="text-white font-black text-base">Portofoli ({photos.length})</Text>
+            <View className="w-10" />
+          </View>
+
+          <View className="absolute top-32 left-0 right-0 z-50">
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="px-6 py-2">
+              {["Të gjitha", ...DEFAULT_CATEGORIES.map(c => c.name)].map((cat) => (
+                <TouchableOpacity
+                  key={cat}
+                  onPress={() => setActivePhotoCategory(cat)}
+                  className={`mr-3 px-6 py-2.5 rounded-full border ${activePhotoCategory === cat ? 'bg-[#3473ef] border-[#3473ef]' : 'bg-white/10 border-white/20'}`}
+                >
+                  <Text className={`font-black text-xs ${activePhotoCategory === cat ? 'text-white' : 'text-slate-300'}`}>{cat}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          <ScrollView
+            contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 200, paddingBottom: 60 }}
+            showsVerticalScrollIndicator={false}
+          >
+            <View className="flex-row flex-wrap justify-between">
+              {filteredPhotos.map((p: any, i: number) => {
+                const url = typeof p === 'string' ? p : p.url;
+                return (
+                  <View key={i} className="w-[48%] aspect-square rounded-3xl overflow-hidden mb-4 bg-slate-800">
+                    <Image source={{ uri: url }} className="w-full h-full object-cover" />
+                    {p.category && (
+                      <View className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded-lg">
+                        <Text className="text-[8px] text-white font-black uppercase">{p.category}</Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+              {filteredPhotos.length === 0 && (
+                <View className="w-full py-20 items-center">
+                  <Text className="text-slate-400 font-bold">Nuk u gjet asnjë foto për këtë kategori.</Text>
+                </View>
+              )}
+            </View>
+          </ScrollView>
+        </View>
       </Modal>
 
     </View>

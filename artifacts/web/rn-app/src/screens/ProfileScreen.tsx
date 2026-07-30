@@ -43,6 +43,8 @@ import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { supabase } from "@/config/supabase";
 import { RegisterScreen } from "./RegisterScreen";
+import { PaddleCheckout } from "../components/PaddleCheckout";
+import { createPaddleTransaction } from "../config/paddle";
 
 const { width, height } = Dimensions.get("window");
 
@@ -92,9 +94,20 @@ interface ProfileScreenProps {
   onLogin: (userData?: any) => void;
   onLogout: () => void;
   onOpenRegisterShop: () => void;
+  favorites?: any[];
+  onToggleFavorite?: (shop: any) => void;
+  onSelectShop?: (shop: any) => void;
 }
 
-export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onLogout, onOpenRegisterShop }) => {
+export const ProfileScreen: React.FC<ProfileScreenProps> = ({
+  user,
+  onLogin,
+  onLogout,
+  onOpenRegisterShop,
+  favorites = [],
+  onToggleFavorite,
+  onSelectShop
+}) => {
   const [profileStats, setProfileStats] = useState({
     appointmentsCount: 0,
     staffCount: 0,
@@ -116,6 +129,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
   const [currentPlan, setCurrentPlan] = useState<string | null>('solo');
   const [teamEmployeeCount, setTeamEmployeeCount] = useState(3);
 
+  // Upgrade Plan States
+  const [upgradeStep, setUpgradeStep] = useState(1);
+  const [isPreparingUpgrade, setIsPreparingUpgrade] = useState(false);
+  const [upgradeTransactionId, setUpgradeTransactionId] = useState<string | null>(null);
+  const [selectedUpgradePlan, setSelectedUpgradePlan] = useState<any>(null);
+
   const calculateTeamPrice = (count: number) => {
     return 25 + (Math.max(3, count) - 3) * 5;
   };
@@ -124,7 +143,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
   const [editData, setEditData] = useState({
     name: user?.name || "",
     phone: "",
-    bio: ""
+    bio: "",
+    website: "",
+    instagram: "",
+    address: ""
   });
 
   // Database Data States
@@ -391,11 +413,20 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
 
       // Also update edit data with user info if available
       const { data: userData } = await supabase.from('users').select('*').eq('id', user.id).maybeSingle();
+      let shopInfo: any = null;
+      if (isBusiness) {
+        const { data: sData } = await supabase.from('barbershops').select('*').eq('owner_id', user.id).maybeSingle();
+        shopInfo = sData;
+      }
+
       if (userData) {
         setEditData({
           name: userData.name || user.name,
-          phone: userData.phone || "",
-          bio: userData.bio || ""
+          phone: userData.phone || shopInfo?.phone || "",
+          bio: userData.bio || "",
+          website: shopInfo?.website || "",
+          instagram: shopInfo?.instagram || "",
+          address: shopInfo?.address || ""
         });
       }
 
@@ -409,6 +440,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
   }, [user, fetchOwnerStats]);
 
   const handleAuthSubmit = async () => {
+    Keyboard.dismiss();
     if (!authEmail || !authPassword) {
       setErrorMessage("Ju lutemi plotësoni email-in dhe fjalëkalimin.");
       return;
@@ -433,6 +465,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
   };
 
   const handleUpdateProfile = async () => {
+    Keyboard.dismiss();
     setLoading(true);
     try {
       const { error } = await supabase.from('users').update({
@@ -444,7 +477,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
       if (user.role === 'owner') {
         const { error: shopErr } = await supabase.from('barbershops').update({
           name: editData.name,
-          phone: editData.phone
+          phone: editData.phone,
+          website: editData.website,
+          instagram: editData.instagram,
+          address: editData.address
         }).eq('owner_id', user.id);
         if (shopErr) console.warn("Failed to update barbershop in Supabase:", shopErr);
       }
@@ -486,8 +522,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
   const handleAction = (label: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (label === 'Profile') setActiveModal('profile');
-    if (label === 'Plans') setActiveModal('plans');
-    if (label === 'Favorites') setActiveModal('favorites');
+    if (label === 'Plans') {
+      setUpgradeStep(1);
+      setActiveModal('plans');
+    }
+    if (label === 'Favorites') {
+      fetchOwnerStats();
+      setActiveModal('favorites');
+    }
     if (label === 'Messages') setActiveModal('messages');
     if (label === 'Appointments') setActiveModal('appointments');
     if (label === 'Forms') setActiveModal('forms');
@@ -505,10 +547,69 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
     }
   };
 
+  const handleStartUpgrade = async (plan: any) => {
+    if (plan.id === currentPlan) return;
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setIsPreparingUpgrade(true);
+    setSelectedUpgradePlan(plan);
+
+    try {
+      const price = plan.id === 'team' ? calculateTeamPrice(teamEmployeeCount) : (plan.id === 'duo' ? 20 : 15);
+
+      console.log(`[Profile] Starting upgrade to ${plan.id} for ${price}€`);
+
+      const res = await createPaddleTransaction({
+        email: user.email,
+        planId: plan.id,
+        amount: price,
+        customerName: user.name
+      });
+
+      if (res?.data?.id) {
+        setUpgradeTransactionId(res.data.id);
+      }
+      setUpgradeStep(2);
+    } catch (err: any) {
+      Alert.alert("Gabim", "Dështoi krijimi i transaksionit të pagesës: " + err.message);
+    } finally {
+      setIsPreparingUpgrade(false);
+    }
+  };
+
+  const handleUpgradeSuccess = async (paddleData: any) => {
+    setLoading(true);
+    try {
+      console.log("[Profile] Payment success, updating subscription in DB...");
+
+      // Update or Insert subscription record
+      const { error } = await supabase.from('subscriptions').upsert({
+        customer_id: user.id,
+        status: 'active',
+        product_id: selectedUpgradePlan.id,
+        subscription_id: upgradeTransactionId || `txn_${Date.now()}`,
+        employee_limit: selectedUpgradePlan.id === 'solo' ? 1 : (selectedUpgradePlan.id === 'duo' ? 2 : teamEmployeeCount),
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'customer_id' });
+
+      if (error) throw error;
+
+      setCurrentPlan(selectedUpgradePlan.id);
+      Alert.alert("Sukses", `Plani juaj u përmirësua me sukses në ${selectedUpgradePlan.name}!`);
+      setUpgradeStep(1);
+      setActiveModal(null);
+      fetchOwnerStats();
+    } catch (e: any) {
+      Alert.alert("Gabim", "Pagesa u krye por dështoi përditësimi i llogarisë: " + e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!user) {
     return (
       <View className="flex-1 bg-white">
-        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }} keyboardShouldPersistTaps="handled">
           <Animated.View entering={FadeInUp} className="items-center mb-10">
              <View className="w-20 h-20 bg-[#3473ef]/10 rounded-3xl items-center justify-center mb-6">
                 <Store size={40} color="#3473ef" />
@@ -533,7 +634,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                    {showPassword ? <EyeOff size={20} color="#94A3B8" /> : <Eye size={20} color="#94A3B8" />}
                 </TouchableOpacity>
              </View>
-             <TouchableOpacity onPress={handleAuthSubmit} disabled={loading} className="bg-[#161719] h-16 rounded-2xl items-center justify-center mt-4 shadow-xl shadow-black/20">
+             <TouchableOpacity onPress={handleAuthSubmit} disabled={loading} className={`bg-[#161719] h-16 rounded-2xl items-center justify-center mt-4 shadow-xl shadow-black/20 ${loading ? 'opacity-70' : ''}`}>
                 {loading ? <ActivityIndicator color="white" /> : <Text className="text-white font-black text-lg">Kyçu</Text>}
              </TouchableOpacity>
              <TouchableOpacity onPress={() => setShowRegisterModal(true)} className="items-center py-4">
@@ -585,11 +686,17 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
               <Text className="text-2xl font-black text-[#161719]">{profileStats.appointmentsCount}</Text>
               <Text className="text-slate-400 font-bold text-[9px] uppercase tracking-widest mt-1">Rezervime</Text>
            </View>
-           <View className="w-[1px] h-8 bg-slate-200 self-center" />
-           <View className="items-center">
-              <Text className="text-2xl font-black text-[#161719]">{profileStats.staffCount}</Text>
-              <Text className="text-slate-400 font-bold text-[9px] uppercase tracking-widest mt-1">Staf</Text>
-           </View>
+
+           {isBusinessRole && (
+             <>
+               <View className="w-[1px] h-8 bg-slate-200 self-center" />
+               <View className="items-center">
+                  <Text className="text-2xl font-black text-[#161719]">{profileStats.staffCount}</Text>
+                  <Text className="text-slate-400 font-bold text-[9px] uppercase tracking-widest mt-1">Staf</Text>
+               </View>
+             </>
+           )}
+
            <View className="w-[1px] h-8 bg-slate-200 self-center" />
            <View className="items-center">
               <View className="flex-row items-center">
@@ -603,7 +710,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
         </View>
       </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
         <View className="px-6 pt-10">
            <Text className="text-slate-400 font-black text-[11px] uppercase tracking-[2px] mb-4 ml-2">Personal</Text>
            <View className="bg-white/40 rounded-[32px] overflow-hidden shadow-sm">
@@ -621,22 +728,24 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                   {isBusinessRole && (
                     <ProfileMenuButton icon={Clock} label="Orari & Festat" onPress={() => handleAction('Orari')} />
                   )}
-                  <ProfileMenuButton
-                    icon={PlansIcon}
-                    label="Planet e Abonimit"
-                    rightElement={
-                      <View className="flex-row items-center">
-                        <View className="bg-emerald-500/10 px-3 py-1 rounded-full mr-2">
-                           <Text className="text-emerald-600 font-black text-[10px] uppercase">{currentPlan || 'Solo'}</Text>
+                  {isBusinessRole && (
+                    <ProfileMenuButton
+                      icon={PlansIcon}
+                      label="Planet e Abonimit"
+                      rightElement={
+                        <View className="flex-row items-center">
+                          <View className="bg-emerald-500/10 px-3 py-1 rounded-full mr-2">
+                             <Text className="text-emerald-600 font-black text-[10px] uppercase">{currentPlan || 'Solo'}</Text>
+                          </View>
+                          <ChevronRight size={18} color="#94A3B8" />
                         </View>
-                        <ChevronRight size={18} color="#94A3B8" />
-                      </View>
-                    }
-                    onPress={() => handleAction('Plans')}
-                  />
+                      }
+                      onPress={() => handleAction('Plans')}
+                    />
+                  )}
                   <ProfileMenuButton icon={Heart} label="Të Ruajtura" onPress={() => handleAction('Favorites')} />
                   <ProfileMenuButton icon={MessageSquare} label="Mesazhet" onPress={() => handleAction('Messages')} />
-                  <ProfileMenuButton icon={Calendar} label="Rezervimet e Mia" onPress={() => handleAction('Appointments')} />
+                  {isBusinessRole && <ProfileMenuButton icon={Calendar} label="Rezervimet e Mia" onPress={() => handleAction('Appointments')} />}
                   <ProfileMenuButton icon={FileText} label="Formularët" onPress={() => handleAction('Forms')} />
                   <ProfileMenuButton icon={Settings} label="Cilësimet" isLast={!isBusinessRole} onPress={() => handleAction('Settings')} />
                 </>
@@ -684,83 +793,132 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                     <Text className="text-3xl font-black text-[#161719]">Ndrysho Profilin</Text>
                     <TouchableOpacity onPress={() => setActiveModal(null)} className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-sm"><X size={24} color="#161719" /></TouchableOpacity>
                   </View>
-                  <View className="gap-y-6">
-                    <View>
-                      <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Emri i plotë</Text>
-                      <TextInput value={editData.name} onChangeText={(val) => setEditData({...editData, name: val})} className="bg-white h-14 rounded-2xl px-5 font-bold border border-slate-100" />
+                  <ScrollView showsVerticalScrollIndicator={false}>
+                    <View className="gap-y-6">
+                      <View>
+                        <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Emri i plotë</Text>
+                        <TextInput value={editData.name} onChangeText={(val) => setEditData({...editData, name: val})} className="bg-white h-14 rounded-2xl px-5 font-bold border border-slate-100" />
+                      </View>
+                      <View>
+                        <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Numri i Telefonit</Text>
+                        <TextInput value={editData.phone} onChangeText={(val) => setEditData({...editData, phone: val})} placeholder="+383 4X XXX XXX" className="bg-white h-14 rounded-2xl px-5 font-bold border border-slate-100" />
+                      </View>
+
+                      {isBusinessRole && (
+                        <>
+                          <View>
+                            <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Uebfaqja (Website)</Text>
+                            <TextInput value={editData.website} onChangeText={(val) => setEditData({...editData, website: val})} placeholder="https://www.salloni.com" className="bg-white h-14 rounded-2xl px-5 font-bold border border-slate-100" />
+                          </View>
+                          <View>
+                            <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Instagram (Username)</Text>
+                            <TextInput value={editData.instagram} onChangeText={(val) => setEditData({...editData, instagram: val})} placeholder="@username" className="bg-white h-14 rounded-2xl px-5 font-bold border border-slate-100" />
+                          </View>
+                          <View>
+                            <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Adresa e Biznesit</Text>
+                            <TextInput value={editData.address} onChangeText={(val) => setEditData({...editData, address: val})} placeholder="Rruga B, Prishtinë" className="bg-white h-14 rounded-2xl px-5 font-bold border border-slate-100" />
+                          </View>
+                        </>
+                      )}
+
+                      <TouchableOpacity onPress={handleUpdateProfile} disabled={loading} className={`bg-[#3473ef] h-16 rounded-2xl items-center justify-center shadow-lg shadow-blue-200 mt-4 ${loading ? 'opacity-70' : ''}`}>
+                        {loading ? <ActivityIndicator color="white" /> : <Text className="text-white font-black text-lg">Ruaj Ndryshimet</Text>}
+                      </TouchableOpacity>
                     </View>
-                    <View>
-                      <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Numri i Telefonit</Text>
-                      <TextInput value={editData.phone} onChangeText={(val) => setEditData({...editData, phone: val})} placeholder="+383 4X XXX XXX" className="bg-white h-14 rounded-2xl px-5 font-bold border border-slate-100" />
-                    </View>
-                    <TouchableOpacity onPress={handleUpdateProfile} className="bg-[#3473ef] h-16 rounded-2xl items-center justify-center shadow-lg shadow-blue-200 mt-4">
-                      {loading ? <ActivityIndicator color="white" /> : <Text className="text-white font-black text-lg">Ruaj Ndryshimet</Text>}
-                    </TouchableOpacity>
-                  </View>
+                  </ScrollView>
                 </View>
               )}
 
               {activeModal === 'plans' && (
                 <View className="flex-1">
                    <View className="flex-row justify-between items-center mb-10">
-                    <Text className="text-3xl font-black text-[#161719]">Abonimet</Text>
+                    <Text className="text-3xl font-black text-[#161719]">{upgradeStep === 1 ? 'Abonimet' : 'Pagesa e Sigurt'}</Text>
                     <TouchableOpacity onPress={() => setActiveModal(null)} className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-sm"><X size={24} color="#161719" /></TouchableOpacity>
                   </View>
-                  <ScrollView showsVerticalScrollIndicator={false}>
-                    <View className="gap-y-6">
-                      {REGISTRATION_PLANS.map((plan) => {
-                        const isTeam = plan.id === 'team';
-                        const displayPrice = isTeam ? `${calculateTeamPrice(teamEmployeeCount)}€` : plan.price;
-                        const displayEmployees = isTeam ? `${teamEmployeeCount} berberë` : plan.employees;
 
-                        return (
-                          <View key={plan.id} className={`bg-white p-6 rounded-[32px] shadow-sm border ${currentPlan === plan.id ? 'border-[#3473ef]' : 'border-transparent'}`}>
-                            <View className="flex-row justify-between items-center mb-4">
-                              <View>
-                                <Text className="text-xl font-black text-[#161719]">{plan.name}</Text>
-                                {isTeam ? (
-                                  <View className="flex-row items-center gap-2 mt-1">
-                                    <TouchableOpacity
-                                      onPress={() => setTeamEmployeeCount(prev => Math.max(3, prev - 1))}
-                                      className="w-6 h-6 bg-slate-100 rounded-md items-center justify-center"
-                                    >
-                                      <Text className="font-black text-xs">-</Text>
-                                    </TouchableOpacity>
-                                    <Text className="text-[#161719] font-bold text-xs">{teamEmployeeCount} berberë</Text>
-                                    <TouchableOpacity
-                                      onPress={() => setTeamEmployeeCount(prev => prev + 1)}
-                                      className="w-6 h-6 bg-slate-100 rounded-md items-center justify-center"
-                                    >
-                                      <Text className="font-black text-xs">+</Text>
-                                    </TouchableOpacity>
-                                  </View>
+                  {upgradeStep === 1 ? (
+                    <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                      <View className="gap-y-6">
+                        {REGISTRATION_PLANS.map((plan) => {
+                          const isTeam = plan.id === 'team';
+                          const displayPrice = isTeam ? `${calculateTeamPrice(teamEmployeeCount)}€` : plan.price;
+                          const displayEmployees = isTeam ? `${teamEmployeeCount} berberë` : plan.employees;
+
+                          return (
+                            <View key={plan.id} className={`bg-white p-6 rounded-[32px] shadow-sm border ${currentPlan === plan.id ? 'border-[#3473ef]' : 'border-transparent'}`}>
+                              <View className="flex-row justify-between items-center mb-4">
+                                <View>
+                                  <Text className="text-xl font-black text-[#161719]">{plan.name}</Text>
+                                  {isTeam ? (
+                                    <View className="flex-row items-center gap-2 mt-1">
+                                      <TouchableOpacity
+                                        onPress={() => setTeamEmployeeCount(prev => Math.max(3, prev - 1))}
+                                        className="w-6 h-6 bg-slate-100 rounded-md items-center justify-center"
+                                      >
+                                        <Text className="font-black text-xs">-</Text>
+                                      </TouchableOpacity>
+                                      <Text className="text-[#161719] font-bold text-xs">{teamEmployeeCount} berberë</Text>
+                                      <TouchableOpacity
+                                        onPress={() => setTeamEmployeeCount(prev => prev + 1)}
+                                        className="w-6 h-6 bg-slate-100 rounded-md items-center justify-center"
+                                      >
+                                        <Text className="font-black text-xs">+</Text>
+                                      </TouchableOpacity>
+                                    </View>
+                                  ) : (
+                                    <Text className="text-slate-400 font-bold text-xs">{plan.employees}</Text>
+                                  )}
+                                </View>
+                                <View className="items-end">
+                                  <Text className="text-2xl font-black text-[#3473ef]">{displayPrice}</Text>
+                                  <Text className="text-slate-300 font-bold text-[9px] uppercase">/muaj</Text>
+                                </View>
+                              </View>
+                              <View className="bg-slate-50 p-4 rounded-2xl mb-6">
+                                {plan.features.map((f, i) => (<View key={i} className="flex-row items-center mb-2"><CheckCircle2 size={14} color="#10b981" strokeWidth={3} /><Text className="text-slate-600 font-bold text-xs ml-2">{f}</Text></View>))}
+                              </View>
+                              <TouchableOpacity
+                                disabled={currentPlan === plan.id || isPreparingUpgrade}
+                                onPress={() => handleStartUpgrade(plan)}
+                                className={`h-14 rounded-2xl items-center justify-center ${currentPlan === plan.id ? 'bg-slate-100' : 'bg-[#161719]'}`}
+                              >
+                                {isPreparingUpgrade && selectedUpgradePlan?.id === plan.id ? (
+                                  <ActivityIndicator color="white" />
                                 ) : (
-                                  <Text className="text-slate-400 font-bold text-xs">{plan.employees}</Text>
+                                  <Text className={`font-black text-sm ${currentPlan === plan.id ? 'text-slate-400' : 'text-white'}`}>
+                                    {currentPlan === plan.id ? 'Plani Aktiv' : 'Upgrade Planin'}
+                                  </Text>
                                 )}
-                              </View>
-                              <View className="items-end">
-                                <Text className="text-2xl font-black text-[#3473ef]">{displayPrice}</Text>
-                                <Text className="text-slate-300 font-bold text-[9px] uppercase">/muaj</Text>
-                              </View>
+                              </TouchableOpacity>
                             </View>
-                            <View className="bg-slate-50 p-4 rounded-2xl mb-6">
-                              {plan.features.map((f, i) => (<View key={i} className="flex-row items-center mb-2"><CheckCircle2 size={14} color="#10b981" strokeWidth={3} /><Text className="text-slate-600 font-bold text-xs ml-2">{f}</Text></View>))}
-                            </View>
-                            <TouchableOpacity
-                              disabled={currentPlan === plan.id}
-                              onPress={() => {
-                                setCurrentPlan(plan.id);
-                                Alert.alert("Sukses", `Plani u ndryshua në ${plan.name} (${displayEmployees}).`);
-                              }}
-                              className={`h-14 rounded-2xl items-center justify-center ${currentPlan === plan.id ? 'bg-slate-100' : 'bg-[#161719]'}`}
-                            >
-                              <Text className={`font-black text-sm ${currentPlan === plan.id ? 'text-slate-400' : 'text-white'}`}>{currentPlan === plan.id ? 'Plani Aktiv' : 'Zgjidh Planin'}</Text>
-                            </TouchableOpacity>
-                          </View>
-                        );
-                      })}
+                          );
+                        })}
+                      </View>
+                    </ScrollView>
+                  ) : (
+                    <View className="flex-1">
+                      <View className="mb-6 px-2">
+                        <Text className="text-slate-500 font-bold text-sm">
+                          Duke procesuar kalimin në planin <Text className="text-[#3473ef] font-black">{selectedUpgradePlan?.name}</Text>
+                        </Text>
+                      </View>
+                      <View className="flex-1 bg-white rounded-[32px] overflow-hidden border border-slate-100 shadow-sm">
+                        <PaddleCheckout
+                          email={user.email}
+                          transactionId={upgradeTransactionId || undefined}
+                          priceId={selectedUpgradePlan?.id === 'team' ? undefined : (selectedUpgradePlan?.id === 'duo' ? 'pri_01ky8e821v11dc6f2nf9jnq5v8' : 'pri_01ky8dvrqajpvkqtcde7ge9fgb')}
+                          onSuccess={handleUpgradeSuccess}
+                          onCancel={() => setUpgradeStep(1)}
+                        />
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => setUpgradeStep(1)}
+                        className="py-6 items-center"
+                      >
+                        <Text className="text-slate-400 font-black text-xs uppercase tracking-widest">Kthehu prapa</Text>
+                      </TouchableOpacity>
                     </View>
-                  </ScrollView>
+                  )}
                 </View>
               )}
 
@@ -770,8 +928,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                     <Text className="text-3xl font-black text-[#161719]">Të Ruajtura</Text>
                     <TouchableOpacity onPress={() => setActiveModal(null)} className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-sm"><X size={24} color="#161719" /></TouchableOpacity>
                   </View>
-                  <ScrollView showsVerticalScrollIndicator={false}>
-                    {dbFavorites.length > 0 ? dbFavorites.map((fav, i) => {
+                  <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                    {(isBusinessRole ? dbFavorites : (favorites || [])).length > 0 ? (isBusinessRole ? dbFavorites : (favorites || [])).map((fav, i) => {
                       if (isBusinessRole) {
                         return (
                           <View key={i} className="bg-white p-5 rounded-[28px] flex-row items-center mb-4 border border-slate-100 shadow-sm">
@@ -791,14 +949,33 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                       }
                       
                       return (
-                        <View key={i} className="bg-white p-4 rounded-[28px] flex-row items-center mb-4 border border-slate-100 shadow-sm">
-                          <Image source={{ uri: fav.barbershops?.image_url || 'https://via.placeholder.com/100' }} className="w-16 h-16 rounded-2xl bg-slate-50" />
+                        <TouchableOpacity
+                          key={i}
+                          activeOpacity={0.8}
+                          onPress={() => {
+                            if (fav.barbershops) {
+                              setActiveModal(null);
+                              onSelectShop?.(fav.barbershops);
+                            }
+                          }}
+                          className="bg-white p-4 rounded-[28px] flex-row items-center mb-4 border border-slate-100 shadow-sm"
+                        >
+                          <Image source={{ uri: fav.barbershops?.image_url || fav.barbershops?.imageUrl || 'https://via.placeholder.com/100' }} className="w-16 h-16 rounded-2xl bg-slate-50" />
                           <View className="flex-1 ml-4">
                              <Text className="font-black text-[#161719] text-base">{fav.barbershops?.name}</Text>
                              <Text className="text-slate-400 font-bold text-xs">{fav.barbershops?.city}</Text>
                           </View>
-                          <TouchableOpacity className="p-3 bg-rose-50 rounded-full"><Heart size={18} color="#ef4444" fill="#ef4444" /></TouchableOpacity>
-                        </View>
+                          <TouchableOpacity
+                            onPress={() => {
+                              if (fav.barbershops) {
+                                onToggleFavorite?.(fav.barbershops);
+                              }
+                            }}
+                            className="p-3 bg-rose-50 rounded-full"
+                          >
+                            <Heart size={18} color="#ef4444" fill="#ef4444" />
+                          </TouchableOpacity>
+                        </TouchableOpacity>
                       );
                     }) : (
                       <View className="items-center justify-center py-20">
@@ -829,7 +1006,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                     </TouchableOpacity>
                   </View>
 
-                  <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+                  <ScrollView showsVerticalScrollIndicator={false} className="flex-1" keyboardShouldPersistTaps="handled">
                     <View className="gap-y-6">
                       <View>
                         <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Subjekti / Titulli</Text>
@@ -870,7 +1047,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                     <Text className="text-3xl font-black text-[#161719]">Mesazhet</Text>
                     <TouchableOpacity onPress={() => setActiveModal(null)} className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-sm"><X size={24} color="#161719" /></TouchableOpacity>
                   </View>
-                  <ScrollView showsVerticalScrollIndicator={false}>
+                  <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                     <View className="bg-indigo-50 p-5 rounded-[28px] border border-indigo-100 mb-4">
                        <View className="flex-row items-center mb-2">
                           <Info size={16} color="#3473ef" />
@@ -889,7 +1066,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                     <Text className="text-3xl font-black text-[#161719]">Rezervimet</Text>
                     <TouchableOpacity onPress={() => setActiveModal(null)} className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-sm"><X size={24} color="#161719" /></TouchableOpacity>
                   </View>
-                  <ScrollView showsVerticalScrollIndicator={false}>
+                  <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                     <View className="gap-y-4">
                       {dbAppointments.length > 0 ? dbAppointments.map((appt, i) => (
                         <View key={i} className="bg-white p-5 rounded-[28px] border border-slate-100 shadow-sm">
@@ -923,7 +1100,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                     <TouchableOpacity onPress={() => setActiveModal(null)} className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-sm"><X size={24} color="#161719" /></TouchableOpacity>
                   </View>
 
-                  <ScrollView showsVerticalScrollIndicator={false}>
+                  <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                     {settingsView === 'main' && (
                       <View className="gap-y-4">
                         <TouchableOpacity onPress={() => setSettingsIndex('notifications')} className="bg-white h-16 rounded-[24px] px-6 flex-row items-center justify-between shadow-sm"><View className="flex-row items-center"><Bell size={20} color="#161719" /><Text className="font-black text-sm ml-4">Cilësimet e Njoftimeve</Text></View><ChevronRight size={18} color="#CBD5E1" /></TouchableOpacity>
@@ -1011,7 +1188,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                     </TouchableOpacity>
                   </View>
 
-                  <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+                  <ScrollView showsVerticalScrollIndicator={false} className="flex-1" keyboardShouldPersistTaps="handled">
                     <View className="mb-8">
                       <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 ml-1">Orari i Sallonit</Text>
                       <View className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-100">
@@ -1080,7 +1257,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                      </TouchableOpacity>
                    </View>
 
-                   <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+                   <ScrollView showsVerticalScrollIndicator={false} className="flex-1" keyboardShouldPersistTaps="handled">
                      {categories.map((cat) => {
                        const catSubs = subcategories.filter(s => s.category_id === cat.id);
                        if (catSubs.length === 0) return null;
@@ -1129,7 +1306,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogin, onL
                      </TouchableOpacity>
                    </View>
 
-                   <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+                   <ScrollView showsVerticalScrollIndicator={false} className="flex-1" keyboardShouldPersistTaps="handled">
                      <View className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-100 mb-6">
                        {employeeSchedule.map((sched, idx) => (
                          <View key={idx} className={`py-4 ${idx < 6 ? 'border-b border-slate-50' : ''}`}>

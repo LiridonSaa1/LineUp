@@ -41,7 +41,16 @@ async function authedJson(path: string, options: RequestInit = {}) {
 export default function DashboardBarbers() {
   const { data: ownerShop, isLoading: shopLoading } = useOwnerShop();
   const shopId = ownerShop?.id ?? 0;
-  const maxBarbers = (ownerShop as any)?.maxBarbers ?? 2;
+  const rawPlan = (ownerShop as any)?.plan || (ownerShop as any)?.subscription_plan || (ownerShop as any)?.subscriptionPlan || "";
+  const rawMax = (ownerShop as any)?.maxBarbers || (ownerShop as any)?.max_employees;
+  const maxBarbers = rawMax !== undefined && rawMax !== null
+    ? Number(rawMax)
+    : rawPlan.toLowerCase().includes("solo")
+      ? 1
+      : rawPlan.toLowerCase().includes("duo")
+        ? 2
+        : 2;
+
   const { toast } = useToast();
   const { data: barbersRes, isLoading, refetch } = useListBarbers(shopId, {
     query: { enabled: !!ownerShop } as any,
@@ -73,6 +82,14 @@ export default function DashboardBarbers() {
   };
 
   const handleCreate = async () => {
+    if (limitReached) {
+      toast({
+        variant: "destructive",
+        title: "Limiti i planit u arrit",
+        description: `Plani juaj (${rawPlan || "Stafi"}) lejon maksimumi ${maxBarbers} punëtor. Bëni upgrade abonimit për të shtuar berberë të tjerë.`,
+      });
+      return;
+    }
     if (!canSubmit) return;
     setIsCreating(true);
     try {

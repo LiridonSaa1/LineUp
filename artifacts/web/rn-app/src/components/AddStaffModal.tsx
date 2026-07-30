@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, TextInput, Modal, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, Modal, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Keyboard } from 'react-native';
 import { X, User, Mail, Lock, ShieldCheck, Check, Briefcase } from 'lucide-react-native';
 import { supabase } from '@/config/supabase';
 import { createClient } from '@supabase/supabase-js';
@@ -22,9 +22,18 @@ interface AddStaffModalProps {
   onClose: () => void;
   shopId: string;
   onSuccess: () => void;
+  employeeLimit?: number;
+  currentStaffCount?: number;
 }
 
-export const AddStaffModal: React.FC<AddStaffModalProps> = ({ visible, onClose, shopId, onSuccess }) => {
+export const AddStaffModal: React.FC<AddStaffModalProps> = ({
+  visible,
+  onClose,
+  shopId,
+  onSuccess,
+  employeeLimit = 100,
+  currentStaffCount = 0
+}) => {
   const [loading, setLoading] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -33,6 +42,13 @@ export const AddStaffModal: React.FC<AddStaffModalProps> = ({ visible, onClose, 
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
   const handleAddStaff = async () => {
+    Keyboard.dismiss();
+
+    if (currentStaffCount >= employeeLimit) {
+      Alert.alert("Limit i Arritur", `Paketa juaj lejon vetëm ${employeeLimit} berberë. Ju lutem kaloni në një paketë më të lartë.`);
+      return;
+    }
+
     if (!firstName || !lastName || !email || !password) {
       Alert.alert('Gabim', 'Ju lutem plotësoni të gjitha fushat.');
       return;
@@ -150,7 +166,7 @@ export const AddStaffModal: React.FC<AddStaffModalProps> = ({ visible, onClose, 
       onRequestClose={onClose}
     >
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1 bg-black/40 justify-end"
       >
         <TouchableOpacity
@@ -178,7 +194,7 @@ export const AddStaffModal: React.FC<AddStaffModalProps> = ({ visible, onClose, 
             </TouchableOpacity>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} className="max-h-[500px]">
+          <ScrollView showsVerticalScrollIndicator={false} className="max-h-[500px]" keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
             <View className="gap-y-6">
               {/* Emri & Mbiemri */}
               <View className="flex-row gap-x-4">

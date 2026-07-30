@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { MapPin, ArrowRight, Scissors } from "lucide-react";
 import { MUNICIPALITIES } from "./kosovo-paths";
+import { supabase } from "@/lib/supabase";
 
 // ── Blue palette matching theme --primary (hsl 217 91% 65%) ──────────────────
 const BLUE = {
@@ -42,23 +43,70 @@ export default function KosovoCitiesMap() {
   const [, setLocation] = useLocation();
   const [cityStats, setCityStats] = useState<CityStats[]>([]);
 
-  useEffect(() => {
-    fetch("/api/barbershops/city-stats")
-      .then((r) => r.json())
-      .then((data: CityStats[]) => {
-        if (Array.isArray(data) && data.length > 0) setCityStats(data);
-      })
-      .catch(() => {});
-  }, []);
-
   const normalizeCityName = (name: string): string => {
     const n = name.toLowerCase().trim();
-    if (n === "prishtinë" || n === "prishtina") return "prishtina";
-    if (n === "mitrovicë" || n === "mitrovica") return "mitrovica";
-    if (n === "gjakovë" || n === "gjakova") return "gjakova";
-    if (n === "pejë" || n === "peja") return "peja";
+    if (n.includes("prishtin")) return "prishtina";
+    if (n.includes("mitrovic")) return "mitrovica";
+    if (n.includes("gjakov")) return "gjakova";
+    if (n.includes("pej")) return "peja";
+    if (n.includes("ferizaj")) return "ferizaj";
+    if (n.includes("prizren")) return "prizren";
+    if (n.includes("gjilan")) return "gjilan";
+    if (n.includes("podujev")) return "podujeva";
+    if (n.includes("vushtrr")) return "vushtrria";
     return n;
   };
+
+  useEffect(() => {
+    const fetchCityStats = async () => {
+      try {
+        const { data, error } = await supabase.from('barbershops').select('id, city, name');
+        if (error) {
+          console.error("Error fetching barbershops from Supabase:", error);
+          return;
+        }
+
+        const counts: Record<string, { shopCount: number; name: string }> = {};
+
+        if (data && Array.isArray(data)) {
+          data.forEach((shop: any) => {
+            if (shop.city && shop.city.trim()) {
+              const rawCity = shop.city.trim();
+              const norm = normalizeCityName(rawCity);
+              
+              let displayName = rawCity;
+              if (norm === "prishtina") displayName = "Prishtinë";
+              else if (norm === "prizren") displayName = "Prizren";
+              else if (norm === "ferizaj") displayName = "Ferizaj";
+              else if (norm === "peja") displayName = "Pejë";
+              else if (norm === "gjakova") displayName = "Gjakovë";
+              else if (norm === "gjilan") displayName = "Gjilan";
+              else if (norm === "mitrovica") displayName = "Mitrovicë";
+              else if (norm === "podujeva") displayName = "Podujevë";
+              else if (norm === "vushtrria") displayName = "Vushtrri";
+
+              if (!counts[norm]) {
+                counts[norm] = { shopCount: 0, name: displayName };
+              }
+              counts[norm].shopCount += 1;
+            }
+          });
+        }
+
+        const realStats: CityStats[] = Object.values(counts).map((item) => ({
+          city: item.name,
+          shopCount: item.shopCount,
+          barberCount: item.shopCount
+        }));
+
+        setCityStats(realStats);
+      } catch (e) {
+        console.error("Error fetching city stats from Supabase:", e);
+      }
+    };
+
+    fetchCityStats();
+  }, []);
 
   // Cities with active accounts in DB drive everything — no hardcoded "covered" list
   const activeCityNames = new Set(cityStats.map(s => normalizeCityName(s.city)));
@@ -272,7 +320,7 @@ export default function KosovoCitiesMap() {
                       style={{ color: `${BLUE.mid}b3` }}
                     />
                     <span className="text-[10px] text-white/35 font-medium whitespace-nowrap">
-                      {city.barberCount !== null ? `${city.barberCount}+ berberë` : "—"}
+                      {city.shopCount === 1 ? "1 dyqan i regjistruar" : `${city.shopCount} dyqane të regjistruara`}
                     </span>
                   </div>
                 </div>
