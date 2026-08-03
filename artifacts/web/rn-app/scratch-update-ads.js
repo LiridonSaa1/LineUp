@@ -30,6 +30,13 @@ async function run() {
       image_url: "noasim_banner.jpg",
       status: "active",
       only_button: true
+    },
+    {
+      business_name: "NOA IPTV",
+      url: "https://noaiptv.com",
+      image_url: "noaiptv_banner.jpg",
+      status: "active",
+      only_button: true
     }
   ];
 

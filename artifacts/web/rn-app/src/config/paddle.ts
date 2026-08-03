@@ -23,6 +23,20 @@ export interface CreateTransactionParams {
   customerName?: string;
 }
 
+export interface PaddleTransaction {
+  id: string;
+  status: string;
+  created_at: string;
+  customer_id: string;
+  details: {
+    totals: {
+      total: string;
+      currency_code: string;
+    }
+  };
+  custom_data?: any;
+}
+
 /**
  * Executes a real transaction request to Paddle Sandbox API
  */
@@ -80,5 +94,33 @@ export async function createPaddleTransaction({ email, planId, amount, customerN
   } catch (error: any) {
     console.error('[Paddle] request failed:', error.message);
     throw error;
+  }
+}
+
+/**
+ * Fetches completed transactions from Paddle API
+ */
+export async function listPaddleTransactions() {
+  const isSandbox = PADDLE_CONFIG.ENVIRONMENT === 'sandbox';
+  const baseUrl = isSandbox ? 'https://sandbox-api.paddle.com' : 'https://api.paddle.com';
+
+  try {
+    const response = await fetch(`${baseUrl}/transactions?status=completed&per_page=50`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${PADDLE_CONFIG.API_KEY}`,
+      }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error?.detail || 'Gabim gjatë marrjes së transaksioneve');
+    }
+
+    return data.data as PaddleTransaction[];
+  } catch (error: any) {
+    console.error('[Paddle] Failed to fetch transactions:', error.message);
+    return [];
   }
 }

@@ -39,7 +39,8 @@ import {
   AlertTriangle,
   AlertCircle,
   Clock,
-  Flag
+  Flag,
+  DollarSign
 } from "lucide-react-native";
 import Animated, { FadeInUp, FadeInDown, useAnimatedStyle, withSpring, useSharedValue, SlideInRight } from "react-native-reanimated";
 import { BlurView } from 'expo-blur';
@@ -152,6 +153,18 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     address: ""
   });
 
+  // Notification Settings State
+  const [notifSettings, setNotifSettings] = useState({
+    bookings: true,
+    favorites: true,
+    system: true
+  });
+
+  // Change Password State
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [updatingPassword, setUpdatingPassword] = useState(false);
+
   // Database Data States
   const [dbFavorites, setDbFavorites] = useState<any[]>([]);
   const [dbMessages, setDbMessages] = useState<any[]>([]);
@@ -168,7 +181,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [subcategories, setSubcategories] = useState<any[]>([]);
   const [selectedEmployeeSubcats, setSelectedEmployeeSubcats] = useState<string[]>([]);
   const [serviceDurations, setServiceDurations] = useState<Record<string, number>>({});
+  const [servicePrices, setServicePrices] = useState<Record<string, number>>({});
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+  const [hasLoadedServices, setHasLoadedServices] = useState(false);
   const [employeeSchedule, setEmployeeSchedule] = useState<any[]>([]);
   const [savingSchedule, setSavingSchedule] = useState(false);
 
@@ -190,19 +205,18 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
       const subcatIds = myServices?.map(s => s.subcategory_id) || [];
       const durations: Record<string, number> = {};
+      const prices: Record<string, number> = {};
       myServices?.forEach(s => {
         if (s.subcategory_id) {
           // Fallback to 30 if column duration_minutes doesn't exist yet
           durations[s.subcategory_id] = (s as any).duration_minutes || 30;
+          prices[s.subcategory_id] = (s as any).price || 0;
         }
       });
       setSelectedEmployeeSubcats(subcatIds);
       setServiceDurations(durations);
-
-      // Expand the first category by default if none expanded
-      if (cats && cats.length > 0 && expandedCategories.length === 0) {
-        setExpandedCategories([cats[0].id]);
-      }
+      setServicePrices(prices);
+      setHasLoadedServices(true);
     } catch (err) {
       console.warn("Error fetching employee services:", err);
     }
@@ -234,6 +248,24 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     }
   };
 
+  const updateServicePrice = async (subcatId: string, price: number) => {
+    setServicePrices(prev => ({ ...prev, [subcatId]: price }));
+    try {
+      const { error } = await supabase
+        .from('barber_services')
+        .update({ price: price } as any)
+        .eq('barber_id', user.id)
+        .eq('subcategory_id', subcatId);
+
+      if (error) {
+        console.warn("[Profile] Could not save price:", error.message);
+      }
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch (e) {
+      console.error("[Profile] updateServicePrice error:", e);
+    }
+  };
+
   const toggleEmployeeService = async (subcatId: string, defaultDuration: number = 30) => {
     // Check local state first for instant UI feedback
     const isCurrentlySelected = selectedEmployeeSubcats.includes(subcatId);
@@ -253,10 +285,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       } else {
         // Select: Use UPSERT to handle potential existing records and avoid unique constraint error
         const currentDur = serviceDurations[subcatId] || defaultDuration;
+        const currentPrice = servicePrices[subcatId] || 0;
 
         const insertData: any = {
           barber_id: user.id,
-          subcategory_id: subcatId
+          subcategory_id: subcatId,
+          price: currentPrice,
+          ...(user.shop_id ? { shop_id: user.shop_id } : {})
         };
 
         // Only include duration if we have reason to believe the column exists or just try it
@@ -513,6 +548,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           instagram: shopInfo?.instagram || "",
           address: shopInfo?.address || ""
         });
+
+        if (userData.notification_settings) {
+          setNotifSettings(userData.notification_settings);
+        }
       }
 
     } catch (e) {
@@ -585,6 +624,57 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     }
   };
 
+  const handleUpdatePassword = async () => {
+    if (!newPassword || !confirmPassword) {
+      Alert.alert("Gabim", "Ju lutemi plotësoni të gjitha fushat.");
+      return;
+    }
+    if (newPassword.length < 6) {
+      Alert.alert("Gabim", "Fjalëkalimi i ri duhet të jetë të paktën 6 karaktere.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      Alert.alert("Gabim", "Fjalëkalimet nuk përputhen.");
+      return;
+    }
+
+    setUpdatingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      Alert.alert("Sukses", "Fjalëkalimi u ndryshua me sukses.");
+      setNewPassword("");
+      setConfirmPassword("");
+      setSettingsIndex('main');
+    } catch (e: any) {
+      Alert.alert("Gabim", e.message || "Dështoi ndryshimi i fjalëkalimit.");
+    } finally {
+      setUpdatingPassword(false);
+    }
+  };
+
+  const toggleNotification = async (key: keyof typeof notifSettings, value: boolean) => {
+    const updated = { ...notifSettings, [key]: value };
+    setNotifSettings(updated);
+
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ notification_settings: updated } as any)
+        .eq('id', user.id);
+
+      if (error) {
+        console.warn("Failed to update notification settings in DB:", error.message);
+      }
+    } catch (e) {
+      console.warn("Error updating notification settings:", e);
+    }
+  };
+
   const handleDeleteAccount = () => {
     Alert.alert(
       "Fshirja e Llogarisë",
@@ -631,7 +721,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const handleAction = (label: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    if (isEmployeeRole && selectedEmployeeSubcats.length === 0 && label !== 'EmployeeServices') {
+    if (isEmployeeRole && hasLoadedServices && selectedEmployeeSubcats.length === 0 && label !== 'EmployeeServices') {
       promptNoServicesAlert();
       return;
     }
@@ -826,7 +916,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
         <View className="px-6 pt-6">
-           {isEmployeeRole && selectedEmployeeSubcats.length === 0 && (
+           {isEmployeeRole && hasLoadedServices && selectedEmployeeSubcats.length === 0 && (
              <TouchableOpacity
                onPress={promptNoServicesAlert}
                className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-[28px] mb-6 flex-row items-center justify-between"
@@ -914,11 +1004,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </View>
       </ScrollView>
 
-      {/* ── SHARED MODAL COMPONENT ── */}
       <Modal visible={activeModal !== null} animationType="slide" transparent={true}>
-        <View className="flex-1 bg-black/60 justify-end">
-           <TouchableOpacity activeOpacity={1} onPress={() => setActiveModal(null)} className="absolute inset-0" />
-           <Animated.View entering={FadeInUp} className="bg-[#F8FAFC] rounded-t-[50px] p-8 pb-12 h-[90%]">
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          className="flex-1"
+        >
+          <View className="flex-1 bg-black/60 justify-end">
+            <TouchableOpacity activeOpacity={1} onPress={() => { setActiveModal(null); Keyboard.dismiss(); }} className="absolute inset-0" />
+            <Animated.View entering={FadeInUp} className="bg-[#F8FAFC] rounded-t-[50px] p-8 pb-12 h-[90%]">
               <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mb-8" />
 
               {activeModal === 'profile' && (
@@ -935,7 +1028,34 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                       </View>
                       <View>
                         <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Numri i Telefonit</Text>
-                        <TextInput value={editData.phone} onChangeText={(val) => setEditData({...editData, phone: val})} placeholder="+383 4X XXX XXX" className="bg-white h-14 rounded-2xl px-5 font-bold border border-slate-100" />
+                        <TextInput
+                          value={editData.phone}
+                          onChangeText={(val) => {
+                            const cleaned = val.replace(/\D/g, "");
+                            let formatted = val;
+                            if (cleaned.length > 0) {
+                              let numberPart = cleaned;
+                              if (cleaned.startsWith("383")) {
+                                numberPart = cleaned.substring(3);
+                              } else if (cleaned.startsWith("0")) {
+                                numberPart = cleaned.substring(1);
+                              }
+
+                              if (numberPart.length > 5) {
+                                formatted = `+383 ${numberPart.substring(0, 2)} ${numberPart.substring(2, 5)} ${numberPart.substring(5, 8)}`;
+                              } else if (numberPart.length > 2) {
+                                formatted = `+383 ${numberPart.substring(0, 2)} ${numberPart.substring(2)}`;
+                              } else {
+                                formatted = `+383 ${numberPart}`;
+                              }
+                            } else {
+                              formatted = val.length > 0 ? "+383 " : "";
+                            }
+                            setEditData({...editData, phone: formatted});
+                          }}
+                          placeholder="+383 4X XXX XXX"
+                          className="bg-white h-14 rounded-2xl px-5 font-bold border border-slate-100"
+                        />
                       </View>
 
                       {isBusinessRole && (
@@ -1063,62 +1183,72 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     <TouchableOpacity onPress={() => setActiveModal(null)} className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-sm"><X size={24} color="#161719" /></TouchableOpacity>
                   </View>
                   <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-                    {(isBusinessRole ? dbFavorites : (favorites || [])).length > 0 ? (isBusinessRole ? dbFavorites : (favorites || [])).map((fav, i) => {
-                      if (isBusinessRole) {
+                    {(() => {
+                      const displayFavs = isBusinessRole ? dbFavorites : (dbFavorites.length > 0 ? dbFavorites : (favorites || []));
+                      if (displayFavs.length === 0) {
                         return (
-                          <View key={i} className="bg-white p-5 rounded-[28px] flex-row items-center mb-4 border border-slate-100 shadow-sm">
-                            <View className="w-12 h-12 rounded-2xl bg-indigo-50 items-center justify-center">
-                              <User size={24} color="#6366f1" />
-                            </View>
-                            <View className="flex-1 ml-4">
-                               <Text className="font-black text-[#161719] text-base">{fav.users?.name || 'Klient i LineUp'}</Text>
-                               <Text className="text-slate-400 font-bold text-xs">{fav.users?.email}</Text>
-                               {fav.users?.phone && <Text className="text-slate-400 font-bold text-[10px] mt-0.5">{fav.users?.phone}</Text>}
-                            </View>
-                            <View className="p-3 bg-indigo-50/50 rounded-full">
-                              <Heart size={18} color="#6366f1" fill="#6366f1" />
-                            </View>
+                          <View className="items-center justify-center py-20">
+                             <Heart size={64} color="#CBD5E1" strokeWidth={1} />
+                             <Text className="text-slate-400 font-bold mt-4">
+                               {isBusinessRole ? 'Salloni juaj nuk ka ende asnjë favorit.' : 'Nuk keni asnjë sallon të ruajtur.'}
+                             </Text>
                           </View>
                         );
                       }
-                      
-                      return (
-                        <TouchableOpacity
-                          key={i}
-                          activeOpacity={0.8}
-                          onPress={() => {
-                            if (fav.barbershops) {
-                              setActiveModal(null);
-                              onSelectShop?.(fav.barbershops);
-                            }
-                          }}
-                          className="bg-white p-4 rounded-[28px] flex-row items-center mb-4 border border-slate-100 shadow-sm"
-                        >
-                          <Image source={{ uri: fav.barbershops?.image_url || fav.barbershops?.imageUrl || 'https://via.placeholder.com/100' }} className="w-16 h-16 rounded-2xl bg-slate-50" />
-                          <View className="flex-1 ml-4">
-                             <Text className="font-black text-[#161719] text-base">{fav.barbershops?.name}</Text>
-                             <Text className="text-slate-400 font-bold text-xs">{fav.barbershops?.city}</Text>
-                          </View>
+
+                      return displayFavs.map((fav, i) => {
+                        const targetShop = fav.barbershops || fav;
+                        if (isBusinessRole && fav.users) {
+                          return (
+                            <View key={i} className="bg-white p-5 rounded-[28px] flex-row items-center mb-4 border border-slate-100 shadow-sm">
+                              <View className="w-12 h-12 rounded-2xl bg-indigo-50 items-center justify-center">
+                                <User size={24} color="#6366f1" />
+                              </View>
+                              <View className="flex-1 ml-4">
+                                 <Text className="font-black text-[#161719] text-base">{fav.users?.name || 'Klient i LineUp'}</Text>
+                                 <Text className="text-slate-400 font-bold text-xs">{fav.users?.email}</Text>
+                                 {fav.users?.phone && <Text className="text-slate-400 font-bold text-[10px] mt-0.5">{fav.users?.phone}</Text>}
+                              </View>
+                              <View className="p-3 bg-indigo-50/50 rounded-full">
+                                <Heart size={18} color="#6366f1" fill="#6366f1" />
+                              </View>
+                            </View>
+                          );
+                        }
+
+                        const shopImg = targetShop?.image_card || targetShop?.card_image || targetShop?.image_url || targetShop?.cover_image || targetShop?.image || targetShop?.avatar || targetShop?.imageUrl || (Array.isArray(targetShop?.photos) && targetShop.photos[0] ? targetShop.photos[0] : null) || 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1000&auto=format&fit=crop&q=80';
+                        
+                        return (
                           <TouchableOpacity
+                            key={i}
+                            activeOpacity={0.8}
                             onPress={() => {
-                              if (fav.barbershops) {
-                                onToggleFavorite?.(fav.barbershops);
+                              if (targetShop) {
+                                setActiveModal(null);
+                                onSelectShop?.(targetShop);
                               }
                             }}
-                            className="p-3 bg-rose-50 rounded-full"
+                            className="bg-white p-4 rounded-[28px] flex-row items-center mb-4 border border-slate-100 shadow-sm"
                           >
-                            <Heart size={18} color="#ef4444" fill="#ef4444" />
+                            <Image source={{ uri: shopImg }} className="w-16 h-16 rounded-2xl bg-slate-50" />
+                            <View className="flex-1 ml-4">
+                               <Text className="font-black text-[#161719] text-base">{targetShop?.name || 'Sallon'}</Text>
+                               <Text className="text-slate-400 font-bold text-xs">{targetShop?.city || 'Kosovë'}</Text>
+                            </View>
+                            <TouchableOpacity
+                              onPress={() => {
+                                if (targetShop) {
+                                  onToggleFavorite?.(targetShop);
+                                }
+                              }}
+                              className="p-3 bg-rose-50 rounded-full"
+                            >
+                              <Heart size={18} color="#ef4444" fill="#ef4444" />
+                            </TouchableOpacity>
                           </TouchableOpacity>
-                        </TouchableOpacity>
-                      );
-                    }) : (
-                      <View className="items-center justify-center py-20">
-                         <Heart size={64} color="#CBD5E1" strokeWidth={1} />
-                         <Text className="text-slate-400 font-bold mt-4">
-                           {isBusinessRole ? 'Salloni juaj nuk ka ende asnjë favorit.' : 'Nuk keni asnjë sallon të ruajtur.'}
-                         </Text>
-                      </View>
-                    )}
+                        );
+                      });
+                    })()}
                   </ScrollView>
                 </View>
               )}
@@ -1248,18 +1378,72 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
                     {settingsView === 'notifications' && (
                       <View className="gap-y-6">
-                        <View className="flex-row items-center justify-between bg-white p-6 rounded-[28px]"><View><Text className="font-black text-[#161719]">Njoftimet për Rezervime</Text><Text className="text-slate-400 font-bold text-xs mt-1">Kur dikush rezervon ose anulon</Text></View><Switch value={true} /></View>
-                        <View className="flex-row items-center justify-between bg-white p-6 rounded-[28px]"><View><Text className="font-black text-[#161719]">Njoftimet për të Ruajtura</Text><Text className="text-slate-400 font-bold text-xs mt-1">Kur dikush ruan sallonin tuaj</Text></View><Switch value={true} /></View>
-                        <View className="flex-row items-center justify-between bg-white p-6 rounded-[28px]"><View><Text className="font-black text-[#161719]">Përditësimet e Sistemit</Text><Text className="text-slate-400 font-bold text-xs mt-1">Lajme dhe rregullime të rëndësishme</Text></View><Switch value={true} /></View>
+                        <View className="flex-row items-center justify-between bg-white p-6 rounded-[28px]">
+                          <View>
+                            <Text className="font-black text-[#161719]">Njoftimet për Rezervime</Text>
+                            <Text className="text-slate-400 font-bold text-xs mt-1">Kur dikush rezervon ose anulon</Text>
+                          </View>
+                          <Switch
+                            value={notifSettings.bookings}
+                            onValueChange={(val) => toggleNotification('bookings', val)}
+                          />
+                        </View>
+                        <View className="flex-row items-center justify-between bg-white p-6 rounded-[28px]">
+                          <View>
+                            <Text className="font-black text-[#161719]">Njoftimet për të Ruajtura</Text>
+                            <Text className="text-slate-400 font-bold text-xs mt-1">Kur dikush ruan sallonin tuaj</Text>
+                          </View>
+                          <Switch
+                            value={notifSettings.favorites}
+                            onValueChange={(val) => toggleNotification('favorites', val)}
+                          />
+                        </View>
+                        <View className="flex-row items-center justify-between bg-white p-6 rounded-[28px]">
+                          <View>
+                            <Text className="font-black text-[#161719]">Përditësimet e Sistemit</Text>
+                            <Text className="text-slate-400 font-bold text-xs mt-1">Lajme dhe rregullime të rëndësishme</Text>
+                          </View>
+                          <Switch
+                            value={notifSettings.system}
+                            onValueChange={(val) => toggleNotification('system', val)}
+                          />
+                        </View>
                       </View>
                     )}
 
                     {settingsView === 'password' && (
                       <View className="gap-y-6">
-                        <View><Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Email (Llogaria)</Text><TextInput value={user.email} editable={false} className="bg-slate-100 h-14 rounded-2xl px-5 font-bold text-slate-400" /></View>
-                        <View><Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Fjalëkalimi i Ri</Text><TextInput secureTextEntry placeholder="••••••••" className="bg-white h-14 rounded-2xl px-5 font-bold border border-slate-100" /></View>
-                        <View><Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Konfirmo Fjalëkalimin</Text><TextInput secureTextEntry placeholder="••••••••" className="bg-white h-14 rounded-2xl px-5 font-bold border border-slate-100" /></View>
-                        <TouchableOpacity className="bg-black h-16 rounded-2xl items-center justify-center mt-4"><Text className="text-white font-black text-lg">Ndrysho Fjalëkalimin</Text></TouchableOpacity>
+                        <View>
+                          <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Email (Llogaria)</Text>
+                          <TextInput value={user.email} editable={false} className="bg-slate-100 h-14 rounded-2xl px-5 font-bold text-slate-400" />
+                        </View>
+                        <View>
+                          <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Fjalëkalimi i Ri</Text>
+                          <TextInput
+                            secureTextEntry
+                            placeholder="••••••••"
+                            className="bg-white h-14 rounded-2xl px-5 font-bold border border-slate-100"
+                            value={newPassword}
+                            onChangeText={setNewPassword}
+                          />
+                        </View>
+                        <View>
+                          <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Konfirmo Fjalëkalimin</Text>
+                          <TextInput
+                            secureTextEntry
+                            placeholder="••••••••"
+                            className="bg-white h-14 rounded-2xl px-5 font-bold border border-slate-100"
+                            value={confirmPassword}
+                            onChangeText={setConfirmPassword}
+                          />
+                        </View>
+                        <TouchableOpacity
+                          onPress={handleUpdatePassword}
+                          disabled={updatingPassword}
+                          className={`bg-black h-16 rounded-2xl items-center justify-center mt-4 ${updatingPassword ? 'opacity-70' : ''}`}
+                        >
+                          {updatingPassword ? <ActivityIndicator color="white" /> : <Text className="text-white font-black text-lg">Ndrysho Fjalëkalimin</Text>}
+                        </TouchableOpacity>
                       </View>
                     )}
 
@@ -1404,9 +1588,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                            <TouchableOpacity
                              activeOpacity={0.7}
                              onPress={() => {
-                               setExpandedCategories(prev =>
-                                 isExpanded ? prev.filter(id => id !== cat.id) : [...prev, cat.id]
-                               );
+                               setExpandedCategories(isExpanded ? [] : [cat.id]);
                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                              }}
                              className={`flex-row items-center justify-between p-5 rounded-[24px] border ${isExpanded ? 'bg-indigo-50 border-indigo-100' : 'bg-white border-slate-100 shadow-sm'}`}
@@ -1432,6 +1614,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                {catSubs.map((sub, idx) => {
                                  const isChecked = selectedEmployeeSubcats.includes(sub.id)
                                  const currentDuration = serviceDurations[sub.id] || 30;
+                                 const currentPrice = servicePrices[sub.id] || 0;
                                  return (
                                    <View
                                      key={sub.id}
@@ -1444,7 +1627,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                        <View className="flex-1 pr-3">
                                          <Text className="font-bold text-[#161719] text-sm">{sub.name}</Text>
                                          <Text className="text-xs font-semibold text-[#3473ef] mt-0.5">
-                                           ⏱️ Kohëzgjatja: {currentDuration} min
+                                           ⏱️ {currentDuration} min {currentPrice > 0 ? `• 💰 ${currentPrice}€` : ''}
                                          </Text>
                                        </View>
                                        <View className={`w-7 h-7 rounded-full border items-center justify-center ${isChecked ? 'bg-[#3473ef] border-[#3473ef]' : 'border-slate-200 bg-slate-50'}`}>
@@ -1459,61 +1642,62 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                            <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1.5">Zgjidh kohëzgjatjen e punës:</Text>
                                          </View>
 
-                                         <View className="flex-row items-center gap-2 flex-wrap">
-                                           {[15, 30, 45, 60, 90].map((dur) => {
-                                             const isDurSelected = currentDuration === dur
-                                             return (
-                                               <TouchableOpacity
-                                                 key={dur}
-                                                 onPress={() => updateServiceDuration(sub.id, dur)}
-                                                 className={`px-4 py-2 rounded-xl border ${
-                                                   isDurSelected
-                                                     ? 'bg-[#161719] border-[#161719]'
-                                                     : 'bg-white border-slate-200'
-                                                 }`}
-                                               >
-                                                 <Text className={`text-xs font-black ${isDurSelected ? 'text-white' : 'text-slate-600'}`}>
-                                                   {dur} min
-                                                 </Text>
-                                               </TouchableOpacity>
-                                             )
-                                           })}
+                                         <View className="flex-row items-center gap-x-2">
+                                           <TouchableOpacity
+                                             onPress={() => updateServiceDuration(sub.id, Math.max(5, currentDuration - 5))}
+                                             className="w-10 h-10 bg-slate-100 rounded-xl items-center justify-center active:bg-slate-200 shadow-sm"
+                                           >
+                                             <Text className="font-black text-xl text-[#161719]">-</Text>
+                                           </TouchableOpacity>
 
-                                           <View className="flex-row items-center gap-x-2">
-                                             <TouchableOpacity
-                                               onPress={() => updateServiceDuration(sub.id, Math.max(5, currentDuration - 5))}
-                                               className="w-9 h-9 bg-slate-100 rounded-xl items-center justify-center active:bg-slate-200"
-                                             >
-                                               <Text className="font-black text-lg text-[#161719]">-</Text>
-                                             </TouchableOpacity>
-
-                                             <View className={`flex-row items-center h-9 rounded-xl px-3 border ${![15, 30, 45, 60, 90].includes(currentDuration) ? 'bg-[#3473ef]/5 border-[#3473ef]' : 'bg-slate-50 border-slate-200'}`}>
-                                               <TextInput
-                                                 keyboardType="numeric"
-                                                 value={currentDuration > 0 ? String(currentDuration) : ''}
-                                                 onChangeText={(text) => {
-                                                   const cleanText = text.replace(/[^0-9]/g, '')
-                                                   const num = parseInt(cleanText, 10)
-                                                   if (!isNaN(num) && num > 0) {
-                                                     updateServiceDuration(sub.id, num)
-                                                   } else if (cleanText === '') {
-                                                     setServiceDurations(prev => ({...prev, [sub.id]: 0}))
-                                                   }
-                                                 }}
-                                                 className="font-black text-xs text-[#161719] min-w-[30px] text-center p-0"
-                                                 placeholder="0"
-                                                 placeholderTextColor="#94a3b8"
-                                               />
-                                               <Text className="text-[10px] font-black text-slate-400 ml-1">min</Text>
-                                             </View>
-
-                                             <TouchableOpacity
-                                               onPress={() => updateServiceDuration(sub.id, currentDuration + 5)}
-                                               className="w-9 h-9 bg-slate-100 rounded-xl items-center justify-center active:bg-slate-200"
-                                             >
-                                               <Text className="font-black text-lg text-[#161719]">+</Text>
-                                             </TouchableOpacity>
+                                           <View className="flex-row items-center h-10 rounded-xl px-4 border border-[#3473ef] bg-[#3473ef]/5 shadow-sm">
+                                             <TextInput
+                                               keyboardType="numeric"
+                                               value={currentDuration > 0 ? String(currentDuration) : ''}
+                                               onChangeText={(text) => {
+                                                 const cleanText = text.replace(/[^0-9]/g, '')
+                                                 const num = parseInt(cleanText, 10)
+                                                 if (!isNaN(num) && num > 0) {
+                                                   updateServiceDuration(sub.id, num)
+                                                 } else if (cleanText === '') {
+                                                   setServiceDurations(prev => ({...prev, [sub.id]: 0}))
+                                                 }
+                                               }}
+                                               className="font-black text-sm text-[#161719] min-w-[40px] text-center p-0"
+                                               placeholder="0"
+                                               placeholderTextColor="#94a3b8"
+                                             />
+                                             <Text className="text-[11px] font-black text-[#3473ef] ml-1">min</Text>
                                            </View>
+
+                                           <TouchableOpacity
+                                             onPress={() => updateServiceDuration(sub.id, currentDuration + 5)}
+                                             className="w-10 h-10 bg-slate-100 rounded-xl items-center justify-center active:bg-slate-200 shadow-sm"
+                                           >
+                                             <Text className="font-black text-xl text-[#161719]">+</Text>
+                                           </TouchableOpacity>
+                                         </View>
+
+                                         {/* Price Section */}
+                                         <View className="flex-row items-center mb-3 mt-6">
+                                           <DollarSign size={13} color="#3473ef" />
+                                           <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1.5">Çmimi i punës (Opsionale):</Text>
+                                         </View>
+
+                                         <View className="flex-row items-center h-12 rounded-2xl px-4 border border-slate-100 bg-white shadow-sm">
+                                             <TextInput
+                                               keyboardType="numeric"
+                                               value={currentPrice > 0 ? String(currentPrice) : ''}
+                                               onChangeText={(text) => {
+                                                 const cleanText = text.replace(/[^0-9]/g, '')
+                                                 const num = parseInt(cleanText, 10)
+                                                 updateServicePrice(sub.id, isNaN(num) ? 0 : num)
+                                               }}
+                                               className="font-black text-sm text-[#161719] flex-1"
+                                               placeholder="Shëno çmimin (psh. 10)"
+                                               placeholderTextColor="#94a3b8"
+                                             />
+                                             <Text className="text-[11px] font-black text-[#3473ef] ml-2">EUR (€)</Text>
                                          </View>
                                        </View>
                                      )}
@@ -1609,7 +1793,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
            </Animated.View>
         </View>
-      </Modal>
+      </KeyboardAvoidingView>
+    </Modal>
     </View>
   );
 };

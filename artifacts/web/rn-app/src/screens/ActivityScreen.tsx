@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Image, Dimensions, Alert } from "react-native";
-import { Calendar, Clock, ChevronRight, MessageSquare, History, Lock, Search, Star, XCircle, AlertCircle } from "lucide-react-native";
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Image, Dimensions, Alert, Modal, TextInput, KeyboardAvoidingView, Platform, Keyboard } from "react-native";
+import { Calendar, Clock, ChevronRight, MessageSquare, History, Lock, Search, Star, XCircle, AlertCircle, X, Check } from "lucide-react-native";
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { supabase } from "@/config/supabase";
@@ -16,6 +16,13 @@ interface ActivityScreenProps {
 export const ActivityScreen: React.FC<ActivityScreenProps> = ({ user, onLogin, onNavigateToSearch }) => {
   const [allAppointments, setAllAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Review Modal States
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [selectedAppt, setSelectedAppt] = useState<any>(null);
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   const fetchAppointments = async () => {
     if (!user) return;
@@ -90,6 +97,47 @@ export const ActivityScreen: React.FC<ActivityScreenProps> = ({ user, onLogin, o
         }
       ]
     );
+  };
+
+  const handleSubmitReview = async () => {
+    if (!selectedAppt) return;
+    setSubmittingReview(true);
+    try {
+      // 1. Insert review
+      const { error: reviewErr } = await supabase
+        .from('reviews')
+        .insert({
+          shop_id: selectedAppt.shop_id,
+          user_id: user.id,
+          appointment_id: selectedAppt.id,
+          rating,
+          comment: comment.trim()
+        });
+
+      if (reviewErr) throw reviewErr;
+
+      // 2. Mark appointment as reviewed
+      const { error: apptErr } = await supabase
+        .from('appointments')
+        .update({ is_reviewed: true })
+        .eq('id', selectedAppt.id);
+
+      if (apptErr) {
+        // Fallback if column is missing (don't fail the whole operation)
+        console.warn("Could not mark as reviewed, column might be missing:", apptErr.message);
+      }
+
+      Alert.alert("Sukses! ⭐", "Vlerësimi juaj u dërgua me sukses. Ju faleminderit!");
+      setShowReviewModal(false);
+      setComment("");
+      setRating(5);
+      fetchAppointments();
+    } catch (e: any) {
+      console.error("Review Error:", e);
+      Alert.alert("Gabim", "Dështoi dërgimi i vlerësimit: " + e.message);
+    } finally {
+      setSubmittingReview(false);
+    }
   };
 
   const upcomingAppointments = allAppointments.filter(item => !item.isPast);
@@ -250,11 +298,23 @@ export const ActivityScreen: React.FC<ActivityScreenProps> = ({ user, onLogin, o
                         </View>
                       </View>
 
-                      {item.status !== 'cancelled' && item.status !== 'Anuluar' && (
-                        <TouchableOpacity className="bg-slate-50 px-5 py-2.5 rounded-2xl flex-row items-center gap-2 border border-slate-100">
+                      {item.status !== 'cancelled' && item.status !== 'Anuluar' && !item.is_reviewed && (
+                        <TouchableOpacity
+                          onPress={() => {
+                            setSelectedAppt(item);
+                            setShowReviewModal(true);
+                          }}
+                          className="bg-slate-50 px-5 py-2.5 rounded-2xl flex-row items-center gap-2 border border-slate-100"
+                        >
                           <Star size={14} color="#fbbf24" fill="#fbbf24" />
                           <Text className="text-[#161719] font-black text-xs">Vlerëso</Text>
                         </TouchableOpacity>
+                      )}
+                      {item.is_reviewed && (
+                        <View className="bg-emerald-50 px-5 py-2.5 rounded-2xl flex-row items-center gap-2 border border-emerald-100">
+                          <Check size={14} color="#10b981" strokeWidth={3} />
+                          <Text className="text-[#10b981] font-black text-xs">Vlerësuar</Text>
+                        </View>
                       )}
                     </View>
                   </View>
@@ -268,6 +328,76 @@ export const ActivityScreen: React.FC<ActivityScreenProps> = ({ user, onLogin, o
           </View>
         )}
       </ScrollView>
+
+      {/* --- REVIEW MODAL --- */}
+      <Modal
+        visible={showReviewModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowReviewModal(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          className="flex-1"
+        >
+          <View className="flex-1 bg-black/60 justify-end">
+            <TouchableOpacity activeOpacity={1} onPress={() => { setShowReviewModal(false); Keyboard.dismiss(); }} className="absolute inset-0" />
+            <View className="bg-white rounded-t-[48px] p-8 pb-12 shadow-2xl">
+              <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mb-8" />
+
+              <View className="flex-row justify-between items-center mb-6">
+                <View>
+                  <Text className="text-3xl font-black text-[#161719] tracking-tight">Vlerëso Sallonin</Text>
+                  <Text className="text-slate-400 font-bold text-sm mt-1">{selectedAppt?.shopName}</Text>
+                </View>
+                <TouchableOpacity onPress={() => setShowReviewModal(false)} className="w-12 h-12 bg-slate-50 rounded-full items-center justify-center">
+                  <X size={24} color="#161719" />
+                </TouchableOpacity>
+              </View>
+
+              <View className="items-center mb-10">
+                <View className="flex-row gap-2 mb-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <TouchableOpacity key={star} onPress={() => setRating(star)}>
+                      <Star size={40} color={star <= rating ? "#fbbf24" : "#e2e8f0"} fill={star <= rating ? "#fbbf24" : "transparent"} strokeWidth={2} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <Text className="text-slate-500 font-bold">Zgjidhni numrin e yjeve</Text>
+              </View>
+
+              <View className="mb-8">
+                <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Komenti juaj (opsionale)</Text>
+                <TextInput
+                  multiline
+                  numberOfLines={4}
+                  placeholder="Shkruani mendimin tuaj për shërbimin..."
+                  className="bg-slate-50 rounded-3xl p-5 font-bold text-[#161719] border border-slate-100"
+                  style={{ textAlignVertical: 'top', height: 120 }}
+                  value={comment}
+                  onChangeText={setComment}
+                />
+              </View>
+
+              <TouchableOpacity
+                onPress={handleSubmitReview}
+                disabled={submittingReview}
+                className={`h-16 rounded-[28px] items-center justify-center shadow-xl shadow-blue-200 ${submittingReview ? 'bg-slate-200' : 'bg-[#3473ef]'}`}
+              >
+                {submittingReview ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <View className="flex-row items-center">
+                    <Text className="text-white text-lg font-black mr-2">Dërgo Vlerësimin</Text>
+                    <Check size={20} color="white" strokeWidth={3} />
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
     </View>
   );
 };

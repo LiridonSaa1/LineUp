@@ -1,14 +1,15 @@
-import React, { useEffect, useState, useRef } from "react";
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, Dimensions, Linking, Modal } from "react-native";
-import { Scissors, MapPin, Search, ChevronDown, Heart, Star, Grid, Eye, Waves, Hand, Sparkles, Smile, User, Syringe, Zap, Shield, Check, ArrowRight, ArrowUpRight, Plus, ExternalLink, Megaphone } from "lucide-react-native";
+import React, { useEffect, useState, useRef, useCallback } from "react";
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, Dimensions, Linking, Modal, Alert as RNAlert, ActivityIndicator, Platform, RefreshControl } from "react-native";
+import { Scissors, MapPin, Search, ChevronDown, Heart, Star, Grid, Eye, Waves, Hand, Sparkles, Smile, User, Syringe, Zap, Shield, Check, ArrowRight, ArrowUpRight, Plus, ExternalLink, Megaphone, X } from "lucide-react-native";
 import { BlurView } from 'expo-blur';
 import Animated, {
   FadeInUp,
   FadeIn,
 } from "react-native-reanimated";
 import { supabase } from "@/config/supabase";
-
-import { X } from "lucide-react-native";
+import { getShopCardImage } from "../utils/imageUtils";
+import { getShopPlanDetails } from "../utils/planLimits";
+import * as Haptics from 'expo-haptics';
 
 const { width } = Dimensions.get("window");
 
@@ -31,11 +32,108 @@ interface HomeScreenProps {
   selectedLocation: string;
   onSearch?: (query: string, subIds?: string[], categoryName?: string) => void;
   onStartPlan?: (planId: string) => void;
+  onManagePlan?: () => void;
+  onUpgradePlan?: (planId: string) => void;
+  onDowngradePlan?: (planId: string) => void;
+  onRenewPlan?: (planId: string) => void;
   categories?: any[];
   subcategories?: any[];
   favorites?: any[];
   onToggleFavorite?: (shop: any) => void;
+  user?: any;
 }
+
+const RecommendedCard = React.memo(({ shop, onPress }: { shop: any, onPress: (shop: any) => void }) => (
+  <TouchableOpacity
+    onPress={() => onPress(shop)}
+    activeOpacity={0.95}
+    className="mr-4 overflow-hidden border border-white/60 shadow-sm"
+    style={{ width: (width - 48) * 0.7, height: 260, borderRadius: 28, backgroundColor: 'rgba(255, 255, 255, 0.4)' }}
+  >
+    <BlurView intensity={30} tint="light" className="flex-1">
+      <View className="relative w-full h-36">
+        <Image
+          source={{ uri: getShopCardImage(shop) }}
+          className="w-full h-full"
+          resizeMode="cover"
+        />
+        <View className="absolute inset-0 bg-black/20" />
+        <View className="absolute top-3 left-3 bg-black/60 px-3 py-1.5 rounded-full flex-row items-center border border-white/20 backdrop-blur-md">
+          <Star size={12} color="#FFD700" fill="#FFD700" />
+          <Text className="text-white font-black text-xs ml-1.5">{shop.rating ? parseFloat(String(shop.rating)).toFixed(1) : '0.0'}</Text>
+        </View>
+        <View className="absolute bottom-[-16] right-4 w-12 h-12 bg-white rounded-full items-center justify-center shadow-lg border border-slate-50">
+          <Image source={{ uri: shop.logo_url || getShopCardImage(shop) }} className="w-10 h-10 rounded-full" />
+        </View>
+      </View>
+
+      <View className="p-4 pt-5 flex-1 justify-between">
+        <View>
+          <Text className="text-xl font-black text-[#161719] mb-1" numberOfLines={1}>{shop.name}</Text>
+          <View className="flex-row items-center">
+            <MapPin size={12} color="#8789A3" />
+            <Text className="text-[#8789A3] font-bold text-xs ml-1" numberOfLines={1}>{shop.address || shop.city}</Text>
+          </View>
+        </View>
+
+        <View className="flex-row items-center justify-between mt-3 pt-3 border-t border-white/40">
+          <Text className="text-[#3473ef] font-black text-sm uppercase tracking-wider">Top Rated</Text>
+          <View className="w-8 h-8 rounded-full bg-[#3473ef]/10 items-center justify-center">
+            <ArrowUpRight size={16} color="#3473ef" />
+          </View>
+        </View>
+      </View>
+    </BlurView>
+  </TouchableOpacity>
+));
+
+const ShopCard = React.memo(({ item, isFavorite, onToggleFavorite, onSelect }: { item: any, isFavorite: boolean, onToggleFavorite: (item: any) => void, onSelect: (item: any) => void }) => (
+  <TouchableOpacity
+    key={item.id}
+    onPress={() => onSelect(item)}
+    className="mr-4 mb-6 overflow-hidden border border-white/60 shadow-sm"
+    style={{ width: (width - 48) * 0.63, borderRadius: 28, backgroundColor: 'rgba(255, 255, 255, 0.4)' }}
+  >
+    <BlurView intensity={30} tint="light" className="p-3 flex-1">
+      <View className="relative rounded-2xl overflow-hidden mb-3">
+        <Image
+          source={{ uri: getShopCardImage(item) }}
+          className="w-full h-40 object-cover"
+        />
+        <View
+          className="absolute top-3 left-3 overflow-hidden rounded-full border border-white/60"
+          style={{ borderRadius: 100 }}
+        >
+          <BlurView intensity={80} tint="light" className="px-3 py-1 bg-white/50">
+            <Text className="text-black text-[10px] font-bold">I zgjedhur</Text>
+          </BlurView>
+        </View>
+        <TouchableOpacity
+          onPress={() => onToggleFavorite(item)}
+          className="absolute top-3 right-3 overflow-hidden rounded-full border border-white/60"
+          style={{ borderRadius: 100 }}
+        >
+          <BlurView intensity={60} tint="light" className="w-8 h-8 items-center justify-center bg-white/30">
+            <Heart size={18} color={isFavorite ? "#ef4444" : "white"} fill={isFavorite ? "#ef4444" : "transparent"} />
+          </BlurView>
+        </TouchableOpacity>
+      </View>
+      <View className="flex-row justify-between items-start">
+        <View className="flex-1 mr-2">
+          <Text className="text-base font-black text-[#161719]" numberOfLines={1}>{item.name}</Text>
+          <Text className="text-[#8789A3] text-[11px] font-bold mt-0.5" numberOfLines={1}>
+            {item.distance || ">50 km"} • {item.address || item.city}
+          </Text>
+          <Text className="text-[#8789A3] text-[10px] font-bold mt-0.5">{item.category || "Sallon bukurie"} • {item.total_reviews || item.reviews_count || 0} vlerësime</Text>
+        </View>
+        <View className="flex-row items-center bg-[#3473ef]/10 px-2 py-1 rounded-full">
+          <Star size={10} color="#3473ef" fill="#3473ef" />
+          <Text className="text-[#3473ef] font-black text-[10px] ml-1">{item.rating ? parseFloat(String(item.rating)).toFixed(1) : '0.0'}</Text>
+        </View>
+      </View>
+    </BlurView>
+  </TouchableOpacity>
+));
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   onSelectShop,
@@ -45,10 +143,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   selectedLocation = "Lokacioni aktual",
   onSearch,
   onStartPlan,
+  onManagePlan,
+  onUpgradePlan,
+  onDowngradePlan,
+  onRenewPlan,
   categories = [],
   subcategories = [],
   favorites = [],
-  onToggleFavorite
+  onToggleFavorite,
+  user
 }) => {
   const [loading, setLoading] = useState(true);
   const [recommendedShops, setRecommendedShops] = useState<any[]>([]);
@@ -56,9 +159,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [selectedMainCategory, setSelectedMainCategory] = useState<any | null>(null);
   const [showSubModal, setShowSubModal] = useState(false);
   const [selectedSubIds, setSelectedSubIds] = useState<string[]>([]);
-
+  const [currentPlanInfo, setCurrentPlanInfo] = useState<any>(null);
 
   const [ads, setAds] = useState<any[]>([
+    {
+      business_name: "NOA IPTV",
+      image_url: "noaiptv_banner.jpg",
+      url: "https://noaiptv.com",
+      status: 'active',
+      only_button: true
+    },
     {
       business_name: "Vehees",
       headline: "Zbulo historikun e veturës tënde",
@@ -92,6 +202,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     // Priority check for branding consistency with local high-resolution assets
     if (ad.business_name === 'Vehees') return require('../../assets/vehees_banner.jpg');
     if (ad.business_name === 'noasim' || ad.business_name === 'Noasim') return require('../../assets/noasim_banner.jpg');
+    if (ad.business_name === 'NOA IPTV' || ad.image_url === 'noaiptv_banner.jpg') return require('../../assets/noaiptv_banner.jpg');
     if (ad.image_url && ad.image_url.startsWith('http')) return { uri: ad.image_url };
     return { uri: ad.image_url || ad.imageUrl || 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1000&auto=format&fit=crop&q=80' };
   };
@@ -135,158 +246,106 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     { name: "Body Care", icon: Waves },
   ];
 
-  useEffect(() => {
-    async function loadData() {
-      setLoading(true);
-      try {
-        const [shopsRes, newShopsRes, adsRes] = await Promise.all([
-          supabase
-            .from('barbershops')
-            .select('*')
-            .eq('status', 'active')
-            .order('rating', { ascending: false })
-            .limit(6),
-          supabase
-            .from('barbershops')
-            .select('*')
-            .eq('status', 'active')
-            .order('created_at', { ascending: false })
-            .limit(6),
-          supabase
-            .from('advertisements')
-            .select('*')
-            .eq('status', 'active'),
-        ]);
+  const [refreshing, setRefreshing] = useState(false);
 
-        let shopsData = shopsRes.data;
-        let shopsError = shopsRes.error;
+  const loadData = useCallback(async (isRefreshing = false) => {
+    if (isRefreshing) setRefreshing(true);
+    else setLoading(true);
 
-        if (shopsError && (shopsError.code === 'PGRST205' || shopsError.message?.includes('barbershops'))) {
-          const fallbackRes = await supabase
-            .from('barbers')
-            .select('*')
-            .limit(6);
-          shopsData = fallbackRes.data;
-        }
+    try {
+      // Calculate date 7 days ago for "New to LineUp" section
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const sevenDaysAgoISO = sevenDaysAgo.toISOString();
 
-        if (shopsData && shopsData.length > 0) {
-          setRecommendedShops(shopsData);
-        }
+      const [shopsRes, newShopsRes, adsRes] = await Promise.all([
+        supabase
+          .from('barbershops')
+          .select('*')
+          .order('total_reviews', { ascending: false })
+          .limit(10),
+        supabase
+          .from('barbershops')
+          .select('*')
+          .gte('created_at', sevenDaysAgoISO)
+          .order('created_at', { ascending: false })
+          .limit(10),
+        supabase
+          .from('advertisements')
+          .select('*')
+          .eq('status', 'active'),
+      ]);
 
-        if (newShopsRes.data) {
-          setNewShops(newShopsRes.data);
-        }
+      let shopsData = shopsRes.data;
+      let shopsError = shopsRes.error;
 
-        if (adsRes.data && adsRes.data.length > 0) {
-          setAds(adsRes.data);
-        }
-
-      } catch (e) {
-        console.warn("Failed to load home data:", e);
-      } finally {
-        setLoading(false);
+      if (shopsError && (shopsError.code === 'PGRST205' || shopsError.message?.includes('barbershops'))) {
+        const fallbackRes = await supabase
+          .from('barbers')
+          .select('*')
+          .limit(6);
+        shopsData = fallbackRes.data;
       }
+
+      if (shopsData && shopsData.length > 0) {
+        setRecommendedShops(shopsData);
+      }
+
+      if (newShopsRes.data) {
+        setNewShops(newShopsRes.data);
+      }
+
+      if (adsRes.data && adsRes.data.length > 0) {
+        setAds(adsRes.data);
+      }
+
+      // Fetch plan info if user is logged in
+      if (user?.id) {
+        let sId = user.id;
+        if (user.role === 'employee') {
+          const { data: bData } = await supabase.from('barbers').select('shop_id').eq('user_id', user.id).maybeSingle();
+          if (bData?.shop_id) sId = bData.shop_id;
+        } else {
+          const { data: sData } = await supabase.from('barbershops').select('id').eq('owner_id', user.id).maybeSingle();
+          if (sData?.id) sId = sData.id;
+        }
+
+        const planInfo = await getShopPlanDetails(sId);
+        setCurrentPlanInfo(planInfo);
+      }
+    } catch (e) {
+      console.warn("Failed to load home data:", e);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
+  }, [user]);
+
+  useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
+
+  const onRefresh = () => {
+    loadData(true);
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch (_) {}
+  };
 
   const renderRecommendedCard = (shop: any, index: number) => (
-    <TouchableOpacity
-      key={shop.id || index}
-      onPress={() => onSelectShop(shop)}
-      activeOpacity={0.95}
-      className="mr-4 overflow-hidden border border-white/60 shadow-sm"
-      style={{ width: (width - 48) * 0.7, height: 260, borderRadius: 28, backgroundColor: 'rgba(255, 255, 255, 0.4)' }}
-    >
-      <BlurView intensity={30} tint="light" className="flex-1">
-        <View className="relative w-full h-36">
-          <Image
-            source={{ uri: shop.imageUrl || shop.image_url || 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1000&auto=format&fit=crop&q=80' }}
-            className="w-full h-full"
-            resizeMode="cover"
-          />
-          <View className="absolute inset-0 bg-black/20" />
-          <View className="absolute top-3 left-3 bg-black/60 px-3 py-1.5 rounded-full flex-row items-center border border-white/20 backdrop-blur-md">
-            <Star size={12} color="#FFD700" fill="#FFD700" />
-            <Text className="text-white font-black text-xs ml-1.5">{shop.rating || '5.0'}</Text>
-          </View>
-          <View className="absolute bottom-[-16] right-4 w-12 h-12 bg-white rounded-full items-center justify-center shadow-lg border border-slate-50">
-            <Image source={{ uri: shop.logo_url || 'https://ui-avatars.com/api/?name=' + shop.name }} className="w-10 h-10 rounded-full" />
-          </View>
-        </View>
-
-        <View className="p-4 pt-5 flex-1 justify-between">
-          <View>
-            <Text className="text-xl font-black text-[#161719] mb-1" numberOfLines={1}>{shop.name}</Text>
-            <View className="flex-row items-center">
-              <MapPin size={12} color="#8789A3" />
-              <Text className="text-[#8789A3] font-bold text-xs ml-1" numberOfLines={1}>{shop.address || shop.city}</Text>
-            </View>
-          </View>
-          
-          <View className="flex-row items-center justify-between mt-3 pt-3 border-t border-white/40">
-            <Text className="text-[#3473ef] font-black text-sm uppercase tracking-wider">Top Rated</Text>
-            <View className="w-8 h-8 rounded-full bg-[#3473ef]/10 items-center justify-center">
-              <ArrowUpRight size={16} color="#3473ef" />
-            </View>
-          </View>
-        </View>
-      </BlurView>
-    </TouchableOpacity>
+    <RecommendedCard key={shop.id || index} shop={shop} onPress={onSelectShop} />
   );
 
-  const renderShopCard = (item: any) => (
-    <TouchableOpacity
-      key={item.id}
-      onPress={() => onSelectShop(item)}
-      className="mr-4 mb-6 overflow-hidden border border-white/60 shadow-sm"
-      style={{ width: (width - 48) * 0.63, borderRadius: 28, backgroundColor: 'rgba(255, 255, 255, 0.4)' }}
-    >
-      <BlurView intensity={30} tint="light" className="p-3 flex-1">
-        <View className="relative rounded-2xl overflow-hidden mb-3">
-          <Image
-            source={{ uri: item.imageUrl || item.image_url || "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1000&auto=format&fit=crop&q=80" }}
-            className="w-full h-40 object-cover"
-          />
-          <View
-            className="absolute top-3 left-3 overflow-hidden rounded-full border border-white/60"
-            style={{ borderRadius: 100 }}
-          >
-            <BlurView intensity={80} tint="light" className="px-3 py-1 bg-white/50">
-              <Text className="text-black text-[10px] font-bold">I zgjedhur</Text>
-            </BlurView>
-          </View>
-          {(() => {
-            const isFav = favorites?.some(f => f.shop_id === item.id || f.shop_id === Number(item.id));
-            return (
-              <TouchableOpacity
-                onPress={() => onToggleFavorite?.(item)}
-                className="absolute top-3 right-3 overflow-hidden rounded-full border border-white/60"
-                style={{ borderRadius: 100 }}
-              >
-                <BlurView intensity={60} tint="light" className="w-8 h-8 items-center justify-center bg-white/30">
-                  <Heart size={18} color={isFav ? "#ef4444" : "white"} fill={isFav ? "#ef4444" : "transparent"} />
-                </BlurView>
-              </TouchableOpacity>
-            );
-          })()}
-        </View>
-        <View className="flex-row justify-between items-start">
-          <View className="flex-1 mr-2">
-            <Text className="text-base font-black text-[#161719]" numberOfLines={1}>{item.name}</Text>
-            <Text className="text-[#8789A3] text-[11px] font-bold mt-0.5" numberOfLines={1}>
-              {item.distance || ">50 km"} • {item.address || item.city}
-            </Text>
-            <Text className="text-[#8789A3] text-[10px] font-bold mt-0.5">{item.category || "Sallon bukurie"} • {item.reviews || "186"} vlerësime</Text>
-          </View>
-          <View className="flex-row items-center bg-[#3473ef]/10 px-2 py-1 rounded-full">
-            <Star size={10} color="#3473ef" fill="#3473ef" />
-            <Text className="text-[#3473ef] font-black text-[10px] ml-1">{parseFloat(item.rating || "5.0").toFixed(1)}</Text>
-          </View>
-        </View>
-      </BlurView>
-    </TouchableOpacity>
-  );
+  const renderShopCard = (item: any) => {
+    const isFav = favorites?.some(f => f.shop_id === item.id || f.shop_id === Number(item.id));
+    return (
+      <ShopCard
+        key={item.id}
+        item={item}
+        isFavorite={isFav}
+        onToggleFavorite={onToggleFavorite || (() => {})}
+        onSelect={onSelectShop}
+      />
+    );
+  };
 
   return (
     <View className="flex-1 bg-[#ECEEF2]">
@@ -294,7 +353,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       <View className="absolute top-[-50] left-[-50] w-64 h-64 bg-[#3473ef]/15 rounded-full blur-3xl" />
       <View className="absolute top-[200] right-[-100] w-80 h-80 bg-[#f47458]/15 rounded-full blur-3xl" />
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 120 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3473ef" />
+        }
+      >
 
         {/* ── HEADER SECTION ───────────────────────────── */}
         <View className="px-6 pt-14 pb-4">
@@ -366,24 +432,27 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         <ScrollView
           ref={adsScrollRef}
           horizontal
-          pagingEnabled
+          pagingEnabled={false}
+          snapToInterval={width - 48}
+          decelerationRate="fast"
           showsHorizontalScrollIndicator={false}
           className="rounded-[28px] overflow-hidden shadow-sm"
+          style={{ height: 224 }}
         >
           {ads.map((ad, i) => {
-            const isCleanBanner = ad.only_button || ad.onlyButton || ad.business_name === 'Vehees' || ad.business_name === 'noasim' || ad.business_name === 'Noasim';
+            const isCleanBanner = ad.only_button || ad.onlyButton || ad.business_name === 'Vehees' || ad.business_name === 'noasim' || ad.business_name === 'Noasim' || ad.business_name === 'NOA IPTV';
             return (
               <TouchableOpacity
                 key={i}
                 onPress={() => ad.url && Linking.openURL(ad.url)}
                 activeOpacity={0.95}
-                style={{ width: width - 48 }}
-                className="h-48 relative overflow-hidden rounded-[28px] bg-slate-900 shadow-md border border-slate-200/40 mr-4"
+                style={{ width: width - 48, height: 224 }}
+                className="relative overflow-hidden rounded-[28px] bg-slate-900 shadow-md border border-slate-200/40"
               >
                 {/* Background Banner Image */}
                 <Image
                   source={getAdImageSource(ad)}
-                  resizeMode="cover"
+                  resizeMode={ad.business_name === 'NOA IPTV' ? "stretch" : "cover"}
                   className="absolute inset-0 w-full h-full"
                 />
 
@@ -427,14 +496,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             decelerationRate="fast"
           >
             <PricingCard
+              planId="solo"
               title="Solo"
               price="15€"
               employees="1 berber"
               desc="Ideale për berberët individualë"
               icon={User}
               onPress={() => onStartPlan && onStartPlan('solo')}
+              currentPlanInfo={currentPlanInfo}
+              userRole={user?.role}
+              onUpgrade={() => onUpgradePlan?.('solo')}
+              onDowngrade={() => onDowngradePlan?.('solo')}
+              onRenew={() => onRenewPlan?.('solo')}
+              onManage={onManagePlan}
             />
             <PricingCard
+              planId="duo"
               title="Duo"
               price="20€"
               employees="2 berberë"
@@ -442,65 +519,31 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               icon={Scissors}
               isPopular
               onPress={() => onStartPlan && onStartPlan('duo')}
+              currentPlanInfo={currentPlanInfo}
+              userRole={user?.role}
+              onUpgrade={() => onUpgradePlan?.('duo')}
+              onDowngrade={() => onDowngradePlan?.('duo')}
+              onRenew={() => onRenewPlan?.('duo')}
+              onManage={onManagePlan}
             />
-            <View
-              className="mr-4 bg-white overflow-hidden shadow-sm border border-slate-100"
-              style={{ width: (width - 48) * 0.7, borderRadius: 28, height: 185 }}
-            >
-              <View className="p-4 relative h-full">
-                <View className="absolute top-[-20] right-[-20] w-24 h-24 bg-[#3473ef]/5 rounded-full blur-xl" />
-
-                <View className="flex-row items-center gap-3 mb-3">
-                  <View className="w-9 h-9 rounded-xl bg-[#3473ef]/10 items-center justify-center">
-                    <Grid size={18} color="#3473ef" strokeWidth={2.5} />
-                  </View>
-                  <View>
-                    <Text className="text-[#161719] text-base font-black">Team</Text>
-                    <Text className="text-[#8789A3] text-[9px] font-bold">Për ekipe në rritje</Text>
-                  </View>
-                </View>
-
-                <View className="bg-[#3473ef]/5 p-3 rounded-2xl border-2 border-dashed border-[#3473ef]/20 mb-3">
-                  <View className="flex-row items-center justify-between">
-                    <View className="flex-row items-center flex-1">
-                      <View className="w-8 h-8 rounded-full bg-white items-center justify-center mr-2 shadow-sm">
-                         <User size={14} color="#3473ef" strokeWidth={3} />
-                      </View>
-                      <TextInput
-                        keyboardType="numeric"
-                        className="text-xl font-black text-[#161719] p-0"
-                        value={teamEmployees}
-                        onChangeText={(val) => {
-                          const num = parseInt(val);
-                          if (val === "" || (!isNaN(num) && num >= 3)) {
-                            setTeamEmployees(val);
-                          }
-                        }}
-                        onBlur={() => {
-                          if (!teamEmployees || parseInt(teamEmployees) < 3) {
-                            setTeamEmployees("3");
-                          }
-                        }}
-                        placeholder="3"
-                        placeholderTextColor="#CBD5E1"
-                      />
-                      <Text className="text-[#8789A3] text-[10px] font-bold ml-1.5 pt-1">berberë</Text>
-                    </View>
-                    <Text className="text-xl font-black text-[#3473ef]">
-                      {25 + (Math.max(3, parseInt(teamEmployees || "3")) - 3) * 5}€
-                    </Text>
-                  </View>
-                  <Text className="text-[#3473ef]/60 text-[8px] font-black uppercase mt-2 text-center">Ndrysho numrin për të kalkuluar</Text>
-                </View>
-
-                <TouchableOpacity 
-                  onPress={() => onStartPlan && onStartPlan('team')}
-                  className="h-10 bg-black rounded-2xl items-center justify-center shadow-md active:scale-95 mt-auto"
-                >
-                  <Text className="text-white font-black text-sm">Fillo Tani</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+            <PricingCard
+              planId="team"
+              title="Team"
+              price={`${25 + (Math.max(3, parseInt(teamEmployees || "3")) - 3) * 5}€`}
+              employees={`${teamEmployees} berberë`}
+              desc="Për ekipe në rritje"
+              icon={Grid}
+              isTeam
+              teamEmployees={teamEmployees}
+              setTeamEmployees={setTeamEmployees}
+              onPress={() => onStartPlan && onStartPlan('team')}
+              currentPlanInfo={currentPlanInfo}
+              userRole={user?.role}
+              onUpgrade={() => onUpgradePlan?.('team')}
+              onDowngrade={() => onDowngradePlan?.('team')}
+              onRenew={() => onRenewPlan?.('team')}
+              onManage={onManagePlan}
+            />
           </ScrollView>
         </View>
       </View>
@@ -648,8 +691,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               onPress={() => {
                 if (selectedMainCategory) {
                   const currentCategorySubIds = subcategories
-                    .filter(s => s.category_id === selectedMainCategory.id)
-                    .map(s => s.id);
+                    .filter(s => String(s.category_id).trim() === String(selectedMainCategory.id).trim())
+                    .map(s => String(s.id).trim());
                   
                   setSelectedSubIds(prev => {
                     const allSelected = currentCategorySubIds.every(id => prev.includes(id));
@@ -667,19 +710,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   });
                 }
               }}
-              className={`rounded-2xl py-4 items-center mb-4 border ${!selectedMainCategory || subcategories.filter(s => s.category_id === selectedMainCategory?.id).every(s => selectedSubIds.includes(s.id)) ? 'bg-[#3473ef]/10 border-[#3473ef]' : 'bg-slate-50 border-slate-200'}`}
+              className={`rounded-2xl py-4 items-center mb-4 border ${!selectedMainCategory || subcategories.filter(s => String(s.category_id).trim() === String(selectedMainCategory?.id).trim()).every(s => selectedSubIds.includes(String(s.id).trim())) ? 'bg-[#3473ef]/10 border-[#3473ef]' : 'bg-slate-50 border-slate-200'}`}
             >
-              <Text className={`font-black text-base ${!selectedMainCategory || subcategories.filter(s => s.category_id === selectedMainCategory?.id).every(s => selectedSubIds.includes(s.id)) ? 'text-[#3473ef]' : 'text-[#64748b]'}`}>Të gjitha në këtë kategori</Text>
+              <Text className={`font-black text-base ${!selectedMainCategory || subcategories.filter(s => String(s.category_id).trim() === String(selectedMainCategory?.id).trim()).every(s => selectedSubIds.includes(String(s.id).trim())) ? 'text-[#3473ef]' : 'text-[#64748b]'}`}>Të gjitha në këtë kategori</Text>
             </TouchableOpacity>
 
-            {selectedMainCategory && subcategories.filter(s => s.category_id === selectedMainCategory.id).map((sub) => {
-              const isSelected = selectedSubIds.includes(sub.id);
+            {selectedMainCategory && subcategories.filter(s => String(s.category_id).trim() === String(selectedMainCategory.id).trim()).map((sub, sIdx) => {
+              const subId = String(sub.id).trim();
+              const isSelected = selectedSubIds.includes(subId);
               return (
                 <TouchableOpacity
-                  key={sub.id}
+                  key={`${subId}-${sIdx}`}
                   onPress={() => {
                     setSelectedSubIds(prev =>
-                      prev.includes(sub.id) ? prev.filter(id => id !== sub.id) : [...prev, sub.id]
+                      prev.includes(subId) ? prev.filter(id => id !== subId) : [...prev, subId]
                     );
                   }}
                   className={`flex-row items-center py-4 border-b ${isSelected ? 'border-[#3473ef]/30' : 'border-slate-100'}`}
@@ -726,49 +770,157 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 );
 };
 
-const PricingCard = ({ title, price, employees, desc, icon: Icon, isPopular = false, onPress }: any) => (
-  <View
-    className="mr-4 bg-white overflow-hidden shadow-sm border border-slate-100"
-    style={{ width: (width - 48) * 0.7, borderRadius: 28, height: 185 }}
-  >
-    <View className="p-4 relative h-full">
-      <View className="absolute top-[-20] right-[-20] w-24 h-24 bg-[#3473ef]/5 rounded-full blur-xl" />
+const PricingCard = ({
+  planId,
+  title,
+  price,
+  employees,
+  desc,
+  icon: Icon,
+  isPopular = false,
+  isTeam = false,
+  teamEmployees,
+  setTeamEmployees,
+  onPress,
+  currentPlanInfo,
+  userRole,
+  onUpgrade,
+  onDowngrade,
+  onRenew,
+  onManage
+}: any) => {
+  const isCurrentPlan = currentPlanInfo?.planId === planId;
+  const isExpired = currentPlanInfo?.status === 'expired' || currentPlanInfo?.status === 'canceled';
+  const isEmployee = userRole === 'employee';
 
-      <View className="flex-row justify-between items-center mb-3">
-        <View className="flex-row items-center gap-3">
-          <View className="w-9 h-9 rounded-xl bg-[#3473ef]/10 items-center justify-center shadow-lg shadow-[#3473ef]/30">
-            <Icon size={18} color="#3473ef" strokeWidth={2.5} />
+  // Plan hierarchy to determine upgrade/downgrade
+  const planWeights: Record<string, number> = { solo: 1, duo: 2, team: 3 };
+  const currentWeight = planWeights[currentPlanInfo?.planId || ''] || 0;
+  const targetWeight = planWeights[planId] || 0;
+
+  const handlePress = () => {
+    if (isEmployee) {
+      RNAlert.alert(
+        "Llogari Punëtori",
+        "Abonimet mund të blihen dhe menaxhohen vetëm nga Pronari i Biznesit. Ju aktualisht jeni duke përdorur një llogari Punëtori."
+      );
+      return;
+    }
+
+    if (isCurrentPlan) {
+      if (isExpired) {
+        onRenew?.();
+      } else {
+        onManage?.();
+      }
+      return;
+    }
+
+    if (currentPlanInfo?.status === 'active' || currentPlanInfo?.status === 'trialing') {
+      if (targetWeight > currentWeight) {
+        onUpgrade?.();
+      } else {
+        onDowngrade?.();
+      }
+      return;
+    }
+
+    onPress();
+  };
+
+  let buttonText = "Fillo Tani";
+  if (isCurrentPlan) {
+    buttonText = isExpired ? "Rinovon" : "Plani Aktual";
+  } else if (currentPlanInfo?.status === 'active' || currentPlanInfo?.status === 'trialing') {
+    buttonText = targetWeight > currentWeight ? "Përmirëso" : "Zbrit";
+  }
+
+  return (
+    <View
+      className="mr-4 bg-white overflow-hidden shadow-sm border border-slate-100"
+      style={{ width: (width - 48) * 0.7, borderRadius: 28, height: 215 }}
+    >
+      <View className="p-4 relative h-full">
+        <View className="absolute top-[-20] right-[-20] w-24 h-24 bg-[#3473ef]/5 rounded-full blur-xl" />
+
+        <View className="flex-row justify-between items-center mb-3">
+          <View className="flex-row items-center gap-3">
+            <View className="w-9 h-9 rounded-xl bg-[#3473ef]/10 items-center justify-center shadow-lg shadow-[#3473ef]/30">
+              <Icon size={18} color="#3473ef" strokeWidth={2.5} />
+            </View>
+            <View>
+              <Text className="text-[#161719] text-base font-black leading-5">{title}</Text>
+              <Text className="text-[#8789A3] text-[9px] font-bold">LineUp Premium</Text>
+            </View>
           </View>
-          <View>
-            <Text className="text-[#161719] text-base font-black leading-5">{title}</Text>
-            <Text className="text-[#8789A3] text-[9px] font-bold">LineUp Premium</Text>
-          </View>
+          {isPopular && (
+            <View className="bg-amber-400 px-2 py-0.5 rounded-full">
+              <Text className="text-[#161719] text-[7px] font-black uppercase">Më i Populluari</Text>
+            </View>
+          )}
         </View>
-        {isPopular && (
-          <View className="bg-amber-400 px-2 py-0.5 rounded-full">
-            <Text className="text-[#161719] text-[7px] font-black uppercase">Më i Populluari</Text>
+
+        {isTeam ? (
+          <View className="bg-[#3473ef]/5 p-3 rounded-2xl border-2 border-dashed border-[#3473ef]/20 mb-3">
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center flex-1">
+                <View className="w-8 h-8 rounded-full bg-white items-center justify-center mr-2 shadow-sm">
+                   <User size={14} color="#3473ef" strokeWidth={3} />
+                </View>
+                <TextInput
+                  keyboardType="numeric"
+                  className="text-xl font-black text-[#161719] p-0"
+                  value={teamEmployees}
+                  onChangeText={(val) => {
+                    const num = parseInt(val);
+                    if (val === "" || (!isNaN(num) && num >= 3)) {
+                      setTeamEmployees(val);
+                    }
+                  }}
+                  onBlur={() => {
+                    if (!teamEmployees || parseInt(teamEmployees) < 3) {
+                      setTeamEmployees("3");
+                    }
+                  }}
+                  placeholder="3"
+                  placeholderTextColor="#CBD5E1"
+                  editable={!isEmployee}
+                />
+                <Text className="text-[#8789A3] text-[10px] font-bold ml-1.5 pt-1">berberë</Text>
+              </View>
+              <Text className="text-xl font-black text-[#3473ef]">{price}</Text>
+            </View>
+          </View>
+        ) : (
+          <View className="flex-row items-center justify-between mb-3 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+            <View className="flex-row items-baseline">
+              <Text className="text-2xl font-black text-[#161719]">{price}</Text>
+              <Text className="text-[10px] font-bold text-[#8789A3] ml-1">/muaj</Text>
+            </View>
+            <View className="flex-row items-center">
+              <Check size={10} color="#10b981" strokeWidth={4} />
+              <Text className="text-[#161719] font-bold text-[10px] ml-1.5">{employees}</Text>
+            </View>
           </View>
         )}
-      </View>
 
-      <View className="flex-row items-center justify-between mb-3 bg-slate-50 p-3 rounded-2xl border border-slate-100">
-        <View className="flex-row items-baseline">
-          <Text className="text-2xl font-black text-[#161719]">{price}</Text>
-          <Text className="text-[10px] font-bold text-[#8789A3] ml-1">/muaj</Text>
-        </View>
-        <View className="flex-row items-center">
-          <Check size={10} color="#10b981" strokeWidth={4} />
-          <Text className="text-[#161719] font-bold text-[10px] ml-1.5">{employees}</Text>
-        </View>
-      </View>
+        {isCurrentPlan && !isExpired && (
+          <Text className="text-[#3473ef] text-[9px] font-black mb-2 text-center">
+            Jeni i abonuar në këtë plan.
+          </Text>
+        )}
 
-      <TouchableOpacity 
-        onPress={onPress}
-        className="h-10 bg-black rounded-2xl items-center justify-center shadow-md active:scale-95 mt-auto"
-      >
-        <Text className="text-white font-black text-sm">Fillo Tani</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handlePress}
+          className={`h-10 rounded-2xl items-center justify-center shadow-md active:scale-95 mt-auto ${isCurrentPlan && !isExpired ? 'bg-slate-200' : 'bg-black'}`}
+          disabled={isCurrentPlan && !isExpired && !isEmployee}
+        >
+          <Text className={`${isCurrentPlan && !isExpired ? 'text-slate-500' : 'text-white'} font-black text-sm`}>
+            {buttonText}
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
-  </View>
-);
+  );
+};
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, memo } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Pressable, TextInput, Dimensions, ActivityIndicator, Keyboard, StyleSheet, FlatList, Modal, KeyboardAvoidingView, Platform } from "react-native";
 import { User, CreditCard, Shield, Store, Mail, Lock, Eye, EyeOff, Phone, ChevronDown, Search, ArrowLeft, Check, ChevronRight, Zap, Sparkles, MapPin, X, Scissors, Hand, Smile, Waves } from "lucide-react-native";
+import { AddressAutocomplete } from '../components/AddressAutocomplete';
 import { supabase } from "@/config/supabase";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { WebView } from "react-native-webview";
@@ -38,42 +39,6 @@ const KOSOVO_CITIES = [
   { formatted_address: "Deçan", city: "Deçan", street: "", postal_code: "51000", country: "Kosovë", latitude: 42.5353, longitude: 20.2878 },
   { formatted_address: "Istog", city: "Istog", street: "", postal_code: "31000", country: "Kosovë", latitude: 42.7808, longitude: 20.4875 },
   { formatted_address: "Klinë", city: "Klinë", street: "", postal_code: "32000", country: "Kosovë", latitude: 42.6225, longitude: 20.5786 },
-];
-
-const KOSOVO_STREETS: Record<string, string[]> = {
-  "Prishtinë": [
-    "Rruga B", "Rruga C", "Rruga Muharrem Fejza", "Bulevardi Nënë Tereza", "Rruga Bill Clinton", 
-    "Rruga George Bush", "Rruga Garibaldi", "Rruga Luan Haradinaj", "Rruga UÇK", 
-    "Rruga Agim Ramadani", "Rruga Bajram Kelmendi", "Rruga Fehmi Agani", "Rruga Rexhep Luci"
-  ],
-  "Ferizaj": [
-    "Rruga Ahmet Kaçiku", "Rruga Gjon Serreçi", "Rruga Vëllezërit Gërvalla", "Rruga Rexhep Bislimi", 
-    "Rruga Zenel Hajdini", "Rruga Enver Topalli", "Rruga Kemajl Hetemi", "Rruga 2 Korriku"
-  ],
-  "Prizren": [
-    "Rruga William Walker", "Rruga Edit Durham", "Rruga Adem Jashari", "Rruga Remzi Ademaj", 
-    "Bulevardi i Dëshmorëve", "Rruga Shatërvan", "Rruga Marin Barleti", "Rruga Jeronim De Rada"
-  ],
-  "Pejë": [
-    "Rruga Mbretëresha Teutë", "Rruga Eliot Engel", "Rruga Adem Jashari", "Rruga Hasan Prishtina", 
-    "Rruga Lekë Dukagjini", "Rruga Papa Klementi", "Rruga William Walker"
-  ],
-  "Gjakovë": [
-    "Rruga Çarshia e Madhe", "Rruga Mother Teresa", "Rruga Ismail Qemali", "Rruga Bardhyl Qaushi", 
-    "Rruga Mic Sokoli", "Rruga Sadik Stavileci", "Rruga Washington"
-  ],
-  "Gjilan": [
-    "Rruga Adem Jashari", "Rruga Marie Shllaku", "Rruga Medlin Ollbrajt", "Rruga Idriz Seferi", 
-    "Rruga Mulla Idrizi", "Rruga Bulevardi i Pavarësisë", "Rruga Kadri Zeka"
-  ],
-  "Mitrovicë": [
-    "Rruga Mbretëresha Teutë", "Rruga Shemsi Ahmeti", "Rruga Isa Boletini", "Rruga Bislim Bajgora", 
-    "Rruga Bulevardi Sheshi Adem Jashari", "Rruga UÇK"
-  ]
-};
-
-const DEFAULT_STREETS = [
-  "Rruga Adem Jashari", "Rruga UÇK", "Rruga Nënë Tereza", "Rruga Zahir Pajaziti", "Rruga Skënderbeu"
 ];
 
 const REGISTRATION_PLANS = [
@@ -211,7 +176,7 @@ const CityPicker = memo(({ selectedCity, onSelect }: CityPickerProps) => {
 
 interface AddressPickerProps {
   selectedCity: string;
-  onSelect: (address: { street: string, full: string }) => void;
+  onSelect: (address: { address: string, lat: number, lng: number }) => void;
   focusedField: string | null;
   setFocusedField: (field: string | null) => void;
 }
@@ -222,80 +187,22 @@ const AddressPicker = memo(({
   focusedField,
   setFocusedField
 }: AddressPickerProps) => {
-  const [addressInput, setAddressInput] = useState("");
-  const [showSuggestions, setShowSuggestions] = useState(false);
-
-  const streets = useMemo(() => {
-    if (!addressInput) return [];
-    const list = KOSOVO_STREETS[selectedCity] || DEFAULT_STREETS;
-    return list.filter(st => st.toLowerCase().includes(addressInput.toLowerCase()));
-  }, [selectedCity, addressInput]);
-
-  const handleTextChange = (val: string) => {
-    setAddressInput(val);
-    // Show suggestions only if user hasn't selected one yet or is typing
-    setShowSuggestions(val.length > 0);
-    const fullAddr = val ? `${val}${selectedCity ? `, ${selectedCity}` : ""}` : "";
-    onSelect({ street: val, full: fullAddr });
-  };
-
   return (
-    <View className="mb-1">
-      <View className={`bg-white rounded-2xl px-4 h-14 flex-row items-center border ${focusedField === 'address' ? 'border-[#3473ef]' : 'border-slate-200'}`}>
-        <MapPin size={20} color={focusedField === 'address' ? '#3473ef' : '#8789A3'} />
-        <TextInput
+    <View className="mb-1" style={{ zIndex: 1000 }}>
+       <AddressAutocomplete
           placeholder="Adresa (Rruga dhe Numri)"
-          value={addressInput}
-          onChangeText={handleTextChange}
-          className="flex-1 ml-3 font-bold text-[#161719] text-base"
-          placeholderTextColor="#94A3B8"
-          onFocus={() => {
-            setFocusedField('address');
-            if (addressInput.length > 0) setShowSuggestions(true);
+          selectedCity={selectedCity}
+          onSelectAddress={(place) => {
+            if (place && place.latitude && place.longitude) {
+              onSelect({
+                address: place.formatted_address,
+                lat: place.latitude,
+                lng: place.longitude
+              });
+            }
           }}
-          onBlur={() => setFocusedField(null)}
-          textContentType="fullStreetAddress"
-          autoComplete="street-address"
-        />
-        {addressInput !== "" && (
-          <TouchableOpacity
-            onPress={() => {
-              setAddressInput("");
-              setShowSuggestions(false);
-              onSelect({ street: "", full: "" });
-            }}
-            className="p-2 bg-slate-50 rounded-full"
-          >
-            <X size={16} color="#8789A3" strokeWidth={2.5} />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {showSuggestions && streets.length > 0 && (
-        <View className="mt-2 bg-white rounded-2xl border border-slate-200 p-2 shadow-lg">
-          {streets.slice(0, 5).map((item) => (
-            <TouchableOpacity
-              key={item}
-              onPress={() => {
-                const fullAddr = `${item}${selectedCity ? `, ${selectedCity}` : ""}`;
-                setAddressInput(item);
-                setShowSuggestions(false);
-                onSelect({ street: item, full: fullAddr });
-                Keyboard.dismiss();
-              }}
-              className="px-4 py-3 border-b border-slate-50 active:bg-slate-50 flex-row items-center justify-between"
-            >
-              <View className="flex-row items-center flex-1">
-                <MapPin size={16} color="#3473ef" className="mr-3" />
-                <Text className="font-bold text-sm text-[#161719] flex-1">
-                  {item}{selectedCity ? `, ${selectedCity}` : ""}
-                </Text>
-              </View>
-              <ChevronRight size={16} color="#CBD5E1" />
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
+          containerClassName={focusedField === 'address' ? 'border-[#3473ef]' : ''}
+       />
     </View>
   );
 });
@@ -327,13 +234,20 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const { data: catData, error: catErr } = await supabase.from('categories').select('*');
-        if (catData && catData.length > 0) setDbCategories(catData);
-        
-        const { data: subData, error: subErr } = await supabase.from('subcategories').select('*');
-        if (subData && subData.length > 0) setDbSubcategories(subData);
+        const [{ data: catData }, { data: subData }] = await Promise.all([
+          supabase.from('categories').select('*').order('name'),
+          supabase.from('subcategories').select('*').order('name')
+        ]);
+
+        if (catData && catData.length > 0 && subData && subData.length > 0) {
+          setDbCategories(catData as Category[]);
+          setDbSubcategories(subData as Subcategory[]);
+        } else {
+          // If either is missing from DB, stay with DEFAULTs to ensure ID consistency
+          console.warn("Categories or subcategories missing in DB, using defaults.");
+        }
       } catch (err) {
-        console.error("Failed to fetch categories:", err);
+        console.error("Failed to fetch categories from Supabase:", err);
       }
     };
     fetchCategories();
@@ -343,7 +257,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState("+383 ");
   const [selectedCity, setSelectedCity] = useState("");
   const [selectedPlace, setSelectedPlace] = useState<{ address: string; lat: number; lng: number } | null>(null);
   
@@ -459,6 +373,32 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
       console.log("[RegisterScreen] Owner User ID:", ownerId);
 
       // 3. Insert barbershop into database 'barbershops' table
+      const CITY_MAP_COORDS: Record<string, { lat: number; lng: number }> = {
+        "prishtin": { lat: 42.6629, lng: 21.1655 },
+        "ferizaj": { lat: 42.3703, lng: 21.1559 },
+        "prizren": { lat: 42.2139, lng: 20.7397 },
+        "pej": { lat: 42.6593, lng: 20.2883 },
+        "gjakov": { lat: 42.3803, lng: 20.4308 },
+        "gjilan": { lat: 42.4635, lng: 21.4678 },
+        "mitrovic": { lat: 42.8914, lng: 20.8660 },
+        "fushe kosov": { lat: 42.6340, lng: 21.0963 },
+        "vushtrr": { lat: 42.8231, lng: 20.9675 },
+        "podujev": { lat: 42.9114, lng: 21.1903 },
+        "rahovec": { lat: 42.3994, lng: 20.6553 },
+        "skenderaj": { lat: 42.7478, lng: 20.7878 },
+        "lipjan": { lat: 42.5217, lng: 21.1258 },
+        "suharek": { lat: 42.3581, lng: 20.8250 },
+        "decan": { lat: 42.5353, lng: 20.2878 },
+        "istog": { lat: 42.7808, lng: 20.4875 },
+        "klin": { lat: 42.6225, lng: 20.5786 },
+      };
+
+      const cityKey = (selectedCity || "prishtin").toLowerCase().replace(/ë/g, "e").replace(/ç/g, "c");
+      let fallbackCoords = CITY_MAP_COORDS["prishtin"];
+      for (const [k, v] of Object.entries(CITY_MAP_COORDS)) {
+        if (cityKey.includes(k)) { fallbackCoords = v; break; }
+      }
+
       console.log("[RegisterScreen] Inserting shop into Supabase 'barbershops' table...");
       const { error: shopError } = await supabase.from('barbershops').insert({
         owner_id: ownerId,
@@ -466,8 +406,8 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
         phone: phone || null,
         city: selectedCity || "Prishtinë",
         address: selectedPlace?.address || (selectedCity ? `Qendra, ${selectedCity}` : "Prishtinë"),
-        latitude: selectedPlace?.lat || 42.6629,
-        longitude: selectedPlace?.lng || 21.1655,
+        latitude: selectedPlace?.lat || fallbackCoords.lat,
+        longitude: selectedPlace?.lng || fallbackCoords.lng,
         status: 'active',
         rating: 0,
         total_reviews: 0,
@@ -714,59 +654,61 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
                 )}
               </View>
 
-              <View className={`bg-white rounded-2xl px-4 h-14 flex-row items-center border ${focusedField === 'phone' ? 'border-[#3473ef]' : 'border-slate-200'}`}>
-                <Phone size={20} color={focusedField === 'phone' ? '#3473ef' : '#8789A3'} />
-                <TextInput
-                  placeholder="Telefoni +383"
-                  value={phone}
-                  onChangeText={(val) => {
-                    const cleaned = val.replace(/\D/g, "");
-                    let formatted = val;
-                    if (cleaned.length > 0) {
-                      let numberPart = cleaned;
-                      if (cleaned.startsWith("383")) {
-                        numberPart = cleaned.substring(3);
-                      } else if (cleaned.startsWith("0")) {
-                        numberPart = cleaned.substring(1);
-                      }
-                      
-                      if (numberPart.length > 5) {
-                        formatted = `+383 ${numberPart.substring(0, 2)} ${numberPart.substring(2, 5)} ${numberPart.substring(5, 8)}`;
-                      } else if (numberPart.length > 2) {
-                        formatted = `+383 ${numberPart.substring(0, 2)} ${numberPart.substring(2)}`;
-                      } else {
-                        formatted = `+383 ${numberPart}`;
-                      }
-                    } else {
-                      formatted = "";
-                    }
-                    setPhone(formatted);
-                  }}
-                  className="flex-1 ml-3 font-bold text-[#161719] text-base"
-                  placeholderTextColor="#94A3B8"
-                  keyboardType="phone-pad"
-                  onFocus={() => setFocusedField('phone')}
-                  onBlur={() => setFocusedField(null)}
-                />
-              </View>
+              <View className="flex-row gap-x-3">
+                <View className={`flex-1 bg-white rounded-2xl px-4 h-14 flex-row items-center border ${focusedField === 'phone' ? 'border-[#3473ef]' : 'border-slate-200'}`}>
+                  <Phone size={20} color={focusedField === 'phone' ? '#3473ef' : '#8789A3'} />
+                  <TextInput
+                    placeholder="Telefoni"
+                    value={phone}
+                    onChangeText={(val) => {
+                      const cleaned = val.replace(/\D/g, "");
+                      let formatted = val;
+                      if (cleaned.length > 0) {
+                        let numberPart = cleaned;
+                        if (cleaned.startsWith("383")) {
+                          numberPart = cleaned.substring(3);
+                        } else if (cleaned.startsWith("0")) {
+                          numberPart = cleaned.substring(1);
+                        }
 
-              <View className={`bg-white rounded-2xl px-4 h-14 flex-row items-center border ${focusedField === 'password' ? 'border-[#3473ef]' : 'border-slate-200'}`}>
-                <Lock size={20} color={focusedField === 'password' ? '#3473ef' : '#8789A3'} />
-                <TextInput
-                  placeholder="Fjalëkalimi"
-                  value={password}
-                  onChangeText={setPassword}
-                  className="flex-1 ml-3 font-bold text-[#161719] text-base"
-                  placeholderTextColor="#94A3B8"
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  onFocus={() => setFocusedField('password')}
-                  onBlur={() => setFocusedField(null)}
-                />
-                <Pressable onPress={() => setShowPassword(!showPassword)} className="p-2">
-                  {showPassword ? <EyeOff size={20} color="#8789A3" /> : <Eye size={20} color="#8789A3" />}
-                </Pressable>
+                        if (numberPart.length > 5) {
+                          formatted = `+383 ${numberPart.substring(0, 2)} ${numberPart.substring(2, 5)} ${numberPart.substring(5, 8)}`;
+                        } else if (numberPart.length > 2) {
+                          formatted = `+383 ${numberPart.substring(0, 2)} ${numberPart.substring(2)}`;
+                        } else {
+                          formatted = `+383 ${numberPart}`;
+                        }
+                      } else {
+                        formatted = val.length > 0 ? "+383 " : "";
+                      }
+                      setPhone(formatted);
+                    }}
+                    className="flex-1 ml-3 font-bold text-[#161719] text-sm"
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="phone-pad"
+                    onFocus={() => setFocusedField('phone')}
+                    onBlur={() => setFocusedField(null)}
+                  />
+                </View>
+
+                <View className={`flex-1 bg-white rounded-2xl px-4 h-14 flex-row items-center border ${focusedField === 'password' ? 'border-[#3473ef]' : 'border-slate-200'}`}>
+                  <Lock size={20} color={focusedField === 'password' ? '#3473ef' : '#8789A3'} />
+                  <TextInput
+                    placeholder="Fjalëkalimi"
+                    value={password}
+                    onChangeText={setPassword}
+                    className="flex-1 ml-3 font-bold text-[#161719] text-sm"
+                    placeholderTextColor="#94A3B8"
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    onFocus={() => setFocusedField('password')}
+                    onBlur={() => setFocusedField(null)}
+                  />
+                  <Pressable onPress={() => setShowPassword(!showPassword)} className="p-1">
+                    {showPassword ? <EyeOff size={18} color="#8789A3" /> : <Eye size={18} color="#8789A3" />}
+                  </Pressable>
+                </View>
               </View>
 
               {/* City Picker input */}
@@ -784,7 +726,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
                 focusedField={focusedField}
                 setFocusedField={setFocusedField}
                 onSelect={(addr) => {
-                  setSelectedPlace({ address: addr.full, lat: 42.6629, lng: 21.1655 });
+                  setSelectedPlace({ address: addr.address, lat: addr.lat, lng: addr.lng });
                 }}
               />
 
@@ -1060,19 +1002,31 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
             <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 100 }} className="flex-1" keyboardShouldPersistTaps="handled">
               <Text className="text-sm font-bold text-[#8789A3] mb-4">Zgjidhni shërbimet (mund të zgjidhni më shumë se një):</Text>
               
-              {selectedMainCategory && dbSubcategories.filter(s => s.category_id === selectedMainCategory.id).map((sub) => {
-                const isSelected = selectedCategories.includes(sub.id);
+            {selectedMainCategory && dbSubcategories.filter(s => String(s.category_id).trim() === String(selectedMainCategory.id).trim()).map((sub, idx) => {
+                const subId = String(sub.id).trim();
+                const isSelected = selectedCategories.includes(subId);
                 return (
-                  <TouchableOpacity
-                    key={sub.id}
-                    onPress={() => toggleCategory(sub.id)}
-                    className={`flex-row items-center py-4 border-b ${isSelected ? 'border-[#3473ef]/30' : 'border-slate-100'}`}
+                  <Pressable
+                    key={`${subId}-${idx}`}
+                    onPress={() => {
+                      console.log("[Register] Toggling subcat:", subId);
+                      toggleCategory(subId);
+                    }}
+                    style={({ pressed }) => ({
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingVertical: 14,
+                      paddingHorizontal: 4,
+                      borderBottomWidth: 1,
+                      borderBottomColor: isSelected ? 'rgba(52, 115, 239, 0.3)' : '#F1F5F9',
+                      opacity: pressed ? 0.7 : 1
+                    })}
                   >
-                    <View className={`w-6 h-6 rounded-md border items-center justify-center mr-3 ${isSelected ? 'bg-[#3473ef] border-[#3473ef]' : 'bg-white border-slate-300'}`}>
+                    <View className={`w-6 h-6 rounded-md border items-center justify-center mr-4 ${isSelected ? 'bg-[#3473ef] border-[#3473ef]' : 'bg-white border-slate-300'}`}>
                       {isSelected && <Check size={14} color="white" strokeWidth={3} />}
                     </View>
-                    <Text className={`text-base flex-1 ${isSelected ? 'font-black text-[#3473ef]' : 'font-bold text-[#161719]'}`}>{sub.name}</Text>
-                  </TouchableOpacity>
+                    <Text className={`text-base flex-1 ${isSelected ? 'font-black text-[#3473ef]' : 'font-bold text-[#161719]'}`} numberOfLines={1}>{sub.name}</Text>
+                  </Pressable>
                 );
               })}
             </ScrollView>

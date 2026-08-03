@@ -7,7 +7,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { uploadFile } from '../utils/storage';
 
 const { width, height } = Dimensions.get("window");
-const GOOGLE_MAPS_KEY = 'AIzaSyD9DOb-ko2C84TUlBVuPVILNaf3Jhkl-yg';
 
 // Comprehensive list of Kosovo Municipalities with Coordinates
 const CITY_DATA: Record<string, { lat: number; lng: number }> = {
@@ -208,11 +207,16 @@ export const AddAdModal: React.FC<AddAdModalProps> = ({ onClose, onSuccess }) =>
             selectedCity={selectedCity}
             containerClassName="mb-6"
             onSelectAddress={(place) => {
-              setSelectedPlace({
-                address: place.formatted_address,
-                lat: place.latitude || CITY_DATA[selectedCity]?.lat || 42.6629,
-                lng: place.longitude || CITY_DATA[selectedCity]?.lng || 21.1655
-              });
+              if (place?.latitude && place?.longitude) {
+                setSelectedPlace({
+                  address: place.formatted_address,
+                  lat: place.latitude,
+                  lng: place.longitude,
+                  place_id: place.place_id
+                });
+              } else {
+                setSelectedPlace(null);
+              }
             }}
           />
 

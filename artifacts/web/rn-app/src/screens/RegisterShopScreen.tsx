@@ -1,11 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Dimensions } from 'react-native';
-import { X, Store, MapPin, Camera, Check, ChevronRight, Info, Search } from 'lucide-react-native';
+import { View, Text, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Dimensions, Modal, FlatList } from 'react-native';
+import { X, Store, MapPin, Camera, Check, ChevronRight, Info, Search, ChevronDown } from 'lucide-react-native';
 import { AddressAutocomplete } from '../components/AddressAutocomplete';
 import { supabase } from '@/config/supabase';
 
 const { width } = Dimensions.get('window');
-const GOOGLE_MAPS_KEY = 'AIzaSyD9DOb-ko2C84TUlBVuPVILNaf3Jhkl-yg';
 
 interface RegisterShopScreenProps {
   onClose: () => void;
@@ -15,8 +14,16 @@ interface RegisterShopScreenProps {
 export const RegisterShopScreen: React.FC<RegisterShopScreenProps> = ({ onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [shopName, setShopName] = useState("");
+  const [shopCity, setShopCity] = useState("Prishtinë");
+  const [showCityPicker, setShowCityPicker] = useState(false);
   const [category, setCategory] = useState("Barber");
-  const [selectedPlace, setSelectedPlace] = useState<{ address: string; lat: number; lng: number } | null>(null);
+  const [selectedPlace, setSelectedPlace] = useState<{ address: string; lat: number; lng: number, city?: string, place_id?: string } | null>(null);
+
+  const KOSOVO_CITIES = [
+    "Prishtinë", "Ferizaj", "Prizren", "Pejë", "Gjakovë", "Gjilan", "Mitrovicë",
+    "Vushtrri", "Podujevë", "Fushë Kosovë", "Rahovec", "Skënderaj", "Lipjan",
+    "Suharekë", "Deçan", "Istog", "Klinë", "Dragash", "Kamenicë", "Malishevë"
+  ];
 
   const autocompleteRef = useRef<any>(null);
 
@@ -52,10 +59,11 @@ export const RegisterShopScreen: React.FC<RegisterShopScreenProps> = ({ onClose,
       const { error } = await supabase.from('barbershops').insert({
         owner_id: ownerId,
         name: shopName,
-        city: selectedPlace.address.split(',')[0] || "Prishtinë",
+        city: selectedPlace.city || selectedPlace.address.split(',')[0] || "Prishtinë",
         address: selectedPlace.address,
         latitude: selectedPlace.lat,
         longitude: selectedPlace.lng,
+        place_id: selectedPlace.place_id,
         status: 'active',
         rating: 0,
         total_reviews: 0,
@@ -117,24 +125,48 @@ export const RegisterShopScreen: React.FC<RegisterShopScreenProps> = ({ onClose,
             </TouchableOpacity>
           </View>
 
-          <AddressAutocomplete
-            label="Lokacioni i verifikuar"
-            placeholder="Kërko adresën e sallonit tuaj..."
-            containerClassName="mb-8"
-            onSelectAddress={(place) => {
-              setSelectedPlace({
-                address: place.formatted_address,
-                lat: place.latitude || 42.6629,
-                lng: place.longitude || 21.1655
-              });
-            }}
-          />
+          <Text className="text-xs font-black text-[#8789A3] uppercase tracking-widest mb-3 ml-1">Lokacioni i biznesit</Text>
+          <View className="bg-slate-50 rounded-2xl p-4 mb-6 border border-slate-100 shadow-sm shadow-black/5">
+            <Text className="text-[10px] font-black text-slate-400 uppercase mb-2">Qyteti</Text>
+            <TouchableOpacity
+              onPress={() => setShowCityPicker(true)}
+              className="flex-row items-center justify-between h-12 border-b border-slate-200"
+            >
+               <View className="flex-row items-center">
+                 <MapPin size={18} color="#3473ef" className="mr-2" />
+                 <Text className="text-[#161719] font-bold text-base">{shopCity}</Text>
+               </View>
+               <ChevronDown size={20} color="#94A3B8" />
+            </TouchableOpacity>
+
+            <View className="mt-4">
+              <Text className="text-[10px] font-black text-slate-400 uppercase mb-2">Adresa / Rruga</Text>
+              <AddressAutocomplete
+                placeholder={`Kërko rrugën në ${shopCity}...`}
+                selectedCity={shopCity}
+                containerClassName="mb-2"
+                onSelectAddress={(place) => {
+                  if (place && place.latitude && place.longitude) {
+                    setSelectedPlace({
+                      address: place.formatted_address,
+                      lat: place.latitude,
+                      lng: place.longitude,
+                      place_id: place.place_id,
+                      city: shopCity
+                    });
+                  } else {
+                    setSelectedPlace(null);
+                  }
+                }}
+              />
+            </View>
+          </View>
 
           {selectedPlace && (
              <View className="bg-emerald-50 p-5 rounded-3xl border border-emerald-100 mb-8">
                 <View className="flex-row items-center mb-2">
                    <Check size={18} color="#10b981" strokeWidth={3} />
-                   <Text className="text-emerald-600 font-black text-xs uppercase ml-2 tracking-widest">Adresa u verifikua</Text>
+                   <Text className="text-emerald-600 font-black text-xs uppercase ml-2 tracking-widest">Lokacioni u përzgjodh saktë</Text>
                 </View>
                 <Text className="text-[#161719] font-bold text-sm leading-5">{selectedPlace.address}</Text>
              </View>
@@ -163,6 +195,41 @@ export const RegisterShopScreen: React.FC<RegisterShopScreenProps> = ({ onClose,
           )}
         </TouchableOpacity>
       </View>
+
+      {/* City Picker Modal */}
+      <Modal visible={showCityPicker} animationType="slide" transparent={true}>
+        <View className="flex-1 bg-black/60 justify-end">
+          <TouchableOpacity activeOpacity={1} onPress={() => setShowCityPicker(false)} className="absolute inset-0" />
+          <View className="bg-white rounded-t-[40px] h-[70%] overflow-hidden">
+            <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mt-3 mb-6" />
+            <View className="px-8 pb-4 flex-row justify-between items-center border-b border-slate-50">
+              <Text className="text-xl font-black text-[#161719]">Zgjidh Qytetin</Text>
+              <TouchableOpacity onPress={() => setShowCityPicker(false)} className="p-2 bg-slate-100 rounded-full">
+                <X size={20} color="#161719" />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={KOSOVO_CITIES}
+              keyExtractor={(item) => item}
+              contentContainerStyle={{ padding: 24 }}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  onPress={() => {
+                    setShopCity(item);
+                    setShowCityPicker(false);
+                    setSelectedPlace(null); // Reset address when city changes
+                  }}
+                  className={`flex-row items-center py-4 px-2 border-b border-slate-50 ${shopCity === item ? 'bg-blue-50/50' : ''}`}
+                >
+                  <MapPin size={18} color={shopCity === item ? "#3473ef" : "#94A3B8"} className="mr-3" />
+                  <Text className={`text-base flex-1 ${shopCity === item ? 'font-black text-[#3473ef]' : 'font-bold text-[#161719]'}`}>{item}</Text>
+                  {shopCity === item && <Check size={20} color="#3473ef" strokeWidth={3} />}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };

@@ -13,8 +13,11 @@
     },
     "ios": {
       "supportsTablet": true,
-      "config": {
-        "googleMapsApiKey": "AIzaSyD9DOb-ko2C84TUlBVuPVILNaf3Jhkl-yg"
+      "bundleIdentifier": "com.lineup.premium",
+      "config": {},
+      "infoPlist": {
+        "NSCameraUsageDescription": "Ky aplikacion ka nevojë për qasje në kamerë për të bërë foto të profilit dhe shërbimeve.",
+        "NSPhotoLibraryUsageDescription": "Ky aplikacion ka nevojë për qasje në galeri për të zgjedhur foto të profilit dhe shërbimeve."
       }
     },
     "android": {
@@ -23,15 +26,19 @@
         "backgroundColor": "#050608"
       },
       "package": "com.lineup.premium",
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyD9DOb-ko2C84TUlBVuPVILNaf3Jhkl-yg"
-        }
-      }
+      "config": {}
     },
     "web": {
       "favicon": "./assets/icon.png"
     },
-    "plugins": []
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Ky aplikacion ka nevojë për qasje në galeri për të zgjedhur foto të profilit dhe shërbimeve.",
+          "cameraPermission": "Ky aplikacion ka nevojë për qasje në kamerë për të bërë foto të profilit dhe shërbimeve."
+        }
+      ]
+    ]
   }
 }

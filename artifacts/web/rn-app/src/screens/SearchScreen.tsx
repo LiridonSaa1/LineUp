@@ -1,17 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, TextInput, ScrollView, Dimensions, FlatList, Keyboard, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, ScrollView, Dimensions, FlatList, Keyboard, Modal, Pressable } from 'react-native';
 import { X, Search, MapPin, Calendar, Grid, Scissors, Hand, Eye, Sparkles, User, Smile, Waves, ArrowLeft, ChevronRight, AlertCircle, Check, ChevronLeft, Shield, Zap, ChevronDown, ChevronUp } from 'lucide-react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { withTiming } from 'react-native-reanimated';
-import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { AddressAutocomplete } from '../components/AddressAutocomplete';
 import { supabase } from '@/config/supabase';
 
 const { width } = Dimensions.get('window');
 const USER_ID = 'demo_user_123';
-
-// IMPORTANT: Replace this with your actual Google Maps API Key
-const GOOGLE_MAPS_KEY = 'AIzaSyD9DOb-ko2C84TUlBVuPVILNaf3Jhkl-yg';
 
 interface SearchScreenProps {
   onClose: () => void;
@@ -460,21 +456,22 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
                 </View>
 
                 {categories.map((cat) => {
-                  const isExpanded = expandedCategories.includes(cat.id);
-                  const catSubcategories = subcategories.filter(s => s.category_id === cat.id && (!treatmentQuery || s.name?.toLowerCase().includes(treatmentQuery.toLowerCase())));
+                  const catId = String(cat.id).trim();
+                  const isExpanded = expandedCategories.includes(catId);
+                  const catSubcategories = subcategories.filter(s => String(s.category_id).trim() === catId && (!treatmentQuery || s.name?.toLowerCase().includes(treatmentQuery.toLowerCase())));
 
                   if (catSubcategories.length === 0) return null;
 
-                  const catSubIds = catSubcategories.map(s => s.id);
+                  const catSubIds = catSubcategories.map(s => String(s.id).trim());
                   const selectedCount = catSubIds.filter(id => selectedSubIds.includes(id)).length;
                   const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
 
                   return (
-                    <View key={cat.id} className="mb-4 bg-slate-50 rounded-2xl overflow-hidden border border-slate-100">
+                    <View key={catId} className="mb-4 bg-slate-50 rounded-2xl overflow-hidden border border-slate-100">
                       <TouchableOpacity
                         onPress={() => {
                           setExpandedCategories(prev =>
-                            prev.includes(cat.id) ? prev.filter(id => id !== cat.id) : [...prev, cat.id]
+                            prev.includes(catId) ? prev.filter(id => id !== catId) : [...prev, catId]
                           );
                         }}
                         className="flex-row items-center justify-between p-4"
@@ -514,17 +511,18 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
                             }}
                             className="flex-row items-center py-3 border-b border-slate-50"
                           >
-                            <Text className={`font-black text-sm flex-1 ${catSubIds.every(id => selectedSubIds.includes(id)) ? 'text-[#3473ef]' : 'text-[#64748b]'}`}>Të gjitha në këtë kategori</Text>
+                            <Text className={`font-black text-sm flex-1 ${catSubIds.length > 0 && catSubIds.every(id => selectedSubIds.includes(id)) ? 'text-[#3473ef]' : 'text-[#64748b]'}`}>Të gjitha në këtë kategori</Text>
                           </TouchableOpacity>
 
-                          {catSubcategories.map(sub => {
-                            const isSelected = selectedSubIds.includes(sub.id);
+                          {catSubcategories.map((sub, sIdx) => {
+                            const subId = String(sub.id).trim();
+                            const isSelected = selectedSubIds.includes(subId);
                             return (
                               <TouchableOpacity
-                                key={sub.id}
+                                key={`${subId}-${sIdx}`}
                                 onPress={() => {
                                   setSelectedSubIds(prev =>
-                                    prev.includes(sub.id) ? prev.filter(id => id !== sub.id) : [...prev, sub.id]
+                                    prev.includes(subId) ? prev.filter(id => id !== subId) : [...prev, subId]
                                   );
                                   setSelectedCategoryName("");
                                   setSelectedTreatment("");
@@ -631,13 +629,16 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
               placeholder="Kërko zonën, qytetin ose rrugën..."
               containerClassName="mb-6"
               onSelectAddress={(place) => {
-                Keyboard.dismiss();
-                setSelectedLocation({
-                  address: place.formatted_address,
-                  lat: place.latitude,
-                  lng: place.longitude
-                });
-                setActivePanel('main');
+                if (place?.formatted_address) {
+                  Keyboard.dismiss();
+                  setSelectedLocation({
+                    address: place.formatted_address,
+                    lat: place.latitude,
+                    lng: place.longitude,
+                    place_id: place.place_id
+                  });
+                  setActivePanel('main');
+                }
               }}
           />
 
@@ -769,8 +770,8 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
               onPress={() => {
                 if (selectedMainCategory) {
                   const currentCategorySubIds = subcategories
-                    .filter(s => s.category_id === selectedMainCategory.id)
-                    .map(s => s.id);
+                    .filter(s => String(s.category_id).trim() === String(selectedMainCategory.id).trim())
+                    .map(s => String(s.id).trim());
                   
                   setSelectedSubIds(prev => {
                     const allSelected = currentCategorySubIds.every(id => prev.includes(id));
@@ -793,23 +794,32 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
               <Text className={`font-black text-base ${!selectedMainCategory || subcategories.filter(s => s.category_id === selectedMainCategory?.id).every(s => selectedSubIds.includes(s.id)) ? 'text-[#3473ef]' : 'text-[#64748b]'}`}>Të gjitha në këtë kategori</Text>
             </TouchableOpacity>
 
-            {selectedMainCategory && subcategories.filter(s => s.category_id === selectedMainCategory.id).map((sub) => {
-              const isSelected = selectedSubIds.includes(sub.id);
+            {selectedMainCategory && subcategories.filter(s => String(s.category_id).trim() === String(selectedMainCategory.id).trim()).map((sub, idx) => {
+              const subId = String(sub.id).trim();
+              const isSelected = selectedSubIds.includes(subId);
               return (
-                <TouchableOpacity
-                  key={sub.id}
+                <Pressable
+                  key={`${subId}-${idx}`}
                   onPress={() => {
+                    console.log("[Search] Toggling subcat:", subId);
                     setSelectedSubIds(prev =>
-                      prev.includes(sub.id) ? prev.filter(id => id !== sub.id) : [...prev, sub.id]
+                      prev.includes(subId) ? prev.filter(id => id !== subId) : [...prev, subId]
                     );
                   }}
-                  className={`flex-row items-center py-4 border-b ${isSelected ? 'border-[#3473ef]/30' : 'border-slate-100'}`}
+                  style={({ pressed }) => ({
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingVertical: 16,
+                    borderBottomWidth: 1,
+                    borderBottomColor: isSelected ? 'rgba(52, 115, 239, 0.3)' : '#F1F5F9',
+                    opacity: pressed ? 0.7 : 1
+                  })}
                 >
                   <View className={`w-6 h-6 rounded-md border items-center justify-center mr-3 ${isSelected ? 'bg-[#3473ef] border-[#3473ef]' : 'bg-white border-slate-300'}`}>
                     {isSelected && <Check size={14} color="white" strokeWidth={3} />}
                   </View>
                   <Text className={`text-base flex-1 ${isSelected ? 'font-black text-[#3473ef]' : 'font-bold text-[#161719]'}`}>{sub.name}</Text>
-                </TouchableOpacity>
+                </Pressable>
               );
             })}
           </ScrollView>

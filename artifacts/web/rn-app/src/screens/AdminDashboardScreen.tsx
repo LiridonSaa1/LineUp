@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Pressable, TextInput, ActivityIndicator, Alert, FlatList, RefreshControl } from "react-native";
 import { Shield, Store, Users, CreditCard, Check, X, Search, Power, Trash2, ChevronRight, RefreshCw, BarChart2, Zap, ArrowLeft, LogOut, Sliders } from "lucide-react-native";
 import { supabase } from "../config/supabase";
-import { PADDLE_CONFIG } from "../config/paddle";
+import { PADDLE_CONFIG, listPaddleTransactions, PaddleTransaction } from "../config/paddle";
 
 interface AdminDashboardScreenProps {
   onLogout: () => void;
@@ -16,6 +16,7 @@ export const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onLo
   // Data States
   const [shops, setShops] = useState<any[]>([]);
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
+  const [paddleTransactions, setPaddleTransactions] = useState<PaddleTransaction[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -40,9 +41,13 @@ export const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onLo
         .select('*')
         .order('id', { ascending: false });
 
+      // 4. Fetch Real Paddle Transactions
+      const pTransactions = await listPaddleTransactions();
+
       setShops(shopsData || []);
       setSubscriptions(subsData || []);
       setUsers(usersData || []);
+      setPaddleTransactions(pTransactions);
     } catch (err) {
       console.warn("[AdminDashboard] Error fetching admin data:", err);
     } finally {
@@ -100,9 +105,9 @@ export const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onLo
     (u.role || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const totalRevenue = subscriptions.reduce((acc, sub) => {
-    const planCost = sub.product_id === 'team' ? 25 : sub.product_id === 'solo' ? 15 : 20;
-    return acc + planCost;
+  const totalRevenue = paddleTransactions.reduce((acc, txn) => {
+    const amount = parseFloat(txn.details?.totals?.total || "0") / 100;
+    return acc + amount;
   }, 0);
 
   return (
@@ -275,6 +280,35 @@ export const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onLo
         {/* TAB 2: PADDLE SUBSCRIPTIONS & TRANSACTIONS */}
         {activeTab === 'subscriptions' && (
           <View className="gap-y-4 pb-12">
+            <Text className="text-white font-black text-lg mb-2">Transaksionet e fundit (Paddle)</Text>
+            {paddleTransactions.length === 0 ? (
+              <View className="bg-slate-800/50 p-8 rounded-3xl items-center justify-center border border-slate-700">
+                <CreditCard size={32} color="#64748B" className="mb-2" />
+                <Text className="text-slate-400 font-bold text-sm">Nuk u gjet asnjë transaksion në Paddle API.</Text>
+              </View>
+            ) : (
+              paddleTransactions.map((txn) => (
+                <View key={txn.id} className="bg-slate-800/90 rounded-3xl p-5 border border-slate-700 gap-y-3">
+                  <View className="flex-row justify-between items-center">
+                    <View className="flex-row items-center gap-3">
+                      <View className="w-10 h-10 rounded-xl bg-emerald-500/20 items-center justify-center">
+                        <Check size={20} color="#10B981" />
+                      </View>
+                      <View>
+                        <Text className="text-base font-black text-white">Shuma: {(parseFloat(txn.details?.totals?.total || "0") / 100).toFixed(2)} {txn.details?.totals?.currency_code}</Text>
+                        <Text className="text-slate-400 font-bold text-xs">{new Date(txn.created_at).toLocaleDateString()} • {txn.status}</Text>
+                      </View>
+                    </View>
+                    <View className="bg-emerald-500/20 px-3 py-1 rounded-full border border-emerald-500/40">
+                      <Text className="text-emerald-400 text-[10px] font-black uppercase">COMPLETED</Text>
+                    </View>
+                  </View>
+                  <Text className="text-slate-500 font-bold text-[11px]">Transaction ID: {txn.id}</Text>
+                </View>
+              ))
+            )}
+
+            <Text className="text-white font-black text-lg mt-6 mb-2">Abonimet në Sistemin tonë</Text>
             {subscriptions.length === 0 ? (
               <View className="bg-slate-800/50 p-8 rounded-3xl items-center justify-center border border-slate-700">
                 <CreditCard size={32} color="#64748B" className="mb-2" />

@@ -16,27 +16,11 @@ const { width, height } = Dimensions.get('window');
 const USER_ID = 'demo_user_123'; // Placeholder until Auth is implemented
 
 const KOSOVO_CITIES = [
-  { city: "Ferizaj" },
-  { city: "Prishtinë" },
-  { city: "Prizren" },
-  { city: "Pejë" },
-  { city: "Gjakovë" },
-  { city: "Gjilan" },
-  { city: "Mitrovicë" },
-  { city: "Vushtrri" },
-  { city: "Podujevë" },
-  { city: "Fushë Kosovë" },
-  { city: "Rahovec" },
-  { city: "Skënderaj" },
-  { city: "Lipjan" },
-  { city: "Suharekë" },
-  { city: "Deçan" },
-  { city: "Istog" },
-  { city: "Klinë" },
+  { city: "Ferizaj" }, { city: "Prishtinë" }, { city: "Prizren" }, { city: "Pejë" },
+  { city: "Gjakovë" }, { city: "Gjilan" }, { city: "Mitrovicë" }, { city: "Vushtrri" },
+  { city: "Podujevë" }, { city: "Fushë Kosovë" }, { city: "Rahovec" }, { city: "Skënderaj" },
+  { city: "Lipjan" }, { city: "Suharekë" }, { city: "Deçan" }, { city: "Istog" }, { city: "Klinë" },
 ];
-
-// IMPORTANT: Replace this with your actual Google Maps API Key
-const GOOGLE_MAPS_KEY = 'AIzaSyD9DOb-ko2C84TUlBVuPVILNaf3Jhkl-yg';
 
 interface LocationScreenProps {
   onBack: () => void;
@@ -194,7 +178,9 @@ export const LocationScreen: React.FC<LocationScreenProps> = ({ onBack, onSelect
           placeholder="Kërko qytetin, zonën ose rrugën..."
           containerClassName="mb-6 z-50"
           onSelectAddress={(place) => {
-            handleSelect(place.formatted_address);
+            if (place?.formatted_address) {
+              handleSelect(place.formatted_address);
+            }
           }}
         />
 

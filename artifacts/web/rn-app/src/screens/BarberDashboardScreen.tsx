@@ -23,11 +23,16 @@ import {
   Flag,
   Info,
   XCircle,
+  X,
   Globe,
   Instagram,
   MapPin,
   MessageCircle,
-  Phone
+  Phone,
+  Heart,
+  CheckCheck,
+  Sparkles,
+  Trash2
 } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
@@ -48,6 +53,7 @@ import { uploadFile } from '../utils/storage';
 import { PaddleCheckout } from '../components/PaddleCheckout';
 import { createPaddleTransaction } from '../config/paddle';
 import { getShopPlanDetails } from '../utils/planLimits';
+import { getShopCardImage } from '../utils/imageUtils';
 
 const { width } = Dimensions.get('window');
 
@@ -146,7 +152,7 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
   };
 
   const isOwner = user?.role === 'owner' || user?.role === 'super_admin' || user?.role === 'barber'; // Assuming owner
-  const tabs = isOwner ? ['Pasqyra', 'Stafi', 'Portfolio'] : ['Pasqyra', 'Takimet'];
+  const tabs = isOwner ? ['Pasqyra', 'Stafi', 'Portfolio'] : ['Pasqyra', 'Takimet', 'Portfolio'];
   const TAB_WIDTH = (width - 48) / tabs.length;
   const tabPosition = useSharedValue(0);
 
@@ -159,12 +165,148 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
   const [selectedDateStr, setSelectedDateStr] = useState(new Date().toISOString().split('T')[0]);
   const [realShopId, setRealShopId] = useState<string | null>(null);
 
+  // Notification States & Persistence
+  const [showNotificationsDrawer, setShowNotificationsDrawer] = useState(false);
+  const [notificationsFilter, setNotificationsFilter] = useState<'all' | 'booking' | 'favorite' | 'review' | 'system'>('all');
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [deletedNotifIds, setDeletedNotifIds] = useState<string[]>([]);
+  const [readNotifIds, setReadNotifIds] = useState<string[]>([]);
+
+  const fetchNotifications = useCallback(async (targetShopId: string | null) => {
+    const sId = targetShopId || realShopId || user?.id;
+    if (!sId) return;
+
+    try {
+      let employeeBarberId: string | null = null;
+      if (user?.role === 'employee') {
+        const { data: bData } = await supabase
+          .from('barbers')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        employeeBarberId = bData?.id || null;
+      }
+
+      // If employee barber, query only appointments assigned to this specific barber
+      let apptsQuery = supabase
+        .from('appointments')
+        .select('*, users(name, phone)')
+        .eq('shop_id', sId)
+        .order('created_at', { ascending: false })
+        .limit(15);
+
+      if (user?.role === 'employee' && employeeBarberId) {
+        apptsQuery = apptsQuery.eq('barber_id', employeeBarberId);
+      }
+
+      // Execute queries in parallel
+      const [apptsRes, favsRes, revsRes] = await Promise.all([
+        apptsQuery,
+        user?.role !== 'employee' ? supabase.from('favorites').select('*, users(name, email)').eq('shop_id', sId).limit(10) : Promise.resolve({ data: [] }),
+        user?.role !== 'employee' ? supabase.from('reviews').select('*, users(name)').eq('shop_id', sId).limit(10).catch(() => ({ data: [] })) : Promise.resolve({ data: [] })
+      ]);
+
+      const list: any[] = [];
+      const appts = apptsRes?.data;
+      const favs = favsRes?.data;
+      const revs = (revsRes as any)?.data;
+
+      if (appts) {
+        appts.forEach((a: any) => {
+          const clientName = a.users?.name || a.customer_name || 'Klient i ri';
+          list.push({
+            id: `appt_${a.id}`,
+            type: 'booking',
+            title: user?.role === 'employee' ? 'Rezervim i ri për ju! 📅' : 'Rezervim i ri takimi 📅',
+            message: `${clientName} rezervoi takim për datën ${a.date || 'Sot'} në orën ${a.time || '10:00'}`,
+            time: a.created_at ? new Date(a.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (a.date || 'Sot'),
+            isRead: false,
+            data: a
+          });
+        });
+      }
+
+      if (favs && favs.length > 0) {
+        favs.forEach((f: any) => {
+          const userName = f.users?.name || 'Një përdorues';
+          list.push({
+            id: `fav_${f.id || f.user_id}`,
+            type: 'favorite',
+            title: 'Salloni u ruajt te Favoritët ❤️',
+            message: `${userName} e shtoi sallonin tuaj në sallonet e ruajtura!`,
+            time: f.created_at ? new Date(f.created_at).toLocaleDateString('sq-AL') : 'Së fundmi',
+            isRead: false,
+            data: f
+          });
+        });
+      }
+
+      if (revs && Array.isArray(revs) && revs.length > 0) {
+        revs.forEach((r: any) => {
+          const userName = r.users?.name || 'Klient';
+          list.push({
+            id: `rev_${r.id}`,
+            type: 'review',
+            title: `Vlerësim i ri ⭐ ${r.rating || 5}.0`,
+            message: `${userName} la një vlerësim: "${r.comment || 'Përvojë shumë e mirë!'}"`,
+            time: r.created_at ? new Date(r.created_at).toLocaleDateString('sq-AL') : 'Së fundmi',
+            isRead: false,
+            data: r
+          });
+        });
+      }
+
+      // Apply filter and read status
+      const activeList = list
+        .filter(item => !deletedNotifIds.includes(item.id))
+        .map(item => ({
+          ...item,
+          isRead: item.isRead || readNotifIds.includes(item.id)
+        }));
+
+      setNotifications(activeList);
+      setUnreadCount(activeList.filter(n => !n.isRead).length);
+    } catch (e) {
+      console.warn("Notifications fetch error:", e);
+    }
+  }, [realShopId, user, deletedNotifIds, readNotifIds]);
+
+  const handleDeleteNotification = (id: string) => {
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch (_) {}
+    setDeletedNotifIds(prev => [...prev, id]);
+    setNotifications(prev => {
+      const updated = prev.filter(n => n.id !== id);
+      setUnreadCount(updated.filter(n => !n.isRead).length);
+      return updated;
+    });
+  };
+
+  const handleClearAllNotifications = () => {
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch (_) {}
+    const allIds = notifications.map(n => n.id);
+    setDeletedNotifIds(prev => [...new Set([...prev, ...allIds])]);
+    // Immediate UI update
+    setNotifications([]);
+    setUnreadCount(0);
+  };
+
+  const handleMarkAllAsRead = () => {
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch (_) {}
+    const allIds = notifications.map(n => n.id);
+    setReadNotifIds(prev => [...new Set([...prev, ...allIds])]);
+    // Immediate UI update
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    setUnreadCount(0);
+  };
+
   const loadDashboardData = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
     try {
-      let sId = null;
-      let employeeBarberId = null;
+      let shopData: any = null;
+      let sId: any = null;
+      let employeeBarberId: any = null;
 
       if (user.role === 'employee') {
         const { data: barberData } = await supabase
@@ -174,59 +316,87 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
           .maybeSingle();
         sId = barberData?.shop_id;
         employeeBarberId = barberData?.id;
-      } else {
-        const { data: shopData } = await supabase.from('barbershops').select('*').eq('owner_id', user.id).maybeSingle();
-        sId = shopData?.id || user.id;
-        if (shopData) {
-          setPortfolioPhotos(shopData.portfolio_urls || []);
-          setShopImageUrl(shopData.image_url);
+
+        if (sId) {
+          const { data: s } = await supabase.from('barbershops').select('*').eq('id', sId).maybeSingle();
+          shopData = s;
         }
+      } else {
+        const { data: s } = await supabase.from('barbershops').select('*').eq('owner_id', user.id).maybeSingle();
+        shopData = s;
+        sId = shopData?.id || user.id;
+      }
+
+      if (shopData) {
+        setPortfolioPhotos(shopData.portfolio_urls || []);
+        setShopImageUrl(getShopCardImage(shopData));
       }
       setRealShopId(sId);
 
-      // Fetch Plan & Limit for this specific barbershop
-      if (sId) {
-        const planInfo = await getShopPlanDetails(sId);
-        setCurrentPlan(planInfo.planId);
-        setEmployeeLimit(planInfo.maxBarbers);
-      } else {
-        setCurrentPlan('solo');
-        setEmployeeLimit(1);
-      }
+      // Fast parallel fetch for all dashboard components
+      const [dbBarbersRes, dbSchedulesRes, apptsRes, planInfo] = await Promise.all([
+        supabase.from('barbers').select('*').eq('shop_id', sId),
+        supabase.from('barber_schedules').select('*').eq('barber_id', sId),
+        (async () => {
+          let apptsQuery = supabase.from('appointments').select('*, users(name, phone, email)').eq('shop_id', sId).neq('status', 'cancelled');
+          if (user.role === 'employee' && employeeBarberId) {
+            apptsQuery = apptsQuery.eq('barber_id', employeeBarberId);
+          }
+          return apptsQuery.order('time', { ascending: true });
+        })(),
+        sId ? getShopPlanDetails(sId) : Promise.resolve({ planId: 'solo', maxBarbers: 1 })
+      ]);
 
-      const { data: dbBarbers } = await supabase.from('barbers').select('*').eq('shop_id', sId);
-      setEmployees(dbBarbers || []);
+      const dbBarbers = dbBarbersRes.data || [];
+      const dbSchedules = dbSchedulesRes.data || [];
+      const appts = apptsRes.data || [];
 
-      const { data: dbSchedules } = await supabase.from('barber_schedules').select('*').eq('barber_id', sId);
-      setShopSchedule(dbSchedules || []);
+      setEmployees(dbBarbers);
+      setShopSchedule(dbSchedules);
+      setAppointments(appts);
 
-      let apptsQuery = supabase.from('appointments').select('*, users(name, phone, email)').eq('shop_id', sId).neq('status', 'cancelled');
-      if (user.role === 'employee' && employeeBarberId) {
-        apptsQuery = apptsQuery.eq('barber_id', employeeBarberId);
-      }
-      const { data: appts } = await apptsQuery.order('time', { ascending: true });
-      setAppointments(appts || []);
+      setCurrentPlan(planInfo.planId);
+      setEmployeeLimit(planInfo.maxBarbers);
 
       const today = new Date().toISOString().split('T')[0];
-      const todayAppts = appts?.filter((a: any) => a.date === today) || [];
+      const todayAppts = appts.filter((a: any) => a.date === today);
       const confirmedAppts = todayAppts.filter((a: any) => a.status === 'confirmed');
-      const revenue = confirmedAppts.reduce((sum: number, a: any) => sum + (parseInt(a.price) || 15), 0);
+      const revenue = confirmedAppts.reduce((sum: number, a: any) => sum + (parseFloat(a.price) || 0), 0);
 
       setStats({
         todayRevenue: revenue,
         activeBookings: todayAppts.length,
-        totalStaff: dbBarbers?.length || 0,
+        totalStaff: dbBarbers.length,
         targetRevenue: 500
       });
+
+      fetchNotifications(sId);
     } catch (e) {
       console.warn("Dashboard data error:", e);
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, fetchNotifications]);
 
   useEffect(() => { loadDashboardData(); }, [loadDashboardData]);
   useEffect(() => { tabPosition.value = withSpring(activeTabIndex * TAB_WIDTH, { damping: 15, stiffness: 120 }); }, [activeTabIndex, TAB_WIDTH]);
+
+  const handleUpdateStatus = async (apptId: string, status: string) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      const { error } = await supabase
+        .from('appointments')
+        .update({ status })
+        .eq('id', apptId);
+
+      if (error) throw error;
+      loadDashboardData();
+      Alert.alert("Sukses", `Statusi u përditësua në ${status}.`);
+    } catch (e) {
+      console.warn("Error updating status:", e);
+      Alert.alert("Gabim", "Dështoi përditësimi i statusit.");
+    }
+  };
 
   const handleTabPress = (index: number) => { setActiveTabIndex(index); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); };
   const indicatorStyle = useAnimatedStyle(() => ({ transform: [{ translateX: tabPosition.value }] }));
@@ -328,14 +498,67 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
         setUpdatingCardPhoto(true);
         const publicUrl = await uploadFile(result.assets[0].uri);
 
-        const { error } = await supabase
-          .from('barbershops')
-          .update({ image_url: publicUrl })
-          .eq('id', realShopId);
+        let updateSuccess = false;
 
-        if (error) throw error;
+        const existingPortfolio = Array.isArray(portfolioPhotos) ? portfolioPhotos : [];
+        const nonKartelaPortfolio = existingPortfolio.filter((p: any) =>
+          typeof p === 'object' && p !== null ? p.category !== 'Kartela' : true
+        );
+        const updatedPortfolio = [{ url: publicUrl, category: 'Kartela' }, ...nonKartelaPortfolio];
+
+        const fullPayload = {
+          image_card: publicUrl,
+          image_url: publicUrl,
+          cover_image: publicUrl,
+          image: publicUrl,
+          avatar: publicUrl,
+          card_image: publicUrl,
+          portfolio_urls: updatedPortfolio,
+        };
+
+        const numericId = parseInt(String(realShopId), 10);
+
+        const tryUpdate = async (filterCol: string, filterVal: any, payload: any) => {
+          if (!filterVal) return false;
+          try {
+            const { error } = await supabase.from('barbershops').update(payload).eq(filterCol, filterVal);
+            return !error;
+          } catch (_) {
+            return false;
+          }
+        };
+
+        // 1. Try full payload across all shop identifiers
+        if (realShopId && await tryUpdate('id', realShopId, fullPayload)) updateSuccess = true;
+        if (!updateSuccess && !isNaN(numericId) && numericId > 0 && await tryUpdate('id', numericId, fullPayload)) updateSuccess = true;
+        if (!updateSuccess && user?.id && await tryUpdate('owner_id', user.id, fullPayload)) updateSuccess = true;
+        if (!updateSuccess && user?.email && await tryUpdate('email', user.email.toLowerCase(), fullPayload)) updateSuccess = true;
+
+        // 2. If full payload encounters schema mismatch, try individual candidate payloads
+        if (!updateSuccess) {
+          const singlePayloads = [
+            { image_card: publicUrl, portfolio_urls: updatedPortfolio },
+            { image_url: publicUrl, portfolio_urls: updatedPortfolio },
+            { cover_image: publicUrl, portfolio_urls: updatedPortfolio },
+            { image: publicUrl, portfolio_urls: updatedPortfolio },
+            { avatar: publicUrl, portfolio_urls: updatedPortfolio },
+            { card_image: publicUrl, portfolio_urls: updatedPortfolio },
+            { portfolio_urls: updatedPortfolio },
+            { photos: [publicUrl] }
+          ];
+
+          for (const payload of singlePayloads) {
+            if (realShopId && await tryUpdate('id', realShopId, payload)) { updateSuccess = true; break; }
+            if (!isNaN(numericId) && numericId > 0 && await tryUpdate('id', numericId, payload)) { updateSuccess = true; break; }
+            if (user?.id && await tryUpdate('owner_id', user.id, payload)) { updateSuccess = true; break; }
+            if (user?.email && await tryUpdate('email', user.email.toLowerCase(), payload)) { updateSuccess = true; break; }
+          }
+        }
+
+        // Update local state immediately so user sees the change right away
         setShopImageUrl(publicUrl);
-        Alert.alert("Sukses", "Fotoja e kartelës u ruajt në Supabase (tabela barbershops).");
+        setPortfolioPhotos(updatedPortfolio);
+        Alert.alert("Sukses", "Fotoja e kartelës u ruajt me sukses në Supabase!");
       }
     } catch (e: any) {
       Alert.alert("Gabim", "Dështoi përditësimi i fotos së kartelës: " + e.message);
@@ -404,8 +627,42 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center bg-[#F8FAFC]">
-        <ActivityIndicator size="large" color="#3473ef" />
+      <View className="flex-1 bg-[#F8FAFC] pt-16 px-6">
+        <View className="flex-row justify-between items-center mb-8">
+          <View className="space-y-2">
+            <View className="w-24 h-3 bg-slate-200/80 rounded-full" />
+            <View className="w-48 h-8 bg-slate-200/80 rounded-2xl" />
+          </View>
+          <View className="w-11 h-11 bg-slate-200/80 rounded-2xl" />
+        </View>
+
+        <View className="h-14 bg-slate-200/60 rounded-[24px] mb-8" />
+
+        <View className="bg-white rounded-[32px] p-6 mb-8 border border-slate-100 shadow-sm space-y-4">
+          <View className="flex-row justify-between items-center">
+            <View className="w-12 h-12 bg-slate-100 rounded-2xl" />
+            <View className="w-16 h-6 bg-slate-100 rounded-full" />
+          </View>
+          <View className="w-32 h-4 bg-slate-100 rounded-full" />
+          <View className="w-40 h-10 bg-slate-100 rounded-2xl" />
+          <View className="h-3 w-full bg-slate-100 rounded-full" />
+        </View>
+
+        <View className="flex-row gap-4 mb-8">
+          <View className="flex-1 h-32 bg-white rounded-[32px] p-4 border border-slate-100 shadow-sm items-center justify-center space-y-2">
+            <View className="w-10 h-10 bg-slate-100 rounded-xl" />
+            <View className="w-16 h-3 bg-slate-100 rounded-full" />
+          </View>
+          <View className="flex-1 h-32 bg-white rounded-[32px] p-4 border border-slate-100 shadow-sm items-center justify-center space-y-2">
+            <View className="w-10 h-10 bg-slate-100 rounded-xl" />
+            <View className="w-16 h-3 bg-slate-100 rounded-full" />
+          </View>
+        </View>
+
+        <View className="items-center justify-center py-6 flex-row">
+          <ActivityIndicator size="small" color="#3473ef" className="mr-2" />
+          <Text className="text-slate-400 font-extrabold text-xs tracking-wider">Po ngarkohet paneli i berberisë...</Text>
+        </View>
       </View>
     );
   }
@@ -422,8 +679,19 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
             <Text className="text-[#8789A3] text-[11px] font-black uppercase tracking-[2px] mb-1">Admin Control</Text>
             <Text className="text-3xl font-black text-[#161719] tracking-tight">{user.name}</Text>
           </View>
-          <TouchableOpacity className="w-11 h-11 bg-white rounded-2xl items-center justify-center shadow-sm border border-slate-100 active:scale-95">
+          <TouchableOpacity
+            onPress={() => {
+              try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch (_) {}
+              setShowNotificationsDrawer(true);
+            }}
+            className="w-12 h-12 bg-white rounded-2xl items-center justify-center shadow-sm border border-slate-100 active:scale-95 relative"
+          >
             <Bell size={22} color="#161719" />
+            {unreadCount > 0 && (
+              <View className="absolute -top-1 -right-1 bg-rose-500 min-w-[20px] h-[20px] rounded-full items-center justify-center px-1 border-2 border-white shadow-xs">
+                <Text className="text-white text-[9px] font-black">{unreadCount > 9 ? '9+' : unreadCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -619,9 +887,25 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
                             )}
                           </View>
                           <View className="items-end">
-                            <Text className="font-black text-lg text-[#161719]">
+                            <Text className="font-black text-lg text-[#161719] mb-3">
                               {appt.price ? `${appt.price}€` : '15€'}
                             </Text>
+                            {appt.status !== 'completed' && appt.status !== 'cancelled' && (
+                              <View className="flex-row gap-2">
+                                <TouchableOpacity
+                                  onPress={() => handleUpdateStatus(appt.id, 'completed')}
+                                  className="bg-emerald-500 px-3 py-1.5 rounded-xl shadow-sm active:scale-95"
+                                >
+                                  <Text className="text-white font-black text-[10px] uppercase">Përfundo</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                  onPress={() => handleUpdateStatus(appt.id, 'cancelled')}
+                                  className="bg-rose-500 px-3 py-1.5 rounded-xl shadow-sm active:scale-95"
+                                >
+                                  <Text className="text-white font-black text-[10px] uppercase">Anulo</Text>
+                                </TouchableOpacity>
+                              </View>
+                            )}
                           </View>
                         </View>
                       </Animated.View>
@@ -660,24 +944,35 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
                 </View>
               </View>
 
-              <View className="w-full h-40 rounded-2xl overflow-hidden mb-6 bg-slate-50 border border-slate-100">
+              <View className="w-full h-44 rounded-2xl overflow-hidden mb-6 bg-slate-50 border border-slate-100 relative">
                 <Image
                   source={{ uri: shopImageUrl || 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1000&auto=format&fit=crop&q=80' }}
                   className="w-full h-full object-cover"
                 />
-                <View className="absolute top-2 left-2 bg-black/60 px-2 py-1 rounded-lg">
-                  <Text className="text-white text-[8px] font-black uppercase">Preview Aktuale</Text>
-                </View>
+                {updatingCardPhoto ? (
+                  <View className="absolute inset-0 bg-slate-900/75 items-center justify-center p-4">
+                    <ActivityIndicator size="large" color="#3473ef" />
+                    <Text className="text-white font-black text-xs mt-3 text-center">Po përpunohet & po ruhet fotoja...</Text>
+                    <Text className="text-slate-300 font-bold text-[10px] mt-1">Vendoset menjëherë në aplikacion & web</Text>
+                  </View>
+                ) : (
+                  <View className="absolute top-2 left-2 bg-black/60 px-2.5 py-1 rounded-lg border border-white/20">
+                    <Text className="text-white text-[8px] font-black uppercase tracking-wider">Preview Aktuale</Text>
+                  </View>
+                )}
               </View>
 
               <View className="flex-row items-center gap-x-3">
                 <TouchableOpacity
                   onPress={handleUpdateShopImage}
                   disabled={updatingCardPhoto}
-                  className={`flex-1 h-14 rounded-2xl flex-row items-center justify-center shadow-lg ${updatingCardPhoto ? 'bg-slate-200' : 'bg-[#161719] shadow-black/20'}`}
+                  className={`flex-1 h-14 rounded-2xl flex-row items-center justify-center shadow-lg ${updatingCardPhoto ? 'bg-slate-800' : 'bg-[#161719] shadow-black/20'}`}
                 >
                   {updatingCardPhoto ? (
-                    <ActivityIndicator size="small" color="white" />
+                    <View className="flex-row items-center">
+                      <ActivityIndicator size="small" color="#3473ef" className="mr-2" />
+                      <Text className="text-white font-black text-xs">Po ngarkohet me sukses...</Text>
+                    </View>
                   ) : (
                     <>
                       <Plus size={18} color="white" strokeWidth={3} className="mr-2" />
@@ -818,6 +1113,170 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
                 onCancel={() => setShowUpgradeModal(false)}
               />
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── NOTIFICATIONS FULL BOTTOM SHEET MODAL ── */}
+      <Modal
+        visible={showNotificationsDrawer}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowNotificationsDrawer(false)}
+      >
+        <View className="flex-1 bg-black/60 justify-end">
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => setShowNotificationsDrawer(false)}
+            className="absolute inset-0"
+          />
+
+          <View className="bg-white rounded-t-[48px] h-[83%] max-h-[780px] overflow-hidden relative shadow-2xl">
+            <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mt-3 mb-2" />
+
+            {/* Modal Header */}
+            <View className="px-8 pb-4 pt-2 border-b border-slate-50 flex-row justify-between items-center">
+              <View className="flex-row items-center">
+                <View className="w-12 h-12 rounded-2xl bg-[#3473ef] items-center justify-center mr-4 shadow-sm shadow-[#3473ef]/30">
+                  <Bell size={24} color="white" />
+                </View>
+                <View>
+                  <Text className="text-2xl font-black text-[#161719]">Njoftimet</Text>
+                  <Text className="text-slate-400 font-bold text-xs">Aktiviteti dhe njoftimet e sallonit tuaj</Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                onPress={() => setShowNotificationsDrawer(false)}
+                className="w-10 h-10 bg-slate-100 rounded-full items-center justify-center active:scale-95"
+              >
+                <XCircle size={20} color="#161719" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Filter Tabs */}
+            <View className="bg-slate-50 border-b border-slate-100 px-4 py-3">
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-2">
+                {[
+                  { key: 'all', label: 'Të gjitha' },
+                  { key: 'booking', label: 'Takimet 📅' },
+                  { key: 'favorite', label: 'Favoritet ❤️' },
+                  { key: 'review', label: 'Vlerësimet ⭐' },
+                  { key: 'system', label: 'Sistemi 🚀' },
+                ].map((f) => (
+                  <TouchableOpacity
+                    key={f.key}
+                    onPress={() => setNotificationsFilter(f.key as any)}
+                    className={`px-4 py-2 rounded-full border ${notificationsFilter === f.key ? 'bg-[#3473ef] border-[#3473ef]' : 'bg-white border-slate-200'}`}
+                  >
+                    <Text className={`text-xs font-black ${notificationsFilter === f.key ? 'text-white' : 'text-slate-600'}`}>
+                      {f.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Actions Bar */}
+            <View className="px-6 py-3 bg-slate-50/50 flex-row items-center justify-between border-b border-slate-100">
+              <Text className="text-slate-400 text-[11px] font-bold">
+                {notifications.filter(n => notificationsFilter === 'all' || n.type === notificationsFilter).length} Njoftime
+              </Text>
+              <View className="flex-row items-center gap-3">
+                {unreadCount > 0 && (
+                  <TouchableOpacity
+                    onPress={handleMarkAllAsRead}
+                    className="flex-row items-center"
+                  >
+                    <CheckCheck size={14} color="#3473ef" className="mr-1" />
+                    <Text className="text-[#3473ef] text-[11px] font-black">Marko si të lexuara</Text>
+                  </TouchableOpacity>
+                )}
+                {notifications.length > 0 && (
+                  <TouchableOpacity
+                    onPress={handleClearAllNotifications}
+                    className="flex-row items-center pl-2 border-l border-slate-200"
+                  >
+                    <Trash2 size={13} color="#ef4444" className="mr-1" />
+                    <Text className="text-rose-500 text-[11px] font-black">Fshi të gjitha</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            {/* Notifications List */}
+            <ScrollView showsVerticalScrollIndicator={false} className="flex-1 p-4" contentContainerStyle={{ paddingBottom: 60 }}>
+              {(() => {
+                const filtered = notifications.filter(n => notificationsFilter === 'all' || n.type === notificationsFilter);
+                if (filtered.length === 0) {
+                  return (
+                    <View className="py-20 items-center justify-center px-6">
+                      <View className="w-16 h-16 rounded-full bg-slate-100 items-center justify-center mb-4">
+                        <Bell size={28} color="#94A3B8" />
+                      </View>
+                      <Text className="text-slate-700 font-black text-base mb-1">Nuk keni asnjë njoftim</Text>
+                      <Text className="text-slate-400 font-bold text-xs text-center">Njoftimet e reja për rezervimet, favoritët dhe vlerësimet do të shfaqen këtu.</Text>
+                    </View>
+                  );
+                }
+
+                return filtered.map((n) => {
+                  let IconComponent = Calendar;
+                  let iconBg = 'bg-blue-50';
+                  let iconColor = '#3473ef';
+
+                  if (n.type === 'favorite') {
+                    IconComponent = Heart;
+                    iconBg = 'bg-rose-50';
+                    iconColor = '#ef4444';
+                  } else if (n.type === 'review') {
+                    IconComponent = Star;
+                    iconBg = 'bg-[#fffbeb]';
+                    iconColor = '#f59e0b';
+                  } else if (n.type === 'system') {
+                    IconComponent = Sparkles;
+                    iconBg = 'bg-indigo-50';
+                    iconColor = '#6366f1';
+                  }
+
+                  return (
+                    <View
+                      key={n.id}
+                      className={`p-4 rounded-3xl mb-3 border ${!n.isRead ? 'bg-blue-50/20 border-blue-100 shadow-sm' : 'bg-white border-slate-100'}`}
+                    >
+                      <View className="flex-row items-start">
+                        <View className={`w-10 h-10 rounded-2xl ${iconBg} items-center justify-center mr-3 mt-0.5`}>
+                          <IconComponent size={20} color={iconColor} />
+                        </View>
+                        <View className="flex-1">
+                          <View className="flex-row items-center justify-between mb-1">
+                            <Text className="font-black text-[#161719] text-sm flex-1 mr-2" numberOfLines={1}>
+                              {n.title}
+                            </Text>
+                            <View className="flex-row items-center gap-2">
+                              {!n.isRead && (
+                                <View className="w-2.5 h-2.5 rounded-full bg-[#3473ef]" />
+                              )}
+                              <TouchableOpacity
+                                onPress={() => handleDeleteNotification(n.id)}
+                                className="p-1 active:opacity-60"
+                              >
+                                <Trash2 size={15} color="#94A3B8" />
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                          <Text className="text-slate-600 font-bold text-xs leading-4 mb-2">
+                            {n.message}
+                          </Text>
+                          <Text className="text-slate-400 font-bold text-[10px]">
+                            ⏱️ {n.time}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  );
+                });
+              })()}
+            </ScrollView>
           </View>
         </View>
       </Modal>
