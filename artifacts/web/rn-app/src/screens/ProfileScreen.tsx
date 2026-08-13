@@ -126,6 +126,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
 
+  // Upgrade & Billing State
+  const [upgradeStep, setUpgradeStep] = useState(1); // 1: Select Plan, 2: Checkout
+  const [selectedUpgradePlan, setSelectedUpgradePlan] = useState<any>(null);
+  const [upgradeTransactionId, setUpgradeTransactionId] = useState<string | null>(null);
+  const [isPreparingUpgrade, setIsPreparingUpgrade] = useState(false);
+  const [teamEmployeeCount, setTeamEmployeeCount] = useState(3);
+  const [isUpdatingCard, setIsUpdatingCard] = useState(false);
+
   // Modal States
   const [activeModal, setActiveModal] = useState<string | null>(null); // 'profile', 'plans', 'favorites', 'messages', 'appointments', 'forms', 'settings', 'support', 'language', 'orari'
   const [settingsView, setSettingsIndex] = useState<'main' | 'notifications' | 'password' | 'legal'>('main');
@@ -1009,8 +1017,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     // The subscription is now handled by the Paddle Webhook authoritative flow.
     // We just trigger the "activating" state to wait for the sync.
     setIsActivating(true);
-    Alert.alert("Sukses", `Pagesa u krye! Abonimi juaj po aktivizohet.`);
-    setUpgradeStep(1);
+
+    if (isUpdatingCard) {
+       Alert.alert("Sukses! 💳", "Metoda juaj e pagesës u përditësua me sukses.");
+       setIsUpdatingCard(false);
+    } else {
+       Alert.alert("Sukses", `Pagesa u krye! Abonimi juaj po aktivizohet.`);
+       setUpgradeStep(1);
+    }
+
     setActiveModal(null);
   };
 
@@ -1068,6 +1083,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleUpdateCard = () => {
+    if (!subscription?.paddle_subscription_id) {
+      Alert.alert("Gabim", "Nuk u gjet ID e abonimit për të përditësuar kartelën.");
+      return;
+    }
+    setIsUpdatingCard(true);
   };
 
   if (!user) {
@@ -1411,93 +1434,128 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               {activeModal === 'subManagement' && (
                 <View className="flex-1">
                   <View className="flex-row justify-between items-center mb-10">
-                    <Text className="text-3xl font-black text-[#161719]">Menaxho Abonimin</Text>
+                    <Text className="text-3xl font-black text-[#161719]">Abonimi juaj</Text>
                     <TouchableOpacity onPress={() => setActiveModal(null)} className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-sm"><X size={24} color="#161719" /></TouchableOpacity>
                   </View>
 
-                  <View className="flex-row gap-x-4 mb-8">
-                    <TouchableOpacity
-                      onPress={() => setActiveModal('plans')}
-                      className="flex-1 bg-white rounded-[32px] p-6 shadow-sm border border-slate-100 items-center justify-center"
-                    >
-                      <View className="w-14 h-14 rounded-2xl bg-amber-50 items-center justify-center mb-4">
-                        <Crown size={28} color="#D97706" />
-                      </View>
-                      <Text className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-1">Plani Aktiv</Text>
-                    <Text className="text-[#161719] font-black text-lg uppercase">{(subscription?.plan_name || 'Asnjë')}</Text>
-                      <View className="mt-4 bg-slate-50 px-3 py-1.5 rounded-full">
-                        <Text className="text-slate-500 font-black text-[10px] uppercase">Ndrysho</Text>
-                      </View>
-                    </TouchableOpacity>
+                  <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+                    {/* NEW STRUCTURED SUBSCRIPTION CARD */}
+                    <View className="bg-white rounded-[40px] overflow-hidden border border-slate-100 shadow-2xl shadow-black/5 mb-8">
+                       <View className="p-8 pb-6">
+                          <View className="flex-row justify-between items-start mb-8">
+                             <View>
+                                <View className="flex-row items-center mb-1">
+                                   <Crown size={16} color="#D97706" />
+                                   <Text className="text-slate-400 font-black text-[10px] uppercase tracking-widest ml-2">Plani Aktual</Text>
+                                </View>
+                                <Text className="text-3xl font-black text-[#161719] uppercase">{subscription?.plan_name || 'Solo'}</Text>
+                             </View>
+                             <View className={`px-4 py-2 rounded-2xl ${subscription?.status === 'active' || subscription?.status === 'trialing' ? 'bg-emerald-50' : 'bg-rose-50'}`}>
+                                <Text className={`font-black text-xs uppercase ${subscription?.status === 'active' || subscription?.status === 'trialing' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                   {subscription?.status === 'active' ? 'Aktiv' : (subscription?.status === 'trialing' ? 'Provë' : (subscription?.status === 'past_due' ? 'Pagesa...' : (subscription?.status || 'Skaduar')))}
+                                </Text>
+                             </View>
+                          </View>
 
-                    <TouchableOpacity
-                      onPress={() => setActiveModal('subDetails')}
-                      className="flex-1 bg-white rounded-[32px] p-6 shadow-sm border border-slate-100 items-center justify-center"
-                    >
-                      <View className="w-14 h-14 rounded-2xl bg-emerald-50 items-center justify-center mb-4">
-                        <CreditCard size={28} color="#10B981" />
-                      </View>
-                      <Text className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-1">Statusi</Text>
-                      <Text
-                        numberOfLines={1}
-                        className={`font-black text-lg uppercase ${
-                          subscription?.status === 'active' || subscription?.status === 'trialing'
-                            ? 'text-emerald-600'
-                            : (subscription?.status === 'past_due' ? 'text-amber-500' : 'text-rose-500')
-                        }`}
-                      >
-                        {subscription?.status === 'active' ? 'Aktiv' : (subscription?.status === 'trialing' ? 'Provë' : (subscription?.status === 'past_due' ? 'Pagesa...' : (subscription?.status || 'Pa abonim')))}
-                      </Text>
-                      <View className="mt-4 bg-slate-50 px-3 py-1.5 rounded-full">
-                        <Text className="text-slate-500 font-black text-[10px] uppercase">Detajet</Text>
-                      </View>
-                    </TouchableOpacity>
-                  </View>
+                          <View className="gap-y-4 mb-8">
+                             <View className="flex-row items-center justify-between">
+                                <View className="flex-row items-center">
+                                   <Calendar size={16} color="#94A3B8" />
+                                   <Text className="text-slate-500 font-bold text-sm ml-3">{subscription?.cancel_at_period_end ? 'Skadon më:' : 'Rinovimi i radhës:'}</Text>
+                                </View>
+                                <Text className="text-[#161719] font-black text-sm">{subscription?.end_date ? new Date(subscription.end_date).toLocaleDateString('sq-AL') : '--'}</Text>
+                             </View>
 
-                  {/* Expiry Progress Bar */}
-                  {subscription?.current_period_end && (
-                    <View className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm mb-8">
-                      <View className="flex-row justify-between items-center mb-4">
-                         <View>
-                            <Text className="text-slate-900 font-black text-sm">Koha e mbetur</Text>
-                            <Text className="text-slate-400 font-bold text-[10px] mt-0.5">30 ditë cikël faturimi</Text>
-                         </View>
-                         <Text className={`font-black text-sm ${subscription.daysRemaining < 7 ? 'text-rose-500' : 'text-[#3473ef]'}`}>
-                            {subscription.daysRemaining} ditë
-                         </Text>
-                      </View>
+                             <View className="flex-row items-center justify-between">
+                                <View className="flex-row items-center">
+                                   <CreditCard size={16} color="#94A3B8" />
+                                   <Text className="text-slate-500 font-bold text-sm ml-3">Metoda e pagesës:</Text>
+                                </View>
+                                <Text className="text-[#161719] font-black text-sm">
+                                   {subscription?.card_brand ? `${subscription.card_brand} **** ${subscription.card_last4 || ''}` : 'Kliko për të shtuar'}
+                                </Text>
+                             </View>
+                          </View>
 
-                      <View className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                         <View
-                           className={`h-full rounded-full ${subscription.daysRemaining < 7 ? 'bg-rose-500' : 'bg-[#3473ef]'}`}
-                           style={{ width: `${Math.min(100, (subscription.daysRemaining / 30) * 100)}%` }}
-                         />
-                      </View>
+                          {subscription?.status === 'active' && (
+                             <View className="mb-6">
+                                <View className="flex-row justify-between items-center mb-3">
+                                   <Text className="text-slate-400 font-black text-[10px] uppercase tracking-widest">Koha e mbetur</Text>
+                                   <Text className={`font-black text-xs ${subscription.daysRemaining < 7 ? 'text-rose-500' : 'text-[#3473ef]'}`}>{subscription.daysRemaining} ditë</Text>
+                                </View>
+                                <View className="h-1.5 w-full bg-slate-50 rounded-full overflow-hidden">
+                                   <View
+                                      className={`h-full rounded-full ${subscription.daysRemaining < 7 ? 'bg-rose-500' : 'bg-[#3473ef]'}`}
+                                      style={{ width: `${Math.min(100, (subscription.daysRemaining / 30) * 100)}%` }}
+                                   />
+                                </View>
+                             </View>
+                          )}
+                       </View>
 
-                      <View className="flex-row justify-between mt-3">
-                         <Text className="text-slate-400 font-bold text-[9px] uppercase tracking-tighter">Fillimi: {new Date(subscription.current_period_start || Date.now()).toLocaleDateString('sq-AL')}</Text>
-                         <Text className="text-slate-400 font-bold text-[9px] uppercase tracking-tighter">Skadimi: {new Date(subscription.current_period_end).toLocaleDateString('sq-AL')}</Text>
-                      </View>
+                       <TouchableOpacity
+                          onPress={handleUpdateCard}
+                          className="bg-slate-50 py-5 items-center justify-center border-t border-slate-100 active:bg-slate-100"
+                       >
+                          <View className="flex-row items-center">
+                             <RefreshCw size={14} color="#64748B" />
+                             <Text className="text-slate-500 font-black text-[11px] uppercase tracking-widest ml-2">Përditëso Kartelën</Text>
+                          </View>
+                       </TouchableOpacity>
                     </View>
-                  )}
 
-                  <View className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm">
-                    <Text className="text-slate-500 font-bold text-xs leading-5">
-                      {subscription?.status === 'active'
-                        ? 'Abonimi juaj është në rregull. Salloni është i dukshëm për të gjithë përdoruesit.'
-                        : 'Menaxhoni planet, shikoni detajet e faturimit ose rinovovi abonimin tuaj këtu.'}
-                    </Text>
-                  </View>
+                    <View className="gap-y-4">
+                       {(subscription?.status === 'expired' || subscription?.status === 'past_due' || !subscription) ? (
+                          <TouchableOpacity
+                             onPress={() => setActiveModal('plans')}
+                             className="bg-[#161719] h-16 rounded-[24px] flex-row items-center justify-center shadow-xl shadow-black/20"
+                          >
+                             <TrendingUp size={20} color="white" className="mr-3" />
+                             <Text className="text-white font-black text-base">Rinovoni Abonimin</Text>
+                          </TouchableOpacity>
+                       ) : (
+                          <>
+                             {subscription?.cancel_at_period_end ? (
+                                <TouchableOpacity
+                                   onPress={handleReactivateAutoRenewal}
+                                   className="bg-emerald-500 h-16 rounded-[24px] flex-row items-center justify-center shadow-lg shadow-emerald-200"
+                                >
+                                   <CheckCircle2 size={20} color="white" className="mr-3" />
+                                   <Text className="text-white font-black text-base">Vazhdo Abonimin</Text>
+                                </TouchableOpacity>
+                             ) : (
+                                <TouchableOpacity
+                                   onPress={handleCancelAutoRenewal}
+                                   className="bg-rose-50 h-16 rounded-[24px] flex-row items-center justify-center border border-rose-100"
+                                >
+                                   <X size={20} color="#F43F5E" className="mr-3" />
+                                   <Text className="text-rose-500 font-black text-base">Anulo Rinovimin Automatik</Text>
+                                </TouchableOpacity>
+                             )}
 
-                  {(!subscription || subscription.status === 'expired' || subscription.status === 'past_due') && (
-                    <TouchableOpacity
-                      onPress={() => setActiveModal('plans')}
-                      className="mt-8 bg-[#161719] h-16 rounded-2xl flex-row items-center justify-center shadow-xl"
-                    >
-                      <RefreshCw size={20} color="white" className="mr-3" />
-                      <Text className="text-white font-black text-base">Rinovo Tani</Text>
-                    </TouchableOpacity>
-                  )}
+                             <TouchableOpacity
+                                onPress={() => setActiveModal('plans')}
+                                className="bg-white h-16 rounded-[24px] flex-row items-center justify-center border border-slate-100 shadow-sm"
+                             >
+                                <TrendingUp size={20} color="#161719" className="mr-3" />
+                                <Text className="text-[#161719] font-black text-base">Ndrysho Planin</Text>
+                             </TouchableOpacity>
+                          </>
+                       )}
+                    </View>
+
+                    {subscription?.cancel_at_period_end && (
+                       <View className="bg-amber-50 p-6 rounded-[32px] border border-amber-100 mt-8">
+                          <View className="flex-row items-center mb-2">
+                             <AlertTriangle size={18} color="#D97706" />
+                             <Text className="text-amber-800 font-black text-sm ml-2">Abonimi po skadon!</Text>
+                          </View>
+                          <Text className="text-amber-700 font-bold text-xs leading-5">
+                             Ju keni ndalur rinovimin automatik. Salloni juaj do të jetë i dukshëm deri më {new Date(subscription.end_date).toLocaleDateString('sq-AL')}. Pas kësaj date, të dhënat tuaja do të ruhen por salloni nuk do të shfaqet për klientët.
+                          </Text>
+                       </View>
+                    )}
+                  </ScrollView>
                 </View>
               )}
 
@@ -1505,7 +1563,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 <View className="flex-1">
                    <View className="flex-row justify-between items-center mb-10">
                     <TouchableOpacity onPress={() => setActiveModal('subManagement')} className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-sm"><ChevronLeft size={24} color="#161719" /></TouchableOpacity>
-                    <Text className="text-3xl font-black text-[#161719]">{upgradeStep === 1 ? 'Abonimet' : 'Pagesa e Sigurt'}</Text>
+                    <Text className="text-3xl font-black text-[#161719]">{upgradeStep === 1 ? 'Planet' : 'Pagesa'}</Text>
                     <TouchableOpacity onPress={() => setActiveModal(null)} className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-sm"><X size={24} color="#161719" /></TouchableOpacity>
                   </View>
 
@@ -1515,10 +1573,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         {REGISTRATION_PLANS.map((plan) => {
                           const isTeam = plan.id === 'team';
                           const displayPrice = isTeam ? `${calculateTeamPrice(teamEmployeeCount)}€` : plan.price;
-                          const displayEmployees = isTeam ? `${teamEmployeeCount} berberë` : plan.employees;
+                          const isCurrent = subscription?.plan_id === plan.id;
 
                           return (
-                           <View key={plan.id} className={`bg-white p-6 rounded-[32px] shadow-sm border ${subscription?.plan_id === plan.id ? 'border-[#3473ef] bg-[#3473ef]/5' : 'border-transparent'}`}>
+                           <View key={plan.id} className={`bg-white p-6 rounded-[32px] shadow-sm border ${isCurrent ? 'border-[#3473ef] bg-[#3473ef]/5' : 'border-transparent'}`}>
                               <View className="flex-row justify-between items-center mb-4">
                                 <View>
                                   <Text className="text-xl font-black text-[#161719]">{plan.name}</Text>
@@ -1551,15 +1609,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                 {plan.features.map((f, i) => (<View key={i} className="flex-row items-center mb-2"><CheckCircle2 size={14} color="#10b981" strokeWidth={3} /><Text className="text-slate-600 font-bold text-xs ml-2">{f}</Text></View>))}
                               </View>
                               <TouchableOpacity
-                                disabled={subscription?.plan_id === plan.id || isPreparingUpgrade}
+                                disabled={isCurrent || isPreparingUpgrade}
                                 onPress={() => handleStartUpgrade(plan)}
-                                className={`h-14 rounded-2xl items-center justify-center ${subscription?.plan_id === plan.id ? 'bg-slate-100' : 'bg-[#161719]'}`}
+                                className={`h-14 rounded-2xl items-center justify-center ${isCurrent ? 'bg-slate-100' : 'bg-[#161719]'}`}
                               >
                                 {isPreparingUpgrade && selectedUpgradePlan?.id === plan.id ? (
                                   <ActivityIndicator color="white" />
                                 ) : (
-                                  <Text className={`font-black text-sm ${subscription?.plan_id === plan.id ? 'text-slate-400' : 'text-white'}`}>
-                                    {subscription?.plan_id === plan.id ? 'Plani Aktiv' : 'Upgrade Planin'}
+                                  <Text className={`font-black text-sm ${isCurrent ? 'text-slate-400' : 'text-white'}`}>
+                                    {isCurrent ? 'Plani juaj aktual' : 'Zgjidhni këtë Plan'}
                                   </Text>
                                 )}
                               </TouchableOpacity>
@@ -1571,122 +1629,20 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   ) : (
                     <View className="flex-1">
                       <View className="mb-6 px-2">
-                        <Text className="text-slate-500 font-bold text-sm">
-                          Duke procesuar kalimin në planin <Text className="text-[#3473ef] font-black">{selectedUpgradePlan?.name}</Text>
+                        <Text className="text-slate-500 font-bold text-sm text-center">
+                          Duke hapur dritaren e sigurt për planin <Text className="text-[#3473ef] font-black">{selectedUpgradePlan?.name}</Text>
                         </Text>
                       </View>
-                      <View className="flex-1 bg-white rounded-[32px] overflow-hidden border border-slate-100 shadow-sm">
+                      <View className="flex-1 bg-white rounded-[40px] overflow-hidden border border-slate-100 shadow-2xl">
                         <PaddleCheckout
                           email={user.email}
                           transactionId={upgradeTransactionId || undefined}
-                          priceId={selectedUpgradePlan?.id === 'team' ? undefined : (selectedUpgradePlan?.id === 'duo' ? 'pri_01ky8e821v11dc6f2nf9jnq5v8' : 'pri_01ky8dvrqajpvkqtcde7ge9fgb')}
                           onSuccess={handleUpgradeSuccess}
                           onCancel={() => setUpgradeStep(1)}
                         />
                       </View>
-                      <TouchableOpacity
-                        onPress={() => setUpgradeStep(1)}
-                        className="py-6 items-center"
-                      >
-                        <Text className="text-slate-400 font-black text-xs uppercase tracking-widest">Kthehu prapa</Text>
-                      </TouchableOpacity>
                     </View>
                   )}
-                </View>
-              )}
-
-              {activeModal === 'subDetails' && (
-                <View className="flex-1">
-                  <View className="flex-row justify-between items-center mb-8">
-                    <TouchableOpacity onPress={() => setActiveModal('subManagement')} className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-sm"><ChevronLeft size={24} color="#161719" /></TouchableOpacity>
-                    <Text className="text-3xl font-black text-[#161719]">Detajet</Text>
-                    <TouchableOpacity onPress={() => setActiveModal(null)} className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-sm"><X size={24} color="#161719" /></TouchableOpacity>
-                  </View>
-
-                  <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 24 }}>
-                    <View className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm">
-                      <View className="flex-row items-center mb-4">
-                        <View className={`w-12 h-12 rounded-2xl items-center justify-center mr-4 ${subscription?.status === 'active' ? 'bg-emerald-50' : 'bg-rose-50'}`}>
-                          <CreditCard size={24} color={subscription?.status === 'active' ? '#10b981' : '#f43f5e'} />
-                        </View>
-                        <View>
-                          <Text className="text-slate-400 font-black text-[10px] uppercase tracking-widest">Statusi Aktual</Text>
-                          <Text className={`text-xl font-black uppercase ${subscription?.status === 'active' ? 'text-emerald-600' : 'text-rose-500'}`}>
-                            {subscription?.status === 'active' ? 'AKTIV' : (subscription?.status === 'past_due' ? 'PAGESË E DËSHTUAR' : (subscription?.status || 'PA ABONIM'))}
-                          </Text>
-                        </View>
-                      </View>
-
-                      <View className="h-[1px] bg-slate-50 my-4" />
-
-                      <View className="gap-y-4">
-                        <View className="flex-row justify-between">
-                          <Text className="text-slate-500 font-bold">Plani:</Text>
-                          <Text className="text-[#161719] font-black uppercase">{subscription?.plan_name || 'ASNJË'}</Text>
-                        </View>
-                        {subscription?.end_date && (
-                          <View className="flex-row justify-between">
-                            <Text className="text-slate-500 font-bold">{subscription.cancel_at_period_end ? 'Skadon më:' : 'Rinovimi i radhës:'}</Text>
-                            <View className="items-end">
-                              <Text className="text-[#161719] font-black">{new Date(subscription.end_date).toLocaleDateString('sq-AL')}</Text>
-                              {subscription.days_remaining !== undefined && (
-                                <Text className={`text-[10px] font-bold ${subscription.days_remaining < 5 ? 'text-rose-500' : 'text-emerald-500'}`}>
-                                  {subscription.days_remaining} ditë mbetur
-                                </Text>
-                              )}
-                            </View>
-                          </View>
-                        )}
-                        {subscription && (
-                          <View className="flex-row justify-between">
-                            <Text className="text-slate-500 font-bold">Rinovimi automatik:</Text>
-                            <Text className={`font-black ${subscription?.cancel_at_period_end ? 'text-rose-500' : 'text-emerald-500'}`}>
-                              {subscription?.cancel_at_period_end ? 'I NDALUR' : 'I AKTIVIZUAR'}
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                    </View>
-
-                    {!subscription?.cancel_at_period_end && subscription?.status === 'active' && (
-                      <TouchableOpacity
-                        onPress={handleCancelAutoRenewal}
-                        className="bg-rose-50 h-16 rounded-[24px] items-center justify-center border border-rose-100"
-                      >
-                        <Text className="text-rose-600 font-black text-base">Anulo Rinovimin Automatik</Text>
-                      </TouchableOpacity>
-                    )}
-
-                    {subscription?.cancel_at_period_end && (subscription?.status === 'active' || subscription?.status === 'trialing') && (
-                      <TouchableOpacity
-                        onPress={handleReactivateAutoRenewal}
-                        className="bg-emerald-50 h-16 rounded-[24px] items-center justify-center border border-emerald-100"
-                      >
-                        <Text className="text-emerald-600 font-black text-base">Aktivizo Rinovimin Automatik</Text>
-                      </TouchableOpacity>
-                    )}
-
-                    {(subscription?.status === 'past_due' || !subscription) && (
-                      <TouchableOpacity
-                        onPress={() => setActiveModal('plans')}
-                        className="bg-[#161719] h-16 rounded-[24px] items-center justify-center"
-                      >
-                        <Text className="text-white font-black text-base">Zgjidh një Plan</Text>
-                      </TouchableOpacity>
-                    )}
-
-                    {subscription?.cancel_at_period_end && (
-                      <View className="bg-amber-50 p-6 rounded-[28px] border border-amber-100">
-                        <View className="flex-row items-center mb-2">
-                          <AlertTriangle size={18} color="#D97706" />
-                          <Text className="text-amber-800 font-black text-sm ml-2">Vini re!</Text>
-                        </View>
-                        <Text className="text-amber-700 font-bold text-xs leading-5">
-                          Rinovimi automatik është anuluar. Salloni juaj do të jetë i dukshëm deri më {new Date(subscription.current_period_end).toLocaleDateString('sq-AL')}. Pas kësaj date, duhet të zgjidhni një plan të ri për të vazhduar shërbimin.
-                        </Text>
-                      </View>
-                    )}
-                  </ScrollView>
                 </View>
               )}
 
@@ -2353,6 +2309,25 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                )}
 
             </Animated.View>
+        </View>
+    </Modal>
+
+    <Modal visible={isUpdatingCard} animationType="slide">
+        <View className="flex-1 bg-white">
+          <View className="flex-row items-center justify-between px-8 pt-16 pb-6 border-b border-slate-50">
+             <Text className="text-2xl font-black text-[#161719]">Përditëso Kartelën</Text>
+             <TouchableOpacity onPress={() => setIsUpdatingCard(false)} className="w-10 h-10 bg-slate-100 rounded-full items-center justify-center">
+                <X size={20} color="#161719" />
+             </TouchableOpacity>
+          </View>
+          <View className="flex-1">
+             <PaddleCheckout
+               email={user?.email}
+               subscriptionId={subscription?.paddle_subscription_id}
+               onSuccess={handleUpgradeSuccess}
+               onCancel={() => setIsUpdatingCard(false)}
+             />
+          </View>
         </View>
     </Modal>
     </View>

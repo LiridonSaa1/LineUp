@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, Dimensions, Platform, RefreshControl } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, Dimensions, Platform, RefreshControl, useWindowDimensions } from "react-native";
 import { Search, MapPin, List, Map as MapIcon, Star, Heart, ArrowUpRight, ChevronDown, Check, SlidersHorizontal, Layers } from "lucide-react-native";
 import Animated, {
   useAnimatedStyle,
@@ -22,9 +22,7 @@ if (Platform.OS !== 'web') {
   }
 }
 
-const { width, height } = Dimensions.get("window");
-const SHEET_MIN_HEIGHT = height * 0.35;
-const SHEET_MAX_HEIGHT = height - 160;
+// Dimensions moved inside components to support responsiveness
 
 const CITY_COORDS: Record<string, { lat: number; lng: number }> = {
   "prishtin": { lat: 42.6629, lng: 21.1655 },
@@ -128,7 +126,7 @@ interface ExploreScreenProps {
 
 const INITIAL_REGION = { lat: 42.5500, lng: 20.8500, zoom: 9 };
 
-const LeafletMapView = ({ shops, onSelectShop, initialCity, mapType, initialCoords }: { shops: any[], onSelectShop: (shop: any) => void, initialCity?: string, mapType: 'standard' | 'satellite', initialCoords?: { lat?: number; lng?: number } }) => {
+const LeafletMapView = ({ shops, onSelectShop, initialCity, mapType, initialCoords, width, height }: { shops: any[], onSelectShop: (shop: any) => void, initialCity?: string, mapType: 'standard' | 'satellite', initialCoords?: { lat?: number; lng?: number }, width: number, height: number }) => {
   const webViewRef = useRef<any>(null);
   const iframeRef = useRef<any>(null);
 
@@ -302,6 +300,10 @@ const LeafletMapView = ({ shops, onSelectShop, initialCity, mapType, initialCoor
 export const ExploreScreen: React.FC<ExploreScreenProps> = ({
   onSelectShop, onOpenSearch, initialCity = "Të gjitha", initialSearch = "", initialCoords, initialSubIds = [], initialCategoryName = "", initialDate = "Anytime", initialTime = "Anytime", favorites = [], onToggleFavorite
 }) => {
+  const { width, height } = useWindowDimensions();
+  const SHEET_MIN_HEIGHT = height * 0.35;
+  const SHEET_MAX_HEIGHT = height - 160;
+
   const [shops, setShops] = useState<any[]>([]);
   const [schedules, setSchedules] = useState<any[]>([]);
   const [filteredShops, setFilteredShops] = useState<any[]>([]);
@@ -421,6 +423,15 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
   const translateY = useSharedValue(height - SHEET_MIN_HEIGHT);
   const context = useSharedValue(0);
 
+  // Handle orientation changes / window resizing
+  useEffect(() => {
+    if (!isExpanded) {
+      translateY.value = withTiming(height - SHEET_MIN_HEIGHT);
+    } else {
+      translateY.value = withTiming(height - SHEET_MAX_HEIGHT);
+    }
+  }, [height, SHEET_MIN_HEIGHT, SHEET_MAX_HEIGHT]);
+
   const toggleSheet = (expand?: boolean) => {
     'worklet';
     const currentVal = translateY.value;
@@ -472,7 +483,7 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
   return (
     <GestureHandlerRootView className="flex-1">
       <View style={{ width, height, position: 'absolute' }}>
-        <LeafletMapView shops={filteredShops} onSelectShop={onSelectShop} initialCity={initialCity} mapType={mapType} initialCoords={initialCoords} />
+        <LeafletMapView shops={filteredShops} onSelectShop={onSelectShop} initialCity={initialCity} mapType={mapType} initialCoords={initialCoords} width={width} height={height} />
       </View>
 
       <View className="absolute top-14 left-6 right-6 z-50">

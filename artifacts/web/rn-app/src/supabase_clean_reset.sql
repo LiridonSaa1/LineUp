@@ -52,6 +52,8 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
     subscription_start_date TIMESTAMP WITH TIME ZONE DEFAULT now(),
     subscription_end_date TIMESTAMP WITH TIME ZONE,
     last_payment_date TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    card_brand TEXT,
+    card_last4 TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );

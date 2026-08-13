@@ -21,7 +21,9 @@ export interface SubscriptionData {
   cancel_at_period_end?: boolean;
   current_period_end?: string;
   current_period_start?: string;
-  subscription_id?: string; // Add this for consistency
+  subscription_id?: string;
+  card_brand?: string;
+  card_last4?: string;
 }
 
 export const useSubscription = (businessId: string | null, userId?: string | null) => {
@@ -66,7 +68,9 @@ export const useSubscription = (businessId: string | null, userId?: string | nul
           cancel_at_period_end: data.cancel_at_period_end,
           current_period_end: data.current_period_end,
           current_period_start: data.current_period_start,
-          subscription_id: data.subscription_id || data.paddle_subscription_id
+          subscription_id: data.subscription_id || data.paddle_subscription_id,
+          card_brand: data.card_brand,
+          card_last4: data.card_last4
         });
         setIsActivating(false);
       } else {

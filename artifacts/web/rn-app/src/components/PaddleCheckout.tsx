@@ -7,11 +7,12 @@ interface PaddleCheckoutProps {
   email: string;
   transactionId?: string;
   priceId?: string;
+  subscriptionId?: string;
   onSuccess: (data: any) => void;
   onCancel: () => void;
 }
 
-export const PaddleCheckout = ({ email, transactionId, priceId, onSuccess, onCancel }: PaddleCheckoutProps) => {
+export const PaddleCheckout = ({ email, transactionId, priceId, subscriptionId, onSuccess, onCancel }: PaddleCheckoutProps) => {
   const [webViewKey, setWebViewKey] = useState(0);
 
   const html = `
@@ -82,6 +83,8 @@ export const PaddleCheckout = ({ email, transactionId, priceId, onSuccess, onCan
 
             if ('${transactionId || ""}') {
               checkoutOptions.transactionId = '${transactionId}';
+            } else if ('${subscriptionId || ""}') {
+              checkoutOptions.subscriptionId = '${subscriptionId}';
             } else {
               checkoutOptions.items = [{ priceId: '${priceId || "pri_01ky8e821v11dc6f2nf9jnq5v8"}', quantity: 1 }];
               checkoutOptions.customer = { email: '${email}' };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, memo, useRef } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Pressable, TextInput, Dimensions, ActivityIndicator, Keyboard, StyleSheet, FlatList, Modal, KeyboardAvoidingView, Platform } from "react-native";
-import { User, CreditCard, Shield, Store, Mail, Lock, Eye, EyeOff, Phone, ChevronDown, Search, ArrowLeft, Check, ChevronRight, Zap, Sparkles, MapPin, X, Scissors, Hand, Smile, Waves } from "lucide-react-native";
+import { User, CreditCard, Shield, Store, Mail, Lock, Eye, EyeOff, Phone, ChevronDown, Search, ArrowLeft, Check, ChevronRight, Zap, Sparkles, MapPin, X, Scissors, Hand, Smile, Waves, Palette } from "lucide-react-native";
 import { AddressAutocomplete } from '../components/AddressAutocomplete';
 import { supabase } from "@/config/supabase";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
@@ -11,14 +11,14 @@ import { CategoryAccordion, Category, Subcategory } from "../components/Category
 import { BlurView } from 'expo-blur';
 
 const CATEGORY_ICONS: Record<string, any> = {
-  'Flokë & Stilim': Scissors,
-  'Mjekër & Estetikë': User,
+  'Flokët & Trajtimet': Scissors,
+  'Ngjyrosja e Flokëve': Palette,
+  'Mjekra & Rruajtja': User,
+  'Vetulla & Qerpikë': Eye,
   'Thonjtë': Hand,
-  'Grim & Bukuri': Smile,
-  'Kujdesi i Lëkurës': Shield,
-  'Spa & Relaks': Waves,
-  'Depilim': Zap,
-  'Raste të Veçanta': Sparkles
+  'Makeup': Smile,
+  'Fytyra & Kujdesi i Lëkurës': Shield,
+  'Depilim & Trup': Zap
 };
 
 const KOSOVO_CITIES = [
@@ -824,30 +824,36 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
                   const isSelected = catSubIds.some(id => selectedCategories.includes(id));
 
                   return (
-                    <View key={cat.id} className="items-center mb-6" style={{ width: '31%' }}>
-                      <TouchableOpacity
-                        onPress={() => {
-                          setSelectedMainCategory(cat);
-                          setShowSubModal(true);
-                        }}
-                        activeOpacity={0.7}
-                        className={`w-full aspect-square rounded-[24px] items-center justify-center border shadow-sm mb-2 ${
-                          isSelected
-                            ? 'bg-[#3473ef]/10 border-[#3473ef]'
-                            : 'bg-white border-slate-200 shadow-slate-200'
+                    <View key={cat.id} className="items-center mb-6" style={{ width: '22%' }}>
+                      <View
+                        className={`overflow-hidden border shadow-sm mb-2 ${
+                          isSelected ? 'border-[#3473ef] shadow-[#3473ef]/20' : 'border-white/60 shadow-black/5'
                         }`}
+                        style={{ borderRadius: 28, backgroundColor: isSelected ? 'rgba(52, 115, 239, 0.1)' : 'rgba(255, 255, 255, 0.4)' }}
                       >
-                        {isEmoji ? (
-                          <Text className="text-3xl">{cat.icon}</Text>
-                        ) : (
-                          <IconComponent size={32} color={isSelected ? "#3473ef" : "#161719"} strokeWidth={1.5} />
-                        )}
-                        {isSelected && (
-                          <View className="absolute top-2 right-2 bg-[#3473ef] rounded-full p-0.5">
-                            <Check size={10} color="white" strokeWidth={4} />
-                          </View>
-                        )}
-                      </TouchableOpacity>
+                        <BlurView intensity={30} tint="light" className="w-[70px] h-[70px] items-center justify-center">
+                          <TouchableOpacity
+                            activeOpacity={0.7}
+                            className="items-center justify-center w-full h-full"
+                            onPress={() => {
+                              setSelectedMainCategory(cat);
+                              setShowSubModal(true);
+                            }}
+                          >
+                            {isEmoji ? (
+                              <Text className="text-3xl">{cat.icon}</Text>
+                            ) : (
+                              <IconComponent size={32} color={isSelected ? "#3473ef" : "#161719"} strokeWidth={1.5} />
+                            )}
+
+                            {isSelected && (
+                              <View className="absolute top-1.5 right-1.5 bg-[#3473ef] rounded-full p-0.5 shadow-sm">
+                                <Check size={8} color="white" strokeWidth={5} />
+                              </View>
+                            )}
+                          </TouchableOpacity>
+                        </BlurView>
+                      </View>
                       <Text className={`text-[10px] text-center font-bold leading-3 ${isSelected ? 'text-[#3473ef]' : 'text-[#161719]'}`} numberOfLines={2}>
                         {cat.name}
                       </Text>

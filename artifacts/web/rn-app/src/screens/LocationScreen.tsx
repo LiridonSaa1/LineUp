@@ -384,11 +384,15 @@ export const LocationScreen: React.FC<LocationScreenProps> = ({ onBack, onSelect
                 selectedCity={addressType === 'home' || addressType === 'work' ? "Prishtinë" : ""} // default or context
                 containerClassName="mb-6"
                 onSelectAddress={(place) => {
-                  setSelectedPlace({
-                    address: place.formatted_address,
-                    lat: place.latitude,
-                    lng: place.longitude
-                  });
+                  if (place && place.formatted_address) {
+                    setSelectedPlace({
+                      address: place.formatted_address,
+                      lat: place.latitude,
+                      lng: place.longitude
+                    });
+                  } else {
+                    setSelectedPlace(null);
+                  }
                 }}
              />
 

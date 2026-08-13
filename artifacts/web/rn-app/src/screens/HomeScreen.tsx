@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, Dimensions, Linking, Modal, Alert as RNAlert, ActivityIndicator, Platform, RefreshControl, KeyboardAvoidingView } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, Dimensions, Linking, Modal, Alert as RNAlert, ActivityIndicator, Platform, RefreshControl, KeyboardAvoidingView, useWindowDimensions } from "react-native";
 import { Scissors, MapPin, Search, ChevronDown, Heart, Star, Grid, Eye, Waves, Hand, Sparkles, Smile, User, Syringe, Zap, Shield, Check, ArrowRight, ArrowUpRight, Plus, Minus, ExternalLink, Megaphone, X, Palette } from "lucide-react-native";
 import { BlurView } from 'expo-blur';
 import Animated, {
@@ -11,7 +11,7 @@ import { getShopCardImage } from "../utils/imageUtils";
 import { getShopPlanDetails } from "../utils/planLimits";
 import * as Haptics from 'expo-haptics';
 
-const { width } = Dimensions.get("window");
+// Remove global width constant to support responsiveness with useWindowDimensions() inside components
 
 const CATEGORY_ICONS: Record<string, any> = {
   'Flokët & Trajtimet': Scissors,
@@ -43,7 +43,7 @@ interface HomeScreenProps {
   user?: any;
 }
 
-const RecommendedCard = React.memo(({ shop, onPress }: { shop: any, onPress: (shop: any) => void }) => (
+const RecommendedCard = React.memo(({ shop, onPress, width }: { shop: any, onPress: (shop: any) => void, width: number }) => (
   <TouchableOpacity
     onPress={() => onPress(shop)}
     activeOpacity={0.95}
@@ -87,7 +87,7 @@ const RecommendedCard = React.memo(({ shop, onPress }: { shop: any, onPress: (sh
   </TouchableOpacity>
 ));
 
-const ShopCard = React.memo(({ item, isFavorite, onToggleFavorite, onSelect }: { item: any, isFavorite: boolean, onToggleFavorite: (item: any) => void, onSelect: (item: any) => void }) => (
+const ShopCard = React.memo(({ item, isFavorite, onToggleFavorite, onSelect, width }: { item: any, isFavorite: boolean, onToggleFavorite: (item: any) => void, onSelect: (item: any) => void, width: number }) => (
   <TouchableOpacity
     key={item.id}
     onPress={() => onSelect(item)}
@@ -153,6 +153,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onToggleFavorite,
   user
 }) => {
+  const { width } = useWindowDimensions();
   const [loading, setLoading] = useState(true);
   const [recommendedShops, setRecommendedShops] = useState<any[]>([]);
   const [newShops, setNewShops] = useState<any[]>([]);
@@ -221,7 +222,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     }, 4000);
 
     return () => clearInterval(interval);
-  }, [loading, recommendedShops]);
+  }, [loading, recommendedShops, width]);
 
   useEffect(() => {
     if (ads.length <= 1) return;
@@ -232,7 +233,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     }, 6000); // Slower loop (6 seconds)
 
     return () => clearInterval(interval);
-  }, [ads]);
+  }, [ads, width]);
 
   const [refreshing, setRefreshing] = useState(false);
 
@@ -321,7 +322,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   };
 
   const renderRecommendedCard = (shop: any, index: number) => (
-    <RecommendedCard key={shop.id || index} shop={shop} onPress={onSelectShop} />
+    <RecommendedCard key={shop.id || index} shop={shop} onPress={onSelectShop} width={width} />
   );
 
   const renderShopCard = (item: any) => {
@@ -333,6 +334,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         isFavorite={isFav}
         onToggleFavorite={onToggleFavorite || (() => {})}
         onSelect={onSelectShop}
+        width={width}
       />
     );
   };
@@ -504,6 +506,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               onDowngrade={() => onDowngradePlan?.('solo')}
               onRenew={() => onRenewPlan?.('solo')}
               onManage={onManagePlan}
+              width={width}
             />
             <PricingCard
               planId="duo"
@@ -520,6 +523,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               onDowngrade={() => onDowngradePlan?.('duo')}
               onRenew={() => onRenewPlan?.('duo')}
               onManage={onManagePlan}
+              width={width}
             />
             <PricingCard
               planId="team"
@@ -538,6 +542,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               onDowngrade={() => onDowngradePlan?.('team')}
               onRenew={() => onRenewPlan?.('team')}
               onManage={onManagePlan}
+              width={width}
             />
           </ScrollView>
         </View>
@@ -783,7 +788,8 @@ const PricingCard = ({
   onUpgrade,
   onDowngrade,
   onRenew,
-  onManage
+  onManage,
+  width
 }: any) => {
   const isCurrentPlan = currentPlanInfo?.planId === planId;
   const isExpired = currentPlanInfo?.status === 'expired' || currentPlanInfo?.status === 'canceled';
