@@ -5,6 +5,8 @@ import { supabase } from "@/lib/supabase";
 import { useListTopBarbershops, useListBarbershops, useListProducts } from "@workspace/api-client-react";
 import { useCart } from "@/context/CartContext";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
+import { useShopPlan } from "@/hooks/use-shop-plan";
 import SharedContactSection from "@/components/ContactSection";
 import KosovoCitiesMap from "@/components/map/KosovoCitiesMap";
 import {
@@ -1350,11 +1352,54 @@ function BannerAds() {
 function PricingSection() {
   const [billingCycle, setBillingCycle] = useState<'month' | 'year'>('month');
   const [teamEmployees, setTeamEmployees] = useState(3);
+  const { user } = useAuth();
+  const { data: shopPlan } = useShopPlan();
+  const { toast } = useToast();
 
   const calculateTeamPrice = (count: number, cycle: 'month' | 'year') => {
     const base = cycle === 'month' ? 25 : 250;
     const extra = (Math.max(3, count) - 3) * (cycle === 'month' ? 5 : 50);
     return base + extra;
+  };
+
+  const planWeights: Record<string, number> = { solo: 1, duo: 2, team: 3 };
+  const currentPlanId = shopPlan?.id || '';
+  const currentWeight = planWeights[currentPlanId] || 0;
+  const isSubscribed = shopPlan?.isSubscribed;
+  const isExpired = shopPlan?.status === 'expired' || shopPlan?.status === 'canceled';
+  const isEmployee = user?.role === 'employee';
+
+  const getButtonState = (planId: string) => {
+    if (isEmployee) return { text: "Fillo Tani", disabled: false, type: 'employee' };
+    if (!isSubscribed && !isExpired) return { text: "Fillo Tani", disabled: false, type: 'start' };
+
+    if (planId === currentPlanId) {
+      return {
+        text: isExpired ? "Rinovo Abonimin" : "Plani Aktual",
+        disabled: !isExpired,
+        type: isExpired ? 'renew' : 'current'
+      };
+    }
+
+    const targetWeight = planWeights[planId] || 0;
+    if (targetWeight > currentWeight) {
+      return { text: "Përmirëso", disabled: false, type: 'upgrade' };
+    } else {
+      return { text: "Zbrit", disabled: false, type: 'downgrade' };
+    }
+  };
+
+  const handleAction = (planId: string, e: React.MouseEvent) => {
+    if (isEmployee) {
+      e.preventDefault();
+      toast({
+        title: "Llogari Punëtori",
+        description: "Abonimet mund të blihen dhe menaxhohen vetëm nga Pronari i Biznesit. Ju aktualisht jeni duke përdorur një llogari Punëtori.",
+        variant: "destructive"
+      });
+      return;
+    }
+    // For other roles, Link will handle navigation to /register or management
   };
 
   return (
@@ -1372,7 +1417,7 @@ function PricingSection() {
             Zgjidhni planin ideal për berberinë tuaj — Çmime mujore ose vjetore pa kontratë pezulluese.
           </p>
 
-          {/* Billing Cycle Switcher (Mujore vs Vjetore) */}
+          {/* Billing Cycle Switcher */}
           <div className="inline-flex items-center p-1.5 bg-slate-900 border border-slate-800 rounded-2xl gap-2 shadow-xl">
             <button
               onClick={() => setBillingCycle('month')}
@@ -1398,155 +1443,139 @@ function PricingSection() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           {/* Solo Plan */}
-          <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-8 flex flex-col justify-between hover:border-slate-700 transition-all">
-            <div>
-              <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">PËR INDIVIDUALË</span>
-              <h3 className="text-2xl font-black text-white mt-1">Solo</h3>
-              <p className="text-xs text-slate-400 mt-1">Ideale për berberët individualë</p>
+          {(() => {
+            const state = getButtonState('solo');
+            return (
+              <div className={`bg-slate-900/80 border rounded-3xl p-8 flex flex-col justify-between hover:border-slate-700 transition-all ${state.type === 'current' ? 'border-primary/40 ring-1 ring-primary/20' : 'border-slate-800'}`}>
+                <div>
+                  <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">PËR INDIVIDUALË</span>
+                  <h3 className="text-2xl font-black text-white mt-1">Solo</h3>
+                  <p className="text-xs text-slate-400 mt-1">Ideale për berberët individualë</p>
 
-              <div className="my-6">
-                <span className="text-4xl font-black text-[#4f8ef7]">
-                  {billingCycle === 'month' ? '15€' : '150€'}
-                </span>
-                <span className="text-xs text-slate-400 ml-1 font-bold">
-                  /{billingCycle === 'month' ? 'muaj' : 'vit'}
-                </span>
+                  <div className="my-6">
+                    <span className="text-4xl font-black text-[#4f8ef7]">
+                      {billingCycle === 'month' ? '15€' : '150€'}
+                    </span>
+                    <span className="text-xs text-slate-400 ml-1 font-bold">
+                      /{billingCycle === 'month' ? 'muaj' : 'vit'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-3 pt-4 border-t border-slate-800">
+                    <div className="flex items-center gap-2.5 text-xs text-slate-300 font-semibold">
+                      <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
+                      <span>Deri në 300 rezervime/muaj</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 text-xs text-slate-300 font-semibold">
+                      <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
+                      <span>1 profil stafi (1 berber)</span>
+                    </div>
+                  </div>
+                </div>
+
+                {state.type === 'current' && <p className="text-[#4f8ef7] text-[10px] font-bold text-center mt-4">Jeni i abonuar në këtë plan.</p>}
+
+                <Link href={isSubscribed ? "/dashboard/subscription" : "/register"} onClick={(e) => handleAction('solo', e)}
+                  className={`w-full py-4 mt-4 rounded-2xl text-sm font-bold text-center transition-all block ${state.disabled ? 'bg-slate-800 text-slate-500 cursor-default' : 'bg-slate-800 hover:bg-slate-700 text-white'}`}>
+                  {state.text}
+                </Link>
               </div>
-
-              <div className="space-y-3 pt-4 border-t border-slate-800">
-                <div className="flex items-center gap-2.5 text-xs text-slate-300 font-semibold">
-                  <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
-                  <span>Deri në 300 rezervime/muaj</span>
-                </div>
-                <div className="flex items-center gap-2.5 text-xs text-slate-300 font-semibold">
-                  <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
-                  <span>1 profil stafi (1 berber)</span>
-                </div>
-                <div className="flex items-center gap-2.5 text-xs text-slate-300 font-semibold">
-                  <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
-                  <span>Kalendari i rezervimeve</span>
-                </div>
-                <div className="flex items-center gap-2.5 text-xs text-slate-300 font-semibold">
-                  <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
-                  <span>Njoftime me email</span>
-                </div>
-              </div>
-            </div>
-
-            <Link href="/register" className="w-full py-4 mt-8 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white text-sm font-bold text-center transition-all block">
-              Zgjidh Planin Solo
-            </Link>
-          </div>
+            );
+          })()}
 
           {/* Duo Plan (Popular) */}
-          <div className="bg-slate-900 border-2 border-[#4f8ef7] rounded-3xl p-8 flex flex-col justify-between relative shadow-2xl shadow-[#4f8ef7]/15">
-            <div className="absolute -top-3.5 right-6 bg-[#4f8ef7] text-white text-[10px] font-black uppercase px-3.5 py-1 rounded-full tracking-widest shadow-md">
-              Më i Popullarizuari
-            </div>
+          {(() => {
+            const state = getButtonState('duo');
+            return (
+              <div className={`bg-slate-900 border-2 rounded-3xl p-8 flex flex-col justify-between relative shadow-2xl transition-all ${state.type === 'current' ? 'border-primary shadow-primary/20' : 'border-[#4f8ef7] shadow-[#4f8ef7]/15'}`}>
+                <div className="absolute -top-3.5 right-6 bg-[#4f8ef7] text-white text-[10px] font-black uppercase px-3.5 py-1 rounded-full tracking-widest shadow-md">
+                  Më i Popullarizuari
+                </div>
 
-            <div>
-              <span className="text-[11px] font-black text-[#4f8ef7] uppercase tracking-widest">PËR SALLONE</span>
-              <h3 className="text-2xl font-black text-white mt-1">Duo</h3>
-              <p className="text-xs text-slate-400 mt-1">Për ekipe të vogla prej 2 personash</p>
+                <div>
+                  <span className="text-[11px] font-black text-[#4f8ef7] uppercase tracking-widest">PËR SALLONE</span>
+                  <h3 className="text-2xl font-black text-white mt-1">Duo</h3>
+                  <p className="text-xs text-slate-400 mt-1">Për ekipe të vogla prej 2 personash</p>
 
-              <div className="my-6">
-                <span className="text-4xl font-black text-[#4f8ef7]">
-                  {billingCycle === 'month' ? '20€' : '200€'}
-                </span>
-                <span className="text-xs text-slate-400 ml-1 font-bold">
-                  /{billingCycle === 'month' ? 'muaj' : 'vit'}
-                </span>
+                  <div className="my-6">
+                    <span className="text-4xl font-black text-[#4f8ef7]">
+                      {billingCycle === 'month' ? '20€' : '200€'}
+                    </span>
+                    <span className="text-xs text-slate-400 ml-1 font-bold">
+                      /{billingCycle === 'month' ? 'muaj' : 'vit'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-3 pt-4 border-t border-slate-800">
+                    <div className="flex items-center gap-2.5 text-xs text-slate-200 font-semibold">
+                      <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
+                      <span>Rezervime pa limit</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 text-xs text-slate-200 font-semibold">
+                      <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
+                      <span>Deri në 2 profile stafi</span>
+                    </div>
+                  </div>
+                </div>
+
+                {state.type === 'current' && <p className="text-[#4f8ef7] text-[10px] font-bold text-center mt-4">Jeni i abonuar në këtë plan.</p>}
+
+                <Link href={isSubscribed ? "/dashboard/subscription" : "/register"} onClick={(e) => handleAction('duo', e)}
+                  className={`w-full py-4 mt-4 rounded-2xl text-sm font-black text-center shadow-lg transition-all block ${state.disabled ? 'bg-slate-800 text-slate-500 cursor-default' : 'bg-[#4f8ef7] hover:bg-blue-600 text-white shadow-[#4f8ef7]/30'}`}>
+                  {state.text}
+                </Link>
               </div>
-
-              <div className="space-y-3 pt-4 border-t border-slate-800">
-                <div className="flex items-center gap-2.5 text-xs text-slate-200 font-semibold">
-                  <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
-                  <span>Rezervime pa limit</span>
-                </div>
-                <div className="flex items-center gap-2.5 text-xs text-slate-200 font-semibold">
-                  <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
-                  <span>Deri në 2 profile stafi</span>
-                </div>
-                <div className="flex items-center gap-2.5 text-xs text-slate-200 font-semibold">
-                  <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
-                  <span>Njoftime me SMS & Email</span>
-                </div>
-                <div className="flex items-center gap-2.5 text-xs text-slate-200 font-semibold">
-                  <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
-                  <span>Statistika & Raporte</span>
-                </div>
-                <div className="flex items-center gap-2.5 text-xs text-slate-200 font-semibold">
-                  <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
-                  <span>Mbështetje prioritare</span>
-                </div>
-              </div>
-            </div>
-
-            <Link href="/register" className="w-full py-4 mt-8 rounded-2xl bg-[#4f8ef7] hover:bg-blue-600 text-white text-sm font-black text-center shadow-lg shadow-[#4f8ef7]/30 transition-all block">
-              Zgjidh Planin Duo
-            </Link>
-          </div>
+            );
+          })()}
 
           {/* Team Plan */}
-          <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-8 flex flex-col justify-between hover:border-slate-700 transition-all">
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">PËR EKIPE TË MËDHA</span>
-                
-                {/* Employee counter */}
-                <div className="flex items-center gap-2 bg-slate-800/80 px-2.5 py-1 rounded-xl border border-slate-700">
-                  <button
-                    onClick={() => setTeamEmployees(prev => Math.max(3, prev - 1))}
-                    className="w-5 h-5 bg-slate-700 rounded-md font-bold text-xs text-white flex items-center justify-center hover:bg-slate-600"
-                  >-</button>
-                  <span className="text-xs font-bold text-slate-200">{teamEmployees} berberë</span>
-                  <button
-                    onClick={() => setTeamEmployees(prev => prev + 1)}
-                    className="w-5 h-5 bg-slate-700 rounded-md font-bold text-xs text-white flex items-center justify-center hover:bg-slate-600"
-                  >+</button>
+          {(() => {
+            const state = getButtonState('team');
+            return (
+              <div className={`bg-slate-900/80 border rounded-3xl p-8 flex flex-col justify-between hover:border-slate-700 transition-all ${state.type === 'current' ? 'border-primary/40 ring-1 ring-primary/20' : 'border-slate-800'}`}>
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">PËR EKIPE TË MËDHA</span>
+                    <div className="flex items-center gap-2 bg-slate-800/80 px-2.5 py-1 rounded-xl border border-slate-700">
+                      <button onClick={() => setTeamEmployees(prev => Math.max(3, prev - 1))} className="w-5 h-5 bg-slate-700 rounded-md font-bold text-xs text-white flex items-center justify-center hover:bg-slate-600">-</button>
+                      <span className="text-xs font-bold text-slate-200">{teamEmployees}</span>
+                      <button onClick={() => setTeamEmployees(prev => prev + 1)} className="w-5 h-5 bg-slate-700 rounded-md font-bold text-xs text-white flex items-center justify-center hover:bg-slate-600">+</button>
+                    </div>
+                  </div>
+
+                  <h3 className="text-2xl font-black text-white mt-1">Team</h3>
+                  <p className="text-xs text-slate-400 mt-1">Për ekipe në rritje</p>
+
+                  <div className="my-6">
+                    <span className="text-4xl font-black text-[#4f8ef7]">
+                      {calculateTeamPrice(teamEmployees, billingCycle)}€
+                    </span>
+                    <span className="text-xs text-slate-400 ml-1 font-bold">
+                      /{billingCycle === 'month' ? 'muaj' : 'vit'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-3 pt-4 border-t border-slate-800">
+                    <div className="flex items-center gap-2.5 text-xs text-slate-300 font-semibold">
+                      <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
+                      <span>Profile stafi pa limit</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 text-xs text-[#4f8ef7] font-semibold">
+                      <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
+                      <span>Asistent personal 24/7</span>
+                    </div>
+                  </div>
                 </div>
+
+                {state.type === 'current' && <p className="text-[#4f8ef7] text-[10px] font-bold text-center mt-4">Jeni i abonuar në këtë plan.</p>}
+
+                <Link href={isSubscribed ? "/dashboard/subscription" : "/register"} onClick={(e) => handleAction('team', e)}
+                  className={`w-full py-4 mt-4 rounded-2xl text-sm font-bold text-center transition-all block ${state.disabled ? 'bg-slate-800 text-slate-500 cursor-default' : 'bg-slate-800 hover:bg-slate-700 text-white'}`}>
+                  {state.text}
+                </Link>
               </div>
-
-              <h3 className="text-2xl font-black text-white mt-1">Team</h3>
-              <p className="text-xs text-slate-400 mt-1">Për ekipe në rritje ({teamEmployees} berberë)</p>
-
-              <div className="my-6">
-                <span className="text-4xl font-black text-[#4f8ef7]">
-                  {calculateTeamPrice(teamEmployees, billingCycle)}€
-                </span>
-                <span className="text-xs text-slate-400 ml-1 font-bold">
-                  /{billingCycle === 'month' ? 'muaj' : 'vit'}
-                </span>
-              </div>
-
-              <div className="space-y-3 pt-4 border-t border-slate-800">
-                <div className="flex items-center gap-2.5 text-xs text-slate-300 font-semibold">
-                  <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
-                  <span>Të gjitha të planit Duo</span>
-                </div>
-                <div className="flex items-center gap-2.5 text-xs text-slate-300 font-semibold">
-                  <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
-                  <span>Profile stafi pa limit</span>
-                </div>
-                <div className="flex items-center gap-2.5 text-xs text-slate-300 font-semibold">
-                  <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
-                  <span>Marketing me SMS</span>
-                </div>
-                <div className="flex items-center gap-2.5 text-xs text-slate-300 font-semibold">
-                  <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
-                  <span>Landing page e personalizuar</span>
-                </div>
-                <div className="flex items-center gap-2.5 text-xs text-[#4f8ef7] font-semibold">
-                  <Check className="w-4 h-4 text-[#4f8ef7] shrink-0" strokeWidth={3} />
-                  <span>Asistent personal 24/7</span>
-                </div>
-              </div>
-            </div>
-
-            <Link href="/register" className="w-full py-4 mt-8 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white text-sm font-bold text-center transition-all block">
-              Zgjidh Planin Team
-            </Link>
-          </div>
+            );
+          })()}
         </div>
       </div>
     </section>
@@ -1993,9 +2022,9 @@ export default function Home() {
             name: b.name,
             address: b.address || b.city || "Kosovë",
             city: b.city || "Prishtinë",
-            rating: Number(b.rating) || 5.0,
-            reviewCount: Number(b.total_reviews) || 12,
-            imageUrl: b.avatar || b.cover_image || "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800&q=80",
+            rating: b.rating ? Number(b.rating) : 0.0,
+            reviewCount: Number(b.total_reviews) || 0,
+            imageUrl: b.image_card || b.card_image || (Array.isArray(b.portfolio_urls) && b.portfolio_urls.find((p: any) => typeof p === 'object' && p !== null && p.category === 'Kartela')?.url) || b.image_url || b.cover_image || b.image || b.avatar || b.imageUrl || (Array.isArray(b.photos) && b.photos[0] ? b.photos[0] : null) || (Array.isArray(b.portfolio_urls) && b.portfolio_urls[0] ? (typeof b.portfolio_urls[0] === 'string' ? b.portfolio_urls[0] : b.portfolio_urls[0].url) : null) || "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800&q=80",
             phone: b.phone || "+383 44 123 456",
             openTime: "09:00",
             closeTime: "20:00",

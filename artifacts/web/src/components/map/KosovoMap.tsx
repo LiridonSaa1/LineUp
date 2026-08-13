@@ -19,16 +19,39 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-// Kosovo city centres — used as fallback when shop has no lat/lng
 const CITY_COORDS: Record<string, [number, number]> = {
-  Prishtina:  [42.6629, 21.1655],
-  Prizren:    [42.2139, 20.7397],
-  Peja:       [42.6597, 20.2880],
-  Gjakova:    [42.3803, 20.4308],
-  Mitrovica:  [42.8914, 20.8660],
-  Ferizaj:    [42.3703, 21.1553],
-  Gjilan:     [42.4635, 21.4694],
+  prishtin:  [42.6629, 21.1655],
+  prizren:    [42.2139, 20.7397],
+  pej:       [42.6597, 20.2880],
+  gjakov:    [42.3803, 20.4308],
+  mitrovic:  [42.8914, 20.8660],
+  ferizaj:    [42.3703, 21.1553],
+  gjilan:     [42.4635, 21.4694],
+  fushe:      [42.6340, 21.0963],
+  vushtrr:    [42.8231, 20.9675],
+  podujev:    [42.9114, 21.1903],
+  rahovec:    [42.3994, 20.6553],
+  skenderaj:  [42.7478, 20.7878],
+  lipjan:     [42.5217, 21.1258],
+  suharek:    [42.3581, 20.8250],
+  therand:    [42.3581, 20.8250],
+  decan:      [42.5353, 20.2878],
+  istog:      [42.7808, 20.4875],
+  klin:       [42.6225, 20.5786],
 };
+
+function normalizeCityKey(name: string) {
+  if (!name) return "";
+  return name.toLowerCase().trim().replace(/ë/g, "e").replace(/ç/g, "c");
+}
+
+function getCoordsForCityName(cityName: string): [number, number] {
+  const norm = normalizeCityKey(cityName);
+  for (const [k, v] of Object.entries(CITY_COORDS)) {
+    if (norm.includes(k) || k.includes(norm)) return v;
+  }
+  return CITY_COORDS["prishtin"];
+}
 
 // Kosovo bounding box centre & default zoom
 const KOSOVO_CENTER: [number, number] = [42.6026, 20.9020];
@@ -106,8 +129,12 @@ export default function KosovoMap({
       .map((s) => {
         const lat = s.latitude != null ? Number(s.latitude) : null;
         const lng = s.longitude != null ? Number(s.longitude) : null;
-        const coords: [number, number] =
-          lat && lng ? [lat, lng] : (CITY_COORDS[s.city] ?? KOSOVO_CENTER);
+        const normCity = normalizeCityKey(s.city);
+        const isDefaultPrishtina = lat && lng && Math.abs(lat - 42.6629) < 0.001 && Math.abs(lng - 21.1655) < 0.001;
+
+        const coords: [number, number] = (lat && lng && (!isDefaultPrishtina || normCity.includes("prishtin")))
+          ? [lat, lng]
+          : getCoordsForCityName(s.city);
         return { shop: s, coords };
       });
   }, [shops, selectedCity, searchQuery]);

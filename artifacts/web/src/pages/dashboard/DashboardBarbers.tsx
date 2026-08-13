@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useListBarbers } from "@workspace/api-client-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useOwnerShop } from "@/hooks/use-owner-shop";
+import { useShopPlan } from "@/hooks/use-shop-plan";
+import { supabase } from "@/lib/supabase";
 import { Lock, Mail, Scissors, Trash2, UserPlus, Users } from "lucide-react";
 
 async function authedJson(path: string, options: RequestInit = {}) {
@@ -40,22 +43,32 @@ async function authedJson(path: string, options: RequestInit = {}) {
 
 export default function DashboardBarbers() {
   const { data: ownerShop, isLoading: shopLoading } = useOwnerShop();
+  const { data: planDetails, isLoading: planLoading } = useShopPlan();
   const shopId = ownerShop?.id ?? 0;
-  const rawPlan = (ownerShop as any)?.plan || (ownerShop as any)?.subscription_plan || (ownerShop as any)?.subscriptionPlan || "";
-  const rawMax = (ownerShop as any)?.maxBarbers || (ownerShop as any)?.max_employees;
-  const maxBarbers = rawMax !== undefined && rawMax !== null
-    ? Number(rawMax)
-    : rawPlan.toLowerCase().includes("solo")
-      ? 1
-      : rawPlan.toLowerCase().includes("duo")
-        ? 2
-        : 2;
+
+  const maxBarbers = planDetails?.maxBarbers || 1;
+  const rawPlan = planDetails?.label || "Solo";
 
   const { toast } = useToast();
-  const { data: barbersRes, isLoading, refetch } = useListBarbers(shopId, {
+  const { data: barbersRes, isLoading: barbersLoading, refetch } = useListBarbers(shopId, {
     query: { enabled: !!ownerShop } as any,
   });
-  const barbers = Array.isArray(barbersRes) ? barbersRes : [];
+
+  const { data: supaBarbers, isLoading: supaLoading } = useQuery({
+    queryKey: ["supa-dashboard-barbers", shopId],
+    queryFn: async () => {
+      try {
+        const { data } = await supabase.from('barbers').select('*').eq('shop_id', shopId);
+        if (data && data.length > 0) return data;
+      } catch (e) {}
+      return [];
+    },
+    enabled: !!shopId,
+  });
+
+  const rawApiBarbers = Array.isArray(barbersRes) ? barbersRes : [];
+  const barbers = rawApiBarbers.length > 0 ? rawApiBarbers : (supaBarbers || []);
+  const isLoading = barbersLoading || supaLoading || planLoading;
   const [isCreating, setIsCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
@@ -92,19 +105,33 @@ export default function DashboardBarbers() {
     }
     if (!canSubmit) return;
     setIsCreating(true);
+    const fullName = `${firstName.trim()} ${lastName.trim()}`;
     try {
-      await authedJson(`/api/barbershops/${shopId}/barbers`, {
-        method: "POST",
-        body: JSON.stringify({
-          firstName: firstName.trim(),
-          lastName: lastName.trim(),
-          name: `${firstName.trim()} ${lastName.trim()}`,
+      try {
+        await authedJson(`/api/barbershops/${shopId}/barbers`, {
+          method: "POST",
+          body: JSON.stringify({
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            name: fullName,
+            email: email.trim(),
+            password,
+            specialties: specialties.trim() || undefined,
+          }),
+        });
+      } catch (apiErr) {
+        // Direct Supabase fallback (matching RN AddStaffModal)
+        const { error } = await supabase.from("barbers").insert({
+          shop_id: shopId,
+          name: fullName,
+          title: specialties.trim() || "Berber",
           email: email.trim(),
-          password,
-          specialties: specialties.trim() || undefined,
-        }),
-      });
-      toast({ title: "Barberi u krijua", description: "U shtua si user dhe ne ekipin e dyqanit." });
+          is_active: true
+        });
+        if (error) throw error;
+      }
+
+      toast({ title: "Barberi u krijua me sukses!", description: "U shtua në ekipin e dyqanit." });
       setIsOpen(false);
       resetForm();
       refetch();
@@ -112,7 +139,7 @@ export default function DashboardBarbers() {
       toast({
         variant: "destructive",
         title: "Nuk u krijua barber-i",
-        description: error?.message ?? "Provoni perseri.",
+        description: error?.message ?? "Provoni përsëri.",
       });
     } finally {
       setIsCreating(false);
@@ -120,11 +147,15 @@ export default function DashboardBarbers() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("A deshironi ta largoni kete barber? User-i i lidhur do te fshihet gjithashtu.")) return;
+    if (!confirm("A dëshironi ta largoni këtë berber? User-i i lidhur do të fshihet gjithashtu.")) return;
     setDeletingId(id);
     try {
-      await authedJson(`/api/barbershops/${shopId}/barbers/${id}`, { method: "DELETE" });
-      toast({ title: "Barberi u largua" });
+      try {
+        await authedJson(`/api/barbershops/${shopId}/barbers/${id}`, { method: "DELETE" });
+      } catch (apiErr) {
+        await supabase.from("barbers").delete().eq("id", id);
+      }
+      toast({ title: "Barberi u largua me sukses!" });
       refetch();
     } catch (error: any) {
       toast({
@@ -172,9 +203,9 @@ export default function DashboardBarbers() {
             <div className="absolute -right-20 -top-20 h-52 w-52 rounded-full bg-primary/25 blur-3xl" />
             <div className="relative">
               <p className="text-xs font-black uppercase tracking-[0.22em] text-primary">Ekipi</p>
-              <h2 className="mt-3 text-3xl font-black tracking-tight">Menaxho barberet</h2>
+              <h2 className="mt-3 text-3xl font-black tracking-tight">Stafi dhe Ekipi</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-white/65">
-                Cdo barber krijohet si user per login dhe ruhet edhe ne tabelen e barber-eve per rezervime.
+                Menaxhoni berberët e dyqanit tuaj. Çdo anëtar i stafit mund të ketë llogarinë e tij për të hyrë në panelin e berberit.
               </p>
             </div>
           </CardContent>
@@ -212,8 +243,8 @@ export default function DashboardBarbers() {
 
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h3 className="text-xl font-black">Barberet e dyqanit</h3>
-          <p className="text-sm text-muted-foreground">Keta usera mund te perdorin panelin e barber-it.</p>
+          <h3 className="text-xl font-black">Stafi i dyqanit</h3>
+          <p className="text-sm text-muted-foreground">Anëtarët e ekipit që mund të pranojnë rezervime.</p>
         </div>
 
         <Dialog open={isOpen} onOpenChange={setIsOpen}>

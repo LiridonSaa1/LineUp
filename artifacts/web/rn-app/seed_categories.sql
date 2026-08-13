@@ -1,103 +1,131 @@
--- 1. Krijo tabelën e kategorive kryesore (Categories)
-CREATE TABLE IF NOT EXISTS public.categories (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name TEXT NOT NULL,
-    icon TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
-);
+-- TOTAL CATEGORY & SUBCATEGORY SEED (CONSOLIDATED)
+-- This script matches the exact list provided by the user.
+-- FIXED: Uses valid hexadecimal UUIDs (a-f, 0-9).
 
--- 2. Krijo tabelën e nënkategorive (Subcategories)
-CREATE TABLE IF NOT EXISTS public.subcategories (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    category_id UUID REFERENCES public.categories(id) ON DELETE CASCADE,
-    name TEXT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
-);
+-- 1. Setup Table Schema
+ALTER TABLE public.categories ADD COLUMN IF NOT EXISTS target_audience TEXT DEFAULT 'both';
 
--- 3. Ndrysho tabelën e barbershops për të mbështetur nënkategoritë
-ALTER TABLE public.barbershops
-ADD COLUMN IF NOT EXISTS subcategories TEXT[] DEFAULT '{}';
-
--- 4. Fshij të dhënat e vjetra
+-- 2. Clear existing to avoid duplicates
 TRUNCATE TABLE public.subcategories CASCADE;
-TRUNCATE TABLE public.categories CASCADE;
+DELETE FROM public.categories;
 
--- 5. Fut Kategoritë dhe Nënkategoritë në SHQIP
+-- 3. Insert Categories
+INSERT INTO public.categories (id, name, icon, target_audience) VALUES
+('c1000000-0000-0000-0000-000000000001', 'Flokët & Trajtimet', '✂️', 'both'),
+('c1000000-0000-0000-0000-000000000002', 'Ngjyrosja e Flokëve', '🎨', 'both'),
+('c1000000-0000-0000-0000-000000000003', 'Mjekra & Rruajtja', '🧔', 'both'),
+('c1000000-0000-0000-0000-000000000004', 'Vetulla & Qerpikë', '👁️', 'both'),
+('c1000000-0000-0000-0000-000000000005', 'Thonjtë', '💅', 'both'),
+('c1000000-0000-0000-0000-000000000006', 'Makeup', '💄', 'both'),
+('c1000000-0000-0000-0000-000000000007', 'Fytyra & Kujdesi i Lëkurës', '🧖', 'both'),
+('c1000000-0000-0000-0000-000000000008', 'Depilim & Trup', '🌸', 'both');
 
--- Flokë & Stilim
-WITH cat_hair AS (
-    INSERT INTO public.categories (name, icon) VALUES ('Flokë & Stilim', '💇') RETURNING id
-)
-INSERT INTO public.subcategories (category_id, name)
-SELECT id, unnest(ARRAY['Prerje Flokësh', 'Stilim Flokësh', 'Larje Flokësh', 'Tharje / Fenixh', 'Ngjyrosje Flokësh', 'Fije & Balayage', 'Trajtim Flokësh', 'Trajtim me Keratinë', 'Zgjatime Flokësh', 'Drejtim Flokësh', 'Ondulim / Perm'])
-FROM cat_hair;
+-- 4. Insert Subcategories
+INSERT INTO public.subcategories (id, category_id, name) VALUES
+-- 1. Flokët & Trajtimet
+('e1000000-0000-0000-0000-000000000001', 'c1000000-0000-0000-0000-000000000001', 'Prerje flokësh'),
+('e1000000-0000-0000-0000-000000000002', 'c1000000-0000-0000-0000-000000000001', 'Skin Fade'),
+('e1000000-0000-0000-0000-000000000003', 'c1000000-0000-0000-0000-000000000001', 'Buzz Cut'),
+('e1000000-0000-0000-0000-000000000004', 'c1000000-0000-0000-0000-000000000001', 'Prerje për fëmijë'),
+('e1000000-0000-0000-0000-000000000005', 'c1000000-0000-0000-0000-000000000001', 'Prerje majash'),
+('e1000000-0000-0000-0000-000000000006', 'c1000000-0000-0000-0000-000000000001', 'Larje flokësh'),
+('e1000000-0000-0000-0000-000000000007', 'c1000000-0000-0000-0000-000000000001', 'Blow Dry'),
+('e1000000-0000-0000-0000-000000000008', 'c1000000-0000-0000-0000-000000000001', 'Stilim flokësh'),
+('e1000000-0000-0000-0000-000000000009', 'c1000000-0000-0000-0000-000000000001', 'Drejtim flokësh'),
+('e1000000-0000-0000-0000-000000000010', 'c1000000-0000-0000-0000-000000000001', 'Kaçurrela'),
+('e1000000-0000-0000-0000-000000000011', 'c1000000-0000-0000-0000-000000000001', 'Keratin Treatment'),
+('e1000000-0000-0000-0000-000000000012', 'c1000000-0000-0000-0000-000000000001', 'Hair Botox'),
+('e1000000-0000-0000-0000-000000000013', 'c1000000-0000-0000-0000-000000000001', 'Hair Treatment'),
+('e1000000-0000-0000-0000-000000000014', 'c1000000-0000-0000-0000-000000000001', 'Hair Mask'),
+('e1000000-0000-0000-0000-000000000015', 'c1000000-0000-0000-0000-000000000001', 'Protein Treatment'),
+('e1000000-0000-0000-0000-000000000016', 'c1000000-0000-0000-0000-000000000001', 'Deep Conditioning'),
+('e1000000-0000-0000-0000-000000000017', 'c1000000-0000-0000-0000-000000000001', 'Scalp Treatment'),
+('e1000000-0000-0000-0000-000000000018', 'c1000000-0000-0000-0000-000000000001', 'Hair Spa'),
+('e1000000-0000-0000-0000-000000000019', 'c1000000-0000-0000-0000-000000000001', 'Hair Extensions'),
+('e1000000-0000-0000-0000-000000000020', 'c1000000-0000-0000-0000-000000000001', 'Extension Refill'),
+('e1000000-0000-0000-0000-000000000021', 'c1000000-0000-0000-0000-000000000001', 'Extension Removal'),
 
--- Mjekër & Estetikë
-WITH cat_beard AS (
-    INSERT INTO public.categories (name, icon) VALUES ('Mjekër & Estetikë', '🧔') RETURNING id
-)
-INSERT INTO public.subcategories (category_id, name)
-SELECT id, unnest(ARRAY['Shkurtim Mjekrre', 'Formësim Mjekrre', 'Rrojë me Peshqir të Nxehtë', 'Shkurtim Mustaqesh', 'Estetikë Fytyre'])
-FROM cat_beard;
+-- 2. Ngjyrosja e Flokëve
+('e1000000-0000-0000-0000-000000000022', 'c1000000-0000-0000-0000-000000000002', 'Ngjyrosje e plotë'),
+('e1000000-0000-0000-0000-000000000023', 'c1000000-0000-0000-0000-000000000002', 'Ngjyrosje e rrënjëve'),
+('e1000000-0000-0000-0000-000000000024', 'c1000000-0000-0000-0000-000000000002', 'Mbulim i thinjave'),
+('e1000000-0000-0000-0000-000000000025', 'c1000000-0000-0000-0000-000000000002', 'Highlights'),
+('e1000000-0000-0000-0000-000000000026', 'c1000000-0000-0000-0000-000000000002', 'Balayage'),
+('e1000000-0000-0000-0000-000000000027', 'c1000000-0000-0000-0000-000000000002', 'Ombre'),
+('e1000000-0000-0000-0000-000000000028', 'c1000000-0000-0000-0000-000000000002', 'Toner'),
+('e1000000-0000-0000-0000-000000000029', 'c1000000-0000-0000-0000-000000000002', 'Hair Gloss'),
+('e1000000-0000-0000-0000-000000000030', 'c1000000-0000-0000-0000-000000000002', 'Zbardhim flokësh'),
+('e1000000-0000-0000-0000-000000000031', 'c1000000-0000-0000-0000-000000000002', 'Korrigjim ngjyre'),
+('e1000000-0000-0000-0000-000000000032', 'c1000000-0000-0000-0000-000000000002', 'Ngjyrosje mjekre'),
 
--- Thonjtë
-WITH cat_nails AS (
-    INSERT INTO public.categories (name, icon) VALUES ('Thonjtë', '💅') RETURNING id
-)
-INSERT INTO public.subcategories (category_id, name)
-SELECT id, unnest(ARRAY['Manikyr', 'Pedikyr', 'Thonj me Xhel', 'Thonj Akrilik', 'Art në Thonj', 'Riparim Thoi'])
-FROM cat_nails;
+-- 3. Mjekra & Rruajtja
+('e1000000-0000-0000-0000-000000000033', 'c1000000-0000-0000-0000-000000000003', 'Prerje mjekre'),
+('e1000000-0000-0000-0000-000000000034', 'c1000000-0000-0000-0000-000000000003', 'Formësim mjekre'),
+('e1000000-0000-0000-0000-000000000035', 'c1000000-0000-0000-0000-000000000003', 'Rruajtje'),
+('e1000000-0000-0000-0000-000000000036', 'c1000000-0000-0000-0000-000000000003', 'Rruajtje me brisk'),
+('e1000000-0000-0000-0000-000000000037', 'c1000000-0000-0000-0000-000000000003', 'Hot Towel Shave'),
+('e1000000-0000-0000-0000-000000000038', 'c1000000-0000-0000-0000-000000000003', 'Rruajtje e kokës'),
+('e1000000-0000-0000-0000-000000000039', 'c1000000-0000-0000-0000-000000000003', 'Kujdes për mjekrën'),
 
--- Grim & Bukuri
-WITH cat_makeup AS (
-    INSERT INTO public.categories (name, icon) VALUES ('Grim & Bukuri', '💄') RETURNING id
-)
-INSERT INTO public.subcategories (category_id, name)
-SELECT id, unnest(ARRAY['Grim', 'Grim për Nuse', 'Formësim Vetullash', 'Ngjyrosje Vetullash', 'Zgjatime Qerpikësh', 'Lash Lift', 'Laminim Vetullash'])
-FROM cat_makeup;
+-- 4. Vetulla & Qerpikë
+('e1000000-0000-0000-0000-000000000040', 'c1000000-0000-0000-0000-000000000004', 'Formësim vetullash'),
+('e1000000-0000-0000-0000-000000000041', 'c1000000-0000-0000-0000-000000000004', 'Ngjyrosje vetullash'),
+('e1000000-0000-0000-0000-000000000042', 'c1000000-0000-0000-0000-000000000004', 'Laminim vetullash'),
+('e1000000-0000-0000-0000-000000000043', 'c1000000-0000-0000-0000-000000000004', 'Lash Lift'),
+('e1000000-0000-0000-0000-000000000044', 'c1000000-0000-0000-0000-000000000004', 'Ngjyrosje qerpikësh'),
+('e1000000-0000-0000-0000-000000000045', 'c1000000-0000-0000-0000-000000000004', 'Classic Lash Extensions'),
+('e1000000-0000-0000-0000-000000000046', 'c1000000-0000-0000-0000-000000000004', 'Volume Lash Extensions'),
+('e1000000-0000-0000-0000-000000000047', 'c1000000-0000-0000-0000-000000000004', 'Lash Refill'),
+('e1000000-0000-0000-0000-000000000048', 'c1000000-0000-0000-0000-000000000004', 'Heqje qerpikësh'),
 
--- Kujdesi i Lëkurës
-WITH cat_skin AS (
-    INSERT INTO public.categories (name, icon) VALUES ('Kujdesi i Lëkurës', '🧖') RETURNING id
-)
-INSERT INTO public.subcategories (category_id, name)
-SELECT id, unnest(ARRAY['Trajtim Fytyre', 'Pastrim i Thellë', 'Trajtim Hidratues', 'Trajtim Anti-Rrudhë', 'Trajtim Kundër Akneve', 'Konsultë për Lëkurën'])
-FROM cat_skin;
+-- 5. Thonjtë
+('e1000000-0000-0000-0000-000000000049', 'c1000000-0000-0000-0000-000000000005', 'Manikyr'),
+('e1000000-0000-0000-0000-000000000050', 'c1000000-0000-0000-0000-000000000005', 'Manikyr me Gel'),
+('e1000000-0000-0000-0000-000000000051', 'c1000000-0000-0000-0000-000000000005', 'French Manicure'),
+('e1000000-0000-0000-0000-000000000052', 'c1000000-0000-0000-0000-000000000005', 'Acrylic Nails'),
+('e1000000-0000-0000-0000-000000000053', 'c1000000-0000-0000-0000-000000000005', 'Gel Extensions'),
+('e1000000-0000-0000-0000-000000000054', 'c1000000-0000-0000-0000-000000000005', 'Nail Refill'),
+('e1000000-0000-0000-0000-000000000055', 'c1000000-0000-0000-0000-000000000005', 'Nail Art'),
+('e1000000-0000-0000-0000-000000000056', 'c1000000-0000-0000-0000-000000000005', 'Heqje Gel/Acrylic'),
+('e1000000-0000-0000-0000-000000000057', 'c1000000-0000-0000-0000-000000000005', 'Pedikyr'),
+('e1000000-0000-0000-0000-000000000058', 'c1000000-0000-0000-0000-000000000005', 'Pedikyr me Gel'),
+('e1000000-0000-0000-0000-000000000059', 'c1000000-0000-0000-0000-000000000005', 'Spa Pedikyr'),
 
--- Spa & Relaks
-WITH cat_spa AS (
-    INSERT INTO public.categories (name, icon) VALUES ('Spa & Relaks', '🧴') RETURNING id
-)
-INSERT INTO public.subcategories (category_id, name)
-SELECT id, unnest(ARRAY['Masazh', 'Masazh Koke', 'Masazh Relaksues', 'Scrub Trupi', 'Trajtim Spa'])
-FROM cat_spa;
+-- 6. Makeup
+('e1000000-0000-0000-0000-000000000060', 'c1000000-0000-0000-0000-000000000006', 'Makeup ditor'),
+('e1000000-0000-0000-0000-000000000061', 'c1000000-0000-0000-0000-000000000006', 'Makeup mbrëmjeje'),
+('e1000000-0000-0000-0000-000000000062', 'c1000000-0000-0000-0000-000000000006', 'Makeup për evente'),
+('e1000000-0000-0000-0000-000000000063', 'c1000000-0000-0000-0000-000000000006', 'Makeup nuseje'),
+('e1000000-0000-0000-0000-000000000064', 'c1000000-0000-0000-0000-000000000006', 'Makeup për fotosesion'),
+('e1000000-0000-0000-0000-000000000065', 'c1000000-0000-0000-0000-000000000006', 'Makeup për festa'),
+('e1000000-0000-0000-0000-000000000066', 'c1000000-0000-0000-0000-000000000006', 'Heqje Makeup'),
 
--- Depilim
-WITH cat_removal AS (
-    INSERT INTO public.categories (name, icon) VALUES ('Depilim', '🪒') RETURNING id
-)
-INSERT INTO public.subcategories (category_id, name)
-SELECT id, unnest(ARRAY['Depilim me Dyllë', 'Heqje me Pe', 'Depilim me Sheqer'])
-FROM cat_removal;
+-- 7. Fytyra & Kujdesi i Lëkurës
+('e1000000-0000-0000-0000-000000000067', 'c1000000-0000-0000-0000-000000000007', 'Pastrim fytyre'),
+('e1000000-0000-0000-0000-000000000068', 'c1000000-0000-0000-0000-000000000007', 'Pastrim i thellë'),
+('e1000000-0000-0000-0000-000000000069', 'c1000000-0000-0000-0000-000000000007', 'Facial Treatment'),
+('e1000000-0000-0000-0000-000000000070', 'c1000000-0000-0000-0000-000000000007', 'Hydrating Facial'),
+('e1000000-0000-0000-0000-000000000071', 'c1000000-0000-0000-0000-000000000007', 'Anti-Aging Facial'),
+('e1000000-0000-0000-0000-000000000072', 'c1000000-0000-0000-0000-000000000007', 'Acne Treatment'),
+('e1000000-0000-0000-0000-000000000073', 'c1000000-0000-0000-0000-000000000007', 'Skin Peeling'),
+('e1000000-0000-0000-0000-000000000074', 'c1000000-0000-0000-0000-000000000007', 'Face Scrub'),
+('e1000000-0000-0000-0000-000000000075', 'c1000000-0000-0000-0000-000000000007', 'Face Mask'),
+('e1000000-0000-0000-0000-000000000076', 'c1000000-0000-0000-0000-000000000007', 'Face Massage'),
+('e1000000-0000-0000-0000-000000000077', 'c1000000-0000-0000-0000-000000000007', 'Black Mask'),
+('e1000000-0000-0000-0000-000000000078', 'c1000000-0000-0000-0000-000000000007', 'Kujdes për lëkurën'),
 
--- Raste të Veçanta
-WITH cat_special AS (
-    INSERT INTO public.categories (name, icon) VALUES ('Raste të Veçanta', '👰') RETURNING id
-)
-INSERT INTO public.subcategories (category_id, name)
-SELECT id, unnest(ARRAY['Paketa e Nuses', 'Paketa e Dhëndrit', 'Stilim për Event', 'Stilim për Mbrëmje'])
-FROM cat_special;
-
--- RLS (Row Level Security)
-ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.subcategories ENABLE ROW LEVEL SECURITY;
-
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Allow public read access on categories' AND tablename = 'categories') THEN
-        CREATE POLICY "Allow public read access on categories" ON public.categories FOR SELECT USING (true);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Allow public read access on subcategories' AND tablename = 'subcategories') THEN
-        CREATE POLICY "Allow public read access on subcategories" ON public.subcategories FOR SELECT USING (true);
-    END IF;
-END $$;
+-- 8. Depilim & Trup
+('e1000000-0000-0000-0000-000000000079', 'c1000000-0000-0000-0000-000000000008', 'Depilim fytyre'),
+('e1000000-0000-0000-0000-000000000080', 'c1000000-0000-0000-0000-000000000008', 'Depilim vetullash'),
+('e1000000-0000-0000-0000-000000000081', 'c1000000-0000-0000-0000-000000000008', 'Depilim buzësh'),
+('e1000000-0000-0000-0000-000000000082', 'c1000000-0000-0000-0000-000000000008', 'Depilim krahësh'),
+('e1000000-0000-0000-0000-000000000083', 'c1000000-0000-0000-0000-000000000008', 'Depilim sqetullash'),
+('e1000000-0000-0000-0000-000000000084', 'c1000000-0000-0000-0000-000000000008', 'Depilim këmbësh'),
+('e1000000-0000-0000-0000-000000000085', 'c1000000-0000-0000-0000-000000000008', 'Depilim bikini'),
+('e1000000-0000-0000-0000-000000000086', 'c1000000-0000-0000-0000-000000000008', 'Brazilian Wax'),
+('e1000000-0000-0000-0000-000000000087', 'c1000000-0000-0000-0000-000000000008', 'Depilim i plotë i trupit'),
+('e1000000-0000-0000-0000-000000000088', 'c1000000-0000-0000-0000-000000000008', 'Body Scrub'),
+('e1000000-0000-0000-0000-000000000089', 'c1000000-0000-0000-0000-000000000008', 'Body Treatment'),
+('e1000000-0000-0000-0000-000000000090', 'c1000000-0000-0000-0000-000000000008', 'Masazh relaksues'),
+('e1000000-0000-0000-0000-000000000091', 'c1000000-0000-0000-0000-000000000008', 'Masazh trupi'),
+('e1000000-0000-0000-0000-000000000092', 'c1000000-0000-0000-0000-000000000008', 'Masazh qafë & shpatulla');

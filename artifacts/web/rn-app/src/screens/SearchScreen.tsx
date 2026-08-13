@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, TextInput, ScrollView, Dimensions, FlatList, Keyboard, Modal, Pressable } from 'react-native';
-import { X, Search, MapPin, Calendar, Grid, Scissors, Hand, Eye, Sparkles, User, Smile, Waves, ArrowLeft, ChevronRight, AlertCircle, Check, ChevronLeft, Shield, Zap, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { View, Text, TouchableOpacity, TextInput, ScrollView, Dimensions, FlatList, Keyboard, Modal, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
+import { X, Search, MapPin, Calendar, Grid, Scissors, Hand, Eye, Sparkles, User, Smile, Waves, ArrowLeft, ChevronRight, AlertCircle, Check, ChevronLeft, Shield, Zap, ChevronDown, ChevronUp, Palette } from 'lucide-react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { withTiming } from 'react-native-reanimated';
 import { AddressAutocomplete } from '../components/AddressAutocomplete';
@@ -33,26 +33,39 @@ interface SearchScreenProps {
 }
 
 const CATEGORY_ICONS: Record<string, any> = {
-  'Flokë & Stilim': Scissors,
-  'Mjekër & Estetikë': User,
+  'Flokët & Trajtimet': Scissors,
+  'Ngjyrosja e Flokëve': Palette,
+  'Mjekra & Rruajtja': User,
+  'Vetulla & Qerpikë': Eye,
   'Thonjtë': Hand,
-  'Grim & Bukuri': Smile,
-  'Kujdesi i Lëkurës': Shield,
-  'Spa & Relaks': Waves,
-  'Depilim': Zap,
-  'Raste të Veçanta': Sparkles
+  'Makeup': Smile,
+  'Fytyra & Kujdesi i Lëkurës': Shield,
+  'Depilim & Trup': Zap
 };
 
+const KOSOVO_HOLIDAYS_2026 = [
+  { day: 1, month: 0, name: 'Viti i Ri', icon: '🎆' },
+  { day: 7, month: 0, name: 'Krishtlindjet Ortodokse', icon: '⛪' },
+  { day: 17, month: 1, name: 'Dita e Pavarësisë', icon: '🇽🇰' },
+  { day: 30, month: 2, name: 'Fitër Bajrami*', icon: '🌙' },
+  { day: 5, month: 3, name: 'Pashkët Katolike', icon: '✝️' },
+  { day: 9, month: 3, name: 'Dita e Kushtetutës', icon: '📜' },
+  { day: 12, month: 3, name: 'Pashkët Ortodokse', icon: '☦️' },
+  { day: 1, month: 4, name: 'Dita Ndërkombëtare e Punës', icon: '🛠️' },
+  { day: 9, month: 4, name: 'Dita e Evropës', icon: '🇪🇺' },
+  { day: 6, month: 5, name: 'Kurban Bajrami*', icon: '🐑' },
+  { day: 25, month: 11, name: 'Krishtlindjet Katolike', icon: '🎄' },
+];
+
 const TREATMENTS = [
-  'Haircut & Styling',
-  'Hair Coloring',
-  'Hair Treatment',
-  'Beard & Grooming',
-  'Nails',
+  'Flokët & Trajtimet',
+  'Ngjyrosja e Flokëve',
+  'Mjekra & Rruajtja',
+  'Vetulla & Qerpikë',
+  'Thonjtë',
   'Makeup',
-  'Brows & Lashes',
-  'Skin Care',
-  'Body Care'
+  'Fytyra & Kujdesi i Lëkurës',
+  'Depilim & Trup'
 ];
 
 export const SearchScreen: React.FC<SearchScreenProps> = ({
@@ -119,10 +132,10 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
 
   const loadSearchOptions = async () => {
     try {
-      const { data: shopsData } = await supabase.from('barbershops').select('*').limit(30);
+      const { data: shopsData } = await supabase.from('barbershops').select('*').eq('status', 'active').limit(30);
       if (shopsData) setDbShops(shopsData);
 
-      const { data: barbersData } = await supabase.from('barbers').select('*').limit(30);
+      const { data: barbersData } = await supabase.from('barbers').select('*').eq('status', 'active').limit(30);
       if (barbersData) setDbBarbers(barbersData);
     } catch (e) {
       console.warn("Error loading database search options:", e);
@@ -255,15 +268,24 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
     for (let d = 1; d <= daysInMonth; d++) {
       const isToday = year === 2026 && month === 6 && d === 22;
       const isSelected = selectedCalendarDay === d;
+      const holiday = KOSOVO_HOLIDAYS_2026.find(h => h.day === d && h.month === month);
+
       days.push(
         <TouchableOpacity
           key={d}
-          onPress={() => handleDateSelect(d)}
-          className={`w-[14%] h-10 items-center justify-center mb-2 rounded-full ${isSelected ? 'bg-[#6366f1]' : isToday ? 'bg-[#6366f1]/10 border border-[#6366f1]/30' : ''}`}
+          onPress={() => !holiday && handleDateSelect(d)}
+          disabled={!!holiday}
+          className={`w-[14%] h-12 items-center justify-center mb-2 rounded-2xl ${isSelected ? 'bg-[#6366f1]' : isToday ? 'bg-[#6366f1]/10 border border-[#6366f1]/30' : holiday ? 'bg-slate-50' : ''}`}
+          style={{ opacity: holiday ? 0.5 : 1 }}
         >
-          <Text className={`font-bold ${isSelected ? 'text-white' : isToday ? 'text-[#6366f1]' : 'text-[#161719]'}`}>
-            {d}
-          </Text>
+          <View className="items-center">
+            <Text className={`font-bold ${isSelected ? 'text-white' : isToday ? 'text-[#6366f1]' : holiday ? 'text-slate-400' : 'text-[#161719]'} ${holiday ? 'text-[13px]' : 'text-base'}`}>
+              {d}
+            </Text>
+            {holiday && (
+              <Text className="text-[10px] mt-0.5">{holiday.icon}</Text>
+            )}
+          </View>
         </TouchableOpacity>
       );
     }
@@ -282,7 +304,12 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
   };
 
   return (
-    <View className="flex-1 bg-white">
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      className="flex-1"
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
+      <View className="flex-1 bg-white">
       {/* --- MAIN PANEL --- */}
       <View className="flex-1">
         <View className="w-12 h-1.5 bg-gray-300 rounded-full self-center mt-3 mb-2" />
@@ -807,18 +834,18 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
                     );
                   }}
                   style={({ pressed }) => ({
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    paddingVertical: 16,
-                    borderBottomWidth: 1,
-                    borderBottomColor: isSelected ? 'rgba(52, 115, 239, 0.3)' : '#F1F5F9',
                     opacity: pressed ? 0.7 : 1
                   })}
                 >
-                  <View className={`w-6 h-6 rounded-md border items-center justify-center mr-3 ${isSelected ? 'bg-[#3473ef] border-[#3473ef]' : 'bg-white border-slate-300'}`}>
-                    {isSelected && <Check size={14} color="white" strokeWidth={3} />}
+                  <View
+                    className="flex-row items-center py-4 border-b"
+                    style={{ borderBottomColor: isSelected ? 'rgba(52, 115, 239, 0.3)' : '#F1F5F9' }}
+                  >
+                    <View className={`w-6 h-6 rounded-md border items-center justify-center mr-3 ${isSelected ? 'bg-[#3473ef] border-[#3473ef]' : 'bg-white border-slate-300'}`}>
+                      {isSelected && <Check size={14} color="white" strokeWidth={3} />}
+                    </View>
+                    <Text className={`text-base flex-1 ${isSelected ? 'font-black text-[#3473ef]' : 'font-bold text-[#161719]'}`}>{sub.name}</Text>
                   </View>
-                  <Text className={`text-base flex-1 ${isSelected ? 'font-black text-[#3473ef]' : 'font-bold text-[#161719]'}`}>{sub.name}</Text>
                 </Pressable>
               );
             })}
@@ -860,6 +887,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
       </View>
     </Modal>
 
-</View>
+      </View>
+    </KeyboardAvoidingView>
   );
 };

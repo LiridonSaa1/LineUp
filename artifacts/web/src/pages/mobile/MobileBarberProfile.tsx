@@ -138,7 +138,7 @@ export default function MobileBarberProfile({ params }: { params: { id: string }
         </div>
 
         {/* ── Book CTA Button ── */}
-        <Link href={`/book/${barber.shop?.id || 1}`}>
+        <Link href={`/book/${barber.shop?.id || 1}?barberId=${barber.id}`}>
           <motion.button
             whileTap={{ scale: 0.94 }}
             className="w-full py-3.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs shadow-md flex items-center justify-center gap-2 active:scale-96 transition-all"

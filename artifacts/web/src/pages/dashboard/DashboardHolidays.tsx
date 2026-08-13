@@ -102,44 +102,44 @@ export default function DashboardHolidays() {
     <div className="space-y-8">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Pushimet & Ditet Jo-Pune</h1>
-          <p className="text-muted-foreground">Blloko ditet per te gjithe dyqanin ose vetem per nje barber.</p>
+          <h1 className="text-3xl font-black tracking-tight">Orari & Festat</h1>
+          <p className="text-muted-foreground">Bllokoni ditët e pushimit për të gjithë sallonin ose për një berber specifik.</p>
         </div>
-        <Button onClick={() => setShowForm(s => !s)} className="rounded-full gap-2">
+        <Button onClick={() => setShowForm(s => !s)} className="rounded-full gap-2 font-bold">
           <Plus className="w-4 h-4" /> Shto Pushim
         </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="rounded-3xl border-border bg-card">
+        <Card className="rounded-3xl border-border bg-card shadow-sm">
           <CardContent className="flex items-center gap-4 p-5">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
               <Users className="h-6 w-6" />
             </div>
             <div>
-              <p className="text-sm font-bold text-muted-foreground">Total berbere</p>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Total Stafi</p>
               <p className="text-3xl font-black">{barbers.length}</p>
             </div>
           </CardContent>
         </Card>
-        <Card className="rounded-3xl border-border bg-card">
+        <Card className="rounded-3xl border-border bg-card shadow-sm">
           <CardContent className="flex items-center gap-4 p-5">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
               <Building2 className="h-6 w-6" />
             </div>
             <div>
-              <p className="text-sm font-bold text-muted-foreground">Pushime dyqani</p>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Pushime Salloni</p>
               <p className="text-3xl font-black">{shopHolidayCount}</p>
             </div>
           </CardContent>
         </Card>
-        <Card className="rounded-3xl border-border bg-card">
+        <Card className="rounded-3xl border-border bg-card shadow-sm">
           <CardContent className="flex items-center gap-4 p-5">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
               <CalendarDays className="h-6 w-6" />
             </div>
             <div>
-              <p className="text-sm font-bold text-muted-foreground">Pushime barberesh</p>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Pushime Stafi</p>
               <p className="text-3xl font-black">{barberHolidayCount}</p>
             </div>
           </CardContent>
@@ -147,26 +147,26 @@ export default function DashboardHolidays() {
       </div>
 
       {showForm && (
-        <Card className="bg-card border-border">
-          <CardHeader><CardTitle>Pushim / Dite Jo-Pune e Re</CardTitle></CardHeader>
+        <Card className="bg-card border-border rounded-3xl shadow-lg">
+          <CardHeader><CardTitle className="text-xl font-black">Pushim i Ri</CardTitle></CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Data *</label>
-                <Input type="date" required value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
+                <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Data *</label>
+                <Input type="date" required value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className="rounded-xl h-12" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Arsyeja</label>
-                <Input placeholder="p.sh. Feste kombetare" value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value }))} />
+                <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Arsyeja</label>
+                <Input placeholder="p.sh. Festë kombëtare" value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value }))} className="rounded-xl h-12" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Aplikohet per</label>
+                <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Aplikohet për</label>
                 <Select value={form.barberId} onValueChange={value => setForm(f => ({ ...f, barberId: value }))}>
-                  <SelectTrigger className="rounded-xl">
-                    <SelectValue placeholder="Zgjidh dyqanin ose barberin" />
+                  <SelectTrigger className="rounded-xl h-12">
+                    <SelectValue placeholder="Zgjidhni" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="shop">I gjithe dyqani</SelectItem>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="shop">I gjithë salloni</SelectItem>
                     {barbers.map((barber: any) => (
                       <SelectItem key={barber.id} value={String(barber.id)}>
                         {barber.name}
@@ -176,11 +176,11 @@ export default function DashboardHolidays() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Lloji</label>
-                <div className="flex gap-3 pt-2">
-                  {[{ v: true, l: "Dite e plote" }, { v: false, l: "Ore te caktuara" }].map(({ v, l }) => (
+                <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Lloji i pushimit</label>
+                <div className="flex gap-3 pt-1">
+                  {[{ v: true, l: "Ditë e plotë" }, { v: false, l: "Orë të caktuara" }].map(({ v, l }) => (
                     <button key={l} type="button" onClick={() => setForm(f => ({ ...f, isFullDay: v }))}
-                      className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-all ${form.isFullDay === v ? "bg-primary text-white border-primary" : "border-border text-muted-foreground"}`}>
+                      className={`flex-1 h-12 rounded-xl text-xs font-black uppercase tracking-wider border transition-all ${form.isFullDay === v ? "bg-primary text-white border-primary" : "border-border text-muted-foreground bg-secondary/30"}`}>
                       {l}
                     </button>
                   ))}
@@ -189,20 +189,20 @@ export default function DashboardHolidays() {
               {!form.isFullDay && (
                 <>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Ora e Fillimit</label>
-                    <Input type="time" value={form.startTime} onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))} />
+                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Ora e Fillimit</label>
+                    <Input type="time" value={form.startTime} onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))} className="rounded-xl h-12" />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Ora e Mbarimit</label>
-                    <Input type="time" value={form.endTime} onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))} />
+                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Ora e Mbarimit</label>
+                    <Input type="time" value={form.endTime} onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))} className="rounded-xl h-12" />
                   </div>
                 </>
               )}
-              <div className="sm:col-span-2 flex gap-3">
-                <Button type="submit" disabled={createMut.isPending} className="rounded-xl">
-                  {createMut.isPending ? "Duke ruajtur..." : "Ruaj"}
+              <div className="sm:col-span-2 flex gap-3 pt-2">
+                <Button type="submit" disabled={createMut.isPending} className="flex-1 rounded-xl h-12 font-black">
+                  {createMut.isPending ? "Duke ruajtur..." : "Ruaj Pushimin"}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => setShowForm(false)} className="rounded-xl">Anulo</Button>
+                <Button type="button" variant="outline" onClick={() => setShowForm(false)} className="rounded-xl h-12 font-bold px-8">Anulo</Button>
               </div>
             </form>
           </CardContent>
@@ -210,13 +210,16 @@ export default function DashboardHolidays() {
       )}
 
       {shopLoading || isLoading || barbersLoading ? (
-        <div className="text-muted-foreground text-sm">Duke ngarkuar...</div>
+        <div className="grid gap-4">
+           <Skeleton className="h-20 rounded-2xl" />
+           <Skeleton className="h-20 rounded-2xl" />
+        </div>
       ) : Object.keys(grouped).length === 0 ? (
-        <Card className="bg-card border-border">
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <CalendarOff className="w-12 h-12 text-muted-foreground/30 mb-4" />
-            <p className="font-semibold">Nuk ka pushime te regjistruara</p>
-            <p className="text-sm text-muted-foreground mt-1">Shto ditet kur dyqani ose nje barber nuk punon.</p>
+        <Card className="bg-card border-border rounded-3xl">
+          <CardContent className="flex flex-col items-center justify-center py-20">
+            <CalendarOff className="w-16 h-16 text-muted-foreground/20 mb-4" />
+            <p className="font-black text-xl text-muted-foreground">Nuk ka pushime të regjistruara</p>
+            <p className="text-sm text-muted-foreground mt-1 font-medium">Shto ditët kur salloni ose një berber nuk punon.</p>
           </CardContent>
         </Card>
       ) : (
@@ -224,34 +227,34 @@ export default function DashboardHolidays() {
           .sort(([a], [b]) => a.localeCompare(b))
           .map(([month, items]: [string, any]) => (
             <div key={month}>
-              <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-3">{month}</h3>
-              <div className="space-y-2">
+              <h3 className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-4 ml-1">{month}</h3>
+              <div className="space-y-3">
                 {items.map((h: any) => (
-                  <Card key={h.id} className="bg-card border-border rounded-2xl">
+                  <Card key={h.id} className="bg-card border-border rounded-[24px] shadow-sm hover:shadow-md transition-shadow">
                     <CardContent className="py-4 flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                          <CalendarOff className="w-5 h-5 text-primary" />
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-secondary/80 flex items-center justify-center shrink-0">
+                          <CalendarOff className="w-6 h-6 text-slate-400" />
                         </div>
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
-                            <p className="font-semibold text-sm">{h.date}</p>
-                            <Badge variant="outline" className="text-xs">
-                              {h.isFullDay ? "Dite e plote" : `${h.startTime} - ${h.endTime}`}
+                            <p className="font-black text-base text-foreground">{h.date}</p>
+                            <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest border-primary/20 text-primary bg-primary/5">
+                              {h.isFullDay ? "Ditë e plotë" : `${h.startTime} - ${h.endTime}`}
                             </Badge>
                             {h.barberId ? (
-                              <Badge variant="secondary" className="text-xs gap-1">
+                              <Badge variant="secondary" className="text-[10px] font-black uppercase tracking-widest gap-1 bg-indigo-50 text-indigo-600 border-indigo-100">
                                 <User className="w-3 h-3" />
                                 {barberById.get(Number(h.barberId))?.name ?? `Barber #${h.barberId}`}
                               </Badge>
                             ) : (
-                              <Badge variant="secondary" className="text-xs gap-1"><Building2 className="w-3 h-3" />Dyqani</Badge>
+                              <Badge variant="secondary" className="text-[10px] font-black uppercase tracking-widest gap-1 bg-amber-50 text-amber-600 border-amber-100"><Building2 className="w-3 h-3" />Salloni</Badge>
                             )}
                           </div>
-                          {h.reason && <p className="text-xs text-muted-foreground mt-0.5">{h.reason}</p>}
+                          {h.reason && <p className="text-xs text-muted-foreground mt-1 font-medium italic">"{h.reason}"</p>}
                         </div>
                       </div>
-                      <Button size="icon" variant="ghost" className="text-destructive hover:text-destructive shrink-0"
+                      <Button size="icon" variant="ghost" className="text-destructive hover:bg-destructive/10 shrink-0 h-10 w-10 rounded-xl"
                         onClick={() => deleteMut.mutate(h.id)}>
                         <Trash2 className="w-4 h-4" />
                       </Button>

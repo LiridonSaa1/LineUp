@@ -1,8 +1,8 @@
-// Configuration and API client for Paddle Billing (v2)
+import { supabase } from "./supabase";
+
+// Configuration for Paddle Billing (v2)
 export const PADDLE_CONFIG = {
-  API_KEY: process.env.EXPO_PUBLIC_PADDLE_API_KEY || '',
   CLIENT_TOKEN: process.env.EXPO_PUBLIC_PADDLE_CLIENT_TOKEN || '',
-  WEBHOOK_SECRET: process.env.EXPO_PUBLIC_PADDLE_WEBHOOK_SECRET || '',
   ENVIRONMENT: (process.env.EXPO_PUBLIC_PADDLE_ENV as 'sandbox' | 'live') || 'sandbox',
   PRICES: {
     solo: 'pri_01ky8dvrqajpvkqtcde7ge9fgb',
@@ -20,79 +20,36 @@ export interface CreateTransactionParams {
   email: string;
   planId: 'solo' | 'duo' | 'team';
   amount: number;
+  userId: string;
   customerName?: string;
 }
 
-export interface PaddleTransaction {
-  id: string;
-  status: string;
-  created_at: string;
-  customer_id: string;
-  details: {
-    totals: {
-      total: string;
-      currency_code: string;
-    }
-  };
-  custom_data?: any;
-}
-
 /**
- * Executes a real transaction request to Paddle Sandbox API
+ * Creates a transaction via Supabase Edge Function to keep API Key secure
  */
-export async function createPaddleTransaction({ email, planId, amount, customerName }: CreateTransactionParams) {
-  const isSandbox = PADDLE_CONFIG.ENVIRONMENT === 'sandbox';
-  const baseUrl = isSandbox ? 'https://sandbox-api.paddle.com' : 'https://api.paddle.com';
-  
-  console.log(`[Paddle] Creating transaction for ${email} (${planId} - ${amount}€)...`);
-
-  // Për planin Team përdorim inline price që të mbështesim kalkulimin tonë (+5€)
-  // Për Solo/Duo përdorim direkt Price ID
-  const item = planId === 'team' ? {
-    quantity: 1,
-    price: {
-      description: `Abonimi TEAM (${amount}€/muaj)`,
-      name: `Plani TEAM`,
-      unit_price: {
-        amount: String(Math.round(amount * 100)),
-        currency_code: 'EUR'
-      },
-      product_id: PADDLE_CONFIG.PRODUCTS.team,
-      tax_mode: 'internal' // Kjo e bën çmimin fiks (përfshirë taksën)
-    }
-  } : {
-    quantity: 1,
-    price_id: PADDLE_CONFIG.PRICES[planId]
-  };
+export async function createPaddleTransaction({ email, planId, amount, userId, customerName }: CreateTransactionParams) {
+  console.log(`[Paddle] Requesting transaction for ${email} (${planId})...`);
 
   try {
-    const response = await fetch(`${baseUrl}/transactions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${PADDLE_CONFIG.API_KEY}`,
-      },
-      body: JSON.stringify({
-        items: [item],
-        customer_email: email,
-        custom_data: {
-          plan: planId,
-          source: 'Mobile App',
-          final_amount: amount
-        }
-      })
+    const { data, error } = await supabase.functions.invoke('create-paddle-transaction', {
+      body: {
+        email,
+        planId,
+        amount,
+        userId,
+        customerName,
+        priceId: PADDLE_CONFIG.PRICES[planId]
+      }
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error('[Paddle] API Error:', JSON.stringify(data, null, 2));
-      throw new Error(data.error?.detail || 'Gabim nga Paddle API');
+    if (error) {
+      console.error('[Paddle] Edge Function Error:', error);
+      throw new Error(error.message || 'Gabim gjatë krijimit të transaksionit');
     }
 
     return data;
   } catch (error: any) {
-    console.error('[Paddle] request failed:', error.message);
+    console.error('[Paddle] Request failed:', error.message);
     throw error;
   }
 }

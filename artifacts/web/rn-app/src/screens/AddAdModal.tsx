@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Dimensions, Image, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Dimensions, Image, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { X, Megaphone, MapPin, Camera, Check, ChevronDown, Info, Search, Building2, Calendar, Sparkles, Zap, Award } from 'lucide-react-native';
 import { AddressAutocomplete } from '../components/AddressAutocomplete';
 import { supabase } from '@/config/supabase';
@@ -66,7 +66,7 @@ export const AddAdModal: React.FC<AddAdModalProps> = ({ onClose, onSuccess }) =>
   const [showCityPicker, setShowCityPicker] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<{ address: string; lat: number; lng: number } | null>(null);
   const [selectedPlan, setSelectedPlan] = useState(PLANS[1]);
-  const [adImage, setAdImage] = useState<string | null>("https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=1000&auto=format&fit=crop&q=80");
+  const [adImage, setAdImage] = useState<string | null>(null);
 
   const autocompleteRef = useRef<any>(null);
 
@@ -126,7 +126,12 @@ export const AddAdModal: React.FC<AddAdModalProps> = ({ onClose, onSuccess }) =>
   };
 
   return (
-    <View className="flex-1 bg-white">
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      className="flex-1"
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
+      <View className="flex-1 bg-white">
       {/* Modal Handle */}
       <View className="w-12 h-1.5 bg-gray-200 rounded-full self-center mt-3 mb-2" />
 
@@ -137,7 +142,12 @@ export const AddAdModal: React.FC<AddAdModalProps> = ({ onClose, onSuccess }) =>
         </TouchableOpacity>
       </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ flexGrow: 1 }}
+      >
         <View className="px-6 pt-6">
 
           {/* Business Info Section */}
@@ -205,6 +215,7 @@ export const AddAdModal: React.FC<AddAdModalProps> = ({ onClose, onSuccess }) =>
             label="Lokacioni i Verifikuar"
             placeholder={`Kërko rrugën në ${selectedCity}...`}
             selectedCity={selectedCity}
+            cityCoords={CITY_DATA[selectedCity]}
             containerClassName="mb-6"
             onSelectAddress={(place) => {
               if (place?.latitude && place?.longitude) {
@@ -307,6 +318,7 @@ export const AddAdModal: React.FC<AddAdModalProps> = ({ onClose, onSuccess }) =>
           )}
         </TouchableOpacity>
       </View>
-    </View>
+      </View>
+    </KeyboardAvoidingView>
   );
 };

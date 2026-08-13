@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Store, Users, LogOut } from "lucide-react";
+import { LayoutDashboard, Store, Users, CreditCard, Activity, Megaphone, Calendar, Tag, LogOut } from "lucide-react";
 import { useLogout } from "@workspace/api-client-react";
 import logoImg from "@assets/LINE_(2)_1782421072087.png";
 
@@ -31,7 +31,12 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const navItems = [
     { href: "/admin", label: "Pasqyra", icon: LayoutDashboard },
     { href: "/admin/barbershops", label: "Dyqanet & Aprovimi", icon: Store },
+    { href: "/admin/subscriptions", label: "Abonimet Paddle", icon: CreditCard },
+    { href: "/admin/ads", label: "Reklamat & Ofertat", icon: Megaphone },
+    { href: "/admin/appointments", label: "Takimet Globale", icon: Calendar },
+    { href: "/admin/categories", label: "Kategoritë", icon: Tag },
     { href: "/admin/users", label: "Përdoruesit", icon: Users },
+    { href: "/admin/system", label: "Statusi i Sistemit", icon: Activity },
   ];
 
   return (

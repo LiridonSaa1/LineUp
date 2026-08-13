@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import {
   User, Crown, Award, Star, Scissors, Calendar, Bell, Shield,
-  Settings, LogOut, ChevronRight, Sparkles, Tag, Heart, HelpCircle
+  Settings, LogOut, ChevronRight, Sparkles, Tag, Heart, HelpCircle, CheckCircle2
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,6 +11,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 export default function MobileProfile() {
   const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
+
+  const isStaff = (user?.role as string) === 'employee' || (user?.role as string) === 'staf' || (user?.role as string) === 'staff' || (user?.role as string) === 'barber';
 
   const handleLogout = () => {
     logout();
@@ -31,13 +33,21 @@ export default function MobileProfile() {
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
-              <h1 className="text-base font-extrabold text-slate-900 truncate">{user?.name || "Klient VIP"}</h1>
+              <h1 className="text-base font-extrabold text-slate-900 truncate">
+                {user?.name || (isStaff ? "Staf i Verifikuar" : "Klient VIP")}
+              </h1>
               <Crown className="w-4 h-4 text-amber-500 shrink-0" />
             </div>
-            <p className="text-xs text-slate-500 truncate">{user?.email || "klient@lineup.com"}</p>
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[10px] font-black uppercase tracking-wider mt-1">
-              <Sparkles className="w-2.5 h-2.5 text-amber-500" /> Anëtar Gold Club
-            </span>
+            <p className="text-xs text-slate-500 truncate">{user?.email || "user@lineup.com"}</p>
+            {isStaff ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-black uppercase tracking-wider mt-1">
+                <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" /> Punëtor i verifikuar
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[10px] font-black uppercase tracking-wider mt-1">
+                <Sparkles className="w-2.5 h-2.5 text-amber-500" /> Anëtar Gold Club
+              </span>
+            )}
           </div>
         </div>
 

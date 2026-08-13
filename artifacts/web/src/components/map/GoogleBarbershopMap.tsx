@@ -25,21 +25,50 @@ export interface BarberMapItem {
 }
 
 const CITY_COORDS: Record<string, { lat: number; lng: number }> = {
-  Prishtina:  { lat: 42.6629, lng: 21.1655 },
-  Prizren:    { lat: 42.2139, lng: 20.7397 },
-  Peja:       { lat: 42.6597, lng: 20.2880 },
-  Gjakova:    { lat: 42.3803, lng: 20.4308 },
-  Mitrovica:  { lat: 42.8914, lng: 20.8660 },
-  Ferizaj:    { lat: 42.3703, lng: 21.1553 },
-  Gjilan:     { lat: 42.4635, lng: 21.4694 },
+  prishtin:  { lat: 42.6629, lng: 21.1655 },
+  prizren:    { lat: 42.2139, lng: 20.7397 },
+  pej:       { lat: 42.6597, lng: 20.2880 },
+  gjakov:    { lat: 42.3803, lng: 20.4308 },
+  mitrovic:  { lat: 42.8914, lng: 20.8660 },
+  ferizaj:    { lat: 42.3703, lng: 21.1553 },
+  gjilan:     { lat: 42.4635, lng: 21.4694 },
+  fushe:      { lat: 42.6340, lng: 21.0963 },
+  vushtrr:    { lat: 42.8231, lng: 20.9675 },
+  podujev:    { lat: 42.9114, lng: 21.1903 },
+  rahovec:    { lat: 42.3994, lng: 20.6553 },
+  skenderaj:  { lat: 42.7478, lng: 20.7878 },
+  lipjan:     { lat: 42.5217, lng: 21.1258 },
+  suharek:    { lat: 42.3581, lng: 20.8250 },
+  therand:    { lat: 42.3581, lng: 20.8250 },
+  decan:      { lat: 42.5353, lng: 20.2878 },
+  istog:      { lat: 42.7808, lng: 20.4875 },
+  klin:       { lat: 42.6225, lng: 20.5786 },
 };
 const KOSOVO_CENTER = { lat: 42.6026, lng: 20.902 };
+
+function normalizeCityKey(name: string) {
+  if (!name) return "";
+  return name.toLowerCase().trim().replace(/ë/g, "e").replace(/ç/g, "c");
+}
+
+function getCoordsForCityName(cityName: string) {
+  const norm = normalizeCityKey(cityName);
+  for (const [k, v] of Object.entries(CITY_COORDS)) {
+    if (norm.includes(k) || k.includes(norm)) return v;
+  }
+  return CITY_COORDS["prishtin"];
+}
 
 function getShopCoords(shop: BarberMapItem["shop"], index: number) {
   const lat = shop.latitude != null ? Number(shop.latitude) : null;
   const lng = shop.longitude != null ? Number(shop.longitude) : null;
-  if (lat && lng && Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
-  const fallback = CITY_COORDS[shop.city] ?? KOSOVO_CENTER;
+  const normCity = normalizeCityKey(shop.city);
+  const isDefaultPrishtina = lat && lng && Math.abs(lat - 42.6629) < 0.001 && Math.abs(lng - 21.1655) < 0.001;
+
+  if (lat && lng && Number.isFinite(lat) && Number.isFinite(lng) && (!isDefaultPrishtina || normCity.includes("prishtin"))) {
+    return { lat, lng };
+  }
+  const fallback = getCoordsForCityName(shop.city);
   const offset = (index % 8) * 0.004;
   return { lat: fallback.lat + offset, lng: fallback.lng + offset };
 }

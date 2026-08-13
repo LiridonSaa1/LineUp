@@ -120,6 +120,8 @@ interface ExploreScreenProps {
   initialCoords?: { lat?: number; lng?: number };
   initialSubIds?: string[];
   initialCategoryName?: string;
+  initialDate?: string;
+  initialTime?: string;
   favorites?: any[];
   onToggleFavorite?: (shop: any) => void;
 }
@@ -298,9 +300,10 @@ const LeafletMapView = ({ shops, onSelectShop, initialCity, mapType, initialCoor
 };
 
 export const ExploreScreen: React.FC<ExploreScreenProps> = ({
-  onSelectShop, onOpenSearch, initialCity = "Të gjitha", initialSearch = "", initialCoords, initialSubIds = [], initialCategoryName = "", favorites = [], onToggleFavorite
+  onSelectShop, onOpenSearch, initialCity = "Të gjitha", initialSearch = "", initialCoords, initialSubIds = [], initialCategoryName = "", initialDate = "Anytime", initialTime = "Anytime", favorites = [], onToggleFavorite
 }) => {
   const [shops, setShops] = useState<any[]>([]);
+  const [schedules, setSchedules] = useState<any[]>([]);
   const [filteredShops, setFilteredShops] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -308,6 +311,8 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
 
   useEffect(() => {
     let result = [...shops];
+
+    // 1. City Filter
     const cleanCity = normalizeCity(initialCity);
     if (cleanCity && cleanCity !== normalizeCity("të gjitha") && cleanCity !== normalizeCity("lokacioni aktual")) {
       result = result.filter(shop => {
@@ -316,6 +321,8 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
         return detected === cleanCity || addrMatch;
       });
     }
+
+    // 2. Category/Subcategory Filter
     const activeSubIds = (initialSubIds || []).filter(id => id && id.toString().trim().length > 0).map(id => String(id).trim().toLowerCase());
     const hasCategoryFilter = activeSubIds.length > 0 || (initialCategoryName && initialCategoryName.trim().length > 0);
     if (hasCategoryFilter) {
@@ -326,6 +333,8 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
         return matchesSubId || matchesCategory;
       });
     }
+
+    // 3. Search Query Filter
     if (initialSearch && initialSearch.trim().length > 0) {
       const cleanSearch = initialSearch.toLowerCase().trim();
       result = result.filter(shop => {
@@ -335,8 +344,79 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
         return nameMatch || cityMatch || addressMatch;
       });
     }
+
+    // 4. Working Hours (Date/Time) Filter
+    if (initialDate && initialDate !== "Anytime" && initialDate !== "Kurdoherë") {
+      let targetDayIdx: number | null = null;
+
+      const now = new Date();
+      if (initialDate === "Sot") {
+        // Mock date from SearchScreen is July 22, 2026
+        // But let's use real index based on July 22, 2026 if it's that specific string
+        // Actually SearchScreen sends "Sot" but it sets currentCalendarDate to new Date(2026, 6, 22)
+        // Wait, SearchScreen line 671: setSelectedDate("Sot");
+        targetDayIdx = (new Date(2026, 6, 22).getDay() + 6) % 7; // Monday-based
+      } else if (initialDate === "Nesër") {
+        targetDayIdx = (new Date(2026, 6, 23).getDay() + 6) % 7;
+      } else {
+        // Format: "D Month YYYY"
+        const parts = initialDate.split(" ");
+        if (parts.length >= 3) {
+          const day = parseInt(parts[0]);
+          const monthStr = parts[1];
+          const year = parseInt(parts[2]);
+          const monthIdx = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].indexOf(monthStr);
+          if (day && monthIdx !== -1 && year) {
+            const date = new Date(year, monthIdx, day);
+            targetDayIdx = (date.getDay() + 6) % 7;
+          }
+        }
+      }
+
+      if (targetDayIdx !== null) {
+        result = result.filter(shop => {
+          const shopIdStr = String(shop.id || "").trim();
+
+          // Find schedule for this shop and day
+          const shopSchedule = schedules.find(s => {
+            const bId = String(s.barber_id || "").trim();
+            const sId = String(s.shop_id || "").trim();
+            return (bId === shopIdStr || sId === shopIdStr) && s.day_of_week === targetDayIdx;
+          });
+
+          // 1. If schedule exists and is_closed is true, filter out
+          // 2. If NO schedule exists and it's Sunday (6), filter out (default closed)
+          if (shopSchedule) {
+            if (shopSchedule.is_closed) return false;
+          } else if (targetDayIdx === 6) {
+            return false;
+          }
+
+          // Time Slot Filtering
+          if (initialTime && initialTime !== "Anytime" && initialTime !== "Kurdoherë") {
+            // slots: 'Mëngjes' (09-12), 'Pasdite' (12-18), 'Mbrëmje' (18-00)
+            const slotRange =
+              initialTime === 'Mëngjes' ? { start: 9, end: 12 } :
+              initialTime === 'Pasdite' ? { start: 12, end: 18 } :
+              initialTime === 'Mbrëmje' ? { start: 18, end: 24 } : null;
+
+            if (slotRange && shopSchedule) {
+              const shopStart = parseInt(shopSchedule.start_time?.split(':')[0] || "0");
+              const shopEnd = parseInt(shopSchedule.end_time?.split(':')[0] || "24");
+
+              // Shop must be open during at least part of the selected slot
+              const overlaps = Math.max(slotRange.start, shopStart) < Math.min(slotRange.end, shopEnd);
+              if (!overlaps) return false;
+            }
+          }
+
+          return true;
+        });
+      }
+    }
+
     setFilteredShops(result);
-  }, [shops, initialCity, initialSearch, initialSubIds]);
+  }, [shops, schedules, initialCity, initialSearch, initialSubIds, initialDate, initialTime]);
 
   const translateY = useSharedValue(height - SHEET_MIN_HEIGHT);
   const context = useSharedValue(0);
@@ -368,10 +448,21 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
   const loadShops = useCallback(async (isRefreshing = false) => {
     if (isRefreshing) setRefreshing(true); else setLoading(true);
     try {
-      const [{ data: shopsData }, { data: barbersData }] = await Promise.all([supabase.from('barbershops').select('*'), supabase.from('barbers').select('*')]);
+      const [
+        { data: shopsData },
+        { data: barbersData },
+        { data: scheduleData }
+      ] = await Promise.all([
+        supabase.from('barbershops').select('*').eq('status', 'active'),
+        supabase.from('barbers').select('*').eq('status', 'active'),
+        supabase.from('barber_schedules').select('*')
+      ]);
+
       const combined = [...(shopsData || [])];
       if (barbersData) barbersData.forEach((b: any) => { if (!combined.some(s => s.id === b.shop_id || s.id === b.id)) combined.push(b); });
+
       setShops(combined);
+      setSchedules(scheduleData || []);
     } catch (e) { console.warn(e); } finally { setLoading(false); setRefreshing(false); }
   }, []);
 

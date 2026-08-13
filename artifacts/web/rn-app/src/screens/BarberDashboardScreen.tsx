@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, Dimensions, ActivityIndicator, Platform, Alert, Switch, TextInput, Modal } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, Dimensions, ActivityIndicator, Platform, Alert, Switch, TextInput, Modal, KeyboardAvoidingView, Keyboard } from 'react-native';
 import {
   Users,
   Calendar,
@@ -8,10 +8,12 @@ import {
   ChevronRight,
   Bell,
   Clock,
+  CreditCard,
   DollarSign,
   Scissors,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   User as UserIcon,
   Star,
   Settings,
@@ -54,6 +56,8 @@ import { PaddleCheckout } from '../components/PaddleCheckout';
 import { createPaddleTransaction } from '../config/paddle';
 import { getShopPlanDetails } from '../utils/planLimits';
 import { getShopCardImage } from '../utils/imageUtils';
+import { SubscriptionExpiredScreen } from '../components/SubscriptionExpiredScreen';
+import { useSubscription } from '../hooks/useSubscription';
 
 const { width } = Dimensions.get('window');
 
@@ -120,13 +124,16 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
   const [activeTabIndex, setActiveTabIndex] = useState(0);
   const [selectedStaffFilter, setSelectedStaffFilter] = useState<string | null>(null);
   const [showAddStaffModal, setShowAddStaffModal] = useState(false);
-  const [currentPlan, setCurrentPlan] = useState<string | null>('solo');
+  const [currentPlan, setCurrentPlan] = useState<string | null>(null);
   const [employeeLimit, setEmployeeLimit] = useState(1);
+  const [shopStatus, setShopStatus] = useState<string>('active');
+  const [suspensionReason, setSuspensionReason] = useState<string | null>(null);
   const [shopSchedule, setShopSchedule] = useState<any[]>([]);
   const [portfolioPhotos, setPortfolioPhotos] = useState<any[]>([]); // Array of {url, category}
   const [newPhotoUrl, setNewPhotoUrl] = useState('');
   const [selectedPhotoCategory, setSelectedPhotoCategory] = useState(DEFAULT_CATEGORIES[0].name);
   const [savingPortfolio, setSavingPortfolio] = useState(false);
+  const [subscriptionDetails, setSubscriptionDetails] = useState<any>(null);
 
   // Shop Card Image states
   const [shopImageUrl, setShopImageUrl] = useState<string | null>(null);
@@ -164,6 +171,7 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
   });
   const [selectedDateStr, setSelectedDateStr] = useState(new Date().toISOString().split('T')[0]);
   const [realShopId, setRealShopId] = useState<string | null>(null);
+  const { subscription, loading: subLoading, isActivating, refresh: refreshSub } = useSubscription(realShopId, user.id);
 
   // Notification States & Persistence
   const [showNotificationsDrawer, setShowNotificationsDrawer] = useState(false);
@@ -178,55 +186,61 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
     if (!sId) return;
 
     try {
-      let employeeBarberId: string | null = null;
-      if (user?.role === 'employee') {
-        const { data: bData } = await supabase
-          .from('barbers')
-          .select('id')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        employeeBarberId = bData?.id || null;
-      }
+      // Resolve barber ID for any business user to ensure they see their personal bookings
+      let currentBarberId: string | null = null;
+      const { data: bData } = await supabase
+        .from('barbers')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      currentBarberId = bData?.id || null;
 
-      // If employee barber, query only appointments assigned to this specific barber
-      let apptsQuery = supabase
+      const isEmployee = ['employee', 'staff', 'staf', 'barber'].includes(user?.role || '');
+
+      // If employee or barber, query only appointments assigned to this specific barber
+      let query = supabase
         .from('appointments')
-        .select('*, users(name, phone)')
-        .eq('shop_id', sId)
-        .order('created_at', { ascending: false })
-        .limit(15);
+        .select('*')
+        .eq('shop_id', sId);
 
-      if (user?.role === 'employee' && employeeBarberId) {
-        apptsQuery = apptsQuery.eq('barber_id', employeeBarberId);
+      if (isEmployee && currentBarberId) {
+        query = query.eq('barber_id', currentBarberId);
       }
 
       // Execute queries in parallel
       const [apptsRes, favsRes, revsRes] = await Promise.all([
-        apptsQuery,
-        user?.role !== 'employee' ? supabase.from('favorites').select('*, users(name, email)').eq('shop_id', sId).limit(10) : Promise.resolve({ data: [] }),
-        user?.role !== 'employee' ? supabase.from('reviews').select('*, users(name)').eq('shop_id', sId).limit(10).catch(() => ({ data: [] })) : Promise.resolve({ data: [] })
+        (async () => { try { return await query.order('created_at', { ascending: false }).limit(15); } catch { return { data: [] }; } })(),
+        !isEmployee ? (async () => { try { return await supabase.from('favorites').select('*, users(name, email)').eq('shop_id', sId).limit(10); } catch { return { data: [] }; } })() : Promise.resolve({ data: [] }),
+        !isEmployee ? (async () => { try { return await supabase.from('reviews').select('*, users(name)').eq('shop_id', sId).limit(10); } catch { return { data: [] }; } })() : Promise.resolve({ data: [] })
       ]);
 
-      const list: any[] = [];
-      const appts = apptsRes?.data;
-      const favs = favsRes?.data;
-      const revs = (revsRes as any)?.data;
+      const apptsData = (apptsRes as any)?.data || [];
+      const favs = (favsRes as any)?.data || [];
+      const revs = (revsRes as any)?.data || [];
 
-      if (appts) {
-        appts.forEach((a: any) => {
-          const clientName = a.users?.name || a.customer_name || 'Klient i ri';
+      const userIds = [...new Set(apptsData.map((a: any) => a.user_id).filter(Boolean))];
+      let userData: any[] = [];
+      if (userIds.length > 0) {
+        const { data: uData } = await supabase.from('users').select('id, name, phone').in('id', userIds);
+        userData = uData || [];
+      }
+
+      const list: any[] = [];
+      if (apptsData) {
+        apptsData.forEach((a: any) => {
+          const u = userData?.find(user => user.id === a.user_id);
+          const clientName = u?.name || a.customer_name || 'Klient i ri';
           list.push({
             id: `appt_${a.id}`,
             type: 'booking',
-            title: user?.role === 'employee' ? 'Rezervim i ri për ju! 📅' : 'Rezervim i ri takimi 📅',
+            title: isEmployee ? 'Rezervim i ri për ju! 📅' : 'Rezervim i ri takimi 📅',
             message: `${clientName} rezervoi takim për datën ${a.date || 'Sot'} në orën ${a.time || '10:00'}`,
             time: a.created_at ? new Date(a.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (a.date || 'Sot'),
             isRead: false,
-            data: a
+            data: { ...a, users: u }
           });
         });
       }
-
       if (favs && favs.length > 0) {
         favs.forEach((f: any) => {
           const userName = f.users?.name || 'Një përdorues';
@@ -306,54 +320,122 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
     try {
       let shopData: any = null;
       let sId: any = null;
-      let employeeBarberId: any = null;
+      let currentBarberId: any = null;
 
-      if (user.role === 'employee') {
-        const { data: barberData } = await supabase
-          .from('barbers')
-          .select('id, shop_id')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        sId = barberData?.shop_id;
-        employeeBarberId = barberData?.id;
+      // Always check if the current user is registered as a barber in the system
+      const { data: barberProfile } = await supabase
+        .from('barbers')
+        .select('id, shop_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
 
+      currentBarberId = barberProfile?.id;
+
+      if (user.role === 'employee' || user.role === 'staff' || user.role === 'staf' || user.role === 'barber') {
+        sId = barberProfile?.shop_id;
         if (sId) {
           const { data: s } = await supabase.from('barbershops').select('*').eq('id', sId).maybeSingle();
           shopData = s;
         }
-      } else {
+      }
+
+      // Fallback or Owner check
+      if (!sId) {
         const { data: s } = await supabase.from('barbershops').select('*').eq('owner_id', user.id).maybeSingle();
-        shopData = s;
-        sId = shopData?.id || user.id;
+        if (s) {
+          shopData = s;
+          sId = s.id;
+        }
+      }
+
+      // Last resort fallback
+      if (!sId) sId = barberProfile?.shop_id;
+
+      if (!sId) {
+         console.warn("No shop ID resolved for user:", user.id);
+         setLoading(false);
+         return;
       }
 
       if (shopData) {
+        setShopStatus(shopData.status || 'active');
+        setSuspensionReason(shopData.suspension_reason || null);
         setPortfolioPhotos(shopData.portfolio_urls || []);
         setShopImageUrl(getShopCardImage(shopData));
       }
       setRealShopId(sId);
 
+      const isEmployee = ['employee', 'staff', 'staf', 'barber'].includes(user?.role || '');
+
       // Fast parallel fetch for all dashboard components
       const [dbBarbersRes, dbSchedulesRes, apptsRes, planInfo] = await Promise.all([
-        supabase.from('barbers').select('*').eq('shop_id', sId),
-        supabase.from('barber_schedules').select('*').eq('barber_id', sId),
+        (async () => { try { return await supabase.from('barbers').select('*').eq('shop_id', sId); } catch { return { data: [] }; } })(),
+        (async () => { try { return await supabase.from('barber_schedules').select('*').eq('barber_id', sId); } catch { return { data: [] }; } })(),
         (async () => {
-          let apptsQuery = supabase.from('appointments').select('*, users(name, phone, email)').eq('shop_id', sId).neq('status', 'cancelled');
-          if (user.role === 'employee' && employeeBarberId) {
-            apptsQuery = apptsQuery.eq('barber_id', employeeBarberId);
+          try {
+            let query = supabase.from('appointments').select('*').eq('shop_id', sId).neq('status', 'cancelled').neq('status', 'refused');
+            if (isEmployee && currentBarberId) {
+              query = query.eq('barber_id', currentBarberId);
+            }
+            const { data: rawAppts, error: apptError } = await query.order('time', { ascending: true });
+            if (apptError) throw apptError;
+
+            const userIds = [...new Set((rawAppts || []).map(a => a.user_id).filter(Boolean))];
+            let userData: any[] = [];
+            if (userIds.length > 0) {
+              const { data: uData } = await supabase.from('users').select('id, name, phone, email').in('id', userIds);
+              userData = uData || [];
+            }
+
+            const enriched = (rawAppts || []).map(a => ({
+              ...a,
+              users: userData?.find(u => u.id === a.user_id) || null
+            }));
+
+            return { data: enriched };
+          } catch (e) {
+            console.warn("Appointments fetch sub-error:", e);
+            return { data: [] };
           }
-          return apptsQuery.order('time', { ascending: true });
         })(),
-        sId ? getShopPlanDetails(sId) : Promise.resolve({ planId: 'solo', maxBarbers: 1 })
+        sId ? getShopPlanDetails(sId).catch(() => ({
+          planId: 'solo',
+          planName: 'Solo',
+          maxBarbers: 1,
+          status: 'inactive',
+          currentBarberCount: 0,
+          canAddBarber: true
+        })) : Promise.resolve({
+          planId: 'solo',
+          planName: 'Solo',
+          maxBarbers: 1,
+          status: 'inactive',
+          currentBarberCount: 0,
+          canAddBarber: true
+        })
       ]);
 
-      const dbBarbers = dbBarbersRes.data || [];
-      const dbSchedules = dbSchedulesRes.data || [];
-      const appts = apptsRes.data || [];
+      const dbBarbers = (dbBarbersRes as any)?.data || [];
+      const dbSchedules = (dbSchedulesRes as any)?.data || [];
+      const appts = (apptsRes as any)?.data || [];
+
+      console.log(`[Dashboard] Fetched ${appts.length} appointments for shop ${sId}`);
+      if (isEmployee) console.log(`[Dashboard] Filtered by barber ${currentBarberId}`);
 
       setEmployees(dbBarbers);
       setShopSchedule(dbSchedules);
       setAppointments(appts);
+      setSubscriptionDetails(planInfo);
+
+      // Auto-select the staff filter if it's a solo shop OR if current user is one of the staff
+      // This ensures appointments are visible by default for solo owners
+      if (!selectedStaffFilter) {
+        if (dbBarbers.length === 1) {
+          setSelectedStaffFilter(dbBarbers[0].id);
+        } else if (currentBarberId && dbBarbers.some(b => b.id === currentBarberId)) {
+          setSelectedStaffFilter(currentBarberId);
+        }
+      }
 
       setCurrentPlan(planInfo.planId);
       setEmployeeLimit(planInfo.maxBarbers);
@@ -363,9 +445,11 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
       const confirmedAppts = todayAppts.filter((a: any) => a.status === 'confirmed');
       const revenue = confirmedAppts.reduce((sum: number, a: any) => sum + (parseFloat(a.price) || 0), 0);
 
+      const activeBookingsCount = appts.filter((a: any) => a.status !== 'cancelled' && a.status !== 'refused').length;
+
       setStats({
         todayRevenue: revenue,
-        activeBookings: todayAppts.length,
+        activeBookings: activeBookingsCount,
         totalStaff: dbBarbers.length,
         targetRevenue: 500
       });
@@ -378,7 +462,16 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
     }
   }, [user, fetchNotifications]);
 
-  useEffect(() => { loadDashboardData(); }, [loadDashboardData]);
+  useEffect(() => {
+    loadDashboardData();
+
+    // Forced payment logic for expired subscriptions
+    if (user?.needsPayment) {
+      // Set a default target plan (Solo) so the modal has context
+      setTargetUpgradePlan({ id: 'solo', name: 'Solo', price: 15 });
+      setShowUpgradeModal(true);
+    }
+  }, [loadDashboardData, user?.needsPayment]);
   useEffect(() => { tabPosition.value = withSpring(activeTabIndex * TAB_WIDTH, { damping: 15, stiffness: 120 }); }, [activeTabIndex, TAB_WIDTH]);
 
   const handleUpdateStatus = async (apptId: string, status: string) => {
@@ -604,20 +697,11 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
     setLoading(true);
     try {
       // Update subscription in DB
-      const { error } = await supabase.from('subscriptions').upsert({
-        customer_id: user.id,
-        status: 'active',
-        product_id: targetUpgradePlan.id,
-        subscription_id: upgradeTransactionId || `txn_${Date.now()}`,
-        employee_limit: targetUpgradePlan.id === 'duo' ? 2 : 100,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'customer_id' });
-
-      if (error) throw error;
-
+      // The subscription is now handled by the Paddle Webhook authoritative flow.
+      // We just trigger the "activating" state to wait for the sync.
+      setIsActivating(true);
       setShowUpgradeModal(false);
-      Alert.alert("Sukses", `Plani u përmirësua me sukses në ${targetUpgradePlan.name}!`);
-      loadDashboardData();
+      Alert.alert("Sukses", `Pagesa u krye! Abonimi juaj në ${targetUpgradePlan.name} po aktivizohet.`);
     } catch (e: any) {
       Alert.alert("Gabim", "Pagesa u krye por dështoi përditësimi i limitit: " + e.message);
     } finally {
@@ -625,7 +709,7 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
     }
   };
 
-  if (loading) {
+  if (loading || subLoading || isActivating) {
     return (
       <View className="flex-1 bg-[#F8FAFC] pt-16 px-6">
         <View className="flex-row justify-between items-center mb-8">
@@ -661,7 +745,9 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
 
         <View className="items-center justify-center py-6 flex-row">
           <ActivityIndicator size="small" color="#3473ef" className="mr-2" />
-          <Text className="text-slate-400 font-extrabold text-xs tracking-wider">Po ngarkohet paneli i berberisë...</Text>
+          <Text className="text-slate-400 font-extrabold text-xs tracking-wider">
+            {isActivating ? "Duke aktivizuar abonimin..." : "Po ngarkohet paneli i berberisë..."}
+          </Text>
         </View>
       </View>
     );
@@ -669,8 +755,41 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
 
   const revenueProgress = Math.min((stats.todayRevenue / stats.targetRevenue) * 100, 100);
 
+  if (subscription?.is_expired) {
+    return (
+      <SubscriptionExpiredScreen
+        planName={subscription.plan_id || 'Solo'}
+        expiryDate={subscription.end_date}
+        onRenew={() => {
+           setTargetUpgradePlan({ id: subscription.plan_id || 'solo', name: (subscription.plan_id || 'solo').toUpperCase(), price: 20 });
+           setShowUpgradeModal(true);
+        }}
+        onLogout={onLogout}
+      />
+    );
+  }
+
   return (
     <View className="flex-1 bg-[#F8FAFC]">
+      {/* Suspension Warning Banner */}
+      {shopStatus === 'suspended' && (
+        <Animated.View
+          entering={FadeInDown}
+          className="mx-6 mt-16 bg-rose-50 border border-rose-100 p-5 rounded-[32px] flex-row items-start gap-4 z-50"
+        >
+          <View className="w-10 h-10 rounded-2xl bg-rose-100 items-center justify-center">
+            <XCircle size={22} color="#EF4444" />
+          </View>
+          <View className="flex-1">
+            <Text className="text-rose-900 font-black text-base">Salloni është Pezulluar</Text>
+            <Text className="text-rose-700/70 font-bold text-xs mt-1 leading-4">
+              Salloni juaj nuk është i dukshëm për klientët deri në rregullimin e statusit.
+              {suspensionReason ? `\n\nArsyeja: ${suspensionReason}` : ""}
+            </Text>
+          </View>
+        </Animated.View>
+      )}
+
       {/* ── HEADER ───────────────────────────── */}
       <View className="pt-16 pb-6 px-6 relative overflow-hidden">
         <View className="absolute top-[-100] right-[-50] w-64 h-64 bg-[#3473ef]/10 rounded-full blur-3xl" />
@@ -735,8 +854,92 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
               </View>
             </Animated.View>
 
+            {/* Subscription Info Card */}
+            {subscription && subscription.status !== 'inactive' && (
+              <Animated.View entering={FadeInDown.delay(150)} className="mb-8">
+                <View className={`bg-white rounded-[32px] p-6 shadow-lg border flex-row items-center justify-between ${
+                  subscription.days_remaining !== undefined && subscription.days_remaining < 5
+                    ? 'border-rose-100 shadow-rose-50'
+                    : 'border-slate-50 shadow-slate-100'
+                }`}>
+                  <View className="flex-1">
+                    <View className="flex-row items-center mb-1">
+                      <CreditCard size={16} color={subscription.days_remaining !== undefined && subscription.days_remaining < 5 ? "#f43f5e" : "#3473ef"} />
+                      <Text className={`font-bold text-[10px] uppercase ml-2 tracking-widest ${
+                        subscription.days_remaining !== undefined && subscription.days_remaining < 5 ? 'text-rose-400' : 'text-slate-400'
+                      }`}>
+                        Abonimi {subscription.plan_name}
+                      </Text>
+                    </View>
+                    <Text className="text-lg font-black text-[#161719]">
+                      {subscription.status === 'active' ? 'Aktiv (Rinovim Automatik)' :
+                       subscription.status === 'trialing' ? 'Periudhë Provuese' :
+                       subscription.status === 'past_due' ? 'Pagesa dështoi' :
+                       subscription.status === 'canceled' ? 'I anuluar' : 'I ndalur'}
+                    </Text>
+
+                    <View className="flex-row items-center mt-1">
+                      {subscription.end_date && (
+                        <Text className="text-slate-400 font-bold text-xs">
+                           {subscription.amount}€ / {subscription.billing_cycle === 'year' ? 'vit' : 'muaj'} • Skadon më {new Date(subscription.end_date).toLocaleDateString('sq-AL')}
+                        </Text>
+                      )}
+
+                      {subscription.days_remaining !== undefined && (
+                        <>
+                          <View className="w-1 h-1 rounded-full bg-slate-300 mx-2" />
+                          <Text className={`font-bold text-xs ${
+                            subscription.days_remaining < 5 ? 'text-rose-500' : 'text-[#3473ef]'
+                          }`}>
+                            {subscription.days_remaining} ditë mbetur
+                          </Text>
+                        </>
+                      )}
+                    </View>
+                  </View>
+                  <View className={`px-4 py-2 rounded-2xl ${
+                    subscription.status === 'active' || subscription.status === 'trialing'
+                      ? (subscription.days_remaining !== undefined && subscription.days_remaining < 5 ? 'bg-amber-50' : 'bg-emerald-50')
+                      : 'bg-rose-50'
+                  }`}>
+                    <Text className={`font-black text-[10px] uppercase ${
+                      subscription.status === 'active' || subscription.status === 'trialing'
+                        ? (subscription.days_remaining !== undefined && subscription.days_remaining < 5 ? 'text-amber-600' : 'text-emerald-600')
+                        : 'text-rose-600'
+                    }`}>
+                      {subscription.status === 'active' ? 'AKTIV' : (subscription.status === 'trialing' ? 'PROVË' : 'I NDALUR')}
+                    </Text>
+                  </View>
+                </View>
+              </Animated.View>
+            )}
+
+            {(!subscription || subscription.status === 'inactive') && (
+              <Animated.View entering={FadeInDown.delay(150)} className="mb-8">
+                <TouchableOpacity
+                  onPress={() => {
+                    setTargetUpgradePlan({ id: 'solo', name: 'Solo', price: 15 });
+                    setShowUpgradeModal(true);
+                  }}
+                  className="bg-rose-50 p-6 rounded-[32px] border border-rose-100 shadow-sm flex-row items-center justify-between"
+                >
+                  <View className="flex-1">
+                    <View className="flex-row items-center mb-1">
+                      <AlertTriangle size={14} color="#f43f5e" />
+                      <Text className="text-rose-400 font-bold text-[10px] uppercase ml-2 tracking-widest">Pa Abonim Aktiv</Text>
+                    </View>
+                    <Text className="text-[#161719] font-black text-sm">Abonimi juaj ka skaduar</Text>
+                    <Text className="text-rose-500 font-bold text-[10px] mt-1">Salloni nuk është i dukshëm për klientët</Text>
+                  </View>
+                  <View className="bg-rose-500 px-4 py-2 rounded-xl">
+                    <Text className="text-white font-black text-[10px] uppercase">Rinovoni</Text>
+                  </View>
+                </TouchableOpacity>
+              </Animated.View>
+            )}
+
             <View className="flex-row gap-4 mb-8">
-              <Animated.View entering={FadeInDown.delay(200)} className="flex-1"><View className="bg-white rounded-[32px] p-5 shadow-lg shadow-slate-100 border border-slate-50 items-center"><View className="w-10 h-10 bg-indigo-50 rounded-xl items-center justify-center mb-3"><Calendar size={20} color="#6366f1" strokeWidth={2.5} /></View><Text className="text-slate-400 font-bold text-[10px] uppercase tracking-wider mb-1">Takime</Text><Text className="text-2xl font-black text-[#161719]">{stats.activeBookings}</Text></View></Animated.View>
+              <Animated.View entering={FadeInDown.delay(200)} className="flex-1"><View className="bg-white rounded-[32px] p-5 shadow-lg shadow-slate-100 border border-slate-50 items-center"><View className="w-10 h-10 bg-indigo-50 rounded-xl items-center justify-center mb-3"><Calendar size={20} color="#6366f1" strokeWidth={2.5} /></View><Text className="text-slate-400 font-bold text-[10px] uppercase tracking-wider mb-1">Gjithsej Takime</Text><Text className="text-2xl font-black text-[#161719]">{stats.activeBookings}</Text></View></Animated.View>
               <Animated.View entering={FadeInDown.delay(300)} className="flex-1"><View className="bg-white rounded-[32px] p-5 shadow-lg shadow-slate-100 border border-slate-50 items-center"><View className="w-10 h-10 bg-purple-50 rounded-xl items-center justify-center mb-3"><Users size={20} color="#a855f7" strokeWidth={2.5} /></View><Text className="text-slate-400 font-bold text-[10px] uppercase tracking-wider mb-1">Stafi</Text><Text className="text-2xl font-black text-[#161719]">{stats.totalStaff}</Text></View></Animated.View>
             </View>
 
@@ -760,58 +963,173 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
         {activeTabIndex === 1 && (
           <View className="px-6">
             {isOwner ? (
-              <>
-                <View className="flex-row justify-between items-center mb-6 px-1">
-                  <View>
-                    <Text className="text-xl font-black text-[#161719]">Ekipi juaj</Text>
-                    <Text className="text-slate-400 font-bold text-xs">
-                      {employees.length}/{employeeLimit} berberë • Plani {(currentPlan || 'solo').toUpperCase()}
-                    </Text>
+              selectedStaffFilter ? (
+                <>
+                  {/* Selected Barber Header & Back Button */}
+                  <View className="flex-row items-center mb-6 px-1">
+                    <TouchableOpacity
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setSelectedStaffFilter(null);
+                      }}
+                      className="w-10 h-10 bg-white rounded-full items-center justify-center shadow-sm border border-slate-100 mr-4"
+                    >
+                      <ChevronRight size={20} color="#161719" style={{ transform: [{ rotate: '180deg' }] }} />
+                    </TouchableOpacity>
+                    <View className="flex-1">
+                      <Text className="text-xl font-black text-[#161719]">
+                        {employees.find(e => e.id === selectedStaffFilter)?.name || 'Berberi'}
+                      </Text>
+                      <Text className="text-slate-400 font-bold text-xs">Orari i rezervimeve</Text>
+                    </View>
                   </View>
-                  <TouchableOpacity
-                    onPress={async () => {
-                      const sId = realShopId || user?.id;
-                      if (sId) {
-                        const planInfo = await getShopPlanDetails(sId);
-                        setCurrentPlan(planInfo.planId);
-                        setEmployeeLimit(planInfo.maxBarbers);
 
-                        if (employees.length >= planInfo.maxBarbers) {
-                          Alert.alert(
-                            "Limit i Arritur",
-                            `Plani juaj aktiv (${planInfo.planName}) lejon vetëm ${planInfo.maxBarbers} berber(ë).\nAktualisht keni ${employees.length} berber(ë). A dëshironi ta përmirësoni planin (Upgrade)?`,
-                            [
-                              { text: "Anulo", style: "cancel" },
-                              { text: "Përmirëso Planin", onPress: triggerUpgradeFlow }
-                            ]
-                          );
-                          return;
-                        }
-                      }
-                      setShowAddStaffModal(true);
-                    }}
-                    className="w-12 h-12 bg-[#3473ef] rounded-2xl items-center justify-center shadow-lg shadow-[#3473ef]/30"
-                  >
-                    {isPreparingUpgrade ? (
-                      <ActivityIndicator size="small" color="white" />
+                  {/* Horizontal Day Selector (Reused) */}
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-6 py-2">
+                    {getNext14Days().map((d, index) => {
+                      const dateStr = d.toISOString().split('T')[0];
+                      const isSelected = dateStr === selectedDateStr;
+                      const dayNum = d.getDate();
+                      const dayName = daysOfWeek[d.getDay()];
+                      const isToday = dateStr === new Date().toISOString().split('T')[0];
+
+                      return (
+                        <TouchableOpacity
+                          key={index}
+                          onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            setSelectedDateStr(dateStr);
+                          }}
+                          className={`mr-3 w-16 h-20 rounded-3xl items-center justify-center border ${
+                            isSelected
+                              ? 'bg-[#3473ef] border-[#3473ef] shadow-lg shadow-blue-200'
+                              : 'bg-white border-slate-100 shadow-sm'
+                          }`}
+                        >
+                          <Text className={`font-black text-[9px] uppercase ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>
+                            {dayName}
+                          </Text>
+                          <Text className={`text-xl font-black mt-1 ${isSelected ? 'text-white' : 'text-[#161719]'}`}>
+                            {dayNum}
+                          </Text>
+                          {isToday && !isSelected && (
+                            <View className="w-1.5 h-1.5 bg-[#3473ef] rounded-full mt-1" />
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+
+                  {/* Appointments list for selected staff */}
+                  <View className="gap-y-4">
+                    {appointments.filter(a => a.date === selectedDateStr && String(a.barber_id).trim() === String(selectedStaffFilter).trim()).length > 0 ? (
+                      appointments.filter(a => a.date === selectedDateStr && String(a.barber_id).trim() === String(selectedStaffFilter).trim()).map((appt, i) => (
+                        <Animated.View key={appt.id} entering={FadeInDown.delay(i * 100)}>
+                          <View className="bg-white p-5 rounded-[32px] border border-slate-100 shadow-sm flex-row items-center justify-between">
+                            <View className="flex-1 pr-4">
+                              <View className="flex-row items-center mb-2">
+                                <View className="bg-blue-50 px-2.5 py-1 rounded-lg">
+                                  <Text className="text-[#3473ef] font-black text-xs">
+                                    {appt.time ? appt.time.substring(0, 5) : '00:00'}
+                                  </Text>
+                                </View>
+                                <View className="bg-indigo-50 px-2.5 py-1 rounded-lg ml-2">
+                                  <Text className="text-indigo-600 font-black text-[9px] uppercase tracking-wider">
+                                    {appt.status}
+                                  </Text>
+                                </View>
+                              </View>
+                              <Text className="font-black text-[#161719] text-base mb-1">
+                                {appt.users?.name || 'Klient i LineUp'}
+                              </Text>
+                              <Text className="text-slate-400 font-bold text-xs">
+                                {appt.service || 'Shërbim i përgjithshëm'}
+                              </Text>
+                            </View>
+                            <View className="items-end">
+                              {appt.price > 0 && (
+                                <Text className="font-black text-lg text-[#161719] mb-3">
+                                  {appt.price}€
+                                </Text>
+                              )}
+                            </View>
+                          </View>
+                        </Animated.View>
+                      ))
                     ) : (
-                      <Plus size={24} color="white" strokeWidth={3} />
-                    )}
-                  </TouchableOpacity>
-                </View>
-
-                <View className="gap-y-4">
-                  {employees.map((emp, i) => (
-                    <Animated.View key={emp.id} entering={FadeInDown.delay(i * 100)}>
-                      <View className="bg-white p-5 rounded-[32px] border border-slate-100 shadow-sm flex-row items-center">
-                        <View className="w-16 h-16 rounded-[22px] mr-4 bg-slate-100 items-center justify-center border border-slate-200"><UserIcon size={28} color="#94A3B8" /></View>
-                        <View className="flex-1"><Text className="font-black text-[#161719] text-base mb-0.5">{emp.name}</Text><Text className="text-slate-400 font-bold text-xs">{emp.role}</Text></View>
-                        <View className="items-end bg-slate-50 px-4 py-3 rounded-2xl border border-slate-100"><Text className="font-black text-lg text-[#3473ef] leading-5">0</Text><Text className="text-[#8789A3] font-bold text-[8px] uppercase tracking-tighter">Termine</Text></View>
+                      <View className="items-center justify-center py-20 bg-white rounded-[32px] border border-slate-100 shadow-sm">
+                        <Calendar size={48} color="#CBD5E1" strokeWidth={1.5} />
+                        <Text className="text-slate-400 font-bold mt-4">
+                          Nuk ka rezervime për këtë berber.
+                        </Text>
                       </View>
-                    </Animated.View>
-                  ))}
-                </View>
-              </>
+                    )}
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View className="flex-row justify-between items-center mb-6 px-1">
+                    <View>
+                      <Text className="text-xl font-black text-[#161719]">Ekipi juaj</Text>
+                      <Text className="text-slate-400 font-bold text-xs">
+                        {employees.length}/{employeeLimit} berberë • Plani {(currentPlan || 'solo').toUpperCase()}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={async () => {
+                        const sId = realShopId || user?.id;
+                        if (sId) {
+                          const planInfo = await getShopPlanDetails(sId);
+                          setCurrentPlan(planInfo.planId);
+                          setEmployeeLimit(planInfo.maxBarbers);
+
+                          if (employees.length >= planInfo.maxBarbers) {
+                            Alert.alert(
+                              "Limit i Arritur",
+                              `Plani juaj aktiv (${planInfo.planName}) lejon vetëm ${planInfo.maxBarbers} berber(ë).\nAktualisht keni ${employees.length} berber(ë). A dëshironi ta përmirësoni planin (Upgrade)?`,
+                              [
+                                { text: "Anulo", style: "cancel" },
+                                { text: "Përmirëso Planin", onPress: triggerUpgradeFlow }
+                              ]
+                            );
+                            return;
+                          }
+                        }
+                        setShowAddStaffModal(true);
+                      }}
+                      className="w-12 h-12 bg-[#3473ef] rounded-2xl items-center justify-center shadow-lg shadow-[#3473ef]/30"
+                    >
+                      {isPreparingUpgrade ? (
+                        <ActivityIndicator size="small" color="white" />
+                      ) : (
+                        <Plus size={24} color="white" strokeWidth={3} />
+                      )}
+                    </TouchableOpacity>
+                  </View>
+
+                  <View className="gap-y-4">
+                    {employees.map((emp, i) => {
+                      const empAppts = appointments.filter(a => String(a.barber_id).trim() === String(emp.id).trim() && a.status !== 'cancelled' && a.status !== 'refused').length;
+
+                      return (
+                        <Animated.View key={emp.id} entering={FadeInDown.delay(i * 100)}>
+                          <TouchableOpacity
+                            onPress={() => {
+                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                              setSelectedStaffFilter(emp.id);
+                            }}
+                            className="bg-white p-5 rounded-[32px] border border-slate-100 shadow-sm flex-row items-center active:scale-[0.98]"
+                          >
+                            <View className="w-16 h-16 rounded-[22px] mr-4 bg-slate-100 items-center justify-center border border-slate-200"><UserIcon size={28} color="#94A3B8" /></View>
+                            <View className="flex-1"><Text className="font-black text-[#161719] text-base mb-0.5">{emp.name}</Text><Text className="text-slate-400 font-bold text-xs">{emp.role}</Text></View>
+                            <View className="items-end bg-slate-50 px-4 py-3 rounded-2xl border border-slate-100"><Text className="font-black text-lg text-[#3473ef] leading-5">{empAppts}</Text><Text className="text-[#8789A3] font-bold text-[8px] uppercase tracking-tighter">Termine</Text></View>
+                          </TouchableOpacity>
+                        </Animated.View>
+                      );
+                    })}
+                  </View>
+                </>
+              )
             ) : (
               <>
                 <View className="mb-4 px-1">
@@ -887,9 +1205,11 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
                             )}
                           </View>
                           <View className="items-end">
-                            <Text className="font-black text-lg text-[#161719] mb-3">
-                              {appt.price ? `${appt.price}€` : '15€'}
-                            </Text>
+                            {appt.price > 0 && (
+                              <Text className="font-black text-lg text-[#161719] mb-3">
+                                {appt.price}€
+                              </Text>
+                            )}
                             {appt.status !== 'completed' && appt.status !== 'cancelled' && (
                               <View className="flex-row gap-2">
                                 <TouchableOpacity
@@ -1090,28 +1410,73 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
       />
 
       {/* Direct Upgrade Modal */}
-      <Modal visible={showUpgradeModal} animationType="slide" transparent={true}>
-        <View className="flex-1 bg-black/60 justify-end">
-          <TouchableOpacity activeOpacity={1} onPress={() => setShowUpgradeModal(false)} className="absolute inset-0" />
-          <View className="bg-white rounded-t-[48px] h-[90%] overflow-hidden">
+      <Modal visible={showUpgradeModal} animationType="slide" transparent={false}>
+        <View className="flex-1 bg-white">
+          <View className="flex-1">
             <View className="w-12 h-1.5 bg-slate-100 rounded-full self-center mt-3 mb-6" />
             <View className="px-8 pb-6 flex-row justify-between items-center">
               <View>
-                <Text className="text-2xl font-black text-[#161719]">Upgrade i Shpejtë</Text>
-                <Text className="text-slate-400 font-bold text-xs mt-1">Kaloni në planin {targetUpgradePlan?.name}</Text>
+                <Text className="text-2xl font-black text-[#161719]">
+                  {user?.needsPayment ? 'Abonimi ka Skaduar' : 'Upgrade i Shpejtë'}
+                </Text>
+                <Text className="text-slate-400 font-bold text-xs mt-1">
+                  {user?.needsPayment
+                    ? 'Ju lutem vazhdoni me pagesën për të hapur panelin.'
+                    : `Kaloni në planin ${targetUpgradePlan?.name}`}
+                </Text>
               </View>
-              <TouchableOpacity onPress={() => setShowUpgradeModal(false)} className="w-10 h-10 bg-slate-50 rounded-full items-center justify-center">
-                <XCircle size={20} color="#161719" />
-              </TouchableOpacity>
+              {!user?.needsPayment && (
+                <TouchableOpacity onPress={() => setShowUpgradeModal(false)} className="w-10 h-10 bg-slate-50 rounded-full items-center justify-center">
+                  <XCircle size={20} color="#161719" />
+                </TouchableOpacity>
+              )}
             </View>
 
             <View className="flex-1">
-              <PaddleCheckout
-                email={user.email}
-                transactionId={upgradeTransactionId || undefined}
-                onSuccess={handleUpgradeSuccess}
-                onCancel={() => setShowUpgradeModal(false)}
-              />
+              {user?.needsPayment && !upgradeTransactionId ? (
+                <ScrollView className="px-8" showsVerticalScrollIndicator={false}>
+                   <Text className="text-slate-500 font-bold text-sm mb-6 leading-5">Salloni juaj është aktualisht i fshehur për klientët deri në momentin e rinovimit të abonimit. Zgjidhni një plan për të vazhduar.</Text>
+
+                   {[
+                     { id: 'solo', name: 'Solo', price: 15, desc: '1 berber, 300 rezervime' },
+                     { id: 'duo', name: 'Duo', price: 20, desc: '2 berberë, Rezervime pa limit' },
+                     { id: 'team', name: 'Team', price: 25, desc: 'Staf pa limit, Marketing SMS' }
+                   ].map((p) => (
+                     <TouchableOpacity
+                       key={p.id}
+                       onPress={() => handleUpgradePress(p.id)}
+                       className="bg-slate-50 p-6 rounded-3xl mb-4 border border-slate-100 flex-row justify-between items-center"
+                     >
+                        <View>
+                          <Text className="text-lg font-black text-[#161719]">{p.name}</Text>
+                          <Text className="text-slate-400 font-bold text-[10px]">{p.desc}</Text>
+                        </View>
+                        <Text className="text-xl font-black text-[#3473ef]">{p.price}€</Text>
+                     </TouchableOpacity>
+                   ))}
+
+                   <TouchableOpacity
+                    onPress={onLogout}
+                    className="mt-4 py-8 items-center"
+                   >
+                     <Text className="text-rose-500 font-black text-sm uppercase tracking-widest">Dil nga llogaria</Text>
+                   </TouchableOpacity>
+                </ScrollView>
+              ) : (
+                <PaddleCheckout
+                  email={user.email}
+                  transactionId={upgradeTransactionId || undefined}
+                  priceId={targetUpgradePlan?.id === 'team' ? undefined : (targetUpgradePlan?.id === 'duo' ? 'pri_01ky8e821v11dc6f2nf9jnq5v8' : 'pri_01ky8dvrqajpvkqtcde7ge9fgb')}
+                  onSuccess={handleUpgradeSuccess}
+                  onCancel={() => {
+                    if (user?.needsPayment) {
+                      setUpgradeTransactionId(null); // Return to plan selection
+                    } else {
+                      setShowUpgradeModal(false);
+                    }
+                  }}
+                />
+              )}
             </View>
           </View>
         </View>

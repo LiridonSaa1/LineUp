@@ -13,6 +13,7 @@ import {
   Settings,
   Store,
   Users,
+  Image as ImageIcon,
 } from "lucide-react";
 import { useLogout } from "@workspace/api-client-react";
 
@@ -22,21 +23,21 @@ interface DashboardLayoutProps {
 
 const navGroups = [
   {
-    label: "Kryesore",
+    label: "Menaxhimi",
     items: [
       { href: "/dashboard", label: "Pasqyra", icon: LayoutDashboard },
-      { href: "/dashboard/appointments", label: "Takimet", icon: Calendar },
-      { href: "/dashboard/barbers", label: "Berberet", icon: Scissors },
-      { href: "/dashboard/services", label: "Sherbimet", icon: Settings },
+      { href: "/dashboard/barbers", label: "Stafi", icon: Users },
+      { href: "/dashboard/portfolio", label: "Portfolio", icon: ImageIcon },
+      { href: "/dashboard/holidays", label: "Orari & Festat", icon: CalendarOff },
+      { href: "/dashboard/subscription", label: "Planet e Abonimit", icon: CreditCard },
+      { href: "/dashboard/appointments", label: "Rezervimet", icon: Calendar },
     ],
   },
   {
-    label: "Dyqani",
+    label: "Konfigurimi",
     items: [
-      { href: "/dashboard/clients", label: "Klientet", icon: Users },
-      { href: "/dashboard/holidays", label: "Pushimet", icon: CalendarOff },
-      { href: "/dashboard/subscription", label: "Abonimi", icon: CreditCard },
-      { href: "/dashboard/settings", label: "Cilesimet", icon: Settings },
+      { href: "/dashboard/services", label: "Shërbimet", icon: Scissors },
+      { href: "/dashboard/settings", label: "Cilësimet", icon: Settings },
     ],
   },
 ];

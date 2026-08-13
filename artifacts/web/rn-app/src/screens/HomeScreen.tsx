@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, Dimensions, Linking, Modal, Alert as RNAlert, ActivityIndicator, Platform, RefreshControl } from "react-native";
-import { Scissors, MapPin, Search, ChevronDown, Heart, Star, Grid, Eye, Waves, Hand, Sparkles, Smile, User, Syringe, Zap, Shield, Check, ArrowRight, ArrowUpRight, Plus, ExternalLink, Megaphone, X } from "lucide-react-native";
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, Dimensions, Linking, Modal, Alert as RNAlert, ActivityIndicator, Platform, RefreshControl, KeyboardAvoidingView } from "react-native";
+import { Scissors, MapPin, Search, ChevronDown, Heart, Star, Grid, Eye, Waves, Hand, Sparkles, Smile, User, Syringe, Zap, Shield, Check, ArrowRight, ArrowUpRight, Plus, Minus, ExternalLink, Megaphone, X, Palette } from "lucide-react-native";
 import { BlurView } from 'expo-blur';
 import Animated, {
   FadeInUp,
@@ -14,14 +14,14 @@ import * as Haptics from 'expo-haptics';
 const { width } = Dimensions.get("window");
 
 const CATEGORY_ICONS: Record<string, any> = {
-  'Flokë & Stilim': Scissors,
-  'Mjekër & Estetikë': User,
+  'Flokët & Trajtimet': Scissors,
+  'Ngjyrosja e Flokëve': Palette,
+  'Mjekra & Rruajtja': User,
+  'Vetulla & Qerpikë': Eye,
   'Thonjtë': Hand,
-  'Grim & Bukuri': Smile,
-  'Kujdesi i Lëkurës': Shield,
-  'Spa & Relaks': Waves,
-  'Depilim': Zap,
-  'Raste të Veçanta': Sparkles
+  'Makeup': Smile,
+  'Fytyra & Kujdesi i Lëkurës': Shield,
+  'Depilim & Trup': Zap
 };
 
 interface HomeScreenProps {
@@ -171,22 +171,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     },
     {
       business_name: "Vehees",
-      headline: "Zbulo historikun e veturës tënde",
-      description: "Kontrollo çdo VIN në sekonda",
-      color: "#00d084",
       url: "https://vehees.com/",
-      button_text: "Gjej veturën",
-      image_url: "https://vehees.com/wp-content/uploads/2024/03/vehees-hero.jpg",
-      status: 'active'
+      image_url: "vehees_banner.jpg",
+      status: 'active',
+      only_button: true
     },
     {
       business_name: "noasim",
-      headline: "Udhëzues eSIM për udhëtim",
-      description: "Udhëzues praktikë për çdo udhëtim",
-      color: "transparent",
       url: "https://noasim.com/guides",
-      button_text: "Lexo udhëzuesit",
-      image_url: "https://noasim.com/wp-content/uploads/2024/05/esim-travel-guides.jpg",
+      image_url: "noasim_banner.jpg",
+      status: 'active',
+      only_button: true
+    },
+    {
+      business_name: "Technova",
+      url: "https://technova-ks.com",
+      image_url: "technova_banner.jpg",
       status: 'active',
       only_button: true
     }
@@ -203,8 +203,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     if (ad.business_name === 'Vehees') return require('../../assets/vehees_banner.jpg');
     if (ad.business_name === 'noasim' || ad.business_name === 'Noasim') return require('../../assets/noasim_banner.jpg');
     if (ad.business_name === 'NOA IPTV' || ad.image_url === 'noaiptv_banner.jpg') return require('../../assets/noaiptv_banner.jpg');
+    if (ad.business_name === 'Technova' || ad.image_url === 'technova_banner.jpg') return require('../../assets/technova_banner.jpg');
     if (ad.image_url && ad.image_url.startsWith('http')) return { uri: ad.image_url };
-    return { uri: ad.image_url || ad.imageUrl || 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1000&auto=format&fit=crop&q=80' };
+    return { uri: ad.image_url || ad.imageUrl || 'noaiptv_banner.jpg' };
   };
 
   useEffect(() => {
@@ -233,19 +234,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     return () => clearInterval(interval);
   }, [ads]);
 
-  const CATEGORIES = [
-    { name: "Të gjitha", icon: Grid },
-    { name: "Haircut & Styling", icon: Scissors },
-    { name: "Hair Coloring", icon: Sparkles },
-    { name: "Hair Treatment", icon: Zap },
-    { name: "Beard & Grooming", icon: User },
-    { name: "Nails", icon: Hand },
-    { name: "Makeup", icon: Smile },
-    { name: "Brows & Lashes", icon: Eye },
-    { name: "Skin Care", icon: Shield },
-    { name: "Body Care", icon: Waves },
-  ];
-
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = useCallback(async (isRefreshing = false) => {
@@ -262,11 +250,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         supabase
           .from('barbershops')
           .select('*')
+          .eq('status', 'active')
           .order('total_reviews', { ascending: false })
           .limit(10),
         supabase
           .from('barbershops')
           .select('*')
+          .eq('status', 'active')
           .gte('created_at', sevenDaysAgoISO)
           .order('created_at', { ascending: false })
           .limit(10),
@@ -348,7 +338,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   };
 
   return (
-    <View className="flex-1 bg-[#ECEEF2]">
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      className="flex-1"
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
+      <View className="flex-1 bg-[#ECEEF2]">
       {/* Background Decorative Blobs */}
       <View className="absolute top-[-50] left-[-50] w-64 h-64 bg-[#3473ef]/15 rounded-full blur-3xl" />
       <View className="absolute top-[200] right-[-100] w-80 h-80 bg-[#f47458]/15 rounded-full blur-3xl" />
@@ -440,7 +435,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           style={{ height: 224 }}
         >
           {ads.map((ad, i) => {
-            const isCleanBanner = ad.only_button || ad.onlyButton || ad.business_name === 'Vehees' || ad.business_name === 'noasim' || ad.business_name === 'Noasim' || ad.business_name === 'NOA IPTV';
+            const isCleanBanner = ad.only_button || ad.onlyButton || ad.business_name === 'Vehees' || ad.business_name === 'noasim' || ad.business_name === 'Noasim' || ad.business_name === 'NOA IPTV' || ad.business_name === 'Technova';
             return (
               <TouchableOpacity
                 key={i}
@@ -452,7 +447,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 {/* Background Banner Image */}
                 <Image
                   source={getAdImageSource(ad)}
-                  resizeMode={ad.business_name === 'NOA IPTV' ? "stretch" : "cover"}
+                  resizeMode={ad.business_name === 'NOA IPTV' || ad.business_name === 'Technova' ? "stretch" : "cover"}
                   className="absolute inset-0 w-full h-full"
                 />
 
@@ -767,7 +762,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       </View>
     </Modal>
   </View>
-);
+    </KeyboardAvoidingView>
+  );
 };
 
 const PricingCard = ({
@@ -867,26 +863,55 @@ const PricingCard = ({
                 <View className="w-8 h-8 rounded-full bg-white items-center justify-center mr-2 shadow-sm">
                    <User size={14} color="#3473ef" strokeWidth={3} />
                 </View>
-                <TextInput
-                  keyboardType="numeric"
-                  className="text-xl font-black text-[#161719] p-0"
-                  value={teamEmployees}
-                  onChangeText={(val) => {
-                    const num = parseInt(val);
-                    if (val === "" || (!isNaN(num) && num >= 3)) {
-                      setTeamEmployees(val);
-                    }
-                  }}
-                  onBlur={() => {
-                    if (!teamEmployees || parseInt(teamEmployees) < 3) {
-                      setTeamEmployees("3");
-                    }
-                  }}
-                  placeholder="3"
-                  placeholderTextColor="#CBD5E1"
-                  editable={!isEmployee}
-                />
-                <Text className="text-[#8789A3] text-[10px] font-bold ml-1.5 pt-1">berberë</Text>
+
+                <View className="flex-row items-center bg-white rounded-xl px-2 py-0.5 shadow-sm">
+                  <TouchableOpacity
+                    onPress={() => {
+                      const num = parseInt(teamEmployees || "3");
+                      if (num > 3) {
+                        setTeamEmployees((num - 1).toString());
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }
+                    }}
+                    disabled={parseInt(teamEmployees || "3") <= 3}
+                    className={`w-6 h-6 items-center justify-center rounded-full ${parseInt(teamEmployees || "3") <= 3 ? 'bg-slate-50' : 'bg-slate-100'}`}
+                  >
+                    <Minus size={12} color={parseInt(teamEmployees || "3") <= 3 ? '#CBD5E1' : '#161719'} strokeWidth={3} />
+                  </TouchableOpacity>
+
+                  <TextInput
+                    keyboardType="numeric"
+                    className="text-lg font-black text-[#161719] px-2 min-w-[30px] text-center"
+                    value={teamEmployees}
+                    onChangeText={(val) => {
+                      const num = parseInt(val);
+                      if (val === "" || (!isNaN(num) && num >= 3)) {
+                        setTeamEmployees(val);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (!teamEmployees || parseInt(teamEmployees) < 3) {
+                        setTeamEmployees("3");
+                      }
+                    }}
+                    placeholder="3"
+                    placeholderTextColor="#CBD5E1"
+                    editable={!isEmployee}
+                  />
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      const num = parseInt(teamEmployees || "3");
+                      setTeamEmployees((num + 1).toString());
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }}
+                    className="w-6 h-6 items-center justify-center bg-[#3473ef] rounded-full"
+                  >
+                    <Plus size={12} color="white" strokeWidth={3} />
+                  </TouchableOpacity>
+                </View>
+
+                <Text className="text-[#8789A3] text-[9px] font-bold ml-1.5">berberë</Text>
               </View>
               <Text className="text-xl font-black text-[#3473ef]">{price}</Text>
             </View>

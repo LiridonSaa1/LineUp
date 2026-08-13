@@ -309,7 +309,15 @@ export function Navbar() {
                             {user.email}
                           </p>
                           <span className="inline-flex items-center mt-2 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-semibold uppercase tracking-wider">
-                            {userRole}
+                            {userRole === "employee" || userRole === "staf" || userRole === "staff"
+                              ? "Punëtor i verifikuar"
+                              : userRole === "owner"
+                              ? "Pronar Biznesi"
+                              : userRole === "barber"
+                              ? "Berber"
+                              : userRole === "admin"
+                              ? "Admin"
+                              : "Klient"}
                           </span>
                         </div>
                         <DropdownMenuSeparator className="bg-black/6 my-1" />

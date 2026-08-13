@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
 import { useGetBarbershop } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,7 +27,7 @@ export default function DashboardSettings() {
 
   const [form, setForm] = useState({
     name: "", city: "", address: "", phone: "", description: "",
-    openTime: "09:00", closeTime: "18:00", gender: "both",
+    openTime: "09:00", closeTime: "18:00", gender: "both", imageUrl: "",
   });
 
   const [initialized, setInitialized] = useState(false);
@@ -40,6 +41,7 @@ export default function DashboardSettings() {
       openTime: shop.openTime ?? "09:00",
       closeTime: shop.closeTime ?? "18:00",
       gender: shop.gender ?? "both",
+      imageUrl: (shop as any).image_card || (shop as any).card_image || (shop as any).imageUrl || (shop as any).image_url || "",
     });
     setInitialized(true);
   }
@@ -58,6 +60,18 @@ export default function DashboardSettings() {
         },
         body: JSON.stringify(form),
       });
+
+      if (form.imageUrl) {
+        await supabase.from("barbershops").update({
+          image_card: form.imageUrl,
+          card_image: form.imageUrl,
+          image_url: form.imageUrl,
+          cover_image: form.imageUrl,
+          image: form.imageUrl,
+          avatar: form.imageUrl
+        }).or(`id.eq.${shopId},owner_id.eq.${user?.id}`);
+      }
+
       toast({ title: "Cilësimet u ruajtën", description: "Të dhënat e dyqanit u përditësuan me sukses." });
     } catch {
       toast({ variant: "destructive", title: "Gabim", description: "Nuk u ruajtën ndryshimet." });
@@ -90,6 +104,10 @@ export default function DashboardSettings() {
           <div className="space-y-2">
             <Label>Emri i sallonit</Label>
             <Input value={form.name} onChange={e => set("name", e.target.value)} placeholder="p.sh. The Barber Lab" className="rounded-xl" />
+          </div>
+          <div className="space-y-2">
+            <Label>Fotoja Kryesore e Kartelës (Image URL)</Label>
+            <Input value={form.imageUrl} onChange={e => set("imageUrl", e.target.value)} placeholder="https://... ose data:image/..." className="rounded-xl" />
           </div>
           <div className="space-y-2">
             <Label>Përshkrimi</Label>

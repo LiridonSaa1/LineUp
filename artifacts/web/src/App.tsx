@@ -52,11 +52,17 @@ import DashboardHolidays from "@/pages/dashboard/DashboardHolidays";
 import DashboardCoupons from "@/pages/dashboard/DashboardCoupons";
 import DashboardWaitingList from "@/pages/dashboard/DashboardWaitingList";
 import DashboardRecurring from "@/pages/dashboard/DashboardRecurring";
+import DashboardPortfolio from "@/pages/dashboard/DashboardPortfolio";
 
 // Admin Pages
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminBarbershops from "@/pages/admin/AdminBarbershops";
 import AdminUsers from "@/pages/admin/AdminUsers";
+import AdminSubscriptions from "@/pages/admin/AdminSubscriptions";
+import AdminAds from "@/pages/admin/AdminAds";
+import AdminAppointments from "@/pages/admin/AdminAppointments";
+import AdminCategories from "@/pages/admin/AdminCategories";
+import AdminSystem from "@/pages/admin/AdminSystem";
 
 // Barber Panel Pages
 import BarberDashboard from "@/pages/barber/BarberDashboard";
@@ -141,6 +147,7 @@ function DashboardRouter() {
         <Route path="/dashboard/services" component={DashboardServices} />
         <Route path="/dashboard/products" component={DashboardProducts} />
         <Route path="/dashboard/subscription" component={DashboardSubscription} />
+        <Route path="/dashboard/portfolio" component={DashboardPortfolio} />
         <Route path="/dashboard/clients" component={DashboardClients} />
         <Route path="/dashboard/settings" component={DashboardSettings} />
         <Route path="/dashboard/payments" component={DashboardPayments} />
@@ -160,7 +167,12 @@ function AdminRouter() {
       <Switch>
         <Route path="/admin" component={AdminDashboard} />
         <Route path="/admin/barbershops" component={AdminBarbershops} />
+        <Route path="/admin/subscriptions" component={AdminSubscriptions} />
+        <Route path="/admin/ads" component={AdminAds} />
+        <Route path="/admin/appointments" component={AdminAppointments} />
+        <Route path="/admin/categories" component={AdminCategories} />
         <Route path="/admin/users" component={AdminUsers} />
+        <Route path="/admin/system" component={AdminSystem} />
         <Route component={NotFound} />
       </Switch>
     </AdminLayout>

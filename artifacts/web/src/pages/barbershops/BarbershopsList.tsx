@@ -33,15 +33,15 @@ async function fetchBarbers(): Promise<BarberMapItem[]> {
       return dbShops.map((b: any) => ({
         id: Number(b.id) || Date.now(),
         name: b.name,
-        avatarUrl: b.avatar || b.cover_image || "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800&q=80",
-        rating: Number(b.rating) || 5.0,
+        avatarUrl: b.image_card || b.card_image || (Array.isArray(b.portfolio_urls) && b.portfolio_urls.find((p: any) => typeof p === 'object' && p !== null && p.category === 'Kartela')?.url) || b.image_url || b.cover_image || b.image || b.avatar || b.imageUrl || (Array.isArray(b.photos) && b.photos[0] ? b.photos[0] : null) || (Array.isArray(b.portfolio_urls) && b.portfolio_urls[0] ? (typeof b.portfolio_urls[0] === 'string' ? b.portfolio_urls[0] : b.portfolio_urls[0].url) : null) || "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800&q=80",
+        rating: b.rating ? Number(b.rating) : 0.0,
         shop: {
           id: Number(b.id) || Date.now(),
           name: b.name,
           city: b.city || "Prishtinë",
           address: b.address || b.city || "Kosovë",
-          imageUrl: b.avatar || b.cover_image || "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800&q=80",
-          rating: Number(b.rating) || 5.0,
+          imageUrl: b.image_card || b.card_image || (Array.isArray(b.portfolio_urls) && b.portfolio_urls.find((p: any) => typeof p === 'object' && p !== null && p.category === 'Kartela')?.url) || b.image_url || b.cover_image || b.image || b.avatar || b.imageUrl || (Array.isArray(b.photos) && b.photos[0] ? b.photos[0] : null) || (Array.isArray(b.portfolio_urls) && b.portfolio_urls[0] ? (typeof b.portfolio_urls[0] === 'string' ? b.portfolio_urls[0] : b.portfolio_urls[0].url) : null) || "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800&q=80",
+          rating: b.rating ? Number(b.rating) : 0.0,
           latitude: Number(b.latitude) || 42.6629,
           longitude: Number(b.longitude) || 21.1655,
           openTime: "09:00",
@@ -379,7 +379,12 @@ export default function BarbershopsList() {
                             ) : <span />}
                             <button
                               type="button"
-                              onClick={(event) => { event.stopPropagation(); setLocation(`/book/${shop.id}`); }}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                const shopSelected = shopBarbers.some((barber) => barber.id === selectedBarberId);
+                                const targetBarberId = shopSelected ? selectedBarberId : null;
+                                setLocation(`/book/${shop.id}${targetBarberId ? `?barberId=${targetBarberId}` : ""}`);
+                              }}
                               className="rounded-full bg-primary/10 px-3 py-1 text-[11px] font-bold text-primary hover:bg-primary/15 transition-all"
                             >
                               Rezervo →

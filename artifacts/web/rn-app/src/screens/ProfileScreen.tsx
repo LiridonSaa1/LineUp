@@ -28,7 +28,6 @@ import {
   X,
   Star,
   UserPlus,
-  CreditCard as PlansIcon,
   Crown,
   Phone,
   Info,
@@ -40,7 +39,8 @@ import {
   AlertCircle,
   Clock,
   Flag,
-  DollarSign
+  DollarSign,
+  RefreshCw
 } from "lucide-react-native";
 import Animated, { FadeInUp, FadeInDown, useAnimatedStyle, withSpring, useSharedValue, SlideInRight } from "react-native-reanimated";
 import { BlurView } from 'expo-blur';
@@ -49,6 +49,8 @@ import { supabase } from "@/config/supabase";
 import { RegisterScreen } from "./RegisterScreen";
 import { PaddleCheckout } from "../components/PaddleCheckout";
 import { createPaddleTransaction } from "../config/paddle";
+import { deleteShopAssets } from "../utils/storage";
+import { useSubscription } from "../hooks/useSubscription";
 
 const { width, height } = Dimensions.get("window");
 
@@ -129,15 +131,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [settingsView, setSettingsIndex] = useState<'main' | 'notifications' | 'password' | 'legal'>('main');
   const [legalType, setLegalType] = useState<'privacy' | 'terms' | 'use'>('privacy');
 
-  const [focusedField, setFocusedField] = useState<string | null>(null);
-  const [currentPlan, setCurrentPlan] = useState<string | null>('solo');
-  const [teamEmployeeCount, setTeamEmployeeCount] = useState(3);
-
-  // Upgrade Plan States
-  const [upgradeStep, setUpgradeStep] = useState(1);
-  const [isPreparingUpgrade, setIsPreparingUpgrade] = useState(false);
-  const [upgradeTransactionId, setUpgradeTransactionId] = useState<string | null>(null);
-  const [selectedUpgradePlan, setSelectedUpgradePlan] = useState<any>(null);
+  const [realShopId, setRealShopId] = useState<string | null>(null);
+  const { subscription, loading: subLoading, isActivating, setIsActivating, refresh: refreshSub } = useSubscription(realShopId, user?.id);
 
   const calculateTeamPrice = (count: number) => {
     return 25 + (Math.max(3, count) - 3) * 5;
@@ -175,6 +170,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [feedbackSubject, setFeedbackSubject] = useState("");
   const [feedbackContent, setFeedbackContent] = useState("");
   const [sendingFeedback, setSendingFeedback] = useState(false);
+
+  // Support Form States
+  const [supportSubject, setSupportSubject] = useState("");
+  const [supportMessage, setSupportMessage] = useState("");
+  const [sendingSupport, setSendingSupport] = useState(false);
 
   // Employee Service & Schedule States
   const [categories, setCategories] = useState<any[]>([]);
@@ -290,34 +290,34 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         const insertData: any = {
           barber_id: user.id,
           subcategory_id: subcatId,
-          price: currentPrice,
-          ...(user.shop_id ? { shop_id: user.shop_id } : {})
+          duration_minutes: currentDur,
+          price: currentPrice
         };
 
-        // Only include duration if we have reason to believe the column exists or just try it
-        // To be safe, we'll try to include it. If it fails, we'll try without it.
-        try {
-          const { error } = await supabase
-            .from('barber_services')
-            .upsert({
-              ...insertData,
-              duration_minutes: currentDur
-            }, { onConflict: 'barber_id,subcategory_id' });
+        // If user is owner/barber, we also try to link to shop_id if available
+        if (user.shop_id) {
+          insertData.shop_id = user.shop_id;
+        }
 
-          if (error && error.message.includes('duration_minutes')) {
-             // Fallback for missing column
-             const { error: err2 } = await supabase
+        // Try full upsert (with price and duration)
+        const { error } = await supabase
+          .from('barber_services')
+          .upsert(insertData, { onConflict: 'barber_id,subcategory_id' });
+
+        if (error) {
+          console.warn("[Profile] First upsert attempt failed:", error.message);
+
+          // Fallback 1: Try without 'price' if it's missing from DB
+          if (error.message.includes('price')) {
+            const { price, ...rest } = insertData;
+            const { error: err2 } = await supabase
               .from('barber_services')
-              .upsert(insertData, { onConflict: 'barber_id,subcategory_id' });
-             if (err2) throw err2;
-          } else if (error) {
+              .upsert(rest, { onConflict: 'barber_id,subcategory_id' });
+
+            if (err2) throw err2;
+          } else {
             throw error;
           }
-        } catch (innerErr) {
-           const { error: err2 } = await supabase
-            .from('barber_services')
-            .upsert(insertData, { onConflict: 'barber_id,subcategory_id' });
-           if (err2) throw err2;
         }
 
         if (!selectedEmployeeSubcats.includes(subcatId)) {
@@ -330,9 +330,19 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch (err: any) {
       console.error("[Profile] toggleEmployeeService error:", err);
+
+      if (err.code === '23503') {
+        Alert.alert(
+          "Llogaria nuk u gjet",
+          "Profili juaj nuk u gjet në databazë. Duke u përpjekur ta rregullojmë...",
+          [{ text: "Në rregull", onPress: () => fetchOwnerStats() }]
+        );
+      } else {
+        Alert.alert("Gabim", "Dështoi përditësimi i shërbimit: " + err.message);
+      }
+
       // Re-fetch to sync state with DB if error occurred
       fetchEmployeeServicesData();
-      Alert.alert("Gabim", "Dështoi përditësimi i shërbimit: " + err.message);
     }
   };
 
@@ -403,66 +413,164 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     }
   };
 
+  const handleSendSupportMessage = async () => {
+    if (!supportSubject.trim() || !supportMessage.trim()) {
+      Alert.alert("Gabim", "Ju lutem plotësoni subjektin dhe mesazhin.");
+      return;
+    }
+
+    setSendingSupport(true);
+    try {
+      const { error } = await supabase.from('system_feedback').insert({
+        user_id: user.id,
+        subject: `SUPPORT: ${supportSubject.trim()}`,
+        content: supportMessage.trim()
+      });
+
+      if (error) throw error;
+
+      Alert.alert("Sukses! ✉️", "Mesazhi juaj u dërgua me sukses. Ekipi ynë do t'ju përgjigjet së shpejti.");
+      setSupportSubject("");
+      setSupportMessage("");
+      setActiveModal(null);
+    } catch (e: any) {
+      console.error("[Profile] Support Message Error:", e);
+      Alert.alert("Gabim", "Dështoi dërgimi i mesazhit: " + (e.message || "Provoni përsëri më vonë."));
+    } finally {
+      setSendingSupport(false);
+    }
+  };
+
   // Orari & Festat States
   const [shopSchedule, setShopSchedule] = useState<any[]>([]);
-  const [realShopId, setRealShopId] = useState<string | null>(null);
+  const [localShopSchedule, setLocalShopSchedule] = useState<any[]>([]);
+  const [holidayPreferences, setHolidayPreferences] = useState<Record<string, boolean>>({});
+  const [localHolidayPrefs, setLocalHolidayPrefs] = useState<Record<string, boolean>>({});
+  const [savingOrari, setSavingOrari] = useState(false);
+  const [currentBarberId, setCurrentBarberId] = useState<string | null>(null);
 
-  const toggleDaySchedule = async (dayIdx: number, currentIsClosed: boolean) => {
-    if (!realShopId) return;
+  const toggleDayScheduleLocal = (dayIdx: number, currentIsClosed: boolean) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
-    const updatedSchedule = [...shopSchedule];
-    const existingIndex = updatedSchedule.findIndex(s => s.day_of_week === dayIdx);
-    
-    const newIsClosed = !currentIsClosed;
-    
-    if (existingIndex > -1) {
-      updatedSchedule[existingIndex] = {
-        ...updatedSchedule[existingIndex],
-        is_closed: newIsClosed
-      };
-    } else {
-      updatedSchedule.push({
-        barber_id: realShopId,
-        day_of_week: dayIdx,
-        is_closed: newIsClosed,
-        start_time: '09:00',
-        end_time: '18:00'
-      });
-    }
-    
-    setShopSchedule(updatedSchedule);
-    
-    try {
+
+    setLocalShopSchedule(prev => {
+      const updated = [...prev];
+      const existingIndex = updated.findIndex(s => s.day_of_week === dayIdx);
+      const newIsClosed = !currentIsClosed;
+      const targetId = (user.role === 'owner') ? realShopId : (currentBarberId || realShopId);
+
       if (existingIndex > -1) {
-        await supabase
-          .from('barber_schedules')
-          .update({ is_closed: newIsClosed })
-          .eq('barber_id', realShopId)
-          .eq('day_of_week', dayIdx);
+        updated[existingIndex] = { ...updated[existingIndex], is_closed: newIsClosed };
       } else {
-        await supabase
-          .from('barber_schedules')
-          .insert({
-            barber_id: realShopId,
-            day_of_week: dayIdx,
-            is_closed: newIsClosed,
-            start_time: '09:00',
-            end_time: '18:00'
-          });
+        updated.push({
+          barber_id: String(targetId),
+          day_of_week: dayIdx,
+          is_closed: newIsClosed,
+          start_time: '09:00',
+          end_time: '18:00'
+        });
       }
-    } catch (err) {
-      console.warn("Failed to update schedule in Supabase:", err);
-      fetchOwnerStats();
+      return updated;
+    });
+  };
+
+  const updateDayTimeLocal = (dayIdx: number, type: 'start_time' | 'end_time', value: string) => {
+    setLocalShopSchedule(prev => {
+      const updated = [...prev];
+      const existingIndex = updated.findIndex(s => s.day_of_week === dayIdx);
+      if (existingIndex > -1) {
+        updated[existingIndex] = { ...updated[existingIndex], [type]: value };
+      }
+      return updated;
+    });
+  };
+
+  const toggleHolidayLocal = (holidayName: string, isWorking: boolean) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setLocalHolidayPrefs(prev => ({ ...prev, [holidayName]: !isWorking }));
+  };
+
+  const handleSaveOrari = async () => {
+    // For owners, we save to the shop ID. For employees/barbers, we save to their personal barber ID.
+    const targetId = (user.role === 'owner') ? realShopId : (currentBarberId || realShopId);
+
+    if (!targetId) {
+      Alert.alert("Gabim", "Nuk u gjet llogaria e sallonit ose berberit për të ruajtur orarin.");
+      return;
+    }
+
+    setSavingOrari(true);
+    try {
+      const finalId = String(targetId).trim();
+      console.log(`[Profile] Saving schedule for targetId: ${finalId}`);
+
+      // 1. Save Schedule (Ensure all 7 days are handled)
+      if (localShopSchedule.length > 0) {
+        const { error: scheduleError } = await supabase
+          .from('barber_schedules')
+          .upsert(localShopSchedule.map(item => ({
+            barber_id: finalId,
+            day_of_week: item.day_of_week,
+            is_closed: item.is_closed,
+            start_time: item.start_time,
+            end_time: item.end_time
+          })), { onConflict: 'barber_id,day_of_week' });
+
+        if (scheduleError) {
+          console.error("Schedule Save Error:", scheduleError);
+          throw new Error("Dështoi ruajtja e ditëve të javës: " + scheduleError.message);
+        }
+      }
+
+      // 2. Save Holiday Preferences
+      console.log(`[Profile] Saving holiday preferences for role: ${user.role}`);
+      if (user.role === 'owner') {
+        const { error: holidayError } = await supabase
+          .from('barbershops')
+          .update({ holiday_preferences: localHolidayPrefs })
+          .eq('id', finalId);
+        if (holidayError) throw holidayError;
+      } else {
+        const { error: holidayError } = await supabase
+          .from('barbers')
+          .update({ holiday_preferences: localHolidayPrefs })
+          .eq('id', finalId);
+        if (holidayError) throw holidayError;
+      }
+
+      // Update UI state with saved values
+      setShopSchedule(localShopSchedule);
+      setHolidayPreferences(localHolidayPrefs);
+
+      Alert.alert("Sukses! 🎉", "Orari i punës dhe preferencat e festave u ruajtën me sukses.");
+      setActiveModal(null);
+      fetchOwnerStats(); // Refresh everything to ensure consistency
+    } catch (err: any) {
+      console.error("[Profile] handleSaveOrari error:", err);
+      Alert.alert("Gabim gjatë komunikimit", err.message || "Ndodhi një gabim gjatë ruajtjes në server.");
+    } finally {
+      setSavingOrari(false);
     }
   };
 
   const fetchOwnerStats = useCallback(async () => {
     if (!user?.id) return;
     try {
+      // Repair logic: Ensure user exists in public.users to avoid FK errors
+      const { data: checkUser } = await supabase.from('users').select('id').eq('id', user.id).maybeSingle();
+      if (!checkUser) {
+        console.log("[Profile] User missing in public.users, attempting repair...");
+        await supabase.from('users').upsert({
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role || 'client'
+        });
+      }
+
       const isBusiness = user.role === 'owner' || user.role === 'barber' || user.role === 'employee';
       
       let shopId = null;
+      let bId = null;
       let apptsRes: any = { data: [] };
       let staffRes: any = { count: 0 };
       let schedulesRes: any = { data: [] };
@@ -470,10 +578,27 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       if (isBusiness) {
         const { data: shopData } = await supabase
           .from('barbershops')
-          .select('id')
+          .select('id, holiday_preferences')
           .eq('owner_id', user.id)
           .maybeSingle();
-        shopId = shopData?.id;
+
+        const { data: barberProfile } = await supabase
+          .from('barbers')
+          .select('id, shop_id, holiday_preferences')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        shopId = shopData?.id || barberProfile?.shop_id;
+        bId = barberProfile?.id;
+
+        if (bId) setCurrentBarberId(bId);
+
+        // Resolve Holiday Preferences
+        if (user.role === 'owner' && shopData?.holiday_preferences) {
+          setHolidayPreferences(shopData.holiday_preferences);
+        } else if (barberProfile?.holiday_preferences) {
+          setHolidayPreferences(barberProfile.holiday_preferences);
+        }
       }
 
       const favQuery = (isBusiness && shopId)
@@ -483,10 +608,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       const promises: any[] = [favQuery];
 
       if (isBusiness && shopId) {
+        const targetSchedId = (user.role === 'owner') ? shopId : bId;
         promises.push(
           supabase.from('appointments').select('*').eq('shop_id', shopId).neq('status', 'cancelled').order('date', { ascending: false }),
           supabase.from('barbers').select('*', { count: 'exact', head: true }).eq('shop_id', shopId),
-          supabase.from('barber_schedules').select('*').eq('barber_id', shopId)
+          supabase.from('barber_schedules').select('*').eq('barber_id', targetSchedId || shopId)
         );
       }
 
@@ -508,15 +634,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         customerData = results[1];
       }
 
-      if (customerData?.data?.customer_id) {
-        const { data: subData } = await supabase
-          .from('subscriptions')
-          .select('product_id')
-          .eq('customer_id', customerData.data.customer_id)
-          .eq('status', 'active')
-          .maybeSingle();
-        if (subData) setCurrentPlan(subData.product_id);
-      }
+      // Removed manual subscription fetching as it is now handled by the useSubscription hook.
 
       setDbAppointments(apptsRes.data || []);
       setDbFavorites(favsRes.data || []);
@@ -585,10 +703,74 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email: cleanEmail, password: authPassword });
       if (authError) { setErrorMessage("E-mail ose fjalëkalimi është i gabuar."); setLoading(false); return; }
       if (authData?.user) {
-        const { data: dbUser } = await supabase.from('users').select('*').eq('email', cleanEmail).maybeSingle();
-        const { data: dbShop } = await supabase.from('barbershops').select('*').eq('email', cleanEmail).maybeSingle();
-        if (dbShop) onLogin({ id: dbShop.owner_id || dbShop.id, name: dbShop.name, email: dbShop.email || cleanEmail, role: 'owner' });
-        else if (dbUser) onLogin({ id: dbUser.id, name: dbUser.name, email: dbUser.email, role: dbUser.role || 'client' });
+        const userId = authData.user.id;
+
+        // 1. Fetch Shop and Subscription Data
+        const { data: dbShop } = await supabase.from('barbershops').select('*').eq('owner_id', userId).maybeSingle();
+        const { data: barberProfile } = await supabase.from('barbers').select('shop_id').eq('user_id', userId).maybeSingle();
+
+        let targetShopId = dbShop?.id || barberProfile?.shop_id;
+        let parentShop = null;
+        let authSubscription = null;
+
+        if (targetShopId) {
+          const [shopRes, subRes] = await Promise.all([
+            supabase.from('barbershops').select('*').eq('id', targetShopId).maybeSingle(),
+            supabase.from('subscriptions').select('*').eq('customer_id', userId).order('created_at', { ascending: false }).limit(1).maybeSingle()
+          ]);
+          parentShop = shopRes.data;
+          authSubscription = subRes.data;
+        }
+
+        const isOwner = !!dbShop;
+        const isBarber = !!barberProfile;
+        const subActive = authSubscription?.status === 'active' || authSubscription?.status === 'trialing';
+
+        // --- LOGIC 1: ADMIN SUSPENSION (Manual) ---
+        // If shop is suspended but NOT because of subscription (e.g. status is suspended and admin set a reason)
+        if (parentShop?.status === 'suspended' && subActive) {
+          const reason = parentShop.suspension_reason ? `\n\nArsyeja: ${parentShop.suspension_reason}` : "";
+          Alert.alert("Llogaria është e Bllokuar", `Salloni "${parentShop.name}" është pezulluar nga administratori.${reason}\n\nJu nuk mund të kyçeni në këtë moment.`);
+          await supabase.auth.signOut();
+          setLoading(false);
+          return;
+        }
+
+        // --- LOGIC 2: SUBSCRIPTION EXPIRED ---
+        if (targetShopId && !subActive) {
+          if (isOwner) {
+            // Owners can login but will be forced to pay
+            const { data: dbUser } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
+            onLogin({
+              id: dbShop.owner_id || dbShop.id,
+              name: dbShop.name,
+              email: dbShop.email || cleanEmail,
+              role: 'owner',
+              needsPayment: true // FLAG FOR DASHBOARD
+            });
+            setLoading(false);
+            return;
+          } else if (isBarber) {
+            // Barbers are locked out
+            Alert.alert("Abonimi ka Skaduar", `Salloni "${parentShop?.name || 'juaj'}" nuk ka një abonim aktiv.\n\nJu lutem kontaktoni pronarin për të rinovuar shërbimin.`);
+            await supabase.auth.signOut();
+            setLoading(false);
+            return;
+          }
+        }
+
+        // If everything is fine, proceed with regular login
+        const { data: dbUser } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
+
+        if (dbShop) {
+          onLogin({ id: dbShop.owner_id || dbShop.id, name: dbShop.name, email: dbShop.email || cleanEmail, role: 'owner' });
+        } else if (dbUser) {
+          onLogin({ id: dbUser.id, name: dbUser.name, email: dbUser.email, role: dbUser.role || 'client' });
+        } else {
+          // Logic for deleted accounts (ghost accounts in Auth but missing in DB)
+          // Handled globally in App.tsx to avoid double alerts
+          await supabase.auth.signOut();
+        }
       }
     } catch (e) { setErrorMessage("Ndodhi një gabim gjatë kyçjes."); } finally { setLoading(false); }
   };
@@ -686,8 +868,30 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           style: "destructive",
           onPress: async () => {
             try {
-              // Note: Cascading delete should be handled in Supabase DB triggers/foreign keys
-              // or manually here: delete appointments -> delete staff -> delete shop -> delete user
+              // 1. Fetch shop assets to delete from storage
+              const { data: shop } = await supabase
+                .from('barbershops')
+                .select('image_url, portfolio_urls')
+                .eq('owner_id', user.id)
+                .maybeSingle();
+
+              if (shop) {
+                const assetsToDelete = [];
+                if (shop.image_url) assetsToDelete.push(shop.image_url);
+                if (Array.isArray(shop.portfolio_urls)) {
+                  shop.portfolio_urls.forEach((url: any) => {
+                    if (typeof url === 'string') assetsToDelete.push(url);
+                    else if (url?.url) assetsToDelete.push(url.url);
+                  });
+                }
+
+                if (assetsToDelete.length > 0) {
+                  await deleteShopAssets(assetsToDelete);
+                }
+              }
+
+              // 2. Cascading delete handled by DB triggers/FKs
+              // delete user -> cascade to barbershops -> barbers -> appointments
               await supabase.from('users').delete().eq('id', user.id);
               onLogout();
             } catch (e) {
@@ -741,7 +945,26 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     if (label === 'Settings') { setActiveModal('settings'); setSettingsIndex('main'); }
     if (label === 'Support') setActiveModal('support');
     if (label === 'Language') setActiveModal('language');
-    if (label === 'Orari') setActiveModal('orari');
+    if (label === 'SubscriptionDetails') setActiveModal('subDetails');
+    if (label === 'Orari') {
+      // Ensure we have a complete 7-day schedule for the local state
+      const targetId = (user.role === 'owner') ? realShopId : (currentBarberId || realShopId);
+
+      const fullSchedule = Array.from({ length: 7 }, (_, idx) => {
+        const existing = shopSchedule.find(s => s.day_of_week === idx);
+        return existing || {
+          barber_id: String(targetId),
+          day_of_week: idx,
+          is_closed: idx === 6, // Sunday default closed
+          start_time: '09:00',
+          end_time: '18:00'
+        };
+      });
+
+      setLocalShopSchedule(fullSchedule);
+      setLocalHolidayPrefs(holidayPreferences);
+      setActiveModal('orari');
+    }
     if (label === 'EmployeeServices') {
       setActiveModal('employeeServices');
     }
@@ -767,11 +990,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         email: user.email,
         planId: plan.id,
         amount: price,
+        userId: user.id,
         customerName: user.name
       });
 
-      if (res?.data?.id) {
-        setUpgradeTransactionId(res.data.id);
+      if (res?.id) {
+        setUpgradeTransactionId(res.id);
       }
       setUpgradeStep(2);
     } catch (err: any) {
@@ -782,27 +1006,65 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   };
 
   const handleUpgradeSuccess = async (paddleData: any) => {
+    // The subscription is now handled by the Paddle Webhook authoritative flow.
+    // We just trigger the "activating" state to wait for the sync.
+    setIsActivating(true);
+    Alert.alert("Sukses", `Pagesa u krye! Abonimi juaj po aktivizohet.`);
+    setUpgradeStep(1);
+    setActiveModal(null);
+  };
+
+  const handleCancelAutoRenewal = async () => {
+    if (!subscription?.subscription_id) return;
+
+    Alert.alert(
+      "Anulo Rinovimin Automatik",
+      "A jeni të sigurt? Abonimi juaj do të mbetet AKTIV dhe salloni juaj do të jetë i dukshëm deri në fund të ciklit aktual faturues. Pas kësaj date, salloni do të çaktivizohet automatikisht.",
+      [
+        { text: "Mbaje", style: "cancel" },
+        {
+          text: "Po, Anuloje",
+          style: "destructive",
+          onPress: async () => {
+            setLoading(true);
+            try {
+              const { error } = await supabase
+                .from('subscriptions')
+                .update({ cancel_at_period_end: true })
+                .eq('paddle_subscription_id', subscription.paddle_subscription_id);
+
+              if (error) throw error;
+
+              Alert.alert("Sukses! 🛑", "Rinovimi automatik u anulua. Ju mund ta përdorni LineUp deri në skadimin e periudhës aktuale.");
+              setActiveModal(null);
+              fetchOwnerStats();
+            } catch (e: any) {
+              Alert.alert("Gabim", "Dështoi anulimi: " + e.message);
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleReactivateAutoRenewal = async () => {
+    if (!subscription?.paddle_subscription_id) return;
+
     setLoading(true);
     try {
-      // Update or Insert subscription record
-      const { error } = await supabase.from('subscriptions').upsert({
-        customer_id: user.id,
-        status: 'active',
-        product_id: selectedUpgradePlan.id,
-        subscription_id: upgradeTransactionId || `txn_${Date.now()}`,
-        employee_limit: selectedUpgradePlan.id === 'solo' ? 1 : (selectedUpgradePlan.id === 'duo' ? 2 : teamEmployeeCount),
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'customer_id' });
+      const { error } = await supabase
+        .from('subscriptions')
+        .update({ cancel_at_period_end: false })
+        .eq('paddle_subscription_id', subscription.paddle_subscription_id);
 
       if (error) throw error;
 
-      setCurrentPlan(selectedUpgradePlan.id);
-      Alert.alert("Sukses", `Plani juaj u përmirësua me sukses në ${selectedUpgradePlan.name}!`);
-      setUpgradeStep(1);
-      setActiveModal(null);
+      Alert.alert("Sukses! ✨", "Rinovimi automatik u rikthye. Abonimi juaj do të vazhdojë normalisht.");
       fetchOwnerStats();
     } catch (e: any) {
-      Alert.alert("Gabim", "Pagesa u krye por dështoi përditësimi i llogarisë: " + e.message);
+      Alert.alert("Gabim", "Dështoi aktivizimi: " + e.message);
     } finally {
       setLoading(false);
     }
@@ -810,40 +1072,99 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   if (!user) {
     return (
-      <View className="flex-1 bg-white">
-      <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }} keyboardShouldPersistTaps="handled">
-          <Animated.View entering={FadeInUp} className="items-center mb-10">
-             <View className="w-20 h-20 bg-[#3473ef]/10 rounded-3xl items-center justify-center mb-6">
-                <Store size={40} color="#3473ef" />
-             </View>
-             <Text className="text-3xl font-black text-[#161719] text-center">Kyçja e Biznesit</Text>
-             <Text className="text-slate-400 font-bold text-center mt-2">Menaxho sallonin tënd me LineUp</Text>
-          </Animated.View>
-          <View className="gap-y-4">
-             {errorMessage !== "" && (
-               <View className="bg-rose-50 p-4 rounded-2xl border border-rose-100 mb-2">
-                 <Text className="text-rose-600 font-bold text-xs text-center">{errorMessage}</Text>
-               </View>
-             )}
-             <View className="bg-slate-50 rounded-2xl px-4 h-16 flex-row items-center border border-slate-100">
-                <Mail size={20} color="#94A3B8" />
-                <TextInput placeholder="Email" value={authEmail} onChangeText={setAuthEmail} className="flex-1 ml-3 font-bold text-[#161719]" placeholderTextColor="#CBD5E1" />
-             </View>
-             <View className="bg-slate-50 rounded-2xl px-4 h-16 flex-row items-center border border-slate-100">
-                <Lock size={20} color="#94A3B8" />
-                <TextInput placeholder="Fjalëkalimi" value={authPassword} onChangeText={setAuthPassword} secureTextEntry={!showPassword} className="flex-1 ml-3 font-bold text-[#161719]" placeholderTextColor="#CBD5E1" />
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                   {showPassword ? <EyeOff size={20} color="#94A3B8" /> : <Eye size={20} color="#94A3B8" />}
-                </TouchableOpacity>
-             </View>
-             <TouchableOpacity onPress={handleAuthSubmit} disabled={loading} className={`bg-[#161719] h-16 rounded-2xl items-center justify-center mt-4 shadow-xl shadow-black/20 ${loading ? 'opacity-70' : ''}`}>
-                {loading ? <ActivityIndicator color="white" /> : <Text className="text-white font-black text-lg">Kyçu</Text>}
-             </TouchableOpacity>
-             <TouchableOpacity onPress={() => setShowRegisterModal(true)} className="items-center py-4">
-                <Text className="text-[#3473ef] font-black">Nuk keni llogari? Regjistroni dyqanin</Text>
-             </TouchableOpacity>
-          </View>
-        </ScrollView>
+      <View className="flex-1 bg-[#ECEEF2]">
+        {/* Background Decorative Blobs */}
+        <View className="absolute top-[-50] left-[-50] w-64 h-64 bg-[#3473ef]/15 rounded-full blur-3xl" />
+        <View className="absolute top-[200] right-[-100] w-80 h-80 bg-[#f47458]/15 rounded-full blur-3xl" />
+
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          className="flex-1"
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+        >
+          <ScrollView
+            contentContainerStyle={{
+              flexGrow: 1,
+              paddingHorizontal: 24,
+              paddingTop: 60,
+              paddingBottom: 40
+            }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View className="flex-1 justify-center">
+              <Animated.View entering={FadeInUp} className="items-center mb-10">
+                 <Image
+                    source={require('../../assets/logo.png')}
+                    style={{ width: 260, height: 87 }}
+                    resizeMode="contain"
+                    className="mb-4"
+                 />
+                 <Text className="text-4xl font-black text-[#161719] text-center tracking-tight">Kyçja e Biznesit</Text>
+                 <Text className="text-slate-500 font-bold text-center mt-2 text-base">Menaxho sallonin tënd me LineUp</Text>
+              </Animated.View>
+
+              <View className="overflow-hidden border border-white/60 shadow-2xl shadow-black/5" style={{ borderRadius: 36, backgroundColor: 'rgba(255, 255, 255, 0.4)' }}>
+                <BlurView intensity={40} tint="light" className="p-8">
+                  <View className="gap-y-5">
+                    {errorMessage !== "" && (
+                      <View className="bg-rose-50/80 p-4 rounded-2xl border border-rose-100 mb-2">
+                        <Text className="text-rose-600 font-bold text-xs text-center">{errorMessage}</Text>
+                      </View>
+                    )}
+
+                    <View className="bg-white/80 rounded-2xl px-4 h-16 flex-row items-center border border-slate-100 shadow-sm shadow-black/5">
+                        <Mail size={20} color="#94A3B8" />
+                        <TextInput
+                          placeholder="E-mail Adresa"
+                          value={authEmail}
+                          onChangeText={setAuthEmail}
+                          className="flex-1 ml-3 font-bold text-[#161719] text-base"
+                          placeholderTextColor="#CBD5E1"
+                          autoCapitalize="none"
+                          keyboardType="email-address"
+                        />
+                    </View>
+
+                    <View className="bg-white/80 rounded-2xl px-4 h-16 flex-row items-center border border-slate-100 shadow-sm shadow-black/5">
+                        <Lock size={20} color="#94A3B8" />
+                        <TextInput
+                          placeholder="Fjalëkalimi"
+                          value={authPassword}
+                          onChangeText={setAuthPassword}
+                          secureTextEntry={!showPassword}
+                          className="flex-1 ml-3 font-bold text-[#161719] text-base"
+                          placeholderTextColor="#CBD5E1"
+                        />
+                        <TouchableOpacity onPress={() => setShowPassword(!showPassword)} className="p-2">
+                          {showPassword ? <EyeOff size={20} color="#94A3B8" /> : <Eye size={20} color="#94A3B8" />}
+                        </TouchableOpacity>
+                    </View>
+
+                    <TouchableOpacity
+                      onPress={handleAuthSubmit}
+                      disabled={loading}
+                      className={`bg-[#161719] h-16 rounded-[22px] items-center justify-center mt-4 shadow-xl shadow-black/20 ${loading ? 'opacity-70' : ''}`}
+                    >
+                        {loading ? <ActivityIndicator color="white" /> : <Text className="text-white font-black text-lg">Kyçu në Panel</Text>}
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => setShowRegisterModal(true)}
+                      className="items-center pt-4 pb-2"
+                    >
+                        <Text className="text-[#3473ef] font-black text-sm">Nuk keni llogari? Regjistroni dyqanin</Text>
+                    </TouchableOpacity>
+                  </View>
+                </BlurView>
+              </View>
+            </View>
+
+            {/* Hapësirë shtesë për manual scrolling kur hapet keyboard */}
+            <View style={{ height: 100 }} />
+          </ScrollView>
+        </KeyboardAvoidingView>
+
         <Modal visible={showRegisterModal} animationType="slide">
           <RegisterScreen onClose={() => setShowRegisterModal(false)} onSuccess={(u) => { setShowRegisterModal(false); onLogin(u); }} />
         </Modal>
@@ -949,49 +1270,55 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 </>
               ) : (
                 <>
+                  {(user.role === 'owner' || user.role === 'barber') && (
+                    <ProfileMenuButton icon={FileText} label="Lista e Shërbimeve" onPress={() => handleAction('EmployeeServices')} />
+                  )}
                   {isBusinessRole && (
                     <ProfileMenuButton icon={Clock} label="Orari & Festat" onPress={() => handleAction('Orari')} />
                   )}
+
                   {isBusinessRole && (
                     <ProfileMenuButton
-                      icon={PlansIcon}
-                      label="Planet e Abonimit"
+                      icon={CreditCard}
+                      label="Plani i abonimit"
                       rightElement={
                         <View className="flex-row items-center">
+                          {subscription?.status === 'suspended' && (
+                            <View className="bg-rose-500 px-2 py-0.5 rounded-full mr-2">
+                               <Text className="text-white font-black text-[8px] uppercase">I bllokuar</Text>
+                            </View>
+                          )}
                           <View className="bg-emerald-500/10 px-3 py-1 rounded-full mr-2">
-                             <Text className="text-emerald-600 font-black text-[10px] uppercase">{currentPlan || 'Solo'}</Text>
-                          </View>
+                        <Text className="text-emerald-600 font-black text-[10px] uppercase">{subscription?.plan_name || 'Solo'}</Text>
+                      </View>
                           <ChevronRight size={18} color="#94A3B8" />
                         </View>
                       }
-                      onPress={() => handleAction('Plans')}
+                      onPress={() => setActiveModal('subManagement')}
                     />
                   )}
+
                   <ProfileMenuButton icon={Heart} label="Të Ruajtura" onPress={() => handleAction('Favorites')} />
                   <ProfileMenuButton icon={MessageSquare} label="Mesazhet" onPress={() => handleAction('Messages')} />
                   {isBusinessRole && <ProfileMenuButton icon={Calendar} label="Rezervimet e Mia" onPress={() => handleAction('Appointments')} />}
-                  <ProfileMenuButton icon={FileText} label="Formularët" onPress={() => handleAction('Forms')} />
+                  <ProfileMenuButton icon={FileText} label="Sugjero një Përmirësim" onPress={() => handleAction('Forms')} />
                   <ProfileMenuButton icon={Settings} label="Cilësimet" isLast={!isBusinessRole} onPress={() => handleAction('Settings')} />
                 </>
               )}
            </View>
 
-           {user.role !== 'employee' && (
-             <>
-               <Text className="text-slate-400 font-black text-[11px] uppercase tracking-[2px] mt-10 mb-4 ml-2">Suporti & Detajet</Text>
-               <View className="bg-white/40 rounded-[32px] overflow-hidden shadow-sm">
-                  <BlurView intensity={20} tint="light" style={StyleSheet.absoluteFill} />
-                  <ProfileMenuButton icon={Headphones} label="Suporti" onPress={() => handleAction('Support')} />
-                  <ProfileMenuButton
-                    icon={Globe}
-                    label="Shqip (Kosovë)"
-                    isLast
-                    rightElement={<ChevronRight size={18} color="#94A3B8" />}
-                    onPress={() => handleAction('Language')}
-                  />
-               </View>
-             </>
-           )}
+           <Text className="text-slate-400 font-black text-[11px] uppercase tracking-[2px] mt-10 mb-4 ml-2">Suporti & Detajet</Text>
+           <View className="bg-white/40 rounded-[32px] overflow-hidden shadow-sm">
+              <BlurView intensity={20} tint="light" style={StyleSheet.absoluteFill} />
+              <ProfileMenuButton icon={Headphones} label="Suporti" onPress={() => handleAction('Support')} />
+              <ProfileMenuButton
+                icon={Globe}
+                label="Shqip (Kosovë)"
+                isLast
+                rightElement={<ChevronRight size={18} color="#94A3B8" />}
+                onPress={() => handleAction('Language')}
+              />
+           </View>
 
            <TouchableOpacity
             onPress={() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); onLogout(); }}
@@ -1004,15 +1331,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </View>
       </ScrollView>
 
-      <Modal visible={activeModal !== null} animationType="slide" transparent={true}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          className="flex-1"
-        >
-          <View className="flex-1 bg-black/60 justify-end">
+      <Modal visible={activeModal !== null} animationType="slide" transparent={activeModal === 'plans' && upgradeStep === 2 ? false : true}>
+        <View className={`flex-1 ${activeModal === 'plans' && upgradeStep === 2 ? 'bg-white' : 'bg-black/60 justify-end'}`}>
+          {!(activeModal === 'plans' && upgradeStep === 2) && (
             <TouchableOpacity activeOpacity={1} onPress={() => { setActiveModal(null); Keyboard.dismiss(); }} className="absolute inset-0" />
-            <Animated.View entering={FadeInUp} className="bg-[#F8FAFC] rounded-t-[50px] p-8 pb-12 h-[90%]">
-              <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mb-8" />
+          )}
+          <Animated.View entering={FadeInUp} className={`${activeModal === 'plans' && upgradeStep === 2 ? 'flex-1 p-0' : 'bg-[#F8FAFC] rounded-t-[50px] p-8 pb-12 h-[95%]'}`}>
+            {!(activeModal === 'plans' && upgradeStep === 2) && <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mb-8" />}
 
               {activeModal === 'profile' && (
                 <View className="flex-1">
@@ -1020,7 +1345,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     <Text className="text-3xl font-black text-[#161719]">Ndrysho Profilin</Text>
                     <TouchableOpacity onPress={() => setActiveModal(null)} className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-sm"><X size={24} color="#161719" /></TouchableOpacity>
                   </View>
-                  <ScrollView showsVerticalScrollIndicator={false}>
+                  <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
                     <View className="gap-y-6">
                       <View>
                         <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Emri i plotë</Text>
@@ -1083,9 +1408,103 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 </View>
               )}
 
+              {activeModal === 'subManagement' && (
+                <View className="flex-1">
+                  <View className="flex-row justify-between items-center mb-10">
+                    <Text className="text-3xl font-black text-[#161719]">Menaxho Abonimin</Text>
+                    <TouchableOpacity onPress={() => setActiveModal(null)} className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-sm"><X size={24} color="#161719" /></TouchableOpacity>
+                  </View>
+
+                  <View className="flex-row gap-x-4 mb-8">
+                    <TouchableOpacity
+                      onPress={() => setActiveModal('plans')}
+                      className="flex-1 bg-white rounded-[32px] p-6 shadow-sm border border-slate-100 items-center justify-center"
+                    >
+                      <View className="w-14 h-14 rounded-2xl bg-amber-50 items-center justify-center mb-4">
+                        <Crown size={28} color="#D97706" />
+                      </View>
+                      <Text className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-1">Plani Aktiv</Text>
+                    <Text className="text-[#161719] font-black text-lg uppercase">{(subscription?.plan_name || 'Asnjë')}</Text>
+                      <View className="mt-4 bg-slate-50 px-3 py-1.5 rounded-full">
+                        <Text className="text-slate-500 font-black text-[10px] uppercase">Ndrysho</Text>
+                      </View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => setActiveModal('subDetails')}
+                      className="flex-1 bg-white rounded-[32px] p-6 shadow-sm border border-slate-100 items-center justify-center"
+                    >
+                      <View className="w-14 h-14 rounded-2xl bg-emerald-50 items-center justify-center mb-4">
+                        <CreditCard size={28} color="#10B981" />
+                      </View>
+                      <Text className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-1">Statusi</Text>
+                      <Text
+                        numberOfLines={1}
+                        className={`font-black text-lg uppercase ${
+                          subscription?.status === 'active' || subscription?.status === 'trialing'
+                            ? 'text-emerald-600'
+                            : (subscription?.status === 'past_due' ? 'text-amber-500' : 'text-rose-500')
+                        }`}
+                      >
+                        {subscription?.status === 'active' ? 'Aktiv' : (subscription?.status === 'trialing' ? 'Provë' : (subscription?.status === 'past_due' ? 'Pagesa...' : (subscription?.status || 'Pa abonim')))}
+                      </Text>
+                      <View className="mt-4 bg-slate-50 px-3 py-1.5 rounded-full">
+                        <Text className="text-slate-500 font-black text-[10px] uppercase">Detajet</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Expiry Progress Bar */}
+                  {subscription?.current_period_end && (
+                    <View className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm mb-8">
+                      <View className="flex-row justify-between items-center mb-4">
+                         <View>
+                            <Text className="text-slate-900 font-black text-sm">Koha e mbetur</Text>
+                            <Text className="text-slate-400 font-bold text-[10px] mt-0.5">30 ditë cikël faturimi</Text>
+                         </View>
+                         <Text className={`font-black text-sm ${subscription.daysRemaining < 7 ? 'text-rose-500' : 'text-[#3473ef]'}`}>
+                            {subscription.daysRemaining} ditë
+                         </Text>
+                      </View>
+
+                      <View className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                         <View
+                           className={`h-full rounded-full ${subscription.daysRemaining < 7 ? 'bg-rose-500' : 'bg-[#3473ef]'}`}
+                           style={{ width: `${Math.min(100, (subscription.daysRemaining / 30) * 100)}%` }}
+                         />
+                      </View>
+
+                      <View className="flex-row justify-between mt-3">
+                         <Text className="text-slate-400 font-bold text-[9px] uppercase tracking-tighter">Fillimi: {new Date(subscription.current_period_start || Date.now()).toLocaleDateString('sq-AL')}</Text>
+                         <Text className="text-slate-400 font-bold text-[9px] uppercase tracking-tighter">Skadimi: {new Date(subscription.current_period_end).toLocaleDateString('sq-AL')}</Text>
+                      </View>
+                    </View>
+                  )}
+
+                  <View className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm">
+                    <Text className="text-slate-500 font-bold text-xs leading-5">
+                      {subscription?.status === 'active'
+                        ? 'Abonimi juaj është në rregull. Salloni është i dukshëm për të gjithë përdoruesit.'
+                        : 'Menaxhoni planet, shikoni detajet e faturimit ose rinovovi abonimin tuaj këtu.'}
+                    </Text>
+                  </View>
+
+                  {(!subscription || subscription.status === 'expired' || subscription.status === 'past_due') && (
+                    <TouchableOpacity
+                      onPress={() => setActiveModal('plans')}
+                      className="mt-8 bg-[#161719] h-16 rounded-2xl flex-row items-center justify-center shadow-xl"
+                    >
+                      <RefreshCw size={20} color="white" className="mr-3" />
+                      <Text className="text-white font-black text-base">Rinovo Tani</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+
               {activeModal === 'plans' && (
                 <View className="flex-1">
                    <View className="flex-row justify-between items-center mb-10">
+                    <TouchableOpacity onPress={() => setActiveModal('subManagement')} className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-sm"><ChevronLeft size={24} color="#161719" /></TouchableOpacity>
                     <Text className="text-3xl font-black text-[#161719]">{upgradeStep === 1 ? 'Abonimet' : 'Pagesa e Sigurt'}</Text>
                     <TouchableOpacity onPress={() => setActiveModal(null)} className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-sm"><X size={24} color="#161719" /></TouchableOpacity>
                   </View>
@@ -1099,7 +1518,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                           const displayEmployees = isTeam ? `${teamEmployeeCount} berberë` : plan.employees;
 
                           return (
-                            <View key={plan.id} className={`bg-white p-6 rounded-[32px] shadow-sm border ${currentPlan === plan.id ? 'border-[#3473ef]' : 'border-transparent'}`}>
+                           <View key={plan.id} className={`bg-white p-6 rounded-[32px] shadow-sm border ${subscription?.plan_id === plan.id ? 'border-[#3473ef] bg-[#3473ef]/5' : 'border-transparent'}`}>
                               <View className="flex-row justify-between items-center mb-4">
                                 <View>
                                   <Text className="text-xl font-black text-[#161719]">{plan.name}</Text>
@@ -1132,15 +1551,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                 {plan.features.map((f, i) => (<View key={i} className="flex-row items-center mb-2"><CheckCircle2 size={14} color="#10b981" strokeWidth={3} /><Text className="text-slate-600 font-bold text-xs ml-2">{f}</Text></View>))}
                               </View>
                               <TouchableOpacity
-                                disabled={currentPlan === plan.id || isPreparingUpgrade}
+                                disabled={subscription?.plan_id === plan.id || isPreparingUpgrade}
                                 onPress={() => handleStartUpgrade(plan)}
-                                className={`h-14 rounded-2xl items-center justify-center ${currentPlan === plan.id ? 'bg-slate-100' : 'bg-[#161719]'}`}
+                                className={`h-14 rounded-2xl items-center justify-center ${subscription?.plan_id === plan.id ? 'bg-slate-100' : 'bg-[#161719]'}`}
                               >
                                 {isPreparingUpgrade && selectedUpgradePlan?.id === plan.id ? (
                                   <ActivityIndicator color="white" />
                                 ) : (
-                                  <Text className={`font-black text-sm ${currentPlan === plan.id ? 'text-slate-400' : 'text-white'}`}>
-                                    {currentPlan === plan.id ? 'Plani Aktiv' : 'Upgrade Planin'}
+                                  <Text className={`font-black text-sm ${subscription?.plan_id === plan.id ? 'text-slate-400' : 'text-white'}`}>
+                                    {subscription?.plan_id === plan.id ? 'Plani Aktiv' : 'Upgrade Planin'}
                                   </Text>
                                 )}
                               </TouchableOpacity>
@@ -1173,6 +1592,101 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                       </TouchableOpacity>
                     </View>
                   )}
+                </View>
+              )}
+
+              {activeModal === 'subDetails' && (
+                <View className="flex-1">
+                  <View className="flex-row justify-between items-center mb-8">
+                    <TouchableOpacity onPress={() => setActiveModal('subManagement')} className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-sm"><ChevronLeft size={24} color="#161719" /></TouchableOpacity>
+                    <Text className="text-3xl font-black text-[#161719]">Detajet</Text>
+                    <TouchableOpacity onPress={() => setActiveModal(null)} className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-sm"><X size={24} color="#161719" /></TouchableOpacity>
+                  </View>
+
+                  <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 24 }}>
+                    <View className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm">
+                      <View className="flex-row items-center mb-4">
+                        <View className={`w-12 h-12 rounded-2xl items-center justify-center mr-4 ${subscription?.status === 'active' ? 'bg-emerald-50' : 'bg-rose-50'}`}>
+                          <CreditCard size={24} color={subscription?.status === 'active' ? '#10b981' : '#f43f5e'} />
+                        </View>
+                        <View>
+                          <Text className="text-slate-400 font-black text-[10px] uppercase tracking-widest">Statusi Aktual</Text>
+                          <Text className={`text-xl font-black uppercase ${subscription?.status === 'active' ? 'text-emerald-600' : 'text-rose-500'}`}>
+                            {subscription?.status === 'active' ? 'AKTIV' : (subscription?.status === 'past_due' ? 'PAGESË E DËSHTUAR' : (subscription?.status || 'PA ABONIM'))}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View className="h-[1px] bg-slate-50 my-4" />
+
+                      <View className="gap-y-4">
+                        <View className="flex-row justify-between">
+                          <Text className="text-slate-500 font-bold">Plani:</Text>
+                          <Text className="text-[#161719] font-black uppercase">{subscription?.plan_name || 'ASNJË'}</Text>
+                        </View>
+                        {subscription?.end_date && (
+                          <View className="flex-row justify-between">
+                            <Text className="text-slate-500 font-bold">{subscription.cancel_at_period_end ? 'Skadon më:' : 'Rinovimi i radhës:'}</Text>
+                            <View className="items-end">
+                              <Text className="text-[#161719] font-black">{new Date(subscription.end_date).toLocaleDateString('sq-AL')}</Text>
+                              {subscription.days_remaining !== undefined && (
+                                <Text className={`text-[10px] font-bold ${subscription.days_remaining < 5 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                  {subscription.days_remaining} ditë mbetur
+                                </Text>
+                              )}
+                            </View>
+                          </View>
+                        )}
+                        {subscription && (
+                          <View className="flex-row justify-between">
+                            <Text className="text-slate-500 font-bold">Rinovimi automatik:</Text>
+                            <Text className={`font-black ${subscription?.cancel_at_period_end ? 'text-rose-500' : 'text-emerald-500'}`}>
+                              {subscription?.cancel_at_period_end ? 'I NDALUR' : 'I AKTIVIZUAR'}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+
+                    {!subscription?.cancel_at_period_end && subscription?.status === 'active' && (
+                      <TouchableOpacity
+                        onPress={handleCancelAutoRenewal}
+                        className="bg-rose-50 h-16 rounded-[24px] items-center justify-center border border-rose-100"
+                      >
+                        <Text className="text-rose-600 font-black text-base">Anulo Rinovimin Automatik</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {subscription?.cancel_at_period_end && (subscription?.status === 'active' || subscription?.status === 'trialing') && (
+                      <TouchableOpacity
+                        onPress={handleReactivateAutoRenewal}
+                        className="bg-emerald-50 h-16 rounded-[24px] items-center justify-center border border-emerald-100"
+                      >
+                        <Text className="text-emerald-600 font-black text-base">Aktivizo Rinovimin Automatik</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {(subscription?.status === 'past_due' || !subscription) && (
+                      <TouchableOpacity
+                        onPress={() => setActiveModal('plans')}
+                        className="bg-[#161719] h-16 rounded-[24px] items-center justify-center"
+                      >
+                        <Text className="text-white font-black text-base">Zgjidh një Plan</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {subscription?.cancel_at_period_end && (
+                      <View className="bg-amber-50 p-6 rounded-[28px] border border-amber-100">
+                        <View className="flex-row items-center mb-2">
+                          <AlertTriangle size={18} color="#D97706" />
+                          <Text className="text-amber-800 font-black text-sm ml-2">Vini re!</Text>
+                        </View>
+                        <Text className="text-amber-700 font-bold text-xs leading-5">
+                          Rinovimi automatik është anuluar. Salloni juaj do të jetë i dukshëm deri më {new Date(subscription.current_period_end).toLocaleDateString('sq-AL')}. Pas kësaj date, duhet të zgjidhni një plan të ri për të vazhduar shërbimin.
+                        </Text>
+                      </View>
+                    )}
+                  </ScrollView>
                 </View>
               )}
 
@@ -1336,7 +1850,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         <View key={i} className="bg-white p-5 rounded-[28px] border border-slate-100 shadow-sm">
                            <View className="flex-row justify-between mb-3">
                               <Text className="font-black text-[#161719] text-base">{appt.users?.name || 'Klient'}</Text>
-                              <Text className="text-[#3473ef] font-black">{appt.price}€</Text>
+                              {appt.price > 0 && (
+                                <Text className="text-[#3473ef] font-black">{appt.price}€</Text>
+                              )}
                            </View>
                            <View className="flex-row items-center">
                               <Calendar size={12} color="#8789A3" />
@@ -1463,12 +1979,16 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     <Text className="text-3xl font-black text-[#161719]">Suporti</Text>
                     <TouchableOpacity onPress={() => setActiveModal(null)} className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-sm"><X size={24} color="#161719" /></TouchableOpacity>
                   </View>
-                  <View className="gap-y-6">
-                    <View className="bg-blue-50 p-6 rounded-[28px] border border-blue-100 flex-row items-center"><Headphones size={24} color="#3473ef" /><View className="ml-4"><Text className="font-black text-[#161719]">Na Kontaktoni</Text><Text className="text-slate-400 font-bold text-xs mt-0.5">Përgjigje brenda 24 orëve</Text></View></View>
-                    <View><Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Subjekti</Text><TextInput placeholder="Psh. Problem me pagesë" className="bg-white h-14 rounded-2xl px-5 font-bold border border-slate-100" /></View>
-                    <View><Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Mesazhi</Text><TextInput multiline numberOfLines={5} placeholder="Shkruani mesazhin tuaj këtu..." className="bg-white h-32 rounded-2xl px-5 py-4 font-bold border border-slate-100" /></View>
-                    <TouchableOpacity onPress={() => { Alert.alert("Dërguar", "Mesazhi juaj u dërgua me sukses përmes Brevo."); setActiveModal(null); }} className="bg-[#3473ef] h-16 rounded-2xl items-center justify-center shadow-lg shadow-blue-200 mt-4"><Text className="text-white font-black text-lg">Dërgo Mesazhin</Text></TouchableOpacity>
-                  </View>
+                  <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
+                    <View className="gap-y-6">
+                      <View className="bg-blue-50 p-6 rounded-[28px] border border-blue-100 flex-row items-center"><Headphones size={24} color="#3473ef" /><View className="ml-4"><Text className="font-black text-[#161719]">Na Kontaktoni</Text><Text className="text-slate-400 font-bold text-xs mt-0.5">Përgjigje brenda 24 orëve</Text></View></View>
+                      <View><Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Subjekti</Text><TextInput value={supportSubject} onChangeText={setSupportSubject} placeholder="Psh. Problem me pagesë" className="bg-white h-14 rounded-2xl px-5 font-bold border border-slate-100" /></View>
+                      <View><Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Mesazhi</Text><TextInput value={supportMessage} onChangeText={setSupportMessage} multiline numberOfLines={5} placeholder="Shkruani mesazhin tuaj këtu..." className="bg-white h-32 rounded-2xl px-5 py-4 font-bold border border-slate-100 text-left align-top" style={{ textAlignVertical: 'top' }} /></View>
+                      <TouchableOpacity onPress={handleSendSupportMessage} disabled={sendingSupport} className={`bg-[#3473ef] h-16 rounded-2xl items-center justify-center shadow-lg shadow-blue-200 mt-4 ${sendingSupport ? 'opacity-70' : ''}`}>
+                        {sendingSupport ? <ActivityIndicator color="white" /> : <Text className="text-white font-black text-lg">Dërgo Mesazhin</Text>}
+                      </TouchableOpacity>
+                    </View>
+                  </ScrollView>
                 </View>
               )}
 
@@ -1511,49 +2031,90 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                       <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 ml-1">Orari i Sallonit</Text>
                       <View className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-100">
                         {['E Hënë', 'E Martë', 'E Mërkurë', 'E Enjte', 'E Premte', 'E Shtunë', 'E Diel'].map((day, idx) => {
-                          const daySched = shopSchedule.find(s => s.day_of_week === idx) || { is_closed: idx === 6, start_time: '09:00', end_time: '18:00' };
+                          const daySched = localShopSchedule.find(s => s.day_of_week === idx) || { is_closed: idx === 6, start_time: '09:00', end_time: '18:00' };
+                          const isWorking = !daySched.is_closed;
+
                           return (
-                            <View key={idx} className={`flex-row items-center py-4 ${idx < 6 ? 'border-b border-slate-50' : ''}`}>
-                              <Text className="flex-1 font-black text-[#161719] text-sm">{day}</Text>
-                              <View className="flex-row items-center gap-3">
-                                {!daySched.is_closed ? (
-                                  <View className="bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
-                                    <Text className="font-bold text-[#161719] text-[10px]">{daySched.start_time} - {daySched.end_time}</Text>
-                                  </View>
-                                ) : (
-                                  <Text className="text-rose-500 font-black text-[10px] uppercase mr-2">Mbyllur</Text>
-                                )}
-                                <Switch 
-                                  value={!daySched.is_closed} 
-                                  onValueChange={() => toggleDaySchedule(idx, daySched.is_closed)}
-                                  trackColor={{ false: '#e2e8f0', true: '#3473ef' }} 
-                                />
+                            <View key={idx} className={`py-4 ${idx < 6 ? 'border-b border-slate-50' : ''}`}>
+                              <View className="flex-row items-center justify-between">
+                                <Text className="font-black text-[#161719] text-sm">{day}</Text>
+                                <View className="flex-row items-center gap-3">
+                                  {!isWorking && (
+                                    <Text className="text-rose-500 font-black text-[10px] uppercase mr-2">Mbyllur</Text>
+                                  )}
+                                  <Switch
+                                    value={isWorking}
+                                    onValueChange={() => toggleDayScheduleLocal(idx, daySched.is_closed)}
+                                    trackColor={{ false: '#e2e8f0', true: '#3473ef' }}
+                                  />
+                                </View>
                               </View>
+
+                              {isWorking && (
+                                <View className="flex-row items-center gap-x-3 mt-3">
+                                  <View className="flex-1">
+                                    <Text className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Nga</Text>
+                                    <TextInput
+                                      value={daySched.start_time}
+                                      onChangeText={(val) => updateDayTimeLocal(idx, 'start_time', val)}
+                                      placeholder="09:00"
+                                      className="bg-slate-50 h-10 rounded-xl px-3 font-bold border border-slate-100 text-center text-[#161719]"
+                                    />
+                                  </View>
+                                  <View className="flex-1">
+                                    <Text className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Deri</Text>
+                                    <TextInput
+                                      value={daySched.end_time}
+                                      onChangeText={(val) => updateDayTimeLocal(idx, 'end_time', val)}
+                                      placeholder="18:00"
+                                      className="bg-slate-50 h-10 rounded-xl px-3 font-bold border border-slate-100 text-center text-[#161719]"
+                                    />
+                                  </View>
+                                </View>
+                              )}
                             </View>
                           );
                         })}
                       </View>
                     </View>
 
-                    <View className="mb-6">
-                      <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 ml-1">Festat Zyrtare 2026 (Kosova)</Text>
+                    <View className="mb-10">
+                      <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 ml-1">Festat Zyrtare - Preferencat e Punës</Text>
                       <View className="bg-white rounded-[32px] p-2 shadow-sm border border-slate-100">
-                         {KOSOVO_HOLIDAYS_2026.map((h, i) => (
-                           <View key={i} className={`flex-row items-center p-5 ${i < KOSOVO_HOLIDAYS_2026.length - 1 ? 'border-b border-slate-50' : ''}`}>
-                              <View className="w-12 h-12 bg-slate-50 rounded-2xl items-center justify-center mr-4">
-                                <Text className="text-2xl">{h.icon}</Text>
-                              </View>
-                              <View className="flex-1">
-                                <Text className="font-black text-[#161719] text-base">{h.name}</Text>
-                                <Text className="text-[#3473ef] font-black text-[10px] uppercase tracking-wider mt-1">{h.date}</Text>
-                              </View>
-                              <View className="w-8 h-8 rounded-full bg-emerald-50 items-center justify-center">
-                                <CheckCircle2 size={14} color="#10b981" />
-                              </View>
-                           </View>
-                         ))}
+                         {KOSOVO_HOLIDAYS_2026.map((h, i) => {
+                           const isWorking = localHolidayPrefs[h.name] || false;
+                           return (
+                             <View key={i} className={`flex-row items-center p-5 ${i < KOSOVO_HOLIDAYS_2026.length - 1 ? 'border-b border-slate-50' : ''}`}>
+                                <View className="w-12 h-12 bg-slate-50 rounded-2xl items-center justify-center mr-4">
+                                  <Text className="text-2xl">{h.icon}</Text>
+                                </View>
+                                <View className="flex-1">
+                                  <Text className="font-black text-[#161719] text-base">{h.name}</Text>
+                                  <Text className="text-[#3473ef] font-black text-[10px] uppercase tracking-wider mt-1">{h.date}</Text>
+                                </View>
+                                <View className="items-center">
+                                  <Text className={`text-[8px] font-black uppercase mb-1 ${isWorking ? 'text-emerald-500' : 'text-slate-400'}`}>
+                                    {isWorking ? 'Punoj' : 'Pushim'}
+                                  </Text>
+                                  <Switch
+                                    value={isWorking}
+                                    onValueChange={() => toggleHolidayLocal(h.name, isWorking)}
+                                    trackColor={{ false: '#e2e8f0', true: '#10b981' }}
+                                  />
+                                </View>
+                             </View>
+                           );
+                         })}
                       </View>
                     </View>
+
+                    <TouchableOpacity
+                      onPress={handleSaveOrari}
+                      disabled={savingOrari}
+                      className="bg-[#3473ef] h-16 rounded-[24px] items-center justify-center shadow-lg shadow-blue-200 mb-10"
+                    >
+                      {savingOrari ? <ActivityIndicator color="white" /> : <Text className="text-white font-black text-lg">Ruaj Ndryshimet</Text>}
+                    </TouchableOpacity>
                   </ScrollView>
                 </View>
               )}
@@ -1791,9 +2352,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                  </View>
                )}
 
-           </Animated.View>
+            </Animated.View>
         </View>
-      </KeyboardAvoidingView>
     </Modal>
     </View>
   );

@@ -150,24 +150,29 @@ export const ActivityScreen: React.FC<ActivityScreenProps> = ({ user, onLogin, o
         <View className="absolute top-[-50] left-[-50] w-64 h-64 bg-[#3473ef]/15 rounded-full blur-3xl" />
         <View className="absolute top-[200] right-[-100] w-80 h-80 bg-[#f47458]/15 rounded-full blur-3xl" />
 
-        <View className="flex-1 items-center justify-center px-8">
-          <View className="w-24 h-24 rounded-full bg-white items-center justify-center shadow-xl mb-8">
-            <Lock size={40} color="#3473ef" strokeWidth={2.5} />
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 32 }}
+          showsVerticalScrollIndicator={false}
+        >
+          <View className="items-center justify-center py-20">
+            <View className="w-24 h-24 rounded-full bg-white items-center justify-center shadow-xl mb-8">
+              <Lock size={40} color="#3473ef" strokeWidth={2.5} />
+            </View>
+
+            <Text className="text-3xl font-black text-[#161719] text-center mb-4">Kyçu në Llogari</Text>
+            <Text className="text-[#8789A3] font-bold text-center leading-6 mb-10">
+              Për të parë terminet tuaja dhe për të rezervuar shërbime të reja, ju duhet të jeni të kyçur në llogarinë tuaj.
+            </Text>
+
+            <TouchableOpacity
+              onPress={onLogin}
+              activeOpacity={0.9}
+              className="w-full h-16 bg-black rounded-3xl items-center justify-center shadow-xl"
+            >
+              <Text className="text-white text-lg font-black">Kyçu Tani</Text>
+            </TouchableOpacity>
           </View>
-
-          <Text className="text-3xl font-black text-[#161719] text-center mb-4">Kyçu në Llogari</Text>
-          <Text className="text-[#8789A3] font-bold text-center leading-6 mb-10">
-            Për të parë terminet tuaja dhe për të rezervuar shërbime të reja, ju duhet të jeni të kyçur në llogarinë tuaj.
-          </Text>
-
-          <TouchableOpacity
-            onPress={onLogin}
-            activeOpacity={0.9}
-            className="w-full h-16 bg-black rounded-3xl items-center justify-center shadow-xl"
-          >
-            <Text className="text-white text-lg font-black">Kyçu Tani</Text>
-          </TouchableOpacity>
-        </View>
+        </ScrollView>
       </View>
     );
   }
@@ -339,60 +344,63 @@ export const ActivityScreen: React.FC<ActivityScreenProps> = ({ user, onLogin, o
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           className="flex-1"
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
           <View className="flex-1 bg-black/60 justify-end">
             <TouchableOpacity activeOpacity={1} onPress={() => { setShowReviewModal(false); Keyboard.dismiss(); }} className="absolute inset-0" />
-            <View className="bg-white rounded-t-[48px] p-8 pb-12 shadow-2xl">
+            <View className="bg-white rounded-t-[48px] p-8 pb-12 shadow-2xl max-h-[90%]">
               <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mb-8" />
 
-              <View className="flex-row justify-between items-center mb-6">
-                <View>
-                  <Text className="text-3xl font-black text-[#161719] tracking-tight">Vlerëso Sallonin</Text>
-                  <Text className="text-slate-400 font-bold text-sm mt-1">{selectedAppt?.shopName}</Text>
-                </View>
-                <TouchableOpacity onPress={() => setShowReviewModal(false)} className="w-12 h-12 bg-slate-50 rounded-full items-center justify-center">
-                  <X size={24} color="#161719" />
-                </TouchableOpacity>
-              </View>
-
-              <View className="items-center mb-10">
-                <View className="flex-row gap-2 mb-2">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <TouchableOpacity key={star} onPress={() => setRating(star)}>
-                      <Star size={40} color={star <= rating ? "#fbbf24" : "#e2e8f0"} fill={star <= rating ? "#fbbf24" : "transparent"} strokeWidth={2} />
-                    </TouchableOpacity>
-                  ))}
-                </View>
-                <Text className="text-slate-500 font-bold">Zgjidhni numrin e yjeve</Text>
-              </View>
-
-              <View className="mb-8">
-                <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Komenti juaj (opsionale)</Text>
-                <TextInput
-                  multiline
-                  numberOfLines={4}
-                  placeholder="Shkruani mendimin tuaj për shërbimin..."
-                  className="bg-slate-50 rounded-3xl p-5 font-bold text-[#161719] border border-slate-100"
-                  style={{ textAlignVertical: 'top', height: 120 }}
-                  value={comment}
-                  onChangeText={setComment}
-                />
-              </View>
-
-              <TouchableOpacity
-                onPress={handleSubmitReview}
-                disabled={submittingReview}
-                className={`h-16 rounded-[28px] items-center justify-center shadow-xl shadow-blue-200 ${submittingReview ? 'bg-slate-200' : 'bg-[#3473ef]'}`}
-              >
-                {submittingReview ? (
-                  <ActivityIndicator color="white" />
-                ) : (
-                  <View className="flex-row items-center">
-                    <Text className="text-white text-lg font-black mr-2">Dërgo Vlerësimin</Text>
-                    <Check size={20} color="white" strokeWidth={3} />
+              <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
+                <View className="flex-row justify-between items-center mb-6">
+                  <View>
+                    <Text className="text-3xl font-black text-[#161719] tracking-tight">Vlerëso Sallonin</Text>
+                    <Text className="text-slate-400 font-bold text-sm mt-1">{selectedAppt?.shopName}</Text>
                   </View>
-                )}
-              </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setShowReviewModal(false)} className="w-12 h-12 bg-slate-50 rounded-full items-center justify-center">
+                    <X size={24} color="#161719" />
+                  </TouchableOpacity>
+                </View>
+
+                <View className="items-center mb-10">
+                  <View className="flex-row gap-2 mb-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <TouchableOpacity key={star} onPress={() => setRating(star)}>
+                        <Star size={40} color={star <= rating ? "#fbbf24" : "#e2e8f0"} fill={star <= rating ? "#fbbf24" : "transparent"} strokeWidth={2} />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  <Text className="text-slate-500 font-bold">Zgjidhni numrin e yjeve</Text>
+                </View>
+
+                <View className="mb-8">
+                  <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Komenti juaj (opsionale)</Text>
+                  <TextInput
+                    multiline
+                    numberOfLines={4}
+                    placeholder="Shkruani mendimin tuaj për shërbimin..."
+                    className="bg-slate-50 rounded-3xl p-5 font-bold text-[#161719] border border-slate-100"
+                    style={{ textAlignVertical: 'top', height: 120 }}
+                    value={comment}
+                    onChangeText={setComment}
+                  />
+                </View>
+
+                <TouchableOpacity
+                  onPress={handleSubmitReview}
+                  disabled={submittingReview}
+                  className={`h-16 rounded-[28px] items-center justify-center shadow-xl shadow-blue-200 ${submittingReview ? 'bg-slate-200' : 'bg-[#3473ef]'}`}
+                >
+                  {submittingReview ? (
+                    <ActivityIndicator color="white" />
+                  ) : (
+                    <View className="flex-row items-center">
+                      <Text className="text-white text-lg font-black mr-2">Dërgo Vlerësimin</Text>
+                      <Check size={20} color="white" strokeWidth={3} />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </ScrollView>
             </View>
           </View>
         </KeyboardAvoidingView>

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Dimensions, Modal, FlatList } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Dimensions, Modal, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
 import { X, Store, MapPin, Camera, Check, ChevronRight, Info, Search, ChevronDown } from 'lucide-react-native';
 import { AddressAutocomplete } from '../components/AddressAutocomplete';
 import { supabase } from '@/config/supabase';
@@ -19,11 +19,31 @@ export const RegisterShopScreen: React.FC<RegisterShopScreenProps> = ({ onClose,
   const [category, setCategory] = useState("Barber");
   const [selectedPlace, setSelectedPlace] = useState<{ address: string; lat: number; lng: number, city?: string, place_id?: string } | null>(null);
 
-  const KOSOVO_CITIES = [
-    "Prishtinë", "Ferizaj", "Prizren", "Pejë", "Gjakovë", "Gjilan", "Mitrovicë",
-    "Vushtrri", "Podujevë", "Fushë Kosovë", "Rahovec", "Skënderaj", "Lipjan",
-    "Suharekë", "Deçan", "Istog", "Klinë", "Dragash", "Kamenicë", "Malishevë"
-  ];
+  const CITY_DATA: Record<string, { lat: number; lng: number }> = {
+    "Prishtinë": { lat: 42.6629, lng: 21.1655 },
+    "Prizren": { lat: 42.2139, lng: 20.7397 },
+    "Pejë": { lat: 42.6593, lng: 20.2883 },
+    "Gjakovë": { lat: 42.3803, lng: 20.4308 },
+    "Gjilan": { lat: 42.4635, lng: 21.4678 },
+    "Mitrovicë": { lat: 42.8914, lng: 20.8660 },
+    "Ferizaj": { lat: 42.3703, lng: 21.1559 },
+    "Vushtrri": { lat: 42.8231, lng: 20.9675 },
+    "Podujevë": { lat: 42.9114, lng: 21.1903 },
+    "Rahovec": { lat: 42.3994, lng: 20.6553 },
+    "Fushë Kosovë": { lat: 42.6340, lng: 21.0963 },
+    "Skënderaj": { lat: 42.7478, lng: 20.7878 },
+    "Lipjan": { lat: 42.5217, lng: 21.1258 },
+    "Malishevë": { lat: 42.4822, lng: 20.7461 },
+    "Kamenicë": { lat: 42.5781, lng: 21.5803 },
+    "Suharekë": { lat: 42.3581, lng: 20.8250 },
+    "Viti": { lat: 42.3214, lng: 21.3583 },
+    "Deçan": { lat: 42.5353, lng: 20.2878 },
+    "Istog": { lat: 42.7808, lng: 20.4875 },
+    "Klinë": { lat: 42.6225, lng: 20.5786 },
+    "Dragash": { lat: 42.0622, lng: 20.6533 }
+  };
+
+  const KOSOVO_CITIES = Object.keys(CITY_DATA).sort();
 
   const autocompleteRef = useRef<any>(null);
 
@@ -86,7 +106,12 @@ export const RegisterShopScreen: React.FC<RegisterShopScreenProps> = ({ onClose,
   };
 
   return (
-    <View className="flex-1 bg-white">
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      className="flex-1"
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
+      <View className="flex-1 bg-white">
       {/* Modal Handle */}
       <View className="w-12 h-1.5 bg-gray-200 rounded-full self-center mt-3 mb-2" />
 
@@ -97,7 +122,12 @@ export const RegisterShopScreen: React.FC<RegisterShopScreenProps> = ({ onClose,
         </TouchableOpacity>
       </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ flexGrow: 1 }}
+      >
         <View className="px-6 pt-6">
           <View className="bg-[#3473ef]/5 p-5 rounded-3xl border border-[#3473ef]/10 mb-8 flex-row items-center">
             <View className="w-12 h-12 rounded-2xl bg-[#3473ef] items-center justify-center mr-4">
@@ -144,6 +174,7 @@ export const RegisterShopScreen: React.FC<RegisterShopScreenProps> = ({ onClose,
               <AddressAutocomplete
                 placeholder={`Kërko rrugën në ${shopCity}...`}
                 selectedCity={shopCity}
+                cityCoords={CITY_DATA[shopCity]}
                 containerClassName="mb-2"
                 onSelectAddress={(place) => {
                   if (place && place.latitude && place.longitude) {
@@ -231,5 +262,6 @@ export const RegisterShopScreen: React.FC<RegisterShopScreenProps> = ({ onClose,
         </View>
       </Modal>
     </View>
+    </KeyboardAvoidingView>
   );
 };

@@ -1,6 +1,37 @@
 import { supabase } from '../config/supabase';
 
 /**
+ * Deletes multiple files from Supabase Storage given their public URLs.
+ * Automatically detects the bucket and file path from the URL.
+ * @param urls Array of public Supabase URLs
+ */
+export async function deleteShopAssets(urls: string[]): Promise<void> {
+  if (!urls || urls.length === 0) return;
+
+  const validUrls = urls.filter(u => u && (u.includes('supabase.co') || u.includes('storage')));
+
+  for (const url of validUrls) {
+    try {
+      // Parse URL to find bucket and path
+      // Format: .../storage/v1/object/public/BUCKET_NAME/FILE_PATH
+      const parts = url.split('/public/');
+      if (parts.length < 2) continue;
+
+      const pathParts = parts[1].split('/');
+      const bucket = pathParts[0];
+      const filePath = pathParts.slice(1).join('/');
+
+      if (bucket && filePath) {
+        console.log(`[Storage] Deleting ${filePath} from bucket ${bucket}...`);
+        await supabase.storage.from(bucket).remove([filePath]);
+      }
+    } catch (err) {
+      console.warn(`[Storage] Failed to delete asset: ${url}`, err);
+    }
+  }
+}
+
+/**
  * Helper to convert Blob to Data URL fallback
  */
 async function blobToDataUrl(blob: Blob): Promise<string> {

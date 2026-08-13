@@ -73,8 +73,16 @@ export default function Profile() {
 
           <div className="space-y-2">
             <Label>Roli</Label>
-            <div className="h-10 px-3 py-2 bg-muted rounded-xl text-sm flex items-center capitalize font-medium text-muted-foreground">
-              {user.role}
+            <div className="h-10 px-3 py-2 bg-muted rounded-xl text-sm flex items-center font-medium text-muted-foreground">
+              {(user.role as string) === 'employee' || (user.role as string) === 'staf' || (user.role as string) === 'staff'
+                ? 'Punëtor i verifikuar'
+                : user.role === 'owner'
+                ? 'Pronar Biznesi'
+                : user.role === 'barber'
+                ? 'Berber'
+                : user.role === 'admin'
+                ? 'Administrator'
+                : 'Klient'}
             </div>
           </div>
         </div>

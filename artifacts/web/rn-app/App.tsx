@@ -2,7 +2,7 @@ import React from "react";
 import { StatusBar } from "expo-status-bar";
 import { View, TouchableOpacity, Text, Dimensions, Platform, Modal, Alert } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { Home, Search, Calendar, User } from "lucide-react-native";
+import { Home, Search, Calendar, User, Shield } from "lucide-react-native";
 import * as Haptics from 'expo-haptics';
 import { BlurView } from 'expo-blur';
 import Animated, {
@@ -31,7 +31,7 @@ import { AdminDashboardScreen } from "./src/screens/AdminDashboardScreen";
 import { AddAdModal } from "./src/screens/AddAdModal";
 import { supabase } from "./src/config/supabase";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { DEFAULT_CATEGORIES, DEFAULT_SUBCATEGORIES } from "./src/config/defaultCategories";
+import { DEFAULT_CATEGORIES, DEFAULT_SUBCATEGORIES, CATEGORY_ORDER } from "./src/config/defaultCategories";
 import "./global.css";
 
 const { width } = Dimensions.get("window");
@@ -102,6 +102,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export default function App() {
   const [activeTab, setActiveTab] = React.useState(0);
+  const [adminUser, setAdminUser] = React.useState<any>(null);
   // ... rest of state
   const [selectedShop, setSelectedShop] = React.useState<any>(null);
   const [user, setUser] = React.useState<any>(null);
@@ -115,6 +116,7 @@ export default function App() {
   const [showLocation, setShowLocation] = React.useState(false);
   const [showSearch, setShowSearch] = React.useState(false);
   const [showRegisterShop, setShowRegisterShop] = React.useState(false);
+  const [isRegistering, setIsRegistering] = React.useState(false);
   const [showAddAd, setShowAddAd] = React.useState(false);
   const [categories, setCategories] = React.useState<any[]>(DEFAULT_CATEGORIES);
   const [subcategories, setSubcategories] = React.useState<any[]>(DEFAULT_SUBCATEGORIES);
@@ -189,21 +191,30 @@ export default function App() {
         if (cachedCats) setCategories(JSON.parse(cachedCats));
         if (cachedSubs) setSubcategories(JSON.parse(cachedSubs));
 
-        // Fetch fresh data in background from Supabase
         const [{ data: dbCats }, { data: dbSubs }] = await Promise.all([
-          supabase.from('categories').select('*').order('name'),
+          supabase.from('categories').select('*'),
           supabase.from('subcategories').select('*').order('name')
         ]);
         
-        if (dbCats && dbCats.length > 0 && dbSubs && dbSubs.length > 0) {
-          // Sync BOTH to ensure ID consistency between categories and subcategories
-          setCategories(dbCats);
-          setSubcategories(dbSubs);
-          await AsyncStorage.setItem('cached_categories', JSON.stringify(dbCats));
-          await AsyncStorage.setItem('cached_subcategories', JSON.stringify(dbSubs));
-        } else if (dbCats && dbCats.length > 0) {
-           // If only categories found, update just them (less ideal but better than nothing)
-           setCategories(dbCats);
+        if (dbCats && dbCats.length > 0) {
+          const sortedCats = [...dbCats].sort((a, b) => {
+            const indexA = CATEGORY_ORDER.indexOf(a.name);
+            const indexB = CATEGORY_ORDER.indexOf(b.name);
+            if (indexA === -1 && indexB === -1) return a.name.localeCompare(b.name);
+            if (indexA === -1) return 1;
+            if (indexB === -1) return -1;
+            return indexA - indexB;
+          });
+
+          if (dbSubs && dbSubs.length > 0) {
+            setCategories(sortedCats);
+            setSubcategories(dbSubs);
+            await AsyncStorage.setItem('cached_categories', JSON.stringify(sortedCats));
+            await AsyncStorage.setItem('cached_subcategories', JSON.stringify(dbSubs));
+          } else {
+            setCategories(sortedCats);
+            await AsyncStorage.setItem('cached_categories', JSON.stringify(sortedCats));
+          }
         }
       } catch (err) {
         console.warn("Failed to load static categories/subcategories:", err);
@@ -215,24 +226,70 @@ export default function App() {
   const fetchUserProfile = React.useCallback(async (email: string, sessionUser: any) => {
     try {
       const cleanEmail = email.toLowerCase();
-      const [dbUser, dbBarber] = await Promise.all([
+      const [dbUser, dbBarberShop, barberProfile] = await Promise.all([
         supabase.from('users').select('*').eq('email', cleanEmail).maybeSingle(),
-        supabase.from('barbershops').select('*').eq('email', cleanEmail).maybeSingle()
+        supabase.from('barbershops').select('*').eq('owner_id', sessionUser.id).maybeSingle(),
+        supabase.from('barbers').select('*, barbershops(*)').eq('user_id', sessionUser.id).maybeSingle()
       ]);
+
+      const userId = sessionUser.id;
+      const isOwner = !!dbBarberShop.data;
+      const isBarber = !!barberProfile.data;
+
+      // --- LOGIC FOR ACCOUNTS WITHOUT PROFILES ---
+      // We removed the forced "Deleted Account" logout to prevent race conditions during registration.
+      // The app will now simply fall back to default user data if no specific profile is found in DB.
+      console.log("[App.tsx] Checking profile for:", cleanEmail, { isRegistering, hasDbUser: !!dbUser.data });
+
+      // Fetch latest subscription
+      const { data: subscription } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('customer_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const isExpired = subscription?.current_period_end && new Date(subscription.current_period_end) < new Date();
+      const subActive = (subscription?.status === 'active' || subscription?.status === 'trialing') && !isExpired;
+      const parentShop = dbBarberShop || barberProfile?.barbershops;
+
+      // --- LOCKOUT LOGIC ---
+
+      // 1. Admin Suspension (Manual)
+      if (parentShop?.status === 'suspended' && subActive) {
+        Alert.alert("Llogari e Bllokuar", "Salloni juaj është pezulluar nga administratori.");
+        await supabase.auth.signOut();
+        setUser(null);
+        return;
+      }
+
+      // 2. Subscription Expiry
+      if (parentShop && !subActive) {
+        if (isBarber) {
+          Alert.alert("Abonimi ka Skaduar", "Salloni ku punoni nuk ka abonim aktiv.");
+          await supabase.auth.signOut();
+          setUser(null);
+          return;
+        }
+        // If owner, we continue but pass needsPayment flag
+      }
 
       if (dbUser.data) {
         setUser({
           id: dbUser.data.id,
           name: dbUser.data.name || dbUser.data.full_name || email.split('@')[0],
           email: dbUser.data.email,
-          role: dbUser.data.role || 'client'
+          role: dbUser.data.role || 'client',
+          needsPayment: isOwner && !subActive // Owner with no sub
         });
-      } else if (dbBarber.data) {
+      } else if (dbBarberShop.data) {
         setUser({
-          id: dbBarber.data.id,
-          name: dbBarber.data.name,
-          email: dbBarber.data.email,
-          role: 'barber'
+          id: dbBarberShop.data.id,
+          name: dbBarberShop.data.name,
+          email: dbBarberShop.data.email,
+          role: 'owner',
+          needsPayment: !subActive
         });
       } else {
         setUser({
@@ -245,7 +302,7 @@ export default function App() {
     } catch (err) {
       console.warn("Error fetching profile:", err);
     }
-  }, []);
+  }, [isRegistering]);
 
   React.useEffect(() => {
     // Check active session on startup
@@ -266,6 +323,21 @@ export default function App() {
 
     return () => subscription.unsubscribe();
   }, [fetchUserProfile]);
+
+  const handleImpersonate = (targetUser: any) => {
+    setAdminUser(user);
+    setUser(targetUser);
+    setActiveTab(0); // Go to home to see the app as that user
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Alert.alert("Impersonim", `Tashmë jeni duke lundruar si ${targetUser.name || targetUser.email}`);
+  };
+
+  const handleStopImpersonating = () => {
+    setUser(adminUser);
+    setAdminUser(null);
+    setActiveTab(2); // Go back to dashboard
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
 
   React.useEffect(() => {
     tabPosition.value = withSpring(activeTab * TAB_WIDTH, { damping: 15, stiffness: 120 });
@@ -296,11 +368,12 @@ export default function App() {
   };
 
   const isBusinessRole = user?.role === 'barber' || user?.role === 'owner' || user?.role === 'employee';
+  const isAdminRole = user?.role === 'super_admin' || user?.role === 'admin';
 
   const tabs = [
     { label: 'Ballina', icon: Home },
     { label: 'Kërko', icon: Search },
-    { label: isBusinessRole ? 'Paneli' : 'Aktiviteti', icon: Calendar },
+    { label: (isAdminRole || isBusinessRole) ? 'Paneli' : 'Aktiviteti', icon: Calendar },
     { label: 'Profili', icon: User },
   ];
 
@@ -322,106 +395,108 @@ export default function App() {
         <View className="flex-1 bg-[#ECEEF2]">
           <StatusBar style="dark" />
 
-          {/* Conditional Rendering: Super Admin Panel vs Unified Standard App */}
-          {user?.role === 'super_admin' || user?.role === 'admin' ? (
-            <AdminDashboardScreen
-              onLogout={async () => {
-                await supabase.auth.signOut();
-                setUser(null);
-              }}
-            />
-          ) : (
-            <>
-              {selectedShop ? (
-                <BarberDetailScreen
-                  shop={selectedShop}
-                  user={user}
-                  onLogin={(userData) => setUser(userData)}
-                  onBack={() => setSelectedShop(null)}
-                  favorites={favorites}
-                  onToggleFavorite={handleToggleFavorite}
-                />
-              ) : (
-                <View className="flex-1">
-                  {activeTab === 0 && (
-                    <HomeScreen
-                      onSelectShop={(shop) => setSelectedShop(shop)}
-                      onOpenLocation={() => setShowLocation(true)}
-                      onOpenSearch={() => setShowSearch(true)}
-                      onOpenAddAd={() => setShowAddAd(true)}
-                      selectedLocation={selectedLocation}
-                      onSearch={(query, subIds, categoryName) => handleSearch({ query, city: selectedLocation, subIds, categoryName })}
-                      onStartPlan={(planId) => {
-                        setSelectedPlanId(planId);
-                        setShowRegisterShop(true);
-                      }}
-                      onManagePlan={() => setActiveTab(3)} // Profile for management
-                      onUpgradePlan={(planId) => {
-                        // If already owner, we could trigger a direct upgrade flow
-                        // For now, let's just go to profile where they can manage
-                        setActiveTab(3);
-                      }}
-                      onDowngradePlan={(planId) => {
-                        setActiveTab(3);
-                      }}
-                      onRenewPlan={(planId) => {
-                        setActiveTab(3);
-                      }}
-                      categories={categories}
-                      subcategories={subcategories}
-                      favorites={favorites}
-                      onToggleFavorite={handleToggleFavorite}
-                      user={user}
-                    />
-                  )}
-                  {activeTab === 1 && (
-                    <ExploreScreen
-                      initialSubIds={searchSubIds}
-                      onSelectShop={(shop) => setSelectedShop(shop)}
-                      onOpenSearch={() => setShowSearch(true)}
-                      initialCity={cityFilter}
-                      initialSearch={searchQuery}
-                      initialCoords={searchCoords}
-                      initialCategoryName={searchCategoryName}
-                      favorites={favorites}
-                      onToggleFavorite={handleToggleFavorite}
-                    />
-                  )}
-                  {activeTab === 2 && (
-                    isBusinessRole ? (
-                      <BarberDashboardScreen
-                        user={user}
-                        onLogout={async () => {
-                          await supabase.auth.signOut();
-                          setUser(null);
-                        }}
-                      />
-                    ) : (
-                      <ActivityScreen
-                        user={user}
-                        onLogin={() => setActiveTab(3)}
-                        onNavigateToSearch={() => setActiveTab(1)}
-                      />
-                    )
-                  )}
-                  {activeTab === 3 && (
-                    <ProfileScreen
-                      user={user}
-                      onLogin={(userData) => setUser(userData)}
+          {/* Conditional Rendering: Standard App Structure for all roles */}
+          <>
+            {selectedShop ? (
+              <BarberDetailScreen
+                shop={selectedShop}
+                user={user}
+                onLogin={(userData) => setUser(userData)}
+                onBack={() => setSelectedShop(null)}
+                favorites={favorites}
+                onToggleFavorite={handleToggleFavorite}
+              />
+            ) : (
+              <View className="flex-1">
+                {activeTab === 0 && (
+                  <HomeScreen
+                    onSelectShop={(shop) => setSelectedShop(shop)}
+                    onOpenLocation={() => setShowLocation(true)}
+                    onOpenSearch={() => setShowSearch(true)}
+                    onOpenAddAd={() => setShowAddAd(true)}
+                    selectedLocation={selectedLocation}
+                    onSearch={(query, subIds, categoryName) => handleSearch({ query, city: selectedLocation, subIds, categoryName })}
+                    onStartPlan={(planId) => {
+                      setSelectedPlanId(planId);
+                      setShowRegisterShop(true);
+                    }}
+                    onManagePlan={() => setActiveTab(3)} // Profile for management
+                    onUpgradePlan={(planId) => {
+                      // If already owner, we could trigger a direct upgrade flow
+                      // For now, let's just go to profile where they can manage
+                      setActiveTab(3);
+                    }}
+                    onDowngradePlan={(planId) => {
+                      setActiveTab(3);
+                    }}
+                    onRenewPlan={(planId) => {
+                      setActiveTab(3);
+                    }}
+                    categories={categories}
+                    subcategories={subcategories}
+                    favorites={favorites}
+                    onToggleFavorite={handleToggleFavorite}
+                    user={user}
+                  />
+                )}
+                {activeTab === 1 && (
+                  <ExploreScreen
+                    initialSubIds={searchSubIds}
+                    onSelectShop={(shop) => setSelectedShop(shop)}
+                    onOpenSearch={() => setShowSearch(true)}
+                    initialCity={cityFilter}
+                    initialSearch={searchQuery}
+                    initialCoords={searchCoords}
+                    initialCategoryName={searchCategoryName}
+                    initialDate={searchDate}
+                    initialTime={searchTime}
+                    favorites={favorites}
+                    onToggleFavorite={handleToggleFavorite}
+                  />
+                )}
+                {activeTab === 2 && (
+                  isAdminRole ? (
+                    <AdminDashboardScreen
                       onLogout={async () => {
                         await supabase.auth.signOut();
                         setUser(null);
                       }}
-                      onOpenRegisterShop={() => setShowRegisterShop(true)}
-                      favorites={favorites}
-                      onToggleFavorite={handleToggleFavorite}
-                      onSelectShop={(shop) => {
-                        setSelectedShop(shop);
+                      onImpersonate={handleImpersonate}
+                    />
+                  ) : isBusinessRole ? (
+                    <BarberDashboardScreen
+                      user={user}
+                      onLogout={async () => {
+                        await supabase.auth.signOut();
+                        setUser(null);
                       }}
                     />
-                  )}
-                </View>
-              )}
+                  ) : (
+                    <ActivityScreen
+                      user={user}
+                      onLogin={() => setActiveTab(3)}
+                      onNavigateToSearch={() => setActiveTab(1)}
+                    />
+                  )
+                )}
+                {activeTab === 3 && (
+                  <ProfileScreen
+                    user={user}
+                    onLogin={(userData) => setUser(userData)}
+                    onLogout={async () => {
+                      await supabase.auth.signOut();
+                      setUser(null);
+                    }}
+                    onOpenRegisterShop={() => setShowRegisterShop(true)}
+                    favorites={favorites}
+                    onToggleFavorite={handleToggleFavorite}
+                    onSelectShop={(shop) => {
+                      setSelectedShop(shop);
+                    }}
+                  />
+                )}
+              </View>
+            )}
 
               {/* Location Selection Modal (Bottom Sheet Style) */}
               <Modal
@@ -501,6 +576,7 @@ export default function App() {
                   <View className="h-[95%] bg-white rounded-t-[40px] overflow-hidden">
                     <RegisterScreen
                       initialPlanId={selectedPlanId}
+                      setIsRegistering={setIsRegistering}
                       onClose={() => {
                         setShowRegisterShop(false);
                         setSelectedPlanId(undefined);
@@ -581,8 +657,22 @@ export default function App() {
                   </View>
                 </View>
               )}
+
+              {/* Floating Return to Admin Button */}
+              {adminUser && (
+                <TouchableOpacity
+                  onPress={handleStopImpersonating}
+                  activeOpacity={0.9}
+                  className="absolute bottom-[110px] right-6 bg-[#161719] px-6 h-12 rounded-full flex-row items-center justify-center shadow-2xl border border-white/10"
+                  style={{ zIndex: 1000 }}
+                >
+                  <Animated.View entering={FadeIn} className="flex-row items-center">
+                    <Shield size={18} color="white" />
+                    <Text className="text-white font-black ml-3 text-xs">Dil nga Impersonimi</Text>
+                  </Animated.View>
+                </TouchableOpacity>
+              )}
             </>
-          )}
         </View>
       </SafeAreaProvider>
     </GestureHandlerRootView>

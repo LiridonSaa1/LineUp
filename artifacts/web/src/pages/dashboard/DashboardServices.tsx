@@ -79,8 +79,22 @@ export default function DashboardServices() {
                   <Input type="number" value={price} onChange={e => setPrice(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Duration (min)</Label>
-                  <Input type="number" value={duration} onChange={e => setDuration(e.target.value)} />
+                  <Label>Kohëzgjatja (minuta)</Label>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    {[15, 30, 60].map((dur) => (
+                      <Button
+                        key={dur}
+                        type="button"
+                        variant={duration === String(dur) ? "default" : "outline"}
+                        size="sm"
+                        className="h-8 px-2.5 text-xs font-bold rounded-lg"
+                        onClick={() => setDuration(String(dur))}
+                      >
+                        {dur} min
+                      </Button>
+                    ))}
+                  </div>
+                  <Input type="number" value={duration} onChange={e => setDuration(e.target.value)} placeholder="Ndryshe (min)" />
                 </div>
               </div>
               <Button onClick={handleCreate} disabled={createMutation.isPending || !name || !price || !duration} className="w-full">

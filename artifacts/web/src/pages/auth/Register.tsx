@@ -224,7 +224,7 @@ export default function Register() {
         city: selectedCity || "Prishtinë",
         address: addressInput || `Qendra, ${selectedCity}`,
         status: 'active',
-        rating: 5.0,
+        rating: 0.0,
         total_reviews: 0,
         subcategories: selectedCategories
       });

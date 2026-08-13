@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, memo } from "react";
+import React, { useState, useEffect, useMemo, memo, useRef } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Pressable, TextInput, Dimensions, ActivityIndicator, Keyboard, StyleSheet, FlatList, Modal, KeyboardAvoidingView, Platform } from "react-native";
 import { User, CreditCard, Shield, Store, Mail, Lock, Eye, EyeOff, Phone, ChevronDown, Search, ArrowLeft, Check, ChevronRight, Zap, Sparkles, MapPin, X, Scissors, Hand, Smile, Waves } from "lucide-react-native";
 import { AddressAutocomplete } from '../components/AddressAutocomplete';
@@ -187,11 +187,15 @@ const AddressPicker = memo(({
   focusedField,
   setFocusedField
 }: AddressPickerProps) => {
+  const cityObj = KOSOVO_CITIES.find(c => c.city === selectedCity);
+  const cityCoords = cityObj ? { lat: cityObj.latitude, lng: cityObj.longitude } : undefined;
+
   return (
-    <View className="mb-1" style={{ zIndex: 1000 }}>
+    <View className="mb-1" style={{ zIndex: focusedField === 'address' ? 2000 : 1 }}>
        <AddressAutocomplete
           placeholder="Adresa (Rruga dhe Numri)"
           selectedCity={selectedCity}
+          cityCoords={cityCoords}
           onSelectAddress={(place) => {
             if (place && place.latitude && place.longitude) {
               onSelect({
@@ -202,6 +206,9 @@ const AddressPicker = memo(({
             }
           }}
           containerClassName={focusedField === 'address' ? 'border-[#3473ef]' : ''}
+          onChangeText={(text) => {
+             if (text.length >= 2) setFocusedField('address');
+          }}
        />
     </View>
   );
@@ -211,11 +218,12 @@ interface RegisterScreenProps {
   onClose: () => void;
   onSuccess: (userData?: any) => void;
   initialPlanId?: string;
+  setIsRegistering?: (val: boolean) => void;
 }
 
-import { DEFAULT_CATEGORIES, DEFAULT_SUBCATEGORIES } from "../config/defaultCategories";
+import { DEFAULT_CATEGORIES, DEFAULT_SUBCATEGORIES, CATEGORY_ORDER } from "../config/defaultCategories";
 
-export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSuccess, initialPlanId }) => {
+export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSuccess, initialPlanId, setIsRegistering }) => {
   const [registerStep, setRegisterStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -223,6 +231,10 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [paddleTransactionId, setPaddleTransactionId] = useState<string | null>(null);
   const [preparingCheckout, setPreparingCheckout] = useState(false);
+
+  // Email check states
+  const [emailExists, setEmailExists] = useState(false);
+  const [checkingEmail, setCheckingEmail] = useState(false);
 
   useEffect(() => {
     Keyboard.dismiss();
@@ -234,20 +246,36 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const [{ data: catData }, { data: subData }] = await Promise.all([
-          supabase.from('categories').select('*').order('name'),
+        console.log("[RegisterScreen] Fetching categories and subcategories...");
+        const [{ data: catData, error: catError }, { data: subData, error: subError }] = await Promise.all([
+          supabase.from('categories').select('*'),
           supabase.from('subcategories').select('*').order('name')
         ]);
 
-        if (catData && catData.length > 0 && subData && subData.length > 0) {
-          setDbCategories(catData as Category[]);
-          setDbSubcategories(subData as Subcategory[]);
+        if (catError) throw catError;
+        if (subError) throw subError;
+
+        if (catData && catData.length > 0) {
+          console.log(`[RegisterScreen] Fetched ${catData.length} categories from DB.`);
+          const sortedCats = [...catData].sort((a, b) => {
+            const indexA = CATEGORY_ORDER.indexOf(a.name);
+            const indexB = CATEGORY_ORDER.indexOf(b.name);
+            if (indexA === -1 && indexB === -1) return a.name.localeCompare(b.name);
+            if (indexA === -1) return 1;
+            if (indexB === -1) return -1;
+            return indexA - indexB;
+          });
+          setDbCategories(sortedCats as Category[]);
         } else {
-          // If either is missing from DB, stay with DEFAULTs to ensure ID consistency
-          console.warn("Categories or subcategories missing in DB, using defaults.");
+          console.warn("[RegisterScreen] No categories found in DB, using defaults.");
+        }
+
+        if (subData && subData.length > 0) {
+          console.log(`[RegisterScreen] Fetched ${subData.length} subcategories from DB.`);
+          setDbSubcategories(subData as Subcategory[]);
         }
       } catch (err) {
-        console.error("Failed to fetch categories from Supabase:", err);
+        console.error("[RegisterScreen] Failed to fetch categories from Supabase:", err);
       }
     };
     fetchCategories();
@@ -260,7 +288,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
   const [phone, setPhone] = useState("+383 ");
   const [selectedCity, setSelectedCity] = useState("");
   const [selectedPlace, setSelectedPlace] = useState<{ address: string; lat: number; lng: number } | null>(null);
-  
+
   const [selectedPlan, setSelectedPlan] = useState(initialPlanId ? REGISTRATION_PLANS.find(p => p.id === initialPlanId) || REGISTRATION_PLANS[1] : REGISTRATION_PLANS[1]);
   
   const [billingCycle, setBillingCycle] = useState<'month' | 'year'>('month');
@@ -268,6 +296,49 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedMainCategory, setSelectedMainCategory] = useState<any | null>(null);
   const [showSubModal, setShowSubModal] = useState(false);
+
+  // Debounced Email Existence Check
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
+    const checkEmail = async (emailToCheck: string) => {
+      if (!isEmailValid(emailToCheck)) {
+        setEmailExists(false);
+        return;
+      }
+
+      setCheckingEmail(true);
+      try {
+        const cleanEmail = emailToCheck.toLowerCase().trim();
+
+        // Check only users table as all entities (clients/owners) are users
+        const { data, error } = await supabase
+          .from('users')
+          .select('id')
+          .eq('email', cleanEmail)
+          .maybeSingle();
+
+        if (error) throw error;
+        setEmailExists(!!data);
+      } catch (err) {
+        console.warn("Email check error:", err);
+      } finally {
+        setCheckingEmail(false);
+      }
+    };
+
+    if (email.length > 5) {
+      timeoutId = setTimeout(() => {
+        checkEmail(email);
+      }, 600);
+    } else {
+      setEmailExists(false);
+    }
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [email]);
 
   const toggleCategory = (catName: string) => {
     setSelectedCategories(prev =>
@@ -313,66 +384,49 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
     return clean.length >= 6;
   };
 
-  const handleAuthSubmit = async () => {
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  const goToStep = (step: number) => {
+    Keyboard.dismiss();
+    setRegisterStep(step);
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+  };
+
+  const handleFinalizeRegistration = async (passedUserId?: string) => {
     Keyboard.dismiss();
     if (loading) return;
     setLoading(true);
     setErrorMessage("");
 
-    const cleanEmail = email.trim().toLowerCase();
-    console.log("[RegisterScreen] Register Business submitted with:", { fullName, email: cleanEmail, phone, selectedCity, selectedPlace });
+    if (setIsRegistering) setIsRegistering(true);
 
     try {
-      // 1. Race Supabase Auth with a 3.5-second timeout so network lag never freezes UI
-      console.log("[RegisterScreen] Calling supabase.auth.signUp with 3.5s timeout...");
-      const authPromise = supabase.auth.signUp({
-        email: cleanEmail,
-        password: password,
-        options: {
-          data: {
-            full_name: fullName,
-            role: 'barber',
-            is_active_partner: true,
-          }
-        }
-      });
+      const cleanEmail = email.trim().toLowerCase();
 
-      const timeoutPromise = new Promise((resolve) =>
-        setTimeout(() => resolve({ data: null, error: { message: "timeout" } }), 3500)
-      );
-
-      const authRes: any = await Promise.race([authPromise, timeoutPromise]);
-
-      if (authRes?.error && authRes.error.message !== "timeout") {
-        throw authRes.error;
+      let userId = passedUserId;
+      if (!userId) {
+        const { data: authUser } = await supabase.auth.getUser();
+        userId = authUser.user?.id;
       }
 
-      const signUpData = authRes?.data;
-      const userId = signUpData?.user?.id;
+      if (!userId) throw new Error("Sesioni skadoi. Ju lutemi hyni përsëri.");
 
-      if (!userId && authRes?.error?.message === "timeout") {
-         console.warn("[RegisterScreen] Auth timeout, but continuing with DB operations...");
-      }
+      console.log("[RegisterScreen] Finalizing DB records for user:", userId);
 
-      // 2. Upsert user into database 'users' table
-      console.log("[RegisterScreen] Inserting/updating user in Supabase 'users' table...");
+      // 1. Upsert user into database 'users' table
       const { data: dbUser, error: userError } = await supabase.from('users').upsert({
-        id: userId, // Dërgojmë UUID-në e saktë nga Auth
+        id: userId,
         email: cleanEmail,
         name: fullName,
         role: 'owner',
         phone: phone || null,
       }, { onConflict: 'email' }).select().single();
 
-      if (userError) {
-        console.error("[RegisterScreen] User table error:", userError);
-        throw new Error(`Gabim në tabelën users: ${userError.message}`);
-      }
+      if (userError) throw userError;
 
       const ownerId = dbUser?.id;
-      console.log("[RegisterScreen] Owner User ID:", ownerId);
 
-      // 3. Insert barbershop into database 'barbershops' table
+      // 2. Insert barbershop
       const CITY_MAP_COORDS: Record<string, { lat: number; lng: number }> = {
         "prishtin": { lat: 42.6629, lng: 21.1655 },
         "ferizaj": { lat: 42.3703, lng: 21.1559 },
@@ -381,16 +435,6 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
         "gjakov": { lat: 42.3803, lng: 20.4308 },
         "gjilan": { lat: 42.4635, lng: 21.4678 },
         "mitrovic": { lat: 42.8914, lng: 20.8660 },
-        "fushe kosov": { lat: 42.6340, lng: 21.0963 },
-        "vushtrr": { lat: 42.8231, lng: 20.9675 },
-        "podujev": { lat: 42.9114, lng: 21.1903 },
-        "rahovec": { lat: 42.3994, lng: 20.6553 },
-        "skenderaj": { lat: 42.7478, lng: 20.7878 },
-        "lipjan": { lat: 42.5217, lng: 21.1258 },
-        "suharek": { lat: 42.3581, lng: 20.8250 },
-        "decan": { lat: 42.5353, lng: 20.2878 },
-        "istog": { lat: 42.7808, lng: 20.4875 },
-        "klin": { lat: 42.6225, lng: 20.5786 },
       };
 
       const cityKey = (selectedCity || "prishtin").toLowerCase().replace(/ë/g, "e").replace(/ç/g, "c");
@@ -399,95 +443,44 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
         if (cityKey.includes(k)) { fallbackCoords = v; break; }
       }
 
-      console.log("[RegisterScreen] Inserting shop into Supabase 'barbershops' table...");
-      const { error: shopError } = await supabase.from('barbershops').insert({
+      const { data: newShop, error: shopError } = await supabase.from('barbershops').insert({
         owner_id: ownerId,
         name: fullName,
-        phone: phone || null,
         city: selectedCity || "Prishtinë",
         address: selectedPlace?.address || (selectedCity ? `Qendra, ${selectedCity}` : "Prishtinë"),
         latitude: selectedPlace?.lat || fallbackCoords.lat,
         longitude: selectedPlace?.lng || fallbackCoords.lng,
         status: 'active',
-        rating: 0,
-        total_reviews: 0,
         subcategories: selectedCategories,
         category: selectedMainCategory?.name || 'Barber'
-      });
+      }).select().single();
 
-      if (shopError) {
-        console.error("[RegisterScreen] Barbershops table error:", shopError);
-        throw new Error(`Gabim në tabelën barbershops: ${shopError.message}`);
-      }
+      if (shopError) throw shopError;
 
-      // 4. Send real transaction to Paddle Billing API & record in Supabase DB
-      try {
-        console.log("[RegisterScreen] Dispatching Paddle transaction to Paddle Server API...");
-        const planPriceNum = selectedPlan?.id === 'team' ? calculateTeamPrice(employeeCount, 'month') : 20;
-        const paddleRes = await createPaddleTransaction({
-          email: cleanEmail,
-          planId: (selectedPlan?.id as any) || 'duo',
-          amount: planPriceNum,
-          customerName: cardName || fullName
+      // 3. Create default barber profile
+      if (ownerId && newShop?.id) {
+        await supabase.from('barbers').insert({
+          user_id: ownerId,
+          shop_id: newShop.id,
+          name: fullName,
+          is_active: true
         });
-
-        const paddleTxnId = paddleRes?.data?.id || `txn_paddle_${Date.now()}`;
-        const paddleCustomerId = paddleRes?.data?.customer_id || `ctm_paddle_${Date.now()}`;
-
-        await supabase.from('customers').upsert({
-          customer_id: paddleCustomerId,
-          email: cleanEmail,
-        }, { onConflict: 'customer_id' });
-
-        await supabase.from('subscriptions').upsert({
-          subscription_id: paddleTxnId,
-          customer_id: paddleCustomerId,
-          status: 'active',
-          price_id: selectedPlan?.paddlePriceId?.month || 'pri_duo_mo',
-          product_id: selectedPlan?.id || 'duo',
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'subscription_id' });
-        console.log("[RegisterScreen] Connected Paddle Payment successfully executed:", { paddleTxnId, paddleCustomerId });
-      } catch (pErr) {
-        console.warn("[RegisterScreen] Paddle connection note:", pErr);
       }
 
-      console.log("[RegisterScreen] SUCCESS! Registration & Paddle Payment complete.");
+      console.log("[RegisterScreen] SUCCESS! Redirecting to dashboard...");
       onSuccess({
-        id: signUpData?.user?.id || String(ownerId),
+        id: userId,
         name: fullName,
         email: cleanEmail,
-        role: 'barber',
+        role: 'owner',
       });
     } catch (e: any) {
-      console.error("[RegisterScreen] Registration submit error:", e?.message || e);
-      setErrorMessage(e?.message || "Ndodhi një gabim gjatë regjistrimit.");
+      console.error("[RegisterScreen] Finalize error:", e);
+      setErrorMessage(e.message || "Ndodhi një gabim gjatë rregullimit të profilit.");
     } finally {
       setLoading(false);
+      if (setIsRegistering) setIsRegistering(false);
     }
-  };
-
-  const handlePressSubmit = () => {
-    console.log("[RegisterScreen] Form submit pressed", { fullName, email, phone, password, selectedCity, selectedPlace });
-    Keyboard.dismiss();
-    if (!fullName || !email || !password) {
-      setErrorMessage("Ju lutemi plotësoni emrin e biznesit, email-in dhe fjalëkalimin.");
-      return;
-    }
-    if (!isEmailValid(email)) {
-      setErrorMessage("Ju lutemi shkruani një email valide (@gmail.com, @outlook.com, ose @pronto.me).");
-      return;
-    }
-    setErrorMessage("");
-    handleAuthSubmit();
-  };
-
-  const scrollViewRef = React.useRef<ScrollView>(null);
-
-  const goToStep = (step: number) => {
-    Keyboard.dismiss();
-    setRegisterStep(step);
-    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   };
 
   const handleStartPayment = async () => {
@@ -495,31 +488,59 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
     setPreparingCheckout(true);
     setErrorMessage("");
     try {
+      const cleanEmail = email.trim().toLowerCase();
+
+      // 1. Create/Register User FIRST to get userId
+      console.log("[RegisterScreen] Registering user before payment...");
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: cleanEmail,
+        password: password,
+        options: {
+          data: {
+            full_name: fullName,
+            role: 'owner',
+          }
+        }
+      });
+
+      let userId = authData?.user?.id;
+
+      // Handle "already registered" - try to sign in to get ID
+      if (authError && (authError.message.includes("already registered") || authError.message.includes("already been registered"))) {
+        console.log("[RegisterScreen] User exists, signing in to retrieve ID...");
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password: password,
+        });
+        if (signInError) throw new Error("Ky email është i regjistruar. Ju lutemi përdorni fjalëkalimin e saktë.");
+        userId = signInData?.user?.id;
+      } else if (authError) {
+        throw authError;
+      }
+
+      if (!userId) throw new Error("Dështoi krijimi i llogarisë.");
+
+      // 2. Create Paddle Transaction with userId in custom_data
       const planPriceNum = selectedPlan?.id === 'team' ? calculateTeamPrice(employeeCount, billingCycle) : (billingCycle === 'month' ? 20 : 200);
 
-      console.log("[RegisterScreen] Creating dynamic transaction for plan:", selectedPlan.id);
-      let res;
-      try {
-        res = await createPaddleTransaction({
-          email: email.trim().toLowerCase(),
-          planId: selectedPlan.id as any,
-          amount: planPriceNum,
-          customerName: fullName
-        });
-      } catch (paddleErr) {
-        console.warn("Paddle API failed (likely CORS), falling back to client-side items.", paddleErr);
-      }
+      console.log("[RegisterScreen] Creating Paddle transaction for userId:", userId);
+      const res = await createPaddleTransaction({
+        email: cleanEmail,
+        planId: (selectedPlan?.id as any) || 'solo',
+        amount: planPriceNum,
+        userId: userId,
+        customerName: fullName
+      });
 
-      if (res?.data?.id) {
-        setPaddleTransactionId(res.data.id);
-      } else {
-        console.warn("Paddle API failed (likely CORS), falling back to client-side items.");
+      if (res?.id) {
+        setPaddleTransactionId(res.id);
       }
       
-      // Always go to Step 4 to show the UI
+      // 3. Go to Step 4 to show the UI
       goToStep(4);
     } catch (err: any) {
-      setErrorMessage(err.message);
+      console.error("[RegisterScreen] Pre-payment error:", err);
+      setErrorMessage(err.message || "Ndodhi një gabim gjatë përgatitjes së pagesës.");
     } finally {
       setPreparingCheckout(false);
     }
@@ -533,31 +554,42 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
       <View className="absolute top-[-50] left-[-50] w-64 h-64 bg-[#3473ef]/15 rounded-full blur-3xl" />
       <View className="absolute top-[200] right-[-100] w-80 h-80 bg-[#f47458]/15 rounded-full blur-3xl" />
 
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      className="flex-1"
+      enabled={registerStep !== 4}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+    >
       <ScrollView
         ref={scrollViewRef}
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 100, paddingTop: 40 }}
+        contentContainerStyle={{
+          flexGrow: 1,
+          paddingBottom: 20,
+          paddingTop: 40
+        }}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Header section with Close Button */}
-        <View className="pt-16 pb-4 px-6 flex-row items-center justify-between">
-          <View className="flex-row items-center gap-4">
-            <View className="w-14 h-14 bg-[#3473ef]/10 rounded-2xl items-center justify-center border border-[#3473ef]/20">
-              <Store size={28} color="#3473ef" />
+        <View className="flex-1 justify-center">
+          {/* Header section with Close Button */}
+          <View className="pt-16 pb-4 px-6 flex-row items-center justify-between">
+            <View className="flex-row items-center gap-4">
+              <View className="w-14 h-14 bg-[#3473ef]/10 rounded-2xl items-center justify-center border border-[#3473ef]/20">
+                <Store size={28} color="#3473ef" />
+              </View>
+              <View>
+                <Text className="text-2xl font-black text-[#161719] tracking-tight">Regjistro biznesin</Text>
+                <Text className="text-slate-500 font-bold text-xs mt-0.5">Fillo të marrësh rezervime në LineUp.</Text>
+              </View>
             </View>
-            <View>
-              <Text className="text-2xl font-black text-[#161719] tracking-tight">Regjistro biznesin</Text>
-              <Text className="text-slate-500 font-bold text-xs mt-0.5">Fillo të marrësh rezervime në LineUp.</Text>
-            </View>
+            <Pressable
+              onPress={onClose}
+              className="w-10 h-10 bg-white rounded-full items-center justify-center border border-slate-200 shadow-sm active:bg-slate-100"
+            >
+              <X size={20} color="#161719" strokeWidth={2.5} />
+            </Pressable>
           </View>
-          <Pressable
-            onPress={onClose}
-            className="w-10 h-10 bg-white rounded-full items-center justify-center border border-slate-200 shadow-sm active:bg-slate-100"
-          >
-            <X size={20} color="#161719" strokeWidth={2.5} />
-          </Pressable>
-        </View>
 
         {/* Steps Progress Indicator (1: Informata, 2: Paketa, 3: Shërbimet, 4: Pagesa) */}
         <View className="flex-row justify-center items-center px-8 py-4 mb-4">
@@ -646,10 +678,20 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
                       <X size={16} color="#8789A3" />
                     </TouchableOpacity>
                   )}
+                  {checkingEmail && (
+                    <View className="mr-2">
+                      <ActivityIndicator size="small" color="#3473ef" />
+                    </View>
+                  )}
                 </View>
                 {email !== "" && !isEmailValid(email) && focusedField === 'email' && (
                   <Text className="text-orange-500 font-bold text-xs mt-1.5 ml-2">
                     Kërkohet: @gmail.com, @outlook.com, ose @pronto.me
+                  </Text>
+                )}
+                {emailExists && (
+                  <Text className="text-rose-500 font-bold text-xs mt-1.5 ml-2">
+                    Ky email është i regjistruar paraprakisht.
                   </Text>
                 )}
               </View>
@@ -744,13 +786,22 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
                   setErrorMessage("Ju lutemi shkruani një email valide (p.sh. emri@shembull.com).");
                   return;
                 }
+                if (emailExists) {
+                  setErrorMessage("Ky email është i regjistruar paraprakisht.");
+                  return;
+                }
                 setErrorMessage("");
                 goToStep(2);
               }}
-              className="bg-[#3473ef] h-14 rounded-2xl items-center justify-center flex-row gap-2 mt-4 shadow-lg shadow-[#3473ef]/30 active:bg-blue-600"
+              disabled={checkingEmail || emailExists}
+              className={`h-14 rounded-2xl items-center justify-center flex-row gap-2 mt-4 shadow-lg active:bg-blue-600 ${
+                (checkingEmail || emailExists) ? 'bg-slate-400 shadow-none' : 'bg-[#3473ef] shadow-[#3473ef]/30'
+              }`}
             >
-              <Text className="text-white text-base font-black tracking-wide">Vazhdo te Shërbimet</Text>
-              <ChevronRight size={18} color="white" strokeWidth={3} />
+              <Text className="text-white text-base font-black tracking-wide">
+                {checkingEmail ? "Duke kontrolluar..." : "Vazhdo te Shërbimet"}
+              </Text>
+              {!checkingEmail && <ChevronRight size={18} color="white" strokeWidth={3} />}
             </Pressable>
           </View>
         )}
@@ -764,38 +815,45 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
             </View>
 
             <View className="flex-row flex-wrap justify-between">
-              {dbCategories.map((cat, i) => {
-                const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
-                const catSubIds = dbSubcategories.filter(s => s.category_id === cat.id).map(s => s.id);
-                const isSelected = catSubIds.some(id => selectedCategories.includes(id));
+              {dbCategories
+                .map((cat, i) => {
+                  // Fallback for icons: if it's an emoji (string), render as Text, else as Component
+                  const isEmoji = typeof cat.icon === 'string' && cat.icon.length <= 4;
+                  const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
+                  const catSubIds = dbSubcategories.filter(s => s.category_id === cat.id).map(s => s.id);
+                  const isSelected = catSubIds.some(id => selectedCategories.includes(id));
 
-                return (
-                  <View key={cat.id} className="items-center mb-6" style={{ width: '31%' }}>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setSelectedMainCategory(cat);
-                        setShowSubModal(true);
-                      }}
-                      activeOpacity={0.7}
-                      className={`w-full aspect-square rounded-[24px] items-center justify-center border shadow-sm mb-2 ${
-                        isSelected 
-                          ? 'bg-[#3473ef]/10 border-[#3473ef]' 
-                          : 'bg-white border-slate-200 shadow-slate-200'
-                      }`}
-                    >
-                      <IconComponent size={32} color={isSelected ? "#3473ef" : "#161719"} strokeWidth={1.5} />
-                      {isSelected && (
-                        <View className="absolute top-2 right-2 bg-[#3473ef] rounded-full p-0.5">
-                          <Check size={10} color="white" strokeWidth={4} />
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                    <Text className={`text-[10px] text-center font-bold leading-3 ${isSelected ? 'text-[#3473ef]' : 'text-[#161719]'}`} numberOfLines={2}>
-                      {cat.name}
-                    </Text>
-                  </View>
-                );
-              })}
+                  return (
+                    <View key={cat.id} className="items-center mb-6" style={{ width: '31%' }}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setSelectedMainCategory(cat);
+                          setShowSubModal(true);
+                        }}
+                        activeOpacity={0.7}
+                        className={`w-full aspect-square rounded-[24px] items-center justify-center border shadow-sm mb-2 ${
+                          isSelected
+                            ? 'bg-[#3473ef]/10 border-[#3473ef]'
+                            : 'bg-white border-slate-200 shadow-slate-200'
+                        }`}
+                      >
+                        {isEmoji ? (
+                          <Text className="text-3xl">{cat.icon}</Text>
+                        ) : (
+                          <IconComponent size={32} color={isSelected ? "#3473ef" : "#161719"} strokeWidth={1.5} />
+                        )}
+                        {isSelected && (
+                          <View className="absolute top-2 right-2 bg-[#3473ef] rounded-full p-0.5">
+                            <Check size={10} color="white" strokeWidth={4} />
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                      <Text className={`text-[10px] text-center font-bold leading-3 ${isSelected ? 'text-[#3473ef]' : 'text-[#161719]'}`} numberOfLines={2}>
+                        {cat.name}
+                      </Text>
+                    </View>
+                  );
+                })}
             </View>
 
             <Pressable
@@ -948,14 +1006,14 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
               </Text>
             </View>
 
-            <View className="flex-1 bg-white rounded-t-[40px] overflow-hidden border-t border-x border-slate-100 shadow-2xl">
+            <View className="flex-1 bg-white overflow-hidden shadow-2xl">
               <PaddleCheckout
                 email={email}
                 transactionId={paddleTransactionId || undefined}
                 priceId={selectedPlan?.paddlePriceId?.[billingCycle]}
                 onSuccess={(data) => {
                   console.log("[RegisterScreen] Paddle success callback triggered");
-                  handleAuthSubmit();
+                  handleFinalizeRegistration();
                 }}
                 onCancel={() => goToStep(3)}
               />
@@ -971,7 +1029,12 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
             </View>
           </View>
         )}
+
+        {/* Bottom spacer for keyboard scrolling accessibility */}
+        <View style={{ height: 280 }} />
+        </View>
       </ScrollView>
+    </KeyboardAvoidingView>
 
       {/* Subcategory Modal */}
       <Modal
@@ -1006,27 +1069,20 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
                 const subId = String(sub.id).trim();
                 const isSelected = selectedCategories.includes(subId);
                 return (
-                  <Pressable
+                  <TouchableOpacity
                     key={`${subId}-${idx}`}
                     onPress={() => {
                       console.log("[Register] Toggling subcat:", subId);
                       toggleCategory(subId);
                     }}
-                    style={({ pressed }) => ({
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      paddingVertical: 14,
-                      paddingHorizontal: 4,
-                      borderBottomWidth: 1,
-                      borderBottomColor: isSelected ? 'rgba(52, 115, 239, 0.3)' : '#F1F5F9',
-                      opacity: pressed ? 0.7 : 1
-                    })}
+                    activeOpacity={0.7}
+                    className={`flex-row items-center py-[14px] px-1 border-b ${isSelected ? 'border-[#3473ef]/30' : 'border-slate-100'}`}
                   >
                     <View className={`w-6 h-6 rounded-md border items-center justify-center mr-4 ${isSelected ? 'bg-[#3473ef] border-[#3473ef]' : 'bg-white border-slate-300'}`}>
                       {isSelected && <Check size={14} color="white" strokeWidth={3} />}
                     </View>
                     <Text className={`text-base flex-1 ${isSelected ? 'font-black text-[#3473ef]' : 'font-bold text-[#161719]'}`} numberOfLines={1}>{sub.name}</Text>
-                  </Pressable>
+                  </TouchableOpacity>
                 );
               })}
             </ScrollView>

@@ -11,22 +11,14 @@ async function run() {
   const ads = [
     {
       business_name: "Vehees",
-      headline: "Zbulo historikun e veturës tënde",
-      description: "Kontrollo çdo VIN në sekonda",
-      color: "#00d084",
       url: "https://vehees.com/",
-      button_text: "Gjej veturën",
       image_url: "vehees_banner.jpg",
       status: "active",
       only_button: true
     },
     {
       business_name: "noasim",
-      headline: "Udhëzues eSIM për udhëtim",
-      description: "Udhëzues praktikë për çdo udhëtim",
-      color: "transparent",
       url: "https://noasim.com/guides",
-      button_text: "Lexo udhëzuesit",
       image_url: "noasim_banner.jpg",
       status: "active",
       only_button: true
@@ -35,6 +27,13 @@ async function run() {
       business_name: "NOA IPTV",
       url: "https://noaiptv.com",
       image_url: "noaiptv_banner.jpg",
+      status: "active",
+      only_button: true
+    },
+    {
+      business_name: "Technova",
+      url: "https://technova-ks.com",
+      image_url: "technova_banner.jpg",
       status: "active",
       only_button: true
     }

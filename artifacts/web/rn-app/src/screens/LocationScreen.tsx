@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, TextInput, ScrollView, SafeAreaView, Linking, ActivityIndicator, Dimensions, Keyboard } from 'react-native';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { View, Text, TouchableOpacity, TextInput, ScrollView, SafeAreaView, Linking, ActivityIndicator, Dimensions, Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
 import { ArrowLeft, Search, Navigation, Home, Briefcase, MapPin, AlertCircle, X, ChevronRight } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import Animated, {
@@ -15,12 +15,48 @@ import { supabase } from '@/config/supabase';
 const { width, height } = Dimensions.get('window');
 const USER_ID = 'demo_user_123'; // Placeholder until Auth is implemented
 
-const KOSOVO_CITIES = [
-  { city: "Ferizaj" }, { city: "Prishtinë" }, { city: "Prizren" }, { city: "Pejë" },
-  { city: "Gjakovë" }, { city: "Gjilan" }, { city: "Mitrovicë" }, { city: "Vushtrri" },
-  { city: "Podujevë" }, { city: "Fushë Kosovë" }, { city: "Rahovec" }, { city: "Skënderaj" },
-  { city: "Lipjan" }, { city: "Suharekë" }, { city: "Deçan" }, { city: "Istog" }, { city: "Klinë" },
-];
+const CITY_DATA: Record<string, { lat: number; lng: number }> = {
+  "Prishtinë": { lat: 42.6629, lng: 21.1655 },
+  "Prizren": { lat: 42.2139, lng: 20.7397 },
+  "Ferizaj": { lat: 42.3703, lng: 21.1559 },
+  "Pejë": { lat: 42.6593, lng: 20.2883 },
+  "Gjakovë": { lat: 42.3803, lng: 20.4308 },
+  "Gjilan": { lat: 42.4635, lng: 21.4678 },
+  "Mitrovicë": { lat: 42.8914, lng: 20.8660 },
+  "Podujevë": { lat: 42.9114, lng: 21.1903 },
+  "Vushtrri": { lat: 42.8231, lng: 20.9675 },
+  "Suharekë": { lat: 42.3581, lng: 20.8250 },
+  "Rahovec": { lat: 42.3994, lng: 20.6553 },
+  "Drenas (Gllogoc)": { lat: 42.6227, lng: 20.8931 },
+  "Lipjan": { lat: 42.5217, lng: 21.1258 },
+  "Malishevë": { lat: 42.4822, lng: 20.7461 },
+  "Kamenicë": { lat: 42.5781, lng: 21.5803 },
+  "Viti": { lat: 42.3214, lng: 21.3583 },
+  "Deçan": { lat: 42.5353, lng: 20.2878 },
+  "Istog": { lat: 42.7808, lng: 20.4875 },
+  "Klinë": { lat: 42.6225, lng: 20.5786 },
+  "Skënderaj": { lat: 42.7478, lng: 20.7878 },
+  "Dragash": { lat: 42.0622, lng: 20.6533 },
+  "Fushë Kosovë": { lat: 42.6340, lng: 21.0963 },
+  "Kaçanik": { lat: 42.2319, lng: 21.2581 },
+  "Shtime": { lat: 42.4331, lng: 21.0397 },
+  "Obiliq (Kastriot)": { lat: 42.6869, lng: 21.0733 },
+  "Leposaviq": { lat: 43.1039, lng: 20.8028 },
+  "Graçanicë": { lat: 42.6011, lng: 21.1931 },
+  "Hani i Elezit": { lat: 42.1500, lng: 21.2967 },
+  "Zveçan": { lat: 42.9031, lng: 20.8403 },
+  "Shtërpcë": { lat: 42.2394, lng: 21.0264 },
+  "Novobërdë": { lat: 42.6161, lng: 21.4331 },
+  "Zubin Potok": { lat: 42.9131, lng: 20.6908 },
+  "Junik": { lat: 42.4764, lng: 20.2781 },
+  "Mamushë": { lat: 42.3314, lng: 20.7275 },
+  "Ranillug": { lat: 42.4931, lng: 21.5831 },
+  "Kllokot": { lat: 42.3517, lng: 21.3744 },
+  "Partesh": { lat: 42.4031, lng: 21.4331 },
+  "Mitrovicë e Veriut": { lat: 42.8950, lng: 20.8647 },
+};
+
+const KOSOVO_CITIES = Object.keys(CITY_DATA).sort().map(c => ({ city: c }));
 
 interface LocationScreenProps {
   onBack: () => void;
@@ -33,6 +69,14 @@ export const LocationScreen: React.FC<LocationScreenProps> = ({ onBack, onSelect
   const [homeAddress, setHomeAddress] = useState<string | null>(null);
   const [workAddress, setWorkAddress] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Filtered cities based on search query
+  const filteredCities = useMemo(() => {
+    if (!searchQuery.trim()) return KOSOVO_CITIES;
+    return KOSOVO_CITIES.filter(item =>
+      item.city.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [searchQuery]);
 
   // Add Address Panel States
   const [showAddAddress, setShowAddAddress] = useState(false);
@@ -157,7 +201,12 @@ export const LocationScreen: React.FC<LocationScreenProps> = ({ onBack, onSelect
   });
 
   return (
-    <View className="flex-1 bg-[#F5F5F5]">
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      className="flex-1"
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
+      <View className="flex-1 bg-[#F5F5F5]">
       {/* Modal Handle */}
       <View className="w-12 h-1.5 bg-gray-300 rounded-full self-center mt-3 mb-2" />
 
@@ -177,6 +226,7 @@ export const LocationScreen: React.FC<LocationScreenProps> = ({ onBack, onSelect
         <AddressAutocomplete
           placeholder="Kërko qytetin, zonën ose rrugën..."
           containerClassName="mb-6 z-50"
+          onChangeText={setSearchQuery}
           onSelectAddress={(place) => {
             if (place?.formatted_address) {
               handleSelect(place.formatted_address);
@@ -187,119 +237,122 @@ export const LocationScreen: React.FC<LocationScreenProps> = ({ onBack, onSelect
         <ScrollView showsVerticalScrollIndicator={false} className="flex-1" keyboardShouldPersistTaps="handled">
           {loading ? (
             <ActivityIndicator size="large" color="#6366f1" className="mt-10" />
-          ) : searchQuery.length === 0 ? (
+          ) : (
             <View>
-              {/* My Addresses */}
-              <View className="flex-row justify-between items-center mb-6">
-                <Text className="text-xl font-bold text-[#161719]">My addresses</Text>
-                <TouchableOpacity onPress={() => openAddAddress('other')}>
-                  <Text className="text-[#6366f1] font-bold text-base">Manage</Text>
-                </TouchableOpacity>
-              </View>
-
-              <TouchableOpacity
-                activeOpacity={0.7}
-                className="flex-row items-center mb-6"
-                onPress={() => {
-                  if (homeAddress) handleSelect(homeAddress);
-                  else openAddAddress('home');
-                }}
-              >
-                <View className="w-10 h-10 rounded-xl bg-[#6366f1]/10 items-center justify-center mr-4">
-                  <Home size={22} color="#6366f1" strokeWidth={2} />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-[17px] font-bold text-[#161719]">{homeAddress || "Add home"}</Text>
-                  {!homeAddress && (
-                    <Text className="text-[12px] text-[#6366f1] font-medium">Set your home address</Text>
-                  )}
-                </View>
-                <ChevronRight size={18} color="#8789A3" />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                activeOpacity={0.7}
-                className="flex-row items-center mb-10"
-                onPress={() => {
-                  if (workAddress) handleSelect(workAddress);
-                  else openAddAddress('work');
-                }}
-              >
-                <View className="w-10 h-10 rounded-xl bg-[#6366f1]/10 items-center justify-center mr-4">
-                  <Briefcase size={22} color="#6366f1" strokeWidth={2} />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-[17px] font-bold text-[#161719]">{workAddress || "Add work"}</Text>
-                  {!workAddress && (
-                    <Text className="text-[12px] text-[#6366f1] font-medium">Set your work address</Text>
-                  )}
-                </View>
-                <ChevronRight size={18} color="#8789A3" />
-              </TouchableOpacity>
-
-              {/* Recents Section */}
-              {recents.length > 0 && (
-                <View className="mb-8">
+              {/* Only show addresses and recents if no search query */}
+              {searchQuery.length === 0 && (
+                <>
+                  {/* My Addresses */}
                   <View className="flex-row justify-between items-center mb-6">
-                    <Text className="text-xl font-bold text-[#161719]">Recents</Text>
-                    <TouchableOpacity onPress={handleClearRecents}>
-                      <Text className="text-[#6366f1] font-bold text-base">Clear</Text>
+                    <Text className="text-xl font-bold text-[#161719]">My addresses</Text>
+                    <TouchableOpacity onPress={() => openAddAddress('other')}>
+                      <Text className="text-[#6366f1] font-bold text-base">Manage</Text>
                     </TouchableOpacity>
                   </View>
 
-                  {recents.map((item, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      className="flex-row items-center mb-6"
-                      onPress={() => handleSelect(item)}
-                    >
-                      <View className="w-10 h-10 rounded-full bg-[#6366f1]/10 items-center justify-center mr-4">
-                        <MapPin size={22} color="#6366f1" strokeWidth={2} />
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    className="flex-row items-center mb-6"
+                    onPress={() => {
+                      if (homeAddress) handleSelect(homeAddress);
+                      else openAddAddress('home');
+                    }}
+                  >
+                    <View className="w-10 h-10 rounded-xl bg-[#6366f1]/10 items-center justify-center mr-4">
+                      <Home size={22} color="#6366f1" strokeWidth={2} />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-[17px] font-bold text-[#161719]">{homeAddress || "Add home"}</Text>
+                      {!homeAddress && (
+                        <Text className="text-[12px] text-[#6366f1] font-medium">Set your home address</Text>
+                      )}
+                    </View>
+                    <ChevronRight size={18} color="#8789A3" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    className="flex-row items-center mb-10"
+                    onPress={() => {
+                      if (workAddress) handleSelect(workAddress);
+                      else openAddAddress('work');
+                    }}
+                  >
+                    <View className="w-10 h-10 rounded-xl bg-[#6366f1]/10 items-center justify-center mr-4">
+                      <Briefcase size={22} color="#6366f1" strokeWidth={2} />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-[17px] font-bold text-[#161719]">{workAddress || "Add work"}</Text>
+                      {!workAddress && (
+                        <Text className="text-[12px] text-[#6366f1] font-medium">Set your work address</Text>
+                      )}
+                    </View>
+                    <ChevronRight size={18} color="#8789A3" />
+                  </TouchableOpacity>
+
+                  {/* Recents Section */}
+                  {recents.length > 0 && (
+                    <View className="mb-8">
+                      <View className="flex-row justify-between items-center mb-6">
+                        <Text className="text-xl font-bold text-[#161719]">Recents</Text>
+                        <TouchableOpacity onPress={handleClearRecents}>
+                          <Text className="text-[#6366f1] font-bold text-base">Clear</Text>
+                        </TouchableOpacity>
                       </View>
-                      <View>
-                        <Text className="text-[17px] font-bold text-[#161719]">{item}</Text>
-                        <Text className="text-[13px] text-[#8789A3] font-medium">{item}</Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+
+                      {recents.map((item, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          className="flex-row items-center mb-6"
+                          onPress={() => handleSelect(item)}
+                        >
+                          <View className="w-10 h-10 rounded-full bg-[#6366f1]/10 items-center justify-center mr-4">
+                            <MapPin size={22} color="#6366f1" strokeWidth={2} />
+                          </View>
+                          <View>
+                            <Text className="text-[17px] font-bold text-[#161719]">{item}</Text>
+                            <Text className="text-[13px] text-[#8789A3] font-medium">{item}</Text>
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </>
               )}
 
               {/* Main Cities Section */}
               <View className="mb-8">
-                <Text className="text-xl font-bold text-[#161719] mb-4">Qytetet</Text>
-                <View className="bg-white rounded-3xl p-2 border border-slate-100">
-                  {KOSOVO_CITIES.map((item, index) => (
-                    <TouchableOpacity
-                      key={item.city}
-                      onPress={() => {
-                        Keyboard.dismiss();
-                        handleSelect(item.city);
-                      }}
-                      className={`flex-row items-center py-4 px-3 ${index !== KOSOVO_CITIES.length - 1 ? 'border-b border-slate-50' : ''}`}
-                    >
-                      <MapPin size={20} color="#8789A3" />
-                      <Text className="flex-1 ml-3 text-base font-bold text-[#161719]">
-                        {item.city}
-                      </Text>
-                      <ChevronRight size={18} color="#cbd5e1" />
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                <Text className="text-xl font-bold text-[#161719] mb-4">
+                  {searchQuery.length > 0 ? `Sygjestimat për "${searchQuery}"` : "Qytetet"}
+                </Text>
+
+                {filteredCities.length > 0 ? (
+                  <View className="bg-white rounded-3xl p-2 border border-slate-100">
+                    {filteredCities.map((item, index) => (
+                      <TouchableOpacity
+                        key={item.city}
+                        onPress={() => {
+                          Keyboard.dismiss();
+                          handleSelect(item.city);
+                        }}
+                        className={`flex-row items-center py-4 px-3 ${index !== filteredCities.length - 1 ? 'border-b border-slate-50' : ''}`}
+                      >
+                        <MapPin size={20} color={searchQuery.length > 0 ? "#6366f1" : "#8789A3"} />
+                        <Text className={`flex-1 ml-3 text-base font-bold ${searchQuery.length > 0 ? 'text-[#6366f1]' : 'text-[#161719]'}`}>
+                          {item.city}
+                        </Text>
+                        <ChevronRight size={18} color="#cbd5e1" />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : searchQuery.length > 0 ? (
+                  <View className="bg-white p-6 rounded-3xl items-center border border-slate-100">
+                    <AlertCircle size={32} color="#8789A3" className="mb-2" />
+                    <Text className="text-[#8789A3] font-bold text-center">Nuk u gjet asnjë qytet me këtë emër.</Text>
+                  </View>
+                ) : null}
               </View>
             </View>
-          ) : (
-             <View className="mb-10">
-                {/* Search Suggestion results (Simplified mock or actual search results could go here) */}
-                <Text className="text-sm font-bold text-[#8789A3] uppercase mb-4">Results for "{searchQuery}"</Text>
-                <TouchableOpacity
-                  onPress={() => handleSelect(searchQuery)}
-                  className="bg-white p-5 rounded-3xl flex-row items-center border border-slate-100"
-                >
-                  <MapPin size={20} color="#6366f1" className="mr-4" />
-                  <Text className="text-lg font-bold text-[#161719]">{searchQuery}</Text>
-                </TouchableOpacity>
-             </View>
           )}
 
           <View className="h-20" />
@@ -328,6 +381,7 @@ export const LocationScreen: React.FC<LocationScreenProps> = ({ onBack, onSelect
              <AddressAutocomplete
                 label="Kërko Adresën / Rrugën"
                 placeholder="Kërko rrugën, qytetin ose ndërtesën..."
+                selectedCity={addressType === 'home' || addressType === 'work' ? "Prishtinë" : ""} // default or context
                 containerClassName="mb-6"
                 onSelectAddress={(place) => {
                   setSelectedPlace({
@@ -359,5 +413,6 @@ export const LocationScreen: React.FC<LocationScreenProps> = ({ onBack, onSelect
         </View>
       </Animated.View>
     </View>
+    </KeyboardAvoidingView>
   );
 };

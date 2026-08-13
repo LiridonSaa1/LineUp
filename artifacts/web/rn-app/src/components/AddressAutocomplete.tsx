@@ -18,22 +18,26 @@ export interface AddressAutocompleteProps {
   placeholder?: string;
   initialValue?: string;
   onSelectAddress: (place: PlaceDetails | null) => void;
+  onChangeText?: (text: string) => void;
   label?: string;
   inputClassName?: string;
   containerClassName?: string;
   disabled?: boolean;
   selectedCity?: string;
+  cityCoords?: { lat: number, lng: number };
 }
 
 export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   placeholder = "Kërko adresën (p.sh. Rruga Gjon Serreçi, Ferizaj)...",
   initialValue = "",
   onSelectAddress,
+  onChangeText,
   label,
   inputClassName = "",
   containerClassName = "",
   disabled = false,
   selectedCity,
+  cityCoords,
 }) => {
   const [query, setQuery] = useState(initialValue || "");
   const [suggestions, setSuggestions] = useState<PlaceDetails[]>([]);
@@ -47,11 +51,22 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
     setQuery(initialValue || "");
   }, [initialValue]);
 
+  // Sync with selectedCity: Clear address when city changes
+  useEffect(() => {
+    setQuery("");
+    setSuggestions([]);
+    setIsSelected(false);
+    setSelectedItem(null);
+    setIsOpen(false);
+    onSelectAddress(null);
+  }, [selectedCity]);
+
   const handleTextChange = (text: string) => {
     setQuery(text);
     setIsSelected(false);
     setSelectedItem(null);
     onSelectAddress(null);
+    if (onChangeText) onChangeText(text);
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
@@ -61,48 +76,89 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
       return;
     }
 
+    // Capture these values now to avoid potential ReferenceErrors inside the timeout callback
+    // (especially common in Hermes engine with certain async patterns)
+    const currentCity = selectedCity;
+    const currentCoords = cityCoords;
+
     setLoading(true);
     debounceRef.current = setTimeout(async () => {
       try {
-        // Build a more structured query for OSM
-        // Using "q" parameter with city name appended for better accuracy
-        const searchTerm = selectedCity
-          ? `${text}, ${selectedCity}, Kosovë`
-          : `${text}, Kosovë`;
+        // STRATEGY: Append city name to the search term for much better precision.
+        // If selectedCity is "Ferizaj" and user types "Gjon", we search "Gjon, Ferizaj"
+        const searchTerm = currentCity ? `${text.trim()}, ${currentCity}` : text.trim();
 
-        const osmRes = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchTerm)}&format=json&addressdetails=1&limit=8&countrycodes=xk&accept-language=sq`,
-          { headers: { 'User-Agent': 'LineUpApp/1.0' } }
-        );
+        // countrycodes=xk for Kosovo
+        // dedupe=1 to remove duplicates
+        // accept-language: sq first, then en
+        let url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchTerm)}&format=json&addressdetails=1&limit=12&accept-language=sq,en;q=0.8&countrycodes=xk&dedupe=1`;
+
+        // If we have city coordinates, we "hard-lock" the search to this city area.
+        // This ensures "Rruga B" returns results in Prishtinë, not some other town.
+        if (currentCoords) {
+          const delta = 0.12; // ~12km box, perfect for Kosovo urban centers
+          const viewbox = `${currentCoords.lng - delta},${currentCoords.lat + delta},${currentCoords.lng + delta},${currentCoords.lat - delta}`;
+          url += `&viewbox=${viewbox}&bounded=1`;
+        }
+
+        const osmRes = await fetch(url, {
+          headers: {
+            'User-Agent': 'LineUpApp-Mobile/1.2 (contact: info@lineup.ks)',
+          }
+        });
+
+        if (!osmRes.ok) throw new Error(`OSM status: ${osmRes.status}`);
+
         const osmData = await osmRes.json();
 
         if (Array.isArray(osmData)) {
           const results = osmData.map((item: any) => {
             const addr = item.address || {};
-            const street = addr.road || addr.pedestrian || addr.suburb || addr.neighbourhood || "";
-            const city = addr.city || addr.town || addr.village || addr.municipality || selectedCity || "Kosovë";
 
-            // Create a clean, short address
+            // Expanded list of OSM tags that can represent a "street" or "location name"
+            const street = addr.road || addr.pedestrian || addr.cycleway || addr.footway ||
+                           addr.path || addr.square || addr.plaza || addr.neighbourhood ||
+                           addr.suburb || addr.hamlet || addr.allotments || addr.place || "";
+
+            const houseNumber = addr.house_number || addr.house_name || "";
+            const city = addr.city || addr.town || addr.village || addr.municipality || selectedCity || "";
+
+            // Build a readable address string
             let shortAddr = street;
-            if (shortAddr && city && !shortAddr.includes(city)) {
-              shortAddr += `, ${city}`;
-            } else if (!shortAddr) {
-              shortAddr = item.display_name.split(',')[0];
+            if (houseNumber) {
+              shortAddr = `${street} ${houseNumber}`.trim();
+            }
+
+            // Fallback for missing street tags
+            if (!shortAddr || shortAddr.length < 3) {
+              shortAddr = item.display_name.split(',')[0].trim();
+            }
+
+            // Clean up city redundancy (e.g. "Rruga B, Prishtinë, Prishtinë" -> "Rruga B, Prishtinë")
+            let finalFormatted = shortAddr;
+            if (city && !finalFormatted.toLowerCase().includes(city.toLowerCase())) {
+              finalFormatted = `${shortAddr}, ${city}`;
             }
 
             return {
-              formatted_address: shortAddr,
+              formatted_address: finalFormatted,
               city: city,
-              street: street,
+              street: street || shortAddr,
               postal_code: addr.postcode || "",
-              country: "Kosovë",
+              country: addr.country || "Kosovë",
               latitude: parseFloat(item.lat),
               longitude: parseFloat(item.lon),
               place_id: `osm_${item.place_id || item.osm_id}`,
             };
           });
-          setSuggestions(results);
-          setIsOpen(results.length > 0);
+
+          // Deduplication based on formatted address
+          const uniqueResults = results.filter((v, i, a) =>
+            a.findIndex(t => t.formatted_address.toLowerCase() === v.formatted_address.toLowerCase()) === i
+          );
+
+          setSuggestions(uniqueResults);
+          setIsOpen(uniqueResults.length > 0);
         }
       } catch (err) {
         console.warn("[AddressAutocomplete] OSM error:", err);
@@ -123,7 +179,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   };
 
   return (
-    <View className={`relative z-50 ${containerClassName}`} style={{ zIndex: 9999, elevation: 10 }}>
+    <View className={`relative ${containerClassName}`} style={{ zIndex: isOpen ? 9999 : 1, elevation: isOpen ? 10 : 1 }}>
       {label && (
         <Text className="text-xs font-black text-[#8789A3] uppercase tracking-widest mb-2 ml-1">
           {label}
@@ -142,6 +198,9 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
           placeholderTextColor="#8789A3"
           editable={!disabled}
           className={`w-full bg-white border ${isSelected ? 'border-emerald-500 bg-emerald-50/10' : 'border-slate-200'} rounded-2xl pl-12 pr-10 h-14 text-sm font-bold text-[#161719] shadow-xs ${inputClassName}`}
+          onFocus={() => {
+            if (query.length >= 2 && suggestions.length > 0) setIsOpen(true);
+          }}
         />
 
         <View className="absolute right-4 z-10 flex-row items-center gap-2">
@@ -167,8 +226,8 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
 
       {isOpen && suggestions.length > 0 && (
         <View
-          className="absolute top-16 left-0 right-0 bg-white rounded-3xl border border-slate-200 p-2 shadow-2xl overflow-hidden"
-          style={{ zIndex: 99999, elevation: 25 }}
+          className="absolute top-[60] left-0 right-0 bg-white rounded-3xl border border-slate-200 p-2 shadow-2xl overflow-hidden"
+          style={{ zIndex: 10000, elevation: 20 }}
         >
           {suggestions.map((item, index) => (
             <TouchableOpacity
