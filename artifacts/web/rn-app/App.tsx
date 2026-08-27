@@ -314,7 +314,7 @@ export default function App() {
       const [dbUser, dbBarberShop, barberProfile] = await Promise.all([
         supabase.from('users').select('*').eq('email', cleanEmail).maybeSingle(),
         supabase.from('barbershops').select('*').eq('owner_id', sessionUser.id).maybeSingle(),
-        supabase.from('barbers').select('*, barbershops(*)').eq('user_id', sessionUser.id).maybeSingle()
+        supabase.from('barbers').select('*').eq('user_id', sessionUser.id).maybeSingle()
       ]);
 
       const userId = sessionUser.id;

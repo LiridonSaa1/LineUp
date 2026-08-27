@@ -96,11 +96,13 @@ const FeedbackItem = React.memo(({ item, onDelete, isSupport = false }: any) => 
         <Text className="text-slate-900 font-bold text-base mt-1">{item.content}</Text>
         <View className="flex-row items-center mt-4 pt-4 border-t border-slate-50">
           <View className="w-8 h-8 rounded-full bg-slate-100 items-center justify-center mr-2">
-            <Text className="text-slate-700 text-[10px] font-black">{item.users?.name?.charAt(0) || 'U'}</Text>
+            <Text className="text-slate-700 text-[10px] font-black">{(item.name || item.users?.name || 'U').charAt(0).toUpperCase()}</Text>
           </View>
           <View>
-            <Text className="text-slate-900 font-black text-[11px]">{item.users?.name || 'Klient i LineUp'}</Text>
-            <Text className="text-slate-500 font-bold text-[10px]">{item.users?.email || "No Email"} • {new Date(item.created_at).toLocaleDateString()}</Text>
+            <Text className="text-slate-900 font-black text-[11px]">{item.name || item.users?.name || 'Klient / Vizitor'}</Text>
+            <Text className="text-slate-500 font-bold text-[10px]">
+              {item.email || item.users?.email || "Pa Email"} {item.phone ? `• ${item.phone}` : ''} • {new Date(item.created_at).toLocaleDateString()}
+            </Text>
           </View>
         </View>
       </View>

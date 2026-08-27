@@ -200,6 +200,53 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
     fetchRealCategoryCounts();
   }, []);
 
+  const [contactForm, setContactForm] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+    phone: user?.phone || '',
+    subject: '',
+    message: ''
+  });
+  const [isSendingContact, setIsSendingContact] = useState(false);
+
+  const handleSendContactMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!contactForm.name.trim() || !contactForm.email.trim() || !contactForm.message.trim()) {
+      alert("Ju lutemi plotësoni emrin, email-in dhe mesazhin tuaj!");
+      return;
+    }
+
+    setIsSendingContact(true);
+    try {
+      const { error } = await supabase.from('system_feedback').insert({
+        user_id: user?.id || null,
+        name: contactForm.name.trim(),
+        email: contactForm.email.trim(),
+        phone: contactForm.phone.trim(),
+        subject: `SUPPORT: ${contactForm.subject.trim() || 'Kërkesë nga Uebsajti'}`,
+        content: `[TEL: ${contactForm.phone.trim() || 'N/A'}] [EMAIL: ${contactForm.email.trim()}]\n\n${contactForm.message.trim()}`,
+        status: 'open',
+        created_at: new Date().toISOString()
+      });
+
+      if (error) throw error;
+
+      setContactForm({
+        name: user?.name || '',
+        email: user?.email || '',
+        phone: user?.phone || '',
+        subject: '',
+        message: ''
+      });
+      alert("Mesazhi juaj u dërgua me sukses te administratori! Do t'ju kontaktojmë së shpejti.");
+    } catch (err: any) {
+      console.error("Contact Form Error:", err);
+      alert("Gabim gjatë dërgimit të mesazhit: " + (err.message || "Provoni përsëri."));
+    } finally {
+      setIsSendingContact(false);
+    }
+  };
+
   return (
     <div className="min-h-screen w-full bg-[#f8fafc] font-sans text-slate-900">
       <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -645,10 +692,7 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
 
             <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
               <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  alert("Mesazhi juaj u dërgua me sukses! Do t'ju kontaktojmë së shpejti.");
-                }}
+                onSubmit={handleSendContactMessage}
                 className="grid gap-5"
               >
                 <div className="grid gap-5 sm:grid-cols-2">
@@ -661,6 +705,8 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
                       <input
                         type="text"
                         required
+                        value={contactForm.name}
+                        onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
                         placeholder="Filan Fisteku"
                         className="w-full bg-transparent text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 placeholder:font-medium"
                       />
@@ -676,6 +722,8 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
                       <input
                         type="email"
                         required
+                        value={contactForm.email}
+                        onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
                         placeholder="emri@shembull.ks"
                         className="w-full bg-transparent text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 placeholder:font-medium"
                       />
@@ -692,6 +740,8 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
                       <Phone className="h-4 w-4 shrink-0 text-slate-400" />
                       <input
                         type="tel"
+                        value={contactForm.phone}
+                        onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
                         placeholder="+383 44 000 000"
                         className="w-full bg-transparent text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 placeholder:font-medium"
                       />
@@ -707,6 +757,8 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
                       <input
                         type="text"
                         required
+                        value={contactForm.subject}
+                        onChange={(e) => setContactForm({ ...contactForm, subject: e.target.value })}
                         placeholder="Pyetje për termin, abonim..."
                         className="w-full bg-transparent text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 placeholder:font-medium"
                       />
@@ -721,6 +773,8 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
                   <textarea
                     rows={4}
                     required
+                    value={contactForm.message}
+                    onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
                     placeholder="Shkruani mesazhin tuaj këtu..."
                     className="w-full rounded-2xl border border-slate-200 bg-slate-50/70 p-3.5 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 placeholder:font-medium transition-colors focus:border-[#3473ef] focus:bg-white focus:ring-2 focus:ring-[#3473ef]/10 resize-none"
                   />
@@ -728,10 +782,11 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
 
                 <button
                   type="submit"
-                  className="flex items-center justify-center gap-2 rounded-2xl bg-slate-900 py-3.5 px-6 font-display text-sm font-bold text-white shadow-md transition-all hover:bg-[#3473ef] active:scale-[0.99] cursor-pointer"
+                  disabled={isSendingContact}
+                  className={`flex items-center justify-center gap-2 rounded-2xl bg-slate-900 py-3.5 px-6 font-display text-sm font-bold text-white shadow-md transition-all hover:bg-[#3473ef] active:scale-[0.99] cursor-pointer ${isSendingContact ? 'opacity-60 cursor-not-allowed' : ''}`}
                 >
                   <Send className="h-4 w-4" />
-                  Dërgo Mesazhin
+                  {isSendingContact ? 'Duke dërguar...' : 'Dërgo Mesazhin'}
                 </button>
               </form>
             </div>

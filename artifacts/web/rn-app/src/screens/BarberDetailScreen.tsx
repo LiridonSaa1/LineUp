@@ -567,20 +567,52 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
       }
     }
     async function fetchReviews() {
+      if (!shop?.id) return;
       setLoadingReviews(true);
       try {
-        const { data, error } = await supabase
+        const sId = shop.id;
+        // 1. Try relational query first
+        let { data, error } = await supabase
           .from('reviews')
-          .select(`
-            *,
-            users (
-              name
-            )
-          `)
-          .eq('shop_id', shop.id)
+          .select('*, users(name, email)')
+          .eq('shop_id', sId)
           .order('created_at', { ascending: false });
 
-        if (error) throw error;
+        // 2. Fallback to basic query if relation error occurs (e.g. missing FK)
+        if (error || !data || data.length === 0) {
+          const basicRes = await supabase
+            .from('reviews')
+            .select('*')
+            .eq('shop_id', sId)
+            .order('created_at', { ascending: false });
+
+          if (basicRes.data && basicRes.data.length > 0) {
+            data = basicRes.data;
+          }
+        }
+
+        // 3. Populate missing user names if users relation wasn't returned
+        if (data && data.length > 0) {
+          const userIdsToFetch = data
+            .filter((r: any) => !r.users?.name && r.user_id)
+            .map((r: any) => r.user_id);
+
+          if (userIdsToFetch.length > 0) {
+            const { data: userData } = await supabase
+              .from('users')
+              .select('id, name')
+              .in('id', userIdsToFetch);
+
+            if (userData && userData.length > 0) {
+              const userMap = new Map(userData.map(u => [u.id, u.name]));
+              data = data.map((r: any) => ({
+                ...r,
+                users: r.users?.name ? r.users : { name: userMap.get(r.user_id) || 'Klient i verifikuar' }
+              }));
+            }
+          }
+        }
+
         setReviews(data || []);
       } catch (e) {
         console.error("Error fetching reviews:", e);
@@ -1169,9 +1201,9 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
                             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 font-bold text-white text-xs">
-                              {rev.users?.name?.charAt(0) || "K"}
+                              {(rev.users?.name || rev.name || "K").charAt(0).toUpperCase()}
                             </div>
-                            <span className="font-display text-sm font-bold text-slate-900">{rev.users?.name || "Klient i verifikuar"}</span>
+                            <span className="font-display text-sm font-bold text-slate-900">{rev.users?.name || rev.name || "Klient i verifikuar"}</span>
                           </div>
                           <span className="flex items-center gap-1 text-xs font-bold text-amber-500">
                             <Star size={12} fill="#f59e0b" color="#f59e0b" />

@@ -24,8 +24,13 @@ export const ActivityScreen: React.FC<ActivityScreenProps> = ({ user, onLogin, o
   const [comment, setComment] = useState("");
   const [submittingReview, setSubmittingReview] = useState(false);
 
+  const isDesktop = Platform.OS === 'web' && width > 768;
+
   const fetchAppointments = async () => {
-    if (!user) return;
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -100,7 +105,7 @@ export const ActivityScreen: React.FC<ActivityScreenProps> = ({ user, onLogin, o
   };
 
   const handleSubmitReview = async () => {
-    if (!selectedAppt) return;
+    if (!selectedAppt || !user?.id) return;
     setSubmittingReview(true);
     try {
       // 1. Insert review
@@ -123,7 +128,6 @@ export const ActivityScreen: React.FC<ActivityScreenProps> = ({ user, onLogin, o
         .eq('id', selectedAppt.id);
 
       if (apptErr) {
-        // Fallback if column is missing (don't fail the whole operation)
         console.warn("Could not mark as reviewed, column might be missing:", apptErr.message);
       }
 
@@ -145,65 +149,65 @@ export const ActivityScreen: React.FC<ActivityScreenProps> = ({ user, onLogin, o
 
   if (!user) {
     return (
-      <View className="flex-1 bg-[#F5F5F5]">
+      <View className="flex-1 bg-[#f8fafc] w-full max-w-full overflow-x-hidden">
         {/* Background Decorative Blobs */}
-        <View className="absolute top-[-50] left-[-50] w-64 h-64 bg-[#3473ef]/15 rounded-full blur-3xl" />
-        <View className="absolute top-[200] right-[-100] w-80 h-80 bg-[#f47458]/15 rounded-full blur-3xl" />
+        <View className="absolute top-[-50] left-[-50] w-64 h-64 bg-[#3473ef]/10 rounded-full blur-3xl pointer-events-none" />
+        <View className="absolute top-[200] right-[-100] w-80 h-80 bg-[#f47458]/10 rounded-full blur-3xl pointer-events-none" />
 
         <ScrollView
           contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 32 }}
           showsVerticalScrollIndicator={false}
         >
-          <View className="items-center justify-center py-20">
-            <View className="w-24 h-24 rounded-full bg-white items-center justify-center shadow-xl mb-8">
-              <Lock size={40} color="#3473ef" strokeWidth={2.5} />
+          <div className={isDesktop ? "mx-auto w-full max-w-[1440px] px-6 lg:px-10 py-8" : "w-full"}>
+            <View className="items-center justify-center py-20 bg-white border border-slate-200/80 rounded-[36px] shadow-xs p-8 max-w-xl mx-auto">
+              <View className="w-20 h-20 rounded-2xl bg-blue-50 items-center justify-center mb-6">
+                <Lock size={36} color="#3473ef" strokeWidth={2.5} />
+              </View>
+
+              <Text className="text-3xl font-black text-[#161719] text-center mb-3">Kyçu në Llogari</Text>
+              <Text className="text-[#8789A3] font-bold text-center leading-6 mb-8 max-w-md">
+                Për të parë terminet tuaja dhe për të rezervuar shërbime të reja, ju duhet të jeni të kyçur në llogarinë tuaj.
+              </Text>
+
+              <TouchableOpacity
+                onPress={onLogin}
+                activeOpacity={0.9}
+                className="w-full h-14 bg-[#161719] rounded-2xl items-center justify-center shadow-lg hover:scale-[1.01] transition-transform cursor-pointer"
+              >
+                <Text className="text-white text-base font-black">Kyçu Tani</Text>
+              </TouchableOpacity>
             </View>
-
-            <Text className="text-3xl font-black text-[#161719] text-center mb-4">Kyçu në Llogari</Text>
-            <Text className="text-[#8789A3] font-bold text-center leading-6 mb-10">
-              Për të parë terminet tuaja dhe për të rezervuar shërbime të reja, ju duhet të jeni të kyçur në llogarinë tuaj.
-            </Text>
-
-            <TouchableOpacity
-              onPress={onLogin}
-              activeOpacity={0.9}
-              className="w-full h-16 bg-black rounded-3xl items-center justify-center shadow-xl"
-            >
-              <Text className="text-white text-lg font-black">Kyçu Tani</Text>
-            </TouchableOpacity>
-          </View>
+          </div>
         </ScrollView>
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-[#F5F5F5]">
+    <View className="flex-1 bg-[#f8fafc] w-full max-w-full overflow-x-hidden">
       {/* Background Decorative Blobs */}
-      <View className="absolute top-[-50] left-[-50] w-64 h-64 bg-[#3473ef]/15 rounded-full blur-3xl" />
-      <View className="absolute top-[200] right-[-100] w-80 h-80 bg-[#f47458]/15 rounded-full blur-3xl" />
-
-      {/* Header - Glassmorphism */}
-      <View className="pt-14 pb-6 px-6 bg-white/70 z-10 shadow-sm border-b border-white/50 overflow-hidden">
-        <BlurView intensity={80} tint="light" className="absolute inset-0" />
-        <View className="relative">
-          <View>
-            <Text className="text-3xl font-black text-[#161719] tracking-tight">Aktiviteti</Text>
-            <Text className="text-[#8789A3] font-bold text-sm mt-1">Shikoni terminet tuaja aktive dhe historinë</Text>
-          </View>
-        </View>
-      </View>
+      <View className="absolute top-[-50] left-[-50] w-64 h-64 bg-[#3473ef]/10 rounded-full blur-3xl pointer-events-none" />
+      <View className="absolute top-[200] right-[-100] w-80 h-80 bg-[#f47458]/10 rounded-full blur-3xl pointer-events-none" />
 
       <ScrollView
-        className="flex-1 px-6 pt-6"
+        className="flex-1 w-full"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
         keyboardShouldPersistTaps="handled"
       >
+        <div className={isDesktop ? "mx-auto w-full max-w-[1440px] px-6 lg:px-10 py-8" : "w-full px-6 pt-6"}>
+          {/* Header - Glassmorphism */}
+          <View className={`pt-8 pb-8 px-8 bg-white/70 backdrop-blur-md rounded-[36px] shadow-xs border border-white/80 mb-8 ${isDesktop ? 'mt-4' : 'rounded-t-none'}`}>
+            <View className="relative">
+              <Text className="text-3xl lg:text-4xl font-black text-[#161719] tracking-tight">Aktiviteti Im</Text>
+              <Text className="text-[#8789A3] font-bold text-sm mt-1">Shikoni terminet tuaja aktive dhe historinë e takimeve</Text>
+            </View>
+          </View>
+
         {loading ? (
-          <ActivityIndicator size="large" color="#3473ef" className="mt-20" />
+          <ActivityIndicator size="large" color="#3473ef" className="mt-20 self-center" />
         ) : (
-          <View>
+          <div className={isDesktop ? "grid lg:grid-cols-2 gap-8 items-start" : "flex flex-col"}>
             {/* --- UPCOMING SECTION --- */}
             <View className="mb-8">
               <View className="flex-row items-center mb-4 ml-1">
@@ -330,8 +334,9 @@ export const ActivityScreen: React.FC<ActivityScreenProps> = ({ user, onLogin, o
                 </View>
               )}
             </View>
-          </View>
+          </div>
         )}
+        </div>
       </ScrollView>
 
       {/* --- REVIEW MODAL --- */}
@@ -346,19 +351,40 @@ export const ActivityScreen: React.FC<ActivityScreenProps> = ({ user, onLogin, o
           className="flex-1"
           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
-          <View className="flex-1 bg-black/60 justify-end">
-            <TouchableOpacity activeOpacity={1} onPress={() => { setShowReviewModal(false); Keyboard.dismiss(); }} className="absolute inset-0" />
-            <View className="bg-white rounded-t-[48px] p-8 pb-12 shadow-2xl max-h-[90%]">
-              <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mb-8" />
+          <View className={`flex-1 ${isDesktop ? 'justify-center items-center p-4 sm:p-6 bg-black/45 backdrop-blur-xs' : 'justify-end bg-black/60'}`}>
+            <TouchableOpacity activeOpacity={1} onPress={() => { setShowReviewModal(false); Keyboard.dismiss(); }} className="absolute inset-0 z-0" />
+            <View
+              style={isDesktop ? { 
+                backgroundColor: '#ffffff', 
+                width: '100%', 
+                maxWidth: '680px', 
+                borderRadius: 36, 
+                padding: 32,
+                overflow: 'hidden' 
+              } : { 
+                backgroundColor: '#ffffff', 
+                width: '100%', 
+                borderTopLeftRadius: 32, 
+                borderTopRightRadius: 32, 
+                padding: 24,
+                overflow: 'hidden' 
+              }}
+              className={`z-10 bg-white shadow-2xl flex-col ${
+                isDesktop 
+                  ? 'w-full max-w-2xl lg:max-w-3xl rounded-[36px] bg-white p-8 lg:p-10 border border-slate-200/80 max-h-[85vh]' 
+                  : 'w-full bg-white rounded-t-[32px] p-6 h-[85%]'
+              }`}
+            >
+              <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mt-1 mb-6 shrink-0" />
 
-              <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
-                <View className="flex-row justify-between items-center mb-6">
+              <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, paddingBottom: 24 }}>
+                <View className="flex-row justify-between items-center pb-4 mb-6 border-b border-slate-50">
                   <View>
-                    <Text className="text-3xl font-black text-[#161719] tracking-tight">Vlerëso Sallonin</Text>
+                    <Text className="text-2xl font-black text-[#161719] tracking-tight">Vlerëso Sallonin</Text>
                     <Text className="text-slate-400 font-bold text-sm mt-1">{selectedAppt?.shopName}</Text>
                   </View>
-                  <TouchableOpacity onPress={() => setShowReviewModal(false)} className="w-12 h-12 bg-slate-50 rounded-full items-center justify-center">
-                    <X size={24} color="#161719" />
+                  <TouchableOpacity onPress={() => setShowReviewModal(false)} className="p-2.5 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors cursor-pointer">
+                    <X size={20} color="#161719" />
                   </TouchableOpacity>
                 </View>
 
