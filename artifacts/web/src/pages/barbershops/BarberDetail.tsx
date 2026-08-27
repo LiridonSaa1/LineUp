@@ -100,7 +100,7 @@ export default function BarberDetail() {
   const shop = data?.shop;
   const barbers = data?.barbers || [];
 
-  const { isFavorite, toggleFavorite } = useFavorites();
+  const { isFavorite, toggleFavorite, AuthModal } = useFavorites();
 
   const { data: servicesRes, isLoading: servicesLoading } = useListServices(shopId, {
     query: { enabled: !!shopId, queryKey: getListServicesQueryKey(shopId) },
@@ -186,6 +186,7 @@ export default function BarberDetail() {
 
   return (
     <div className="min-h-screen bg-slate-50/70 pb-16 dark:bg-background">
+      <AuthModal />
       {/* Header Hero Section */}
       <section className="relative min-h-[420px] overflow-hidden bg-slate-950 text-white">
         {shop.image_url || shop.cover_image || shop.image || shop.avatar || shop.imageUrl || (Array.isArray(shop.photos) && shop.photos[0] ? shop.photos[0] : null) || (Array.isArray(shop.portfolio_urls) && shop.portfolio_urls[0] ? (typeof shop.portfolio_urls[0] === 'string' ? shop.portfolio_urls[0] : shop.portfolio_urls[0].url) : null) ? (

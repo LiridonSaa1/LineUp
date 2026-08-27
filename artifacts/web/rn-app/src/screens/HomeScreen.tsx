@@ -10,6 +10,8 @@ import { supabase } from "@/config/supabase";
 import { getShopCardImage } from "../utils/imageUtils";
 import { getShopPlanDetails } from "../utils/planLimits";
 import * as Haptics from 'expo-haptics';
+import { WebFooter } from "../components/WebFooter";
+import { DesktopHomeWeb } from "../components/home/DesktopHomeWeb";
 
 // Remove global width constant to support responsiveness with useWindowDimensions() inside components
 
@@ -52,6 +54,8 @@ interface HomeScreenProps {
   favorites?: any[];
   onToggleFavorite?: (shop: any) => void;
   user?: any;
+  onTabPress?: (index: number) => void;
+  activeTab?: number;
 }
 
 const RecommendedCard = React.memo(({ shop, onPress, width }: { shop: any, onPress: (shop: any) => void, width: number }) => (
@@ -146,9 +150,6 @@ const ShopCard = React.memo(({ item, isFavorite, onToggleFavorite, onSelect, wid
   </TouchableOpacity>
 ));
 
-import { WebFooter } from "../components/WebFooter";
-import { DesktopHomeWeb } from "../components/home/DesktopHomeWeb";
-
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   onSelectShop,
   onOpenLocation,
@@ -165,7 +166,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   subcategories = [],
   favorites = [],
   onToggleFavorite,
-  user
+  user,
+  onTabPress,
+  activeTab
 }) => {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
@@ -354,31 +357,178 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     );
   };
 
+  const renderSubModal = () => {
+    const isSubcatForCategory = (s: any) => {
+      if (!selectedMainCategory) return false;
+      const sCatId = String(s.category_id || '').trim().toLowerCase();
+      const catId = String(selectedMainCategory.id || '').trim().toLowerCase();
+      const sCatName = String(s.category_name || s.categoryName || '').trim().toLowerCase();
+      const catName = String(selectedMainCategory.name || '').trim().toLowerCase();
+
+      return (catId && sCatId === catId) || (catName && (sCatId === catName || sCatName === catName));
+    };
+
+    const currentSubcategories = subcategories.filter(isSubcatForCategory);
+
+    return (
+      <Modal
+        visible={showSubModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowSubModal(false)}
+      >
+        <View className={`flex-1 justify-end ${isDesktop ? 'items-center pb-4 sm:pb-8' : ''}`}>
+          <TouchableOpacity
+            className="absolute inset-0 bg-black/45 z-0"
+            activeOpacity={1}
+            onPress={() => setShowSubModal(false)}
+          />
+          <View className={`bg-white overflow-hidden shadow-2xl flex-col z-10 ${
+            isDesktop 
+              ? 'w-full max-w-2xl lg:max-w-3xl rounded-[36px] h-auto max-h-[85vh] border border-slate-200/80' 
+              : 'w-full rounded-t-[32px] h-[75%]'
+          }`}>
+            <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mt-3 mb-2" />
+            <View className="flex-row items-center justify-between px-6 py-4 border-b border-slate-50">
+              <View className="flex-row items-center">
+                <Text className="text-xl font-black text-[#161719]">Shërbimet</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowSubModal(false)} className="p-2 bg-slate-100 rounded-full">
+                <X size={20} color="#161719" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Category Tabs */}
+            <View className="border-b border-slate-100">
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+                {categories.map(cat => {
+                  const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
+                  const isSelected = selectedMainCategory?.id === cat.id || selectedMainCategory?.name === cat.name;
+                  return (
+                    <TouchableOpacity
+                      key={cat.id || cat.name}
+                      onPress={() => setSelectedMainCategory(cat)}
+                      className={`flex-row items-center px-4 py-2 rounded-full mr-2 ${isSelected ? 'bg-[#161719]' : 'bg-slate-100'}`}
+                    >
+                      <IconComponent size={14} color={isSelected ? "white" : "#64748b"} />
+                      <Text className={`ml-2 text-sm font-bold ${isSelected ? 'text-white' : 'text-slate-500'}`}>{cat.name}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
+            <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 100 }} className="flex-1">
+              <Text className="text-sm font-bold text-[#8789A3] mb-4">Zgjidhni shërbimet për këtë kategori:</Text>
+              
+              <TouchableOpacity
+                onPress={() => {
+                  if (selectedMainCategory) {
+                    const currentCategorySubIds = currentSubcategories.map(s => String(s.id).trim());
+                    
+                    setSelectedSubIds(prev => {
+                      const allSelected = currentCategorySubIds.every(id => prev.includes(id));
+                      if (allSelected) {
+                        return prev.filter(id => !currentCategorySubIds.includes(id));
+                      } else {
+                        const newSelection = [...prev];
+                        currentCategorySubIds.forEach(id => {
+                          if (!newSelection.includes(id)) newSelection.push(id);
+                        });
+                        return newSelection;
+                      }
+                    });
+                  }
+                }}
+                className={`rounded-2xl py-4 items-center mb-4 border ${!selectedMainCategory || (currentSubcategories.length > 0 && currentSubcategories.every(s => selectedSubIds.includes(String(s.id).trim()))) ? 'bg-[#3473ef]/10 border-[#3473ef]' : 'bg-slate-50 border-slate-200'}`}
+              >
+                <Text className={`font-black text-base ${!selectedMainCategory || (currentSubcategories.length > 0 && currentSubcategories.every(s => selectedSubIds.includes(String(s.id).trim()))) ? 'text-[#3473ef]' : 'text-[#64748b]'}`}>Të gjitha në këtë kategori</Text>
+              </TouchableOpacity>
+
+              {currentSubcategories.map((sub, sIdx) => {
+                const subId = String(sub.id).trim();
+                const isSelected = selectedSubIds.includes(subId);
+                return (
+                  <TouchableOpacity
+                    key={`${subId}-${sIdx}`}
+                    onPress={() => {
+                      setSelectedSubIds(prev =>
+                        prev.includes(subId) ? prev.filter(id => id !== subId) : [...prev, subId]
+                      );
+                    }}
+                    className={`flex-row items-center py-4 border-b ${isSelected ? 'border-[#3473ef]/30' : 'border-slate-100'}`}
+                  >
+                    <View className={`w-6 h-6 rounded-md border items-center justify-center mr-3 ${isSelected ? 'bg-[#3473ef] border-[#3473ef]' : 'bg-white border-slate-300'}`}>
+                      {isSelected && <Check size={14} color="white" strokeWidth={3} />}
+                    </View>
+                    <Text className={`text-base flex-1 ${isSelected ? 'font-black text-[#3473ef]' : 'font-bold text-[#161719]'}`}>{sub.name}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Sticky Bottom Button */}
+            <View className="absolute bottom-0 left-0 right-0 p-6 bg-white border-t border-slate-50">
+              <TouchableOpacity
+                onPress={() => {
+                  setShowSubModal(false);
+
+                  let finalSubIds = [...selectedSubIds];
+                  if (finalSubIds.length === 0 && selectedMainCategory) {
+                    finalSubIds = currentSubcategories.map(s => String(s.id).trim());
+                  }
+                  
+                  if (onSearch) {
+                    onSearch("", finalSubIds, selectedMainCategory?.name || "");
+                  }
+                }}
+                className="h-14 bg-black rounded-2xl items-center justify-center shadow-lg"
+              >
+                <Text className="text-white font-black text-lg">
+                  Kërko {selectedSubIds.length > 0 ? `(${selectedSubIds.length})` : ''}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
   if (isDesktop && Platform.OS === 'web') {
     return (
-      <DesktopHomeWeb
-        categories={categories}
-        recommendedShops={recommendedShops}
-        newShops={newShops}
-        ads={ads}
-        user={user}
-        selectedLocation={selectedLocation}
-        onSelectShop={onSelectShop}
-        onOpenLocation={onOpenLocation}
-        onOpenSearch={onOpenSearch}
-        onStartPlan={(pId) => onStartPlan && onStartPlan(pId)}
-        onManagePlan={onManagePlan || (() => {})}
-        onUpgradePlan={(pId) => onUpgradePlan && onUpgradePlan(pId)}
-        onDowngradePlan={(pId) => onDowngradePlan && onDowngradePlan(pId)}
-        onRenewPlan={(pId) => onRenewPlan && onRenewPlan(pId)}
-        currentPlanInfo={currentPlanInfo}
-        teamEmployees={teamEmployees}
-        setTeamEmployees={setTeamEmployees}
-        favorites={favorites}
-        onToggleFavorite={onToggleFavorite || (() => {})}
-        activeTab={0}
-        onTabPress={() => {}}
-      />
+      <View className="flex-1 bg-[#f8fafc]">
+        <DesktopHomeWeb
+          categories={categories}
+          recommendedShops={recommendedShops}
+          newShops={newShops}
+          ads={ads}
+          user={user}
+          selectedLocation={selectedLocation}
+          onSelectShop={onSelectShop}
+          onOpenLocation={onOpenLocation}
+          onOpenSearch={onOpenSearch}
+          onSelectCategory={(label) => {
+            const found = categories.find(c => String(c.name).toLowerCase().trim() === String(label).toLowerCase().trim()) || { name: label, id: label };
+            setSelectedMainCategory(found);
+            setShowSubModal(true);
+          }}
+          onStartPlan={(pId) => onStartPlan && onStartPlan(pId)}
+          onManagePlan={onManagePlan || (() => {})}
+          onUpgradePlan={(pId) => onUpgradePlan && onUpgradePlan(pId)}
+          onDowngradePlan={(pId) => onDowngradePlan && onDowngradePlan(pId)}
+          onRenewPlan={(pId) => onRenewPlan && onRenewPlan(pId)}
+          currentPlanInfo={currentPlanInfo}
+          teamEmployees={teamEmployees}
+          setTeamEmployees={setTeamEmployees}
+          favorites={favorites}
+          onToggleFavorite={onToggleFavorite || (() => {})}
+          activeTab={activeTab || 0}
+          onTabPress={onTabPress || (() => {})}
+        />
+
+        {renderSubModal()}
+      </View>
     );
   }
 
@@ -898,137 +1048,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
       </ScrollView>
 
-    {/* Subcategory Modal */}
-    <Modal
-      visible={showSubModal}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={() => setShowSubModal(false)}
-    >
-      <View className={`flex-1 justify-end ${isDesktop ? 'items-center pb-4 sm:pb-8' : ''}`}>
-        <TouchableOpacity
-          className="absolute inset-0 bg-black/45"
-          activeOpacity={1}
-          onPress={() => setShowSubModal(false)}
-        />
-        <View className={`bg-white overflow-hidden shadow-2xl flex-col ${
-          isDesktop 
-            ? 'w-full max-w-2xl lg:max-w-3xl rounded-[36px] h-auto max-h-[85vh] border border-slate-200/80' 
-            : 'w-full rounded-t-[32px] h-[75%]'
-        }`}>
-          <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mt-3 mb-2" />
-          <View className="flex-row items-center justify-between px-6 py-4 border-b border-slate-50">
-            <View className="flex-row items-center">
-              <Text className="text-xl font-black text-[#161719]">Shërbimet</Text>
-            </View>
-            <TouchableOpacity onPress={() => setShowSubModal(false)} className="p-2 bg-slate-100 rounded-full">
-              <X size={20} color="#161719" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Category Tabs */}
-          <View className="border-b border-slate-100">
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-              {categories.map(cat => {
-                const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
-                const isSelected = selectedMainCategory?.id === cat.id;
-                return (
-                  <TouchableOpacity
-                    key={cat.id}
-                    onPress={() => setSelectedMainCategory(cat)}
-                    className={`flex-row items-center px-4 py-2 rounded-full mr-2 ${isSelected ? 'bg-[#161719]' : 'bg-slate-100'}`}
-                  >
-                    <IconComponent size={14} color={isSelected ? "white" : "#64748b"} />
-                    <Text className={`ml-2 text-sm font-bold ${isSelected ? 'text-white' : 'text-slate-500'}`}>{cat.name}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-
-          <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 100 }} className="flex-1">
-            <Text className="text-sm font-bold text-[#8789A3] mb-4">Zgjidhni shërbimet për këtë kategori:</Text>
-            
-            <TouchableOpacity
-              onPress={() => {
-                if (selectedMainCategory) {
-                  const currentCategorySubIds = subcategories
-                    .filter(s => String(s.category_id).trim() === String(selectedMainCategory.id).trim())
-                    .map(s => String(s.id).trim());
-                  
-                  setSelectedSubIds(prev => {
-                    const allSelected = currentCategorySubIds.every(id => prev.includes(id));
-                    if (allSelected) {
-                      // If all are selected, unselect them
-                      return prev.filter(id => !currentCategorySubIds.includes(id));
-                    } else {
-                      // Select all
-                      const newSelection = [...prev];
-                      currentCategorySubIds.forEach(id => {
-                        if (!newSelection.includes(id)) newSelection.push(id);
-                      });
-                      return newSelection;
-                    }
-                  });
-                }
-              }}
-              className={`rounded-2xl py-4 items-center mb-4 border ${!selectedMainCategory || subcategories.filter(s => String(s.category_id).trim() === String(selectedMainCategory?.id).trim()).every(s => selectedSubIds.includes(String(s.id).trim())) ? 'bg-[#3473ef]/10 border-[#3473ef]' : 'bg-slate-50 border-slate-200'}`}
-            >
-              <Text className={`font-black text-base ${!selectedMainCategory || subcategories.filter(s => String(s.category_id).trim() === String(selectedMainCategory?.id).trim()).every(s => selectedSubIds.includes(String(s.id).trim())) ? 'text-[#3473ef]' : 'text-[#64748b]'}`}>Të gjitha në këtë kategori</Text>
-            </TouchableOpacity>
-
-            {selectedMainCategory && subcategories.filter(s => String(s.category_id).trim() === String(selectedMainCategory.id).trim()).map((sub, sIdx) => {
-              const subId = String(sub.id).trim();
-              const isSelected = selectedSubIds.includes(subId);
-              return (
-                <TouchableOpacity
-                  key={`${subId}-${sIdx}`}
-                  onPress={() => {
-                    setSelectedSubIds(prev =>
-                      prev.includes(subId) ? prev.filter(id => id !== subId) : [...prev, subId]
-                    );
-                  }}
-                  className={`flex-row items-center py-4 border-b ${isSelected ? 'border-[#3473ef]/30' : 'border-slate-100'}`}
-                >
-                  <View className={`w-6 h-6 rounded-md border items-center justify-center mr-3 ${isSelected ? 'bg-[#3473ef] border-[#3473ef]' : 'bg-white border-slate-300'}`}>
-                    {isSelected && <Check size={14} color="white" strokeWidth={3} />}
-                  </View>
-                  <Text className={`text-base flex-1 ${isSelected ? 'font-black text-[#3473ef]' : 'font-bold text-[#161719]'}`}>{sub.name}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-
-          {/* Sticky Bottom Button */}
-          <View className="absolute bottom-0 left-0 right-0 p-6 bg-white border-t border-slate-50">
-            <TouchableOpacity
-              onPress={() => {
-                setShowSubModal(false);
-
-                let finalSubIds = [...selectedSubIds];
-                if (finalSubIds.length === 0 && selectedMainCategory) {
-                  finalSubIds = subcategories
-                    .filter(s => s.category_id === selectedMainCategory.id)
-                    .map(s => s.id);
-                }
-                
-                if (onSearch) {
-                  // We pass empty query to avoid filtering by "Haircut" in name/address
-                  // and instead rely on category/subcategory IDs
-                  onSearch("", finalSubIds, selectedMainCategory?.name || "");
-                }
-              }}
-              className="h-14 bg-black rounded-2xl items-center justify-center shadow-lg"
-            >
-              <Text className="text-white font-black text-lg">
-                Kërko {selectedSubIds.length > 0 ? `(${selectedSubIds.length})` : ''}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+      {renderSubModal()}
       </View>
-    </Modal>
-  </View>
     </KeyboardAvoidingView>
   );
 };

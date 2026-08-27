@@ -6,6 +6,19 @@ import { Home, Search, Calendar, User, Shield, MapPin, ChevronDown } from "lucid
 import { Image as RNImage } from "react-native";
 import { useWindowDimensions } from "react-native";
 
+const logoImg = require('./assets/logo.png');
+const extractUri = (mod: any): string => {
+  if (!mod) return "";
+  if (typeof mod === "string") return mod;
+  if (typeof mod === "object") {
+    if (typeof mod.default === "string") return mod.default;
+    if (mod.default && typeof mod.default === "object" && typeof mod.default.uri === "string") return mod.default.uri;
+    if (typeof mod.uri === "string") return mod.uri;
+    if (typeof mod.src === "string") return mod.src;
+  }
+  return String(mod || "");
+};
+
 const DesktopHeaderBar = ({
   activeTab,
   onTabPress,
@@ -17,73 +30,57 @@ const DesktopHeaderBar = ({
   onOpenRegisterShop
 }: any) => {
   return (
-    <View className="sticky top-0 z-30 border-b border-slate-200/70 bg-white/85 backdrop-blur-xl">
-      <View className="mx-auto flex max-w-[1440px] flex-row items-center justify-between gap-6 px-6 py-4 lg:px-10">
-        {/* Brand Logo & Title */}
-        <TouchableOpacity
-          onPress={() => onTabPress(0)}
-          activeOpacity={0.8}
-          className="flex-row items-center gap-2 mr-6 lg:mr-12"
+    <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
+      <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-6 px-6 py-4 lg:px-10">
+        <div
+          onClick={() => onTabPress(0)}
+          className="flex cursor-pointer shrink-0 items-center gap-2 mr-6 lg:mr-12"
         >
-          <Image source={require('./assets/logo.png')} className="h-16 w-16 rounded-2xl" resizeMode="contain" />
-        </TouchableOpacity>
+          <img src={extractUri(logoImg)} alt="LineUp" className="h-16 w-16 object-contain rounded-2xl transition-transform hover:scale-105" />
+        </div>
 
-        {/* Center Nav Links */}
-        <View className="hidden flex-row items-center gap-2 lg:flex ml-4 lg:ml-8">
-          {tabs.map((tab: any, i: number) => {
-            const isActive = activeTab === i;
-            return (
-              <TouchableOpacity
-                key={i}
-                onPress={() => onTabPress(i)}
-                className={`rounded-full px-4 py-2 transition-colors ${
-                  isActive
-                    ? "bg-slate-100"
-                    : "hover:bg-slate-50"
-                }`}
-              >
-                <Text className={`text-sm ${isActive ? 'font-bold text-slate-900' : 'font-medium text-slate-500'}`}>
-                  {tab.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+        <nav className="hidden items-center gap-2 lg:flex ml-4 lg:ml-8">
+          {["Ballina", "Kërko", "Aktiviteti", "Profili"].map((item, i) => (
+            <button
+              key={item}
+              onClick={() => onTabPress(i)}
+              className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                activeTab === i
+                  ? "bg-slate-100 font-bold text-slate-900"
+                  : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              {item}
+            </button>
+          ))}
+        </nav>
 
-        {/* Right Action Controls */}
-        <View className="flex-row items-center gap-3">
-          <TouchableOpacity
-            onPress={onOpenLocation}
-            className="flex-row items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-50"
+        <div className="ml-auto flex min-w-0 items-center gap-3">
+          <button
+            type="button"
+            onClick={onOpenLocation}
+            className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-50 cursor-pointer"
           >
-            <MapPin size={16} color="#3473ef" />
-            <Text className="text-sm font-medium text-slate-900">{selectedLocation}</Text>
-            <ChevronDown size={16} color="#64748B" />
-          </TouchableOpacity>
+            <MapPin className="h-4 w-4 shrink-0 text-[#3473ef]" />
+            <span className="truncate">{selectedLocation}</span>
+            <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+          </button>
 
-          {(!user || user.role === 'client') && (
-            <TouchableOpacity
-              onPress={onOpenRegisterShop}
-              className="shrink-0 rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-            >
-              <Text className="text-white font-semibold text-sm">Kyçu</Text>
-            </TouchableOpacity>
-          )}
-
-          {user && (
-            <TouchableOpacity
-              onPress={() => onTabPress(3)}
-              className="flex-row items-center bg-[#3473ef]/10 border border-[#3473ef]/20 px-3.5 py-1.5 rounded-full"
-            >
-              <View className="w-7 h-7 rounded-full bg-[#3473ef] items-center justify-center mr-2">
-                <Text className="text-white font-bold text-xs">{user.name ? user.name.charAt(0).toUpperCase() : 'U'}</Text>
-              </View>
-              <Text className="text-[#3473ef] font-bold text-xs" numberOfLines={1}>{user.name || 'Llogaria'}</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-    </View>
+          <button
+            onClick={() => {
+              if (user) {
+                onTabPress(3);
+              } else {
+                onOpenRegisterShop();
+              }
+            }}
+            className="shrink-0 rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 cursor-pointer"
+          >
+            {user ? (user.name || "Profili") : "Kyçu"}
+          </button>
+        </div>
+      </div>
+    </header>
   );
 };
 import * as Haptics from 'expo-haptics';
@@ -204,6 +201,7 @@ export default function App() {
   const [showRegisterShop, setShowRegisterShop] = React.useState(false);
   const [isRegistering, setIsRegistering] = React.useState(false);
   const [showAddAd, setShowAddAd] = React.useState(false);
+  const [showAuthAlert, setShowAuthAlert] = React.useState(false);
   const [categories, setCategories] = React.useState<any[]>(DEFAULT_CATEGORIES);
   const [subcategories, setSubcategories] = React.useState<any[]>(DEFAULT_SUBCATEGORIES);
   const [selectedPlanId, setSelectedPlanId] = React.useState<string | undefined>(undefined);
@@ -233,11 +231,7 @@ export default function App() {
 
   const handleToggleFavorite = async (shop: any) => {
     if (!user) {
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        window.alert("Llogaria kërkohet: Ju lutem kyçuni për të shtuar në të ruajtura.");
-      } else {
-        Alert.alert("Llogaria kërkohet", "Ju lutem kyçuni për të shtuar në të ruajtura.");
-      }
+      setShowAuthAlert(true);
       return;
     }
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch (_) {}
@@ -447,6 +441,9 @@ export default function App() {
 
   React.useEffect(() => {
     tabPosition.value = withSpring(activeTab * TAB_WIDTH, { damping: 15, stiffness: 120 });
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }, [activeTab]);
 
   const handleCitySelect = (city: string) => {
@@ -468,6 +465,9 @@ export default function App() {
     if (filters.shouldClose !== false) {
       setShowSearch(false);
       setActiveTab(1); // Switch to Explore tab
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     }
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -542,8 +542,6 @@ export default function App() {
                     }}
                     onManagePlan={() => setActiveTab(3)} // Profile for management
                     onUpgradePlan={(planId) => {
-                      // If already owner, we could trigger a direct upgrade flow
-                      // For now, let's just go to profile where they can manage
                       setActiveTab(3);
                     }}
                     onDowngradePlan={(planId) => {
@@ -557,6 +555,8 @@ export default function App() {
                     favorites={favorites}
                     onToggleFavorite={handleToggleFavorite}
                     user={user}
+                    onTabPress={(index) => setActiveTab(index)}
+                    activeTab={activeTab}
                   />
                 )}
                 {activeTab === 1 && (
@@ -572,6 +572,8 @@ export default function App() {
                     initialTime={searchTime}
                     favorites={favorites}
                     onToggleFavorite={handleToggleFavorite}
+                    onOpenRegisterShop={() => setShowRegisterShop(true)}
+                    onNavigateTab={(idx) => setActiveTab(idx)}
                   />
                 )}
                 {activeTab === 2 && (
@@ -792,6 +794,56 @@ export default function App() {
                     </BlurView>
                   </View>
                 </View>
+              )}
+
+              {/* Sleek Custom Auth Required Modal */}
+              {showAuthAlert && (
+                <Modal
+                  transparent
+                  visible={showAuthAlert}
+                  animationType="fade"
+                  onRequestClose={() => setShowAuthAlert(false)}
+                >
+                  <View className="flex-1 items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 z-50">
+                    <div className="w-full max-w-md overflow-hidden rounded-3xl bg-white p-6 shadow-2xl transition-all border border-slate-100">
+                      <div className="flex flex-col items-center text-center">
+                        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 border border-blue-100/60 shadow-2xs">
+                          <User size={32} color="#3473ef" />
+                        </div>
+
+                        <h3 className="font-display text-xl font-bold text-slate-900 mb-2">
+                          Llogaria Kërkohet
+                        </h3>
+
+                        <p className="text-sm font-medium text-slate-500 leading-relaxed mb-6">
+                          Ju lutem kyçuni ose krijoni një llogari për të ruajtur sallonin tuaj të preferuar te lista e të ruajturave.
+                        </p>
+
+                        <div className="flex w-full flex-col gap-2.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowAuthAlert(false);
+                              setShowRegisterShop(true);
+                            }}
+                            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#3473ef] py-3.5 px-4 font-display text-sm font-bold text-white shadow-md transition-all hover:bg-blue-600 active:scale-[0.98] cursor-pointer"
+                          >
+                            <User size={18} color="white" />
+                            Kyçu ose Regjistrohu
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setShowAuthAlert(false)}
+                            className="w-full rounded-2xl border border-slate-200 bg-white py-3 px-4 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 cursor-pointer"
+                          >
+                            Më vonë
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </View>
+                </Modal>
               )}
 
               {/* Floating Return to Admin Button */}

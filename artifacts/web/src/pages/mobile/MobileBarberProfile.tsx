@@ -13,7 +13,7 @@ import { useFavorites } from "@/hooks/useFavorites";
 export default function MobileBarberProfile({ params }: { params: { id: string } }) {
   const [, setLocation] = useLocation();
   const barberId = parseInt(params.id);
-  const { isFavorite, toggleFavorite } = useFavorites();
+  const { isFavorite, toggleFavorite, AuthModal } = useFavorites();
 
   const { data: barber, isLoading } = useQuery({
     queryKey: ["barber-detail", barberId],
@@ -51,6 +51,7 @@ export default function MobileBarberProfile({ params }: { params: { id: string }
 
   return (
     <div className="pb-8 space-y-6">
+      <AuthModal />
       {/* ── Top Cover & Action Bar ── */}
       <div className="relative h-64 bg-slate-900 overflow-hidden">
         {barber.shop?.imageUrl ? (

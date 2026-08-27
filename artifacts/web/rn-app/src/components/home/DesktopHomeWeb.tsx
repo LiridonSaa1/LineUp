@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Scissors,
   Palette,
@@ -21,7 +21,7 @@ import {
   Send,
   Heart
 } from "lucide-react-native";
-import { Image as RNImage } from "react-native";
+import { Platform } from "react-native";
 import { getShopCardImage } from "../../utils/imageUtils";
 import { supabase } from "../../config/supabase";
 
@@ -34,17 +34,14 @@ const logoImg = require('../../../assets/logo.png');
 const extractUri = (mod: any): string => {
   if (!mod) return "";
   if (typeof mod === "string") return mod;
+  if (typeof mod === "number") return String(mod);
   if (typeof mod === "object") {
     if (typeof mod.default === "string") return mod.default;
     if (mod.default && typeof mod.default === "object" && typeof mod.default.uri === "string") return mod.default.uri;
     if (typeof mod.uri === "string") return mod.uri;
     if (typeof mod.src === "string") return mod.src;
   }
-  try {
-    const res = RNImage.resolveAssetSource(mod);
-    if (res?.uri) return res.uri;
-  } catch (e) {}
-  return "";
+  return String(mod || "");
 };
 
 const resolveAdImage = (ad: any): string => {
@@ -90,6 +87,7 @@ interface DesktopHomeWebProps {
   onToggleFavorite: (shop: any) => void;
   activeTab: number;
   onTabPress: (idx: number) => void;
+  onSelectCategory?: (categoryName: string) => void;
 }
 
 const servicesList = [
@@ -149,7 +147,12 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
   onToggleFavorite,
   activeTab,
   onTabPress,
+  onSelectCategory,
 }) => {
+  if (Platform.OS !== 'web') {
+    return null;
+  }
+
   const [adIndex, setAdIndex] = React.useState(0);
   const [realCategoryCounts, setRealCategoryCounts] = React.useState<Record<string, number>>({});
 
@@ -350,7 +353,13 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
               return (
                 <button
                   key={label}
-                  onClick={onOpenSearch}
+                  onClick={() => {
+                    if (onSelectCategory) {
+                      onSelectCategory(label);
+                    } else {
+                      onOpenSearch();
+                    }
+                  }}
                   className="group grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-2xl border border-slate-200/60 bg-white px-3 py-3 text-left transition-all hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-0 outline-none select-none shadow-2xs"
                 >
                   <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-700 transition-colors group-hover:bg-[#3473ef] group-hover:text-white">

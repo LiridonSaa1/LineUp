@@ -58,3 +58,17 @@ input:-webkit-autofill:focus,
 input:-webkit-autofill:active {
   transition: background-color 50000s ease-in-out 0s !important;
 }
+
+/* Hide any injected Expo/Metro/IDE dev toolbars or Fast Refresh sidebars */
+[class*="expo-dev"],
+[id*="expo-dev"],
+[class*="metro-dev"],
+[class*="fast-refresh"],
+div[style*="z-index: 99999"][style*="left: 0"],
+div[style*="z-index: 999999"][style*="left: 0"] {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+

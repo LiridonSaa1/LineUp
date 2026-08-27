@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, TouchableOpacity, TextInput, ScrollView, Dimensions, FlatList, Keyboard, Modal, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 import { X, Search, MapPin, Calendar, Grid, Scissors, Hand, Eye, Sparkles, User, Smile, Waves, ArrowLeft, ChevronRight, AlertCircle, Check, ChevronLeft, Shield, Zap, ChevronDown, ChevronUp, Palette } from 'lucide-react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
@@ -150,7 +150,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
 
   const fetchRecents = async () => {
     try {
-      const { data: recentData } = await supabase
+      const { data: recentData, error } = await supabase
         .from('recent_searches')
         .select('category_name')
         .eq('user_id', USER_ID)
@@ -158,13 +158,11 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
         .order('created_at', { ascending: false })
         .limit(10);
 
-      if (recentData) {
+      if (!error && recentData) {
         const uniqueRecents = [...new Set(recentData.map(r => r.category_name).filter(Boolean))] as string[];
         setRecents(uniqueRecents.slice(0, 5));
       }
-    } catch (e) {
-      console.warn("Error fetching category recents from Supabase:", e);
-    }
+    } catch (e) {}
   };
 
   const saveRecentSearch = async (category: string) => {
@@ -183,9 +181,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
         user_id: USER_ID,
         category_name: category
       });
-    } catch (e) {
-      console.warn("Error saving category recent to Supabase:", e);
-    }
+    } catch (e) {}
   };
 
   const handleClearRecents = async () => {

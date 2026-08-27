@@ -808,6 +808,328 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
     ? portfolioData
     : portfolioData.filter((p: any) => p.category === activePhotoCategory);
 
+  const isDesktop = Platform.OS === 'web' && width > 768;
+
+  if (isDesktop) {
+    return (
+      <View className="flex-1 bg-[#f8fafc] overflow-y-auto">
+        <div className="mx-auto w-full max-w-[1440px] px-6 lg:px-10 py-8">
+          {/* Top Desktop Breadcrumb & Navigation */}
+          <div className="mb-6 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={onBack}
+              className="group inline-flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white px-4 py-2.5 font-display text-sm font-bold text-slate-700 shadow-2xs transition-all hover:bg-slate-50 hover:text-slate-900 cursor-pointer"
+            >
+              <ArrowLeft size={18} className="text-slate-500 group-hover:text-slate-900" />
+              <span>← Kthehu te Kërkimi</span>
+            </button>
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleFavoriteToggle}
+                className="flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white px-4 py-2.5 font-display text-sm font-bold text-slate-700 shadow-2xs transition-transform hover:scale-105 cursor-pointer"
+              >
+                <Heart size={18} color={isFavLocal ? "#ef4444" : "#64748b"} fill={isFavLocal ? "#ef4444" : "transparent"} />
+                <span>{isFavLocal ? "Në të ruajtura" : "Ruaj"}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleShare}
+                className="flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white px-4 py-2.5 font-display text-sm font-bold text-slate-700 shadow-2xs transition-transform hover:scale-105 cursor-pointer"
+              >
+                <Share2 size={18} className="text-slate-500" />
+                <span>Shpërndaj</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Desktop Hero Image Gallery */}
+          <div className="mb-8 grid gap-4 lg:grid-cols-3">
+            <div 
+              onClick={() => setZoomImage(imageUrl)}
+              className="group relative cursor-pointer overflow-hidden rounded-3xl bg-slate-900 lg:col-span-2 h-[380px]"
+            >
+              <img src={imageUrl} alt={shopName} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
+              <div className="absolute bottom-6 left-6 right-6 flex items-end justify-between">
+                <div>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/90 backdrop-blur-md px-3 py-1 font-display text-xs font-bold text-slate-900 mb-2">
+                    <Star size={14} color="#fbbf24" fill="#fbbf24" />
+                    {rating} ({reviews.length > 0 ? reviews.length : 12} vlerësime)
+                  </span>
+                  <h1 className="font-display text-3xl font-bold text-white drop-shadow-md">{shopName}</h1>
+                  <p className="flex items-center gap-1.5 font-medium text-slate-200 text-sm mt-1">
+                    <MapPin size={16} className="text-white" />
+                    {address}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Side Gallery Photos */}
+            <div className="grid gap-4 grid-rows-2 h-[380px]">
+              {photos.slice(0, 2).map((photoUrl: string, idx: number) => (
+                <div 
+                  key={idx}
+                  onClick={() => setZoomImage(photoUrl)}
+                  className="group relative cursor-pointer overflow-hidden rounded-2xl bg-slate-100 h-full"
+                >
+                  <img src={photoUrl} alt={`${shopName} photo`} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                </div>
+              ))}
+              {photos.length === 0 && (
+                <div className="flex h-full items-center justify-center rounded-2xl bg-slate-100 p-6 text-center">
+                  <Store className="h-10 w-10 text-slate-400" />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 2-COLUMN SPLIT LAYOUT */}
+          <div className="grid gap-8 lg:grid-cols-[1fr_420px] items-start">
+            {/* LEFT COLUMN: Overview, Staff, Services Menu, Reviews */}
+            <div className="flex flex-col gap-8">
+              {/* About & Shop Info */}
+              <div className="rounded-3xl border border-slate-200/80 bg-white p-8 shadow-2xs">
+                <h2 className="font-display text-xl font-bold text-slate-900 mb-3">Rreth {shopName}</h2>
+                <p className="text-sm font-medium text-slate-600 leading-relaxed mb-6">
+                  {shop?.description || `${shopName} është një nga sallonet më premium në zonë, duke ofruar shërbime profesionale të prerjes së flokëve, stilimit të mjekrës dhe kujdesit për lëkurën.`}
+                </p>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 border-t border-slate-100 pt-6">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-[#3473ef]">
+                      <Clock size={20} />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-slate-400 uppercase">Orari</p>
+                      <p className="font-display text-sm font-bold text-slate-900">09:00 - 20:00</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                      <Star size={20} fill="#fbbf24" color="#fbbf24" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-slate-400 uppercase">Vlerësimi</p>
+                      <p className="font-display text-sm font-bold text-slate-900">{rating} / 5.0</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                      <Shield size={20} />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-slate-400 uppercase">Statusi</p>
+                      <p className="font-display text-sm font-bold text-emerald-600">Verifikuar ✓</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Staff / Barbers Selection */}
+              {staff.length > 0 && (
+                <div className="rounded-3xl border border-slate-200/80 bg-white p-8 shadow-2xs">
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h2 className="font-display text-xl font-bold text-slate-900">Zgjidh Berberin</h2>
+                      <p className="text-xs font-medium text-slate-500">Zgjidhni berberin tuaj të preferuar për terminin</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {staff.map((emp: any) => {
+                      const isSelected = selectedEmployee?.id === emp.id;
+                      return (
+                        <div
+                          key={emp.id}
+                          onClick={() => setSelectedEmployee(emp)}
+                          className={`group flex cursor-pointer flex-col items-center rounded-2xl border p-4 transition-all ${
+                            isSelected 
+                              ? 'border-[#3473ef] bg-blue-50/50 shadow-md ring-2 ring-[#3473ef]/30' 
+                              : 'border-slate-200/80 bg-slate-50/50 hover:border-slate-300 hover:bg-white'
+                          }`}
+                        >
+                          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-2xs border border-slate-100">
+                            <UserIcon size={28} className={isSelected ? 'text-[#3473ef]' : 'text-slate-400'} />
+                          </div>
+                          <p className="font-display text-sm font-bold text-slate-900 text-center mb-1">{emp.name}</p>
+                          <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-500">
+                            <Star size={12} fill="#f59e0b" color="#f59e0b" />
+                            {emp.rating ? parseFloat(String(emp.rating)).toFixed(1) : "5.0"}
+                          </span>
+                          <span className={`mt-3 rounded-full px-3 py-1 text-[11px] font-bold ${
+                            isSelected ? 'bg-[#3473ef] text-white' : 'bg-slate-200/80 text-slate-700'
+                          }`}>
+                            {isSelected ? 'Zgjedhur ✓' : 'Zgjidh'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Services Offered Menu */}
+              <div className="rounded-3xl border border-slate-200/80 bg-white p-8 shadow-2xs">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="font-display text-xl font-bold text-slate-900">Menuja e Shërbimeve</h2>
+                    <p className="text-xs font-medium text-slate-500">Zgjidhni shërbimet që dëshironi të kryeni</p>
+                  </div>
+                  <span className="rounded-full bg-blue-50 px-3 py-1 font-display text-xs font-bold text-[#3473ef]">
+                    {selectedServices.length} shërbime zgjedhur
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-6">
+                  {Object.keys(groupedServices).map((catName) => {
+                    const servicesInCat = groupedServices[catName];
+                    return (
+                      <div key={catName} className="flex flex-col gap-3">
+                        <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
+                          {catName}
+                        </p>
+                        <div className="grid gap-3">
+                          {servicesInCat.map((srv: any) => {
+                            const selected = isServiceSelected(srv);
+                            return (
+                              <div
+                                key={srv.id}
+                                onClick={() => handleToggleService(srv)}
+                                className={`flex cursor-pointer items-center justify-between rounded-2xl border p-4 transition-all ${
+                                  selected 
+                                    ? 'border-[#3473ef] bg-blue-50/40 shadow-xs' 
+                                    : 'border-slate-100 bg-slate-50/40 hover:border-slate-200 hover:bg-white'
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className={`flex h-6 w-6 items-center justify-center rounded-lg border transition-colors ${
+                                    selected ? 'border-[#3473ef] bg-[#3473ef] text-white' : 'border-slate-300 bg-white'
+                                  }`}>
+                                    {selected && <Check size={14} strokeWidth={3} />}
+                                  </div>
+                                  <div>
+                                    <p className="font-display text-sm font-bold text-slate-900">{srv.name}</p>
+                                    <p className="text-xs font-medium text-slate-400">⏱️ {srv.duration || `${srv.durationMinutes || 30} min`}</p>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                  <span className="font-display text-base font-bold text-[#3473ef]">
+                                    {srv.price ? `${srv.price} €` : 'Nga 5 €'}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Customer Reviews Section */}
+              <div className="rounded-3xl border border-slate-200/80 bg-white p-8 shadow-2xs">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="font-display text-xl font-bold text-slate-900">Vlerësimet nga Klientët</h2>
+                    <p className="text-xs font-medium text-slate-500">Përvojat e klientëve të verifikuar te {shopName}</p>
+                  </div>
+                  <span className="inline-flex items-center gap-1 rounded-xl bg-amber-50 px-3 py-1 font-display text-sm font-bold text-slate-900 border border-amber-200/60">
+                    <Star size={14} color="#fbbf24" fill="#fbbf24" />
+                    {rating} / 5.0
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-4">
+                  {reviews.length > 0 ? (
+                    reviews.map((rev: any, idx: number) => (
+                      <div key={idx} className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 font-bold text-white text-xs">
+                              {rev.users?.name?.charAt(0) || "K"}
+                            </div>
+                            <span className="font-display text-sm font-bold text-slate-900">{rev.users?.name || "Klient i verifikuar"}</span>
+                          </div>
+                          <span className="flex items-center gap-1 text-xs font-bold text-amber-500">
+                            <Star size={12} fill="#f59e0b" color="#f59e0b" />
+                            {rev.rating || 5}.0
+                          </span>
+                        </div>
+                        <p className="text-xs font-medium text-slate-600 leading-relaxed">{rev.comment}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="py-8 text-center">
+                      <p className="text-sm font-medium text-slate-500">Nuk ka ende vlerësime të shkruara. Bëhu i pari që rezervon dhe vlerëson!</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* RIGHT COLUMN: STICKY BOOKING WIDGET */}
+            <div className="sticky top-24 flex flex-col gap-6">
+              <div className="overflow-hidden rounded-3xl border border-slate-200/90 bg-white p-6 shadow-xl">
+                <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Rezervim me OTP</p>
+                    <p className="font-display text-xl font-bold text-slate-900">Konfirmo Terminin</p>
+                  </div>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-[#3473ef]">
+                    <Calendar size={20} />
+                  </div>
+                </div>
+
+                {/* Selected Services Summary */}
+                <div className="mb-6 rounded-2xl bg-slate-50 p-4 border border-slate-100">
+                  <p className="text-xs font-bold text-slate-400 uppercase mb-2">Përmbledhje e zgjedhur</p>
+                  {selectedServices.length > 0 ? (
+                    <div className="flex flex-col gap-1.5">
+                      {selectedServices.map((s, idx) => (
+                        <div key={idx} className="flex items-center justify-between text-xs font-bold text-slate-800">
+                          <span>• {s.name}</span>
+                          <span className="text-[#3473ef]">{s.price ? `${s.price} €` : '5 €'}</span>
+                        </div>
+                      ))}
+                      <div className="mt-2 flex items-center justify-between border-t border-slate-200/60 pt-2 font-display text-sm font-bold text-slate-900">
+                        <span>Totali:</span>
+                        <span className="text-base text-[#3473ef]">
+                          {selectedServices.reduce((sum, s) => sum + (parseFloat(String(s.price)) || 5), 0)} €
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs font-medium text-slate-500 italic">Zgjidhni të paktën 1 shërbim te menuja në të majtë</p>
+                  )}
+                </div>
+
+                {/* Main Action Button */}
+                <button
+                  type="button"
+                  onClick={() => setShowBookingModal(true)}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#3473ef] py-4 font-display text-sm font-bold text-white shadow-lg transition-all hover:bg-blue-600 active:scale-[0.98] cursor-pointer"
+                >
+                  <Calendar size={18} />
+                  <span>Rezervo Tani me OTP →</span>
+                </button>
+
+                <p className="mt-3 text-center text-[11px] font-medium text-slate-400">
+                  ⚡ Pa parapagim — konfirmim i menjëhershëm me SMS OTP.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </View>
+    );
+  }
+
   return (
     <View className="flex-1 bg-[#F8F9FE]">
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>

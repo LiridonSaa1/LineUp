@@ -178,6 +178,7 @@ export default function BarbershopsList() {
 
   return (
     <div className="min-h-screen bg-slate-50/60 dark:bg-background">
+      <AuthModal />
       <section className="border-b border-border bg-background">
         <div className="container mx-auto grid max-w-7xl gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[1fr_360px] lg:items-end">
           <div>

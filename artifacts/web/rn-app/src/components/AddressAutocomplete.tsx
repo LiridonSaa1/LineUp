@@ -46,6 +46,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   const [isSelected, setIsSelected] = useState<boolean>(false);
   const [selectedItem, setSelectedItem] = useState<PlaceDetails | null>(null);
   const prevCityRef = useRef<string | undefined>(undefined);
+  const debounceRef = useRef<any>(null);
 
   useEffect(() => {
     if (initialValue && initialValue !== query) {
@@ -76,33 +77,49 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
-    if (text.trim().length < 2) {
+    const clean = text.toLowerCase().trim();
+    if (clean.length < 1) {
       setSuggestions([]);
       setIsOpen(false);
       return;
     }
 
-    // Capture these values now to avoid potential ReferenceErrors inside the timeout callback
-    // (especially common in Hermes engine with certain async patterns)
+    // 1. Instant local Kosovo city/region matches
+    const KOSOVO_CITIES = [
+      "Prishtinë", "Prizren", "Ferizaj", "Pejë", "Gjakovë", "Gjilan", "Mitrovicë", 
+      "Podujevë", "Vushtrri", "Suharekë", "Rahovec", "Drenas (Gllogoc)", "Lipjan", 
+      "Malishevë", "Kamenicë", "Viti", "Deçan", "Istog", "Klinë", "Skënderaj", 
+      "Dragash", "Fushë Kosovë", "Kaçanik", "Shtime", "Obiliq", "Graçanicë", 
+      "Hani i Elezit", "Zveçan", "Shtërpcë", "Novobërdë", "Zubin Potok", "Junik"
+    ];
+
+    const localMatches: PlaceDetails[] = KOSOVO_CITIES
+      .filter(c => c.toLowerCase().includes(clean))
+      .map(c => ({
+        formatted_address: c,
+        city: c,
+        street: c,
+        postal_code: "",
+        country: "Kosovë",
+        place_id: `city_${c.toLowerCase()}`
+      }));
+
+    setSuggestions(localMatches);
+    setIsOpen(localMatches.length > 0);
+
+    if (clean.length < 2) return;
+
     const currentCity = selectedCity;
     const currentCoords = cityCoords;
 
     setLoading(true);
     debounceRef.current = setTimeout(async () => {
       try {
-        // STRATEGY: Append city name to the search term for much better precision.
-        // If selectedCity is "Ferizaj" and user types "Gjon", we search "Gjon, Ferizaj"
-        const searchTerm = currentCity ? `${text.trim()}, ${currentCity}` : text.trim();
+        const searchTerm = currentCity ? `${text.trim()}, ${currentCity}` : `${text.trim()}, Kosovë`;
+        let url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchTerm)}&format=json&addressdetails=1&limit=10&accept-language=sq,en`;
 
-        // countrycodes=xk for Kosovo
-        // dedupe=1 to remove duplicates
-        // accept-language: sq first, then en
-        let url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchTerm)}&format=json&addressdetails=1&limit=12&accept-language=sq,en;q=0.8&countrycodes=xk&dedupe=1`;
-
-        // If we have city coordinates, we "hard-lock" the search to this city area.
-        // This ensures "Rruga B" returns results in Prishtinë, not some other town.
         if (currentCoords) {
-          const delta = 0.12; // ~12km box, perfect for Kosovo urban centers
+          const delta = 0.12;
           const viewbox = `${currentCoords.lng - delta},${currentCoords.lat + delta},${currentCoords.lng + delta},${currentCoords.lat - delta}`;
           url += `&viewbox=${viewbox}&bounded=1`;
         }
@@ -118,10 +135,8 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
         const osmData = await osmRes.json();
 
         if (Array.isArray(osmData)) {
-          const results = osmData.map((item: any) => {
+          const apiResults = osmData.map((item: any) => {
             const addr = item.address || {};
-
-            // Expanded list of OSM tags that can represent a "street" or "location name"
             const street = addr.road || addr.pedestrian || addr.cycleway || addr.footway ||
                            addr.path || addr.square || addr.plaza || addr.neighbourhood ||
                            addr.suburb || addr.hamlet || addr.allotments || addr.place || "";
@@ -129,18 +144,15 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
             const houseNumber = addr.house_number || addr.house_name || "";
             const city = addr.city || addr.town || addr.village || addr.municipality || selectedCity || "";
 
-            // Build a readable address string
             let shortAddr = street;
             if (houseNumber) {
               shortAddr = `${street} ${houseNumber}`.trim();
             }
 
-            // Fallback for missing street tags
             if (!shortAddr || shortAddr.length < 3) {
               shortAddr = item.display_name.split(',')[0].trim();
             }
 
-            // Clean up city redundancy (e.g. "Rruga B, Prishtinë, Prishtinë" -> "Rruga B, Prishtinë")
             let finalFormatted = shortAddr;
             if (city && !finalFormatted.toLowerCase().includes(city.toLowerCase())) {
               finalFormatted = `${shortAddr}, ${city}`;
@@ -158,8 +170,9 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
             };
           });
 
-          // Deduplication based on formatted address
-          const uniqueResults = results.filter((v, i, a) =>
+          // Combine local matches + API results without duplicates
+          const combined = [...localMatches, ...apiResults];
+          const uniqueResults = combined.filter((v, i, a) =>
             a.findIndex(t => t.formatted_address.toLowerCase() === v.formatted_address.toLowerCase()) === i
           );
 
@@ -171,7 +184,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
       } finally {
         setLoading(false);
       }
-    }, 400);
+    }, 300);
   };
 
   const handleSelectSuggestion = (item: PlaceDetails) => {

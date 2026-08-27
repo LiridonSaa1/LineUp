@@ -558,3 +558,16 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Hide injected Expo/Metro/IDE dev toolbars or Fast Refresh sidebars */
+[class*="expo-dev"],
+[id*="expo-dev"],
+[class*="metro-dev"],
+[class*="fast-refresh"],
+div[style*="z-index: 99999"][style*="left: 0"],
+div[style*="z-index: 999999"][style*="left: 0"] {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
