@@ -1435,23 +1435,16 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           <Animated.View
             entering={FadeInUp}
             style={{
-              backgroundColor: '#ffffff',
               width: '100%',
-              borderRadius: 36,
+              borderRadius: 40,
               overflow: 'hidden'
             }}
-            className="bg-white rounded-[36px] p-8 lg:p-10 border border-slate-200/80 shadow-2xl shadow-slate-900/10 z-10 my-auto"
+            className="bg-white/80 backdrop-blur-2xl rounded-[40px] p-10 sm:p-12 lg:p-14 border border-white/80 shadow-2xl shadow-slate-900/10 z-10 my-auto"
           >
-            {/* Header / Logo */}
+            {/* Header */}
             <View className="items-center mb-8">
-              <Image
-                source={require('../../assets/logo.png')}
-                style={{ width: 180, height: 60 }}
-                resizeMode="contain"
-                className="mb-4"
-              />
               <Text className="text-3xl font-black text-[#161719] text-center tracking-tight">Kyçja e Biznesit</Text>
-              <Text className="text-slate-500 font-bold text-center mt-1.5 text-sm">Menaxho sallonin tënd me LineUp</Text>
+              <Text className="text-slate-500 font-bold text-center mt-2 text-sm">Menaxho sallonin tënd me LineUp</Text>
             </View>
 
             {/* Error Message if any */}
@@ -1688,12 +1681,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       </ScrollView>
 
       <Modal visible={activeModal !== null} animationType="slide" transparent={activeModal === 'plans' && upgradeStep === 2 ? false : true} onRequestClose={() => setActiveModal(null)}>
-        <View className={`flex-1 justify-end ${
+        <View className={`flex-1 ${
           activeModal === 'plans' && upgradeStep === 2 
             ? 'bg-white' 
             : isDesktop 
-            ? 'items-center pb-4 sm:pb-8 bg-black/45 backdrop-blur-xs' 
-            : 'bg-black/60'
+            ? 'justify-center items-center p-4 sm:p-6 bg-black/45 backdrop-blur-xs' 
+            : 'justify-end bg-black/60'
         }`}>
           {!(activeModal === 'plans' && upgradeStep === 2) && (
             <TouchableOpacity activeOpacity={1} onPress={() => { setActiveModal(null); Keyboard.dismiss(); }} className="absolute inset-0 z-0" />
@@ -1705,29 +1698,27 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               width: '100%', 
               maxWidth: '768px', 
               borderRadius: 36, 
-              padding: 32,
               overflow: 'hidden' 
             } : { 
               backgroundColor: '#ffffff', 
               width: '100%', 
               borderTopLeftRadius: 32, 
               borderTopRightRadius: 32, 
-              padding: 24,
               overflow: 'hidden' 
             }}
             className={`z-10 bg-white shadow-2xl flex-col ${
               activeModal === 'plans' && upgradeStep === 2 
                 ? 'flex-1 p-0 w-full' 
                 : isDesktop 
-                ? 'w-full max-w-2xl lg:max-w-3xl rounded-[36px] bg-white p-8 lg:p-10 border border-slate-200/80 max-h-[85vh]' 
+                ? 'w-full max-w-2xl lg:max-w-3xl rounded-[36px] bg-white p-6 lg:p-8 border border-slate-200/80 max-h-[85vh] h-[85vh]' 
                 : 'w-full bg-white rounded-t-[32px] p-6 h-[85%]'
             }`}
           >
-            {!(activeModal === 'plans' && upgradeStep === 2) && <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mt-1 mb-6 shrink-0" />}
+            {!(activeModal === 'plans' && upgradeStep === 2) && <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mt-1 mb-4 shrink-0" />}
 
               {activeModal === 'profile' && (
-                <View className="flex-1">
-                  <View className="flex-row justify-between items-center pb-4 mb-6 border-b border-slate-50">
+                <View className="flex-1 flex-col overflow-hidden">
+                  <View className="flex-row justify-between items-center pb-4 mb-4 border-b border-slate-100 shrink-0">
                     <Text className="text-2xl font-black text-[#161719]">Ndrysho Profilin</Text>
                     <TouchableOpacity onPress={() => setActiveModal(null)} className="p-2.5 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors cursor-pointer"><X size={20} color="#161719" /></TouchableOpacity>
                   </View>
@@ -1801,11 +1792,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               )}
 
               {activeModal === 'subManagement' && (
-                <View className="flex-1">
-                  <View className="flex-row justify-between items-center mb-6">
-                    <Text className="text-3xl font-black text-[#161719]">{subView === 'card' ? 'Përditëso Kartelën' : 'Abonimi juaj'}</Text>
-                    <TouchableOpacity onPress={() => { if (subView === 'card') setSubView('main'); else setActiveModal(null); }} className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-sm">
-                      <X size={24} color="#161719" />
+                <View className="flex-1 flex-col overflow-hidden">
+                  <View className="flex-row justify-between items-center pb-4 mb-4 border-b border-slate-100 shrink-0">
+                    <Text className="text-2xl font-black text-[#161719]">{subView === 'card' ? 'Përditëso Kartelën' : 'Abonimi juaj'}</Text>
+                    <TouchableOpacity onPress={() => { if (subView === 'card') setSubView('main'); else setActiveModal(null); }} className="p-2.5 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors cursor-pointer">
+                      <X size={20} color="#161719" />
                     </TouchableOpacity>
                   </View>
 
@@ -2490,8 +2481,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               )}
 
               {activeModal === 'orari' && (
-                <View className="flex-1">
-                  <View className="flex-row justify-between items-center mb-6">
+                <View className="flex-1 flex-col overflow-hidden">
+                  <View className="flex-row justify-between items-center pb-4 mb-4 border-b border-slate-100 shrink-0">
                     <View className="flex-row items-center">
                       <View className="w-10 h-10 bg-indigo-50 rounded-xl items-center justify-center mr-3">
                         <Clock size={22} color="#6366f1" />
@@ -2501,12 +2492,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         <Text className="text-slate-400 font-bold text-xs">Përcakto orët e punës dhe shiko festat</Text>
                       </View>
                     </View>
-                    <TouchableOpacity onPress={() => setActiveModal(null)} className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-sm">
-                      <X size={24} color="#161719" />
+                    <TouchableOpacity onPress={() => setActiveModal(null)} className="p-2.5 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors cursor-pointer">
+                      <X size={20} color="#161719" />
                     </TouchableOpacity>
                   </View>
 
-                  <ScrollView showsVerticalScrollIndicator={false} className="flex-1" keyboardShouldPersistTaps="handled">
+                  <ScrollView showsVerticalScrollIndicator={false} className="flex-1" contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
                     <View className="mb-8">
                       <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 ml-1">Orari i Sallonit</Text>
                       <View className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-100">
@@ -2600,23 +2591,23 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               )}
 
               {activeModal === 'employeeServices' && (
-                 <View className="flex-1">
-                   <View className="flex-row justify-between items-center mb-6">
+                 <View className="flex-1 flex-col overflow-hidden">
+                   <View className="flex-row justify-between items-center pb-4 mb-4 border-b border-slate-100 shrink-0">
                      <View className="flex-row items-center">
                        <View className="w-10 h-10 bg-indigo-50 rounded-xl items-center justify-center mr-3">
                          <FileText size={22} color="#6366f1" />
                        </View>
                        <View>
-                         <Text className="text-2xl font-black text-[#161719]">Lista e Sherbimeve</Text>
-                         <Text className="text-slate-400 font-bold text-xs">Cilet sherbime ofroni ne sallon</Text>
+                         <Text className="text-2xl font-black text-[#161719]">Lista e Shërbimeve</Text>
+                         <Text className="text-slate-400 font-bold text-xs">Aktivizo shërbimet që ofroni në sallon</Text>
                        </View>
                      </View>
-                     <TouchableOpacity onPress={() => setActiveModal(null)} className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-sm">
-                       <X size={24} color="#161719" />
+                     <TouchableOpacity onPress={() => setActiveModal(null)} className="p-2.5 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors cursor-pointer">
+                       <X size={20} color="#161719" />
                      </TouchableOpacity>
                    </View>
 
-                   <ScrollView showsVerticalScrollIndicator={false} className="flex-1" keyboardShouldPersistTaps="handled">
+                   <ScrollView showsVerticalScrollIndicator={false} className="flex-1" contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
                      {categories.map((cat) => {
                        const catSubs = subcategories.filter(s => s.category_id === cat.id)
                        if (catSubs.length === 0) return null

@@ -12,7 +12,8 @@
 /* Force browser window to be the native scroll container for sticky positioning */
 html, body, #root, #root > div, [data-reactroot] {
   display: block !important;
-  overflow: visible !important;
+  overflow-x: hidden !important;
+  max-width: 100vw !important;
   height: auto !important;
   min-height: 100vh !important;
 }
