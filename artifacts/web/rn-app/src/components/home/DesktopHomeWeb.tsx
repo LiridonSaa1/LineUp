@@ -200,6 +200,51 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
     fetchRealCategoryCounts();
   }, []);
 
+  const [stats, setStats] = useState({
+    shopsCount: '...',
+    appointmentsCount: '...',
+    avgRating: '4.9'
+  });
+
+  useEffect(() => {
+    async function fetchRealStats() {
+      try {
+        const [shopsRes, apptsRes, ratingRes] = await Promise.all([
+          supabase.from('barbershops').select('id, rating', { count: 'exact', head: false }),
+          supabase.from('appointments').select('id', { count: 'exact', head: true }),
+          supabase.from('barbershops').select('rating')
+        ]);
+
+        const totalShops = shopsRes.count !== null && shopsRes.count !== undefined ? shopsRes.count : (shopsRes.data?.length || 0);
+        const totalAppts = apptsRes.count !== null && apptsRes.count !== undefined ? apptsRes.count : 0;
+
+        let avgRating = 4.9;
+        if (ratingRes.data && ratingRes.data.length > 0) {
+          const validRatings = ratingRes.data
+            .map(s => parseFloat(String(s.rating)))
+            .filter(r => !isNaN(r) && r > 0);
+          if (validRatings.length > 0) {
+            avgRating = validRatings.reduce((sum, r) => sum + r, 0) / validRatings.length;
+          }
+        }
+
+        const formatCount = (num: number, suffix = '+') => {
+          if (num >= 1000) return `${(num / 1000).toFixed(1).replace('.0', '')}k`;
+          return num > 0 ? `${num}${suffix}` : '0';
+        };
+
+        setStats({
+          shopsCount: formatCount(totalShops, '+'),
+          appointmentsCount: formatCount(totalAppts, totalAppts >= 1000 ? '' : '+'),
+          avgRating: avgRating.toFixed(1)
+        });
+      } catch (e) {
+        console.warn("Could not fetch real stats from Supabase:", e);
+      }
+    }
+    fetchRealStats();
+  }, []);
+
   const [contactForm, setContactForm] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -327,15 +372,15 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
           </div>
           <div className="flex flex-wrap items-center gap-6 text-sm text-slate-500 lg:justify-end">
             <div>
-              <p className="font-display text-2xl font-bold text-slate-900">450+</p>
+              <p className="font-display text-2xl font-bold text-slate-900">{stats.shopsCount}</p>
               <p className="text-xs font-semibold">Sallone</p>
             </div>
             <div>
-              <p className="font-display text-2xl font-bold text-slate-900">28k</p>
+              <p className="font-display text-2xl font-bold text-slate-900">{stats.appointmentsCount}</p>
               <p className="text-xs font-semibold">Termine</p>
             </div>
             <div>
-              <p className="font-display text-2xl font-bold text-[#3473ef]">4.9</p>
+              <p className="font-display text-2xl font-bold text-[#3473ef]">{stats.avgRating}</p>
               <p className="text-xs font-semibold">Vlerësim</p>
             </div>
           </div>

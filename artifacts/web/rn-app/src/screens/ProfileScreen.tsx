@@ -1420,98 +1420,99 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   };
 
   if (!user) {
+    const isDesktop = Platform.OS === 'web' && width > 768;
+
     return (
-      <View className="flex-1 bg-[#ECEEF2]">
+      <View className="flex-1 bg-[#f8fafc] justify-center items-center p-4 sm:p-6 w-full max-w-full overflow-x-hidden min-h-screen">
         {/* Background Decorative Blobs */}
-        <View className="absolute top-[-50] left-[-50] w-64 h-64 bg-[#3473ef]/15 rounded-full blur-3xl" />
-        <View className="absolute top-[200] right-[-100] w-80 h-80 bg-[#f47458]/15 rounded-full blur-3xl" />
+        <View className="absolute top-[-50] left-[-50] w-72 h-72 bg-[#3473ef]/10 rounded-full blur-3xl pointer-events-none" />
+        <View className="absolute bottom-[-50] right-[-50] w-96 h-96 bg-[#f47458]/10 rounded-full blur-3xl pointer-events-none" />
 
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
-          className="flex-1"
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+          className="w-full max-w-[540px] items-center justify-center"
         >
-          <ScrollView
-            contentContainerStyle={{
-              flexGrow: 1,
-              paddingHorizontal: 24,
-              paddingTop: 60,
-              paddingBottom: 40
+          <Animated.View
+            entering={FadeInUp}
+            style={{
+              backgroundColor: '#ffffff',
+              width: '100%',
+              borderRadius: 36,
+              overflow: 'hidden'
             }}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
+            className="bg-white rounded-[36px] p-8 lg:p-10 border border-slate-200/80 shadow-2xl shadow-slate-900/10 z-10 my-auto"
           >
-            <View className="flex-1 justify-center">
-              <Animated.View entering={FadeInUp} className="items-center mb-10">
-                 <Image
-                    source={require('../../assets/logo.png')}
-                    style={{ width: 260, height: 87 }}
-                    resizeMode="contain"
-                    className="mb-4"
-                 />
-                 <Text className="text-4xl font-black text-[#161719] text-center tracking-tight">Kyçja e Biznesit</Text>
-                 <Text className="text-slate-500 font-bold text-center mt-2 text-base">Menaxho sallonin tënd me LineUp</Text>
-              </Animated.View>
-
-              <View className="overflow-hidden border border-white/60 shadow-2xl shadow-black/5" style={{ borderRadius: 36, backgroundColor: 'rgba(255, 255, 255, 0.4)' }}>
-                <BlurView intensity={40} tint="light" className="p-8">
-                  <View className="gap-y-5">
-                    {errorMessage !== "" && (
-                      <View className="bg-rose-50/80 p-4 rounded-2xl border border-rose-100 mb-2">
-                        <Text className="text-rose-600 font-bold text-xs text-center">{errorMessage}</Text>
-                      </View>
-                    )}
-
-                    <View className="bg-white/80 rounded-2xl px-4 h-16 flex-row items-center border border-slate-100 shadow-sm shadow-black/5">
-                        <Mail size={20} color="#94A3B8" />
-                        <TextInput
-                          placeholder="E-mail Adresa"
-                          value={authEmail}
-                          onChangeText={setAuthEmail}
-                          className="flex-1 ml-3 font-bold text-[#161719] text-base"
-                          placeholderTextColor="#CBD5E1"
-                          autoCapitalize="none"
-                          keyboardType="email-address"
-                        />
-                    </View>
-
-                    <View className="bg-white/80 rounded-2xl px-4 h-16 flex-row items-center border border-slate-100 shadow-sm shadow-black/5">
-                        <Lock size={20} color="#94A3B8" />
-                        <TextInput
-                          placeholder="Fjalëkalimi"
-                          value={authPassword}
-                          onChangeText={setAuthPassword}
-                          secureTextEntry={!showPassword}
-                          className="flex-1 ml-3 font-bold text-[#161719] text-base"
-                          placeholderTextColor="#CBD5E1"
-                        />
-                        <TouchableOpacity onPress={() => setShowPassword(!showPassword)} className="p-2">
-                          {showPassword ? <EyeOff size={20} color="#94A3B8" /> : <Eye size={20} color="#94A3B8" />}
-                        </TouchableOpacity>
-                    </View>
-
-                    <TouchableOpacity
-                      onPress={handleAuthSubmit}
-                      disabled={loading}
-                      className={`bg-[#161719] h-16 rounded-[22px] items-center justify-center mt-4 shadow-xl shadow-black/20 ${loading ? 'opacity-70' : ''}`}
-                    >
-                        {loading ? <ActivityIndicator color="white" /> : <Text className="text-white font-black text-lg">Kyçu në Panel</Text>}
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      onPress={onOpenRegisterShop}
-                      className="items-center pt-4 pb-2"
-                    >
-                        <Text className="text-[#3473ef] font-black text-sm">Nuk keni llogari? Regjistroni dyqanin</Text>
-                    </TouchableOpacity>
-                  </View>
-                </BlurView>
-              </View>
+            {/* Header / Logo */}
+            <View className="items-center mb-8">
+              <Image
+                source={require('../../assets/logo.png')}
+                style={{ width: 180, height: 60 }}
+                resizeMode="contain"
+                className="mb-4"
+              />
+              <Text className="text-3xl font-black text-[#161719] text-center tracking-tight">Kyçja e Biznesit</Text>
+              <Text className="text-slate-500 font-bold text-center mt-1.5 text-sm">Menaxho sallonin tënd me LineUp</Text>
             </View>
 
-            {/* Hapësirë shtesë për manual scrolling kur hapet keyboard */}
-            <View style={{ height: 100 }} />
-          </ScrollView>
+            {/* Error Message if any */}
+            {errorMessage !== "" && (
+              <View className="bg-rose-50 p-4 rounded-2xl border border-rose-100 mb-6">
+                <Text className="text-rose-600 font-bold text-xs text-center">{errorMessage}</Text>
+              </View>
+            )}
+
+            {/* Form Fields */}
+            <View className="gap-y-4">
+              <View>
+                <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">E-mail Adresa</Text>
+                <View className="bg-slate-50 border border-slate-200/80 rounded-2xl px-4 h-14 flex-row items-center focus-within:border-[#3473ef] focus-within:bg-white transition-colors">
+                  <Mail size={18} color="#94A3B8" />
+                  <TextInput
+                    placeholder="emri@shembull.ks"
+                    value={authEmail}
+                    onChangeText={setAuthEmail}
+                    className="flex-1 ml-3 font-bold text-[#161719] text-sm"
+                    placeholderTextColor="#94A3B8"
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                  />
+                </View>
+              </View>
+
+              <View>
+                <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Fjalëkalimi</Text>
+                <View className="bg-slate-50 border border-slate-200/80 rounded-2xl px-4 h-14 flex-row items-center focus-within:border-[#3473ef] focus-within:bg-white transition-colors">
+                  <Lock size={18} color="#94A3B8" />
+                  <TextInput
+                    placeholder="••••••••"
+                    value={authPassword}
+                    onChangeText={setAuthPassword}
+                    secureTextEntry={!showPassword}
+                    className="flex-1 ml-3 font-bold text-[#161719] text-sm"
+                    placeholderTextColor="#94A3B8"
+                  />
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)} className="p-2">
+                    {showPassword ? <EyeOff size={18} color="#94A3B8" /> : <Eye size={18} color="#94A3B8" />}
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                onPress={handleAuthSubmit}
+                disabled={loading}
+                className={`bg-[#161719] hover:bg-[#3473ef] h-14 rounded-2xl items-center justify-center mt-4 shadow-lg transition-colors cursor-pointer ${loading ? 'opacity-70' : ''}`}
+              >
+                {loading ? <ActivityIndicator color="white" /> : <Text className="text-white font-black text-base">Kyçu në Panel</Text>}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={onOpenRegisterShop}
+                className="items-center pt-3 pb-1"
+              >
+                <Text className="text-[#3473ef] hover:underline font-black text-xs">Nuk keni llogari? Regjistroni dyqanin</Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
         </KeyboardAvoidingView>
       </View>
     );
