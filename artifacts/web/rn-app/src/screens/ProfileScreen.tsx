@@ -1518,179 +1518,219 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   }
 
   const isBusinessRole = user?.role === 'owner' || user?.role === 'barber' || user?.role === 'employee';
+  const isDesktop = Platform.OS === 'web' && width > 768;
 
   return (
-    <View className="flex-1 bg-[#ECEEF2]">
+    <View className="flex-1 bg-[#f8fafc] w-full max-w-full overflow-x-hidden">
       {/* Background Decorative Blobs */}
-      <View className="absolute top-[-50] left-[-50] w-64 h-64 bg-[#3473ef]/15 rounded-full blur-3xl" />
-      <View className="absolute top-[200] right-[-100] w-80 h-80 bg-[#f47458]/15 rounded-full blur-3xl" />
+      <View className="absolute top-[-50] left-[-50] w-64 h-64 bg-[#3473ef]/10 rounded-full blur-3xl pointer-events-none" />
+      <View className="absolute top-[200] right-[-100] w-80 h-80 bg-[#f47458]/10 rounded-full blur-3xl pointer-events-none" />
 
-      {/* ── HEADER ───────────────────────────── */}
-      <View className="pt-16 pb-12 px-8 bg-white/40 rounded-b-[50px] relative overflow-hidden">
-        <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFill} />
-        <Animated.View entering={FadeInDown} className="flex-row items-center">
-          <View className="relative">
-            <View className="w-24 h-24 rounded-[32px] bg-[#161719] items-center justify-center shadow-lg">
-              <Text className="text-white text-4xl font-black">{user.name?.charAt(0).toUpperCase()}</Text>
-            </View>
-            <View className="absolute bottom-[-4] right-[-4] w-8 h-8 bg-[#3473ef] rounded-2xl items-center justify-center border-white shadow-sm">
-               <Award size={14} color="white" strokeWidth={2.5} />
-            </View>
-          </View>
-          <View className="ml-6 flex-1">
-            <Text className="text-slate-400 font-black text-[10px] uppercase tracking-[2px] mb-1">
-              {user.role === 'owner' ? 'Pronar i Biznesit' : user.role === 'barber' ? 'Berber' : user.role === 'super_admin' ? 'Super Admin' : (user.role === 'employee' || user.role === 'staf' || user.role === 'staff') ? 'Punëtor i verifikuar' : 'Klient'}
-            </Text>
-            <Text className="text-3xl font-black text-[#161719] tracking-tight mb-1">{user.name}</Text>
-            <View className="flex-row items-center bg-indigo-50 px-2.5 py-1 rounded-full self-start">
-               <CheckCircle2 size={12} color="#3473ef" strokeWidth={3} />
-               <Text className="text-[#3473ef] font-black text-[10px] ml-1.5 uppercase">
-                 {(user.role === 'employee' || user.role === 'staf' || user.role === 'staff' || user.role === 'barber') ? 'Punëtor i Verifikuar' : 'Partner i Verifikuar'}
-               </Text>
-            </View>
-          </View>
-        </Animated.View>
-
-        <View className="flex-row justify-between mt-10 px-2">
-           <View className="items-center">
-              <Text className="text-2xl font-black text-[#161719]">{profileStats.appointmentsCount}</Text>
-              <Text className="text-slate-400 font-bold text-[9px] uppercase tracking-widest mt-1">Rezervime</Text>
-           </View>
-
-           {isBusinessRole && (
-             <>
-               <View className="w-[1px] h-8 bg-slate-200 self-center" />
-               <View className="items-center">
-                  <Text className="text-2xl font-black text-[#161719]">{profileStats.staffCount}</Text>
-                  <Text className="text-slate-400 font-bold text-[9px] uppercase tracking-widest mt-1">Staf</Text>
-               </View>
-             </>
-           )}
-
-           <View className="w-[1px] h-8 bg-slate-200 self-center" />
-           <View className="items-center">
+      <ScrollView className="flex-1 w-full" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
+        <div className={isDesktop ? "mx-auto w-full max-w-[1440px] px-6 lg:px-10 py-8 overflow-hidden" : "w-full overflow-hidden"}>
+          {/* ── HEADER ───────────────────────────── */}
+          <View className={`pt-12 pb-10 px-8 bg-white/60 backdrop-blur-md rounded-[40px] relative overflow-hidden shadow-xs border border-white/60 mb-6 ${isDesktop ? 'mt-4' : 'pt-16 rounded-t-none rounded-b-[50px]'}`}>
+            <Animated.View entering={FadeInDown} className="flex-row items-center justify-between flex-wrap gap-6">
               <View className="flex-row items-center">
-                <Text className="text-2xl font-black text-[#161719]">{profileStats.favoritesCount}</Text>
-                <View className="ml-1 mb-1">
-                  <Heart size={14} color="#ef4444" fill="#ef4444" />
+                <View className="relative">
+                  <View className="w-20 h-20 lg:w-24 lg:h-24 rounded-[28px] bg-[#161719] items-center justify-center shadow-lg">
+                    <Text className="text-white text-3xl lg:text-4xl font-black">{user.name?.charAt(0).toUpperCase()}</Text>
+                  </View>
+                  <View className="absolute bottom-[-4] right-[-4] w-8 h-8 bg-[#3473ef] rounded-2xl items-center justify-center border-white border-2 shadow-sm">
+                    <Award size={14} color="white" strokeWidth={2.5} />
+                  </View>
+                </View>
+                <View className="ml-6">
+                  <Text className="text-slate-400 font-black text-[10px] uppercase tracking-[2px] mb-1">
+                    {user.role === 'owner' ? 'Pronar i Biznesit' : user.role === 'barber' ? 'Berber' : user.role === 'super_admin' ? 'Super Admin' : (user.role === 'employee' || user.role === 'staf' || user.role === 'staff') ? 'Punëtor i verifikuar' : 'Klient'}
+                  </Text>
+                  <Text className="text-2xl lg:text-3xl font-black text-[#161719] tracking-tight mb-1">{user.name}</Text>
+                  <View className="flex-row items-center bg-indigo-50 px-3 py-1 rounded-full self-start border border-blue-100">
+                    <CheckCircle2 size={12} color="#3473ef" strokeWidth={3} />
+                    <Text className="text-[#3473ef] font-black text-[10px] ml-1.5 uppercase">
+                      {(user.role === 'employee' || user.role === 'staf' || user.role === 'staff' || user.role === 'barber') ? 'Punëtor i Verifikuar' : 'Partner i Verifikuar'}
+                    </Text>
+                  </View>
                 </View>
               </View>
-              <Text className="text-slate-400 font-bold text-[9px] uppercase tracking-widest mt-1">Të Ruajtura</Text>
-           </View>
-        </View>
-      </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
-        <View className="px-6 pt-6">
-           {isEmployeeRole && hasLoadedServices && selectedEmployeeSubcats.length === 0 && (
-             <TouchableOpacity
-               onPress={promptNoServicesAlert}
-               className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-[28px] mb-6 flex-row items-center justify-between"
-             >
-               <View className="flex-1 pr-3 flex-row items-center">
-                 <AlertCircle size={24} color="#f59e0b" />
-                 <View className="ml-3 flex-1">
-                   <Text className="font-black text-amber-800 text-sm">Nuk keni asnjë shërbim të zgjedhur!</Text>
-                   <Text className="text-amber-700 font-bold text-xs mt-0.5">
-                     Klientët nuk mund të bëjnë rezervime me ju sepse nuk keni zgjedhur shërbimet.
-                   </Text>
-                 </View>
-               </View>
-               <View className="bg-amber-500 px-3 py-2 rounded-2xl">
-                 <Text className="text-white font-black text-xs">Në rregull</Text>
-               </View>
-             </TouchableOpacity>
-           )}
+              {/* Stats Box */}
+              <View className="flex-row items-center justify-around bg-white/90 px-6 py-4 rounded-[24px] border border-slate-100 shadow-2xs gap-6 min-w-[280px]">
+                <View className="items-center">
+                  <Text className="text-2xl font-black text-[#161719]">{profileStats.appointmentsCount}</Text>
+                  <Text className="text-slate-400 font-bold text-[9px] uppercase tracking-widest mt-1">Rezervime</Text>
+                </View>
 
-           <Text className="text-slate-400 font-black text-[11px] uppercase tracking-[2px] mb-4 ml-2">Personal</Text>
-           <View className="bg-white/40 rounded-[32px] overflow-hidden shadow-sm">
-              <BlurView intensity={20} tint="light" style={StyleSheet.absoluteFill} />
-              <ProfileMenuButton icon={User} label="Profili im" onPress={() => handleAction('Profile')} />
-              
-              {user.role === 'employee' ? (
-                <>
-                  <ProfileMenuButton icon={FileText} label="Lista e Shërbimeve" onPress={() => handleAction('EmployeeServices')} />
-                  <ProfileMenuButton icon={Clock} label="Organizimi i Orarit" onPress={() => handleAction('EmployeeSchedule')} />
-                  <ProfileMenuButton icon={Settings} label="Cilësimet" isLast onPress={() => handleAction('Settings')} />
-                </>
-              ) : (
-                <>
-                  {(user.role === 'owner' || user.role === 'barber') && (
-                    <ProfileMenuButton icon={FileText} label="Lista e Shërbimeve" onPress={() => handleAction('EmployeeServices')} />
-                  )}
-                  {isBusinessRole && (
-                    <ProfileMenuButton icon={Clock} label="Orari & Festat" onPress={() => handleAction('Orari')} />
-                  )}
+                {isBusinessRole && (
+                  <>
+                    <View className="w-[1px] h-8 bg-slate-200 self-center" />
+                    <View className="items-center">
+                      <Text className="text-2xl font-black text-[#161719]">{profileStats.staffCount}</Text>
+                      <Text className="text-slate-400 font-bold text-[9px] uppercase tracking-widest mt-1">Staf</Text>
+                    </View>
+                  </>
+                )}
 
-                  {isBusinessRole && (
-                    <ProfileMenuButton
-                      icon={CreditCard}
-                      label="Plani i abonimit"
-                      rightElement={
-                        <View className="flex-row items-center">
-                          {subscription?.status === 'suspended' && (
-                            <View className="bg-rose-500 px-2 py-0.5 rounded-full mr-2">
-                               <Text className="text-white font-black text-[8px] uppercase">I bllokuar</Text>
-                            </View>
-                          )}
-                          <View className="bg-emerald-500/10 px-3 py-1 rounded-full mr-2">
-                        <Text className="text-emerald-600 font-black text-[10px] uppercase">{subscription?.plan_name || 'Solo'}</Text>
-                      </View>
-                          <ChevronRight size={18} color="#94A3B8" />
-                        </View>
-                      }
-                      onPress={() => setActiveModal('subManagement')}
-                    />
-                  )}
+                <View className="w-[1px] h-8 bg-slate-200 self-center" />
+                <View className="items-center">
+                  <View className="flex-row items-center">
+                    <Text className="text-2xl font-black text-[#161719]">{profileStats.favoritesCount}</Text>
+                    <View className="ml-1 mb-1">
+                      <Heart size={14} color="#ef4444" fill="#ef4444" />
+                    </View>
+                  </View>
+                  <Text className="text-slate-400 font-bold text-[9px] uppercase tracking-widest mt-1">Të Ruajtura</Text>
+                </View>
+              </View>
+            </Animated.View>
+          </View>
 
-                  <ProfileMenuButton icon={Heart} label="Të Ruajtura" onPress={() => handleAction('Favorites')} />
-                  <ProfileMenuButton icon={MessageSquare} label="Mesazhet" onPress={() => handleAction('Messages')} />
-                  {isBusinessRole && <ProfileMenuButton icon={Calendar} label="Rezervimet e Mia" onPress={() => handleAction('Appointments')} />}
-                  <ProfileMenuButton icon={FileText} label="Sugjero një Përmirësim" onPress={() => handleAction('Forms')} />
-                  <ProfileMenuButton icon={Settings} label="Cilësimet" isLast={!isBusinessRole} onPress={() => handleAction('Settings')} />
-                </>
+          {/* ── MAIN CONTENT GRID ───────────────────────────── */}
+          <div className={isDesktop ? "grid lg:grid-cols-2 gap-8 items-start px-2" : "px-6 pt-2"}>
+            {/* COLUMN 1: PERSONAL */}
+            <View>
+              {isEmployeeRole && hasLoadedServices && selectedEmployeeSubcats.length === 0 && (
+                <TouchableOpacity
+                  onPress={promptNoServicesAlert}
+                  className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-[28px] mb-6 flex-row items-center justify-between"
+                >
+                  <View className="flex-1 pr-3 flex-row items-center">
+                    <AlertCircle size={24} color="#f59e0b" />
+                    <View className="ml-3 flex-1">
+                      <Text className="font-black text-amber-800 text-sm">Nuk keni asnjë shërbim të zgjedhur!</Text>
+                      <Text className="text-amber-700 font-bold text-xs mt-0.5">
+                        Klientët nuk mund të bëjnë rezervime me ju sepse nuk keni zgjedhur shërbimet.
+                      </Text>
+                    </View>
+                  </View>
+                  <View className="bg-amber-500 px-3 py-2 rounded-2xl">
+                    <Text className="text-white font-black text-xs">Në rregull</Text>
+                  </View>
+                </TouchableOpacity>
               )}
-           </View>
 
-           <Text className="text-slate-400 font-black text-[11px] uppercase tracking-[2px] mt-10 mb-4 ml-2">Suporti & Detajet</Text>
-           <View className="bg-white/40 rounded-[32px] overflow-hidden shadow-sm">
-              <BlurView intensity={20} tint="light" style={StyleSheet.absoluteFill} />
-              <ProfileMenuButton icon={Headphones} label="Suporti" onPress={() => handleAction('Support')} />
-              <ProfileMenuButton
-                icon={Globe}
-                label="Shqip (Kosovë)"
-                isLast
-                rightElement={<ChevronRight size={18} color="#94A3B8" />}
-                onPress={() => handleAction('Language')}
-              />
-           </View>
+              <Text className="text-slate-400 font-black text-[11px] uppercase tracking-[2px] mb-4 ml-2">Personal</Text>
+              <View className="bg-white border border-slate-200/80 rounded-[32px] overflow-hidden shadow-xs">
+                <ProfileMenuButton icon={User} label="Profili im" onPress={() => handleAction('Profile')} />
+                
+                {user.role === 'employee' ? (
+                  <>
+                    <ProfileMenuButton icon={FileText} label="Lista e Shërbimeve" onPress={() => handleAction('EmployeeServices')} />
+                    <ProfileMenuButton icon={Clock} label="Organizimi i Orarit" onPress={() => handleAction('EmployeeSchedule')} />
+                    <ProfileMenuButton icon={Settings} label="Cilësimet" isLast onPress={() => handleAction('Settings')} />
+                  </>
+                ) : (
+                  <>
+                    {(user.role === 'owner' || user.role === 'barber') && (
+                      <ProfileMenuButton icon={FileText} label="Lista e Shërbimeve" onPress={() => handleAction('EmployeeServices')} />
+                    )}
+                    {isBusinessRole && (
+                      <ProfileMenuButton icon={Clock} label="Orari & Festat" onPress={() => handleAction('Orari')} />
+                    )}
 
-           <TouchableOpacity
-            onPress={() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); onLogout(); }}
-            activeOpacity={0.8}
-            className="mt-10 mb-8 bg-[#161719] h-16 rounded-[24px] flex-row items-center justify-center shadow-xl shadow-black/20"
-           >
-              <LogOut size={20} color="white" className="mr-3" />
-              <Text className="text-white font-black text-base">Dil</Text>
-           </TouchableOpacity>
-        </View>
+                    {isBusinessRole && (
+                      <ProfileMenuButton
+                        icon={CreditCard}
+                        label="Plani i abonimit"
+                        rightElement={
+                          <View className="flex-row items-center">
+                            {subscription?.status === 'suspended' && (
+                              <View className="bg-rose-500 px-2 py-0.5 rounded-full mr-2">
+                                <Text className="text-white font-black text-[8px] uppercase">I bllokuar</Text>
+                              </View>
+                            )}
+                            <View className="bg-emerald-500/10 px-3 py-1 rounded-full mr-2">
+                              <Text className="text-emerald-600 font-black text-[10px] uppercase">{subscription?.plan_name || 'Solo'}</Text>
+                            </View>
+                            <ChevronRight size={18} color="#94A3B8" />
+                          </View>
+                        }
+                        onPress={() => setActiveModal('subManagement')}
+                      />
+                    )}
+
+                    <ProfileMenuButton icon={Heart} label="Të Ruajtura" onPress={() => handleAction('Favorites')} />
+                    <ProfileMenuButton icon={MessageSquare} label="Mesazhet" onPress={() => handleAction('Messages')} />
+                    {isBusinessRole && <ProfileMenuButton icon={Calendar} label="Rezervimet e Mia" onPress={() => handleAction('Appointments')} />}
+                    <ProfileMenuButton icon={FileText} label="Sugjero një Përmirësim" onPress={() => handleAction('Forms')} />
+                    <ProfileMenuButton icon={Settings} label="Cilësimet" isLast={!isBusinessRole} onPress={() => handleAction('Settings')} />
+                  </>
+                )}
+              </View>
+            </View>
+
+            {/* COLUMN 2: SUPPORT & LOGOUT */}
+            <View>
+              <Text className={`text-slate-400 font-black text-[11px] uppercase tracking-[2px] mb-4 ml-2 ${isDesktop ? '' : 'mt-10'}`}>Suporti & Detajet</Text>
+              <View className="bg-white border border-slate-200/80 rounded-[32px] overflow-hidden shadow-xs">
+                <ProfileMenuButton icon={Headphones} label="Suporti" onPress={() => handleAction('Support')} />
+                <ProfileMenuButton
+                  icon={Globe}
+                  label="Shqip (Kosovë)"
+                  isLast
+                  rightElement={<ChevronRight size={18} color="#94A3B8" />}
+                  onPress={() => handleAction('Language')}
+                />
+              </View>
+
+              <TouchableOpacity
+                onPress={() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); onLogout(); }}
+                activeOpacity={0.8}
+                className="mt-8 mb-8 bg-[#161719] h-16 rounded-[24px] flex-row items-center justify-center shadow-xl shadow-black/20 hover:scale-[1.01] transition-transform cursor-pointer"
+              >
+                <LogOut size={20} color="white" className="mr-3" />
+                <Text className="text-white font-black text-base">Dil nga Llogaria</Text>
+              </TouchableOpacity>
+            </View>
+          </div>
+        </div>
       </ScrollView>
 
-      <Modal visible={activeModal !== null} animationType="slide" transparent={activeModal === 'plans' && upgradeStep === 2 ? false : true}>
-        <View className={`flex-1 ${activeModal === 'plans' && upgradeStep === 2 ? 'bg-white' : 'bg-black/60 justify-end'}`}>
+      <Modal visible={activeModal !== null} animationType="slide" transparent={activeModal === 'plans' && upgradeStep === 2 ? false : true} onRequestClose={() => setActiveModal(null)}>
+        <View className={`flex-1 justify-end ${
+          activeModal === 'plans' && upgradeStep === 2 
+            ? 'bg-white' 
+            : isDesktop 
+            ? 'items-center pb-4 sm:pb-8 bg-black/45 backdrop-blur-xs' 
+            : 'bg-black/60'
+        }`}>
           {!(activeModal === 'plans' && upgradeStep === 2) && (
-            <TouchableOpacity activeOpacity={1} onPress={() => { setActiveModal(null); Keyboard.dismiss(); }} className="absolute inset-0" />
+            <TouchableOpacity activeOpacity={1} onPress={() => { setActiveModal(null); Keyboard.dismiss(); }} className="absolute inset-0 z-0" />
           )}
-          <Animated.View entering={FadeInUp} className={`${activeModal === 'plans' && upgradeStep === 2 ? 'flex-1 p-0' : 'bg-[#F8FAFC] rounded-t-[50px] p-8 pb-12 h-[95%]'}`}>
-            {!(activeModal === 'plans' && upgradeStep === 2) && <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mb-8" />}
+          <Animated.View 
+            entering={FadeInUp} 
+            style={isDesktop ? { 
+              backgroundColor: '#ffffff', 
+              width: '100%', 
+              maxWidth: '768px', 
+              borderRadius: 36, 
+              padding: 32,
+              overflow: 'hidden' 
+            } : { 
+              backgroundColor: '#ffffff', 
+              width: '100%', 
+              borderTopLeftRadius: 32, 
+              borderTopRightRadius: 32, 
+              padding: 24,
+              overflow: 'hidden' 
+            }}
+            className={`z-10 bg-white shadow-2xl flex-col ${
+              activeModal === 'plans' && upgradeStep === 2 
+                ? 'flex-1 p-0 w-full' 
+                : isDesktop 
+                ? 'w-full max-w-2xl lg:max-w-3xl rounded-[36px] bg-white p-8 lg:p-10 border border-slate-200/80 max-h-[85vh]' 
+                : 'w-full bg-white rounded-t-[32px] p-6 h-[85%]'
+            }`}
+          >
+            {!(activeModal === 'plans' && upgradeStep === 2) && <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mt-1 mb-6 shrink-0" />}
 
               {activeModal === 'profile' && (
                 <View className="flex-1">
-                  <View className="flex-row justify-between items-center mb-10">
-                    <Text className="text-3xl font-black text-[#161719]">Ndrysho Profilin</Text>
-                    <TouchableOpacity onPress={() => setActiveModal(null)} className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-sm"><X size={24} color="#161719" /></TouchableOpacity>
+                  <View className="flex-row justify-between items-center pb-4 mb-6 border-b border-slate-50">
+                    <Text className="text-2xl font-black text-[#161719]">Ndrysho Profilin</Text>
+                    <TouchableOpacity onPress={() => setActiveModal(null)} className="p-2.5 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors cursor-pointer"><X size={20} color="#161719" /></TouchableOpacity>
                   </View>
-                  <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
+                  <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, paddingBottom: 32 }}>
                     <View className="gap-y-6">
                       <View>
                         <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Emri i plotë</Text>

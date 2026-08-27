@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Pressable, Image, Dimensions, Modal, TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Keyboard, Linking, Share } from "react-native";
-import { ArrowLeft, Share2, Star, MapPin, Phone, MessageSquare, Compass, Globe, Heart, Calendar, Check, X, User as UserIcon, Clock, Scissors as ScissorsIcon, Mail, Lock, ChevronRight, Hash, AlertCircle, Instagram, Sparkles, Store, Palette, Eye, Hand, Smile, Shield, Zap } from "lucide-react-native";
+import { ArrowLeft, Share2, Star, MapPin, Phone, MessageSquare, Compass, Globe, Heart, Calendar, Check, X, User as UserIcon, Clock, Scissors as ScissorsIcon, Mail, Lock, ChevronRight, Hash, AlertCircle, Instagram, Sparkles, Store, Palette, Eye, Hand, Smile, Shield, Zap, Smartphone } from "lucide-react-native";
 import Animated, { FadeInUp, FadeIn, FadeInDown } from "react-native-reanimated";
 import { supabase } from "@/config/supabase";
 import { getShopCardImage } from "../utils/imageUtils";
@@ -68,6 +68,7 @@ const KOSOVO_HOLIDAYS_2026 = [
 export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, user, onLogin, onBack, favorites = [], onToggleFavorite }) => {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [bookingStep, setBookingStep] = useState(1);
+  const [widgetStep, setWidgetStep] = useState<number>(1);
   const bookingScrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -104,6 +105,10 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
+
+  // Celebration success state
+  const [bookingSuccess, setBookingSuccess] = useState(false);
+  const [confirmedBookingDetails, setConfirmedBookingDetails] = useState<any>(null);
 
   useEffect(() => {
     setIsFavLocal(favorites?.some(f => f.shop_id === shop?.id || f.shop_id === Number(shop?.id)) || false);
@@ -283,6 +288,121 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
     }
   };
 
+  const handleConfirmOtpAndReserve = async () => {
+    setLoading(true);
+    try {
+      let targetUser = user;
+
+      // 1. If user is not logged in, authenticate or sign up inline first
+      if (!targetUser) {
+        if (authMode === 'login') {
+          const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+            email: email.trim().toLowerCase(),
+            password
+          });
+          if (authError) throw authError;
+
+          const { data: dbUser } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', authData.user?.id)
+            .maybeSingle();
+
+          if (dbUser) {
+            targetUser = {
+              id: dbUser.id,
+              name: dbUser.name || email,
+              email: email,
+              phone: dbUser.phone || phone,
+              role: dbUser.role || 'client'
+            };
+            onLogin(targetUser);
+          } else {
+            targetUser = {
+              id: authData.user?.id,
+              name: email,
+              email: email,
+              phone: phone,
+              role: 'client'
+            };
+            onLogin(targetUser);
+          }
+        } else if (authMode === 'signup') {
+          const fullNameStr = `${firstName} ${lastName}`.trim() || 'Klient i Ri';
+          const { data: authData, error: authError } = await supabase.auth.signUp({
+            email: email.trim().toLowerCase(),
+            password,
+            options: {
+              data: { full_name: fullNameStr, phone }
+            }
+          });
+          if (authError) throw authError;
+
+          const userUuid = authData.user?.id;
+          if (userUuid) {
+            await supabase.from('users').upsert({
+              id: userUuid,
+              name: fullNameStr,
+              email: email.trim().toLowerCase(),
+              phone: phone,
+              role: 'client'
+            });
+          }
+
+          targetUser = {
+            id: userUuid,
+            name: fullNameStr,
+            email: email,
+            phone: phone,
+            role: 'client'
+          };
+          onLogin(targetUser);
+        }
+      }
+
+      // 2. Fetch target phone number for Twilio SMS OTP
+      const targetPhone = phone || targetUser?.phone || user?.phone;
+      if (!targetPhone) {
+        Alert.alert("Numri i Telefonit", "Ju lutem shkruani numrin tuaj të telefonit për të marrë SMS OTP.");
+        setLoading(false);
+        return;
+      }
+
+      // 3. Trigger Twilio SMS OTP send
+      await sendTwilioOTP(targetPhone);
+      setBookingOtpSent(true);
+      Alert.alert("SMS e Dërguar 📱", `Kodi i verifikimit OTP u dërgua me SMS në numrin: ${targetPhone}`);
+    } catch (err: any) {
+      Alert.alert("Gabim", err.message || "Gabim gjatë procesit të kyçjes ose dërgimit të SMS.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtpSubmit = async () => {
+    if (!bookingOtpCode || bookingOtpCode.trim().length < 4) {
+      Alert.alert("Kodi OTP", "Ju lutem shkruani kodin e verifikimit nga SMS.");
+      return;
+    }
+
+    setVerifyingBookingOtp(true);
+    try {
+      const targetPhone = phone || user?.phone;
+      if (!targetPhone) throw new Error("Numri i telefonit nuk u gjet.");
+
+      await verifyTwilioOTP(targetPhone, bookingOtpCode.trim());
+      await handleBookingSubmit(user);
+
+      setBookingOtpSent(false);
+      setBookingOtpCode("");
+      Alert.alert("Rezervimi u Krye! 📅", `Takimi juaj te ${shopName} u konfirmua me sukses.`);
+    } catch (err: any) {
+      Alert.alert("Verifikimi dështoi", err.message || "Kodi i verifikimit OTP është i pasaktë ose ka skaduar.");
+    } finally {
+      setVerifyingBookingOtp(false);
+    }
+  };
+
   const DEFAULT_SHOP_SERVICES = [
     { id: 'srv_1', name: "Prerje flokësh", price: 0, duration: "30 min", durationMinutes: 30 },
     { id: 'srv_2', name: "Skin Fade", price: 0, duration: "45 min", durationMinutes: 45 },
@@ -427,14 +547,23 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
           .select('*, users(role)')
           .eq('shop_id', shop.id);
 
-        if (barbers) {
-          // Filter out staff members who are not 'employee'
-          // This hides the owner from the booking list if they don't have the employee role
+        if (barbers && barbers.length > 0) {
           const onlyEmployees = barbers.filter((b: any) => b.users?.role === 'employee');
-          setStaff(onlyEmployees);
+          const finalStaff = onlyEmployees.length > 0 ? onlyEmployees : barbers;
+          setStaff(finalStaff);
+          if (finalStaff.length > 0) {
+            setSelectedEmployee((prev: any) => prev || finalStaff[0]);
+          }
+        } else {
+          const defaultStaff = [{ id: shop?.id || 1, name: shop?.name || "Stafi i Sallonit", rating: shop?.rating || 5.0 }];
+          setStaff(defaultStaff);
+          setSelectedEmployee((prev: any) => prev || defaultStaff[0]);
         }
       } catch (e) {
         console.warn("Error loading barbers:", e);
+        const defaultStaff = [{ id: shop?.id || 1, name: shop?.name || "Stafi i Sallonit", rating: shop?.rating || 5.0 }];
+        setStaff(defaultStaff);
+        setSelectedEmployee((prev: any) => prev || defaultStaff[0]);
       }
     }
     async function fetchReviews() {
@@ -508,24 +637,43 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
   };
 
   const isSlotDisabled = useCallback((slotTime: string) => {
-    // 1. Disable past slots for today
+    const todayStr = new Date().toISOString().split('T')[0];
     const dateObj = calendarDates.find(d => d.fullDate === selectedDate);
-    const isToday = dateObj?.label === 'Sot';
+    const isToday = selectedDate === todayStr || dateObj?.label === 'Sot';
 
-    if (isToday) {
-      const now = new Date();
-      const currentMins = now.getHours() * 60 + now.getMinutes();
-      const slotMins = timeToMins(slotTime);
-      if (slotMins < currentMins) return true;
-    }
-
-    // 2. Check for overlapping booked appointments
+    const now = new Date();
+    const currentMins = now.getHours() * 60 + now.getMinutes();
     const candidateStart = timeToMins(slotTime);
     const candidateEnd = candidateStart + totalDurationMinutes;
 
+    // 1. Disable past slots for today (including slots starting within next 10 minutes)
+    if (isToday && candidateStart < currentMins + 10) {
+      return true;
+    }
+
+    // 2. Disable slots that run past the day's closing time
+    const dbDayIndex = dateObj ? dateObj.dbDayIndex : (new Date(selectedDate).getDay() === 0 ? 6 : new Date(selectedDate).getDay() - 1);
+    const dayConfig = selectedBarberSchedule.find(s => s.day_of_week === dbDayIndex);
+    const closingTimeStr = dayConfig?.end_time || '20:00';
+    const dayClosingMins = timeToMins(closingTimeStr);
+
+    if (candidateEnd > dayClosingMins) {
+      return true;
+    }
+
+    // 3. Disable break time slots if barber has a scheduled break (e.g. 13:00 - 14:00)
+    if (dayConfig?.break_start && dayConfig?.break_end) {
+      const breakStart = timeToMins(dayConfig.break_start);
+      const breakEnd = timeToMins(dayConfig.break_end);
+      if (candidateStart < breakEnd && candidateEnd > breakStart) {
+        return true;
+      }
+    }
+
+    // 4. Check for overlapping booked appointments
     for (const app of bookedAppointments) {
       const bookedStart = timeToMins(app.time);
-      const bookedDuration = 30; // Default since column is missing in DB
+      const bookedDuration = app.duration_minutes || app.durationMinutes || app.duration || 30;
       const bookedEnd = bookedStart + bookedDuration;
 
       // Overlap condition: candidateStart < bookedEnd AND candidateEnd > bookedStart
@@ -534,7 +682,7 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
       }
     }
     return false;
-  }, [bookedAppointments, totalDurationMinutes, selectedDate, calendarDates]);
+  }, [bookedAppointments, totalDurationMinutes, selectedDate, calendarDates, selectedBarberSchedule]);
 
   const handleBookingSubmit = async (authenticatedUser = user) => {
     if (!authenticatedUser || !selectedEmployee || !selectedDate || !selectedTime) return;
@@ -576,16 +724,17 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
       }
 
       try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch (_) {}
-      Alert.alert(
-        "Sukses! 🎉",
-        `Takimi juaj te ${selectedEmployee.name} u konfirmua për datën ${selectedDate} në orën ${selectedTime} (${totalMins} min). Njoftimi u dërgua te berberi!`
-      );
-
+      
+      setConfirmedBookingDetails({
+        shopName: shop?.name || "Salloni",
+        barberName: selectedEmployee?.name || "Stafi i Sallonit",
+        services: selectedServices.map(s => s.name).join(", "),
+        date: selectedDate,
+        time: selectedTime,
+        price: totalPrice
+      });
+      setBookingSuccess(true);
       setShowBookingModal(false);
-      setBookingStep(1);
-      setSelectedEmployee(null);
-      setSelectedServices([]);
-      setSelectedTime("");
     } catch (e: any) {
       Alert.alert("Gabim në rezervim", e.message || "Dështoi rezervimi.");
     } finally {
@@ -698,29 +847,35 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
 
   useEffect(() => {
     async function loadBarberSchedule() {
-      if (!selectedEmployee?.id) return;
+      const defaults = Array.from({ length: 7 }, (_, i) => ({
+        day_of_week: i,
+        start_time: '09:00',
+        end_time: '20:00',
+        is_closed: i === 6 // Sunday
+      }));
+
+      if (!selectedEmployee?.id) {
+        setSelectedBarberSchedule(defaults);
+        generateAvailableDates(defaults);
+        return;
+      }
       try {
         const { data: schedule } = await supabase
           .from('barber_schedules')
           .select('*')
           .eq('barber_id', String(selectedEmployee.id));
 
-        if (schedule) {
+        if (schedule && schedule.length > 0) {
           setSelectedBarberSchedule(schedule);
           generateAvailableDates(schedule);
         } else {
-          // Default schedule if none found
-          const defaults = Array.from({ length: 7 }, (_, i) => ({
-            day_of_week: i,
-            start_time: '09:00',
-            end_time: '18:00',
-            is_closed: i === 6 // Sunday
-          }));
           setSelectedBarberSchedule(defaults);
           generateAvailableDates(defaults);
         }
       } catch (e) {
         console.warn("Error loading schedule:", e);
+        setSelectedBarberSchedule(defaults);
+        generateAvailableDates(defaults);
       }
     }
     loadBarberSchedule();
@@ -744,7 +899,7 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
 
       const dayConfig = schedule.find(s => s.day_of_week === dbDayIndex);
 
-      // Check if this date is a official holiday and what the shop/barber preference is
+      // Check if this date is an official holiday and what the shop/barber preference is
       const holiday = KOSOVO_HOLIDAYS_2026.find(h => h.day === d.getDate() && h.month === d.getMonth());
 
       // If employee is selected, check their preferences first. Fallback to shop if no employee selected.
@@ -752,6 +907,29 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
       const isWorkingOnHoliday = holiday ? (targetHolidayPrefs?.[holiday.name] === true) : true;
 
       let isClosed = dayConfig ? dayConfig.is_closed : false;
+
+      // Check if barber or shop is on vacation/pushim
+      if (selectedEmployee?.is_on_vacation || shop?.is_on_vacation) {
+        isClosed = true;
+      } else if (selectedEmployee?.vacation_start && selectedEmployee?.vacation_end) {
+        const dStr = d.toISOString().split('T')[0];
+        if (dStr >= selectedEmployee.vacation_start && dStr <= selectedEmployee.vacation_end) {
+          isClosed = true;
+        }
+      }
+
+      // Disable today if working hours have passed
+      if (i === 0) {
+        const endTimeStr = dayConfig?.end_time || '20:00';
+        const [endHour, endMin] = endTimeStr.split(':').map(Number);
+        const closingMinutes = (endHour || 20) * 60 + (endMin || 0);
+        const currentMinutes = today.getHours() * 60 + today.getMinutes();
+
+        if (currentMinutes >= closingMinutes - 15) {
+          isClosed = true;
+        }
+      }
+
       if (holiday && !isWorkingOnHoliday) {
         isClosed = true;
       }
@@ -765,22 +943,36 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
       });
     }
     setCalendarDates(dates);
-    if (dates.length > 0 && !selectedDate) setSelectedDate(dates[0].fullDate);
+    const firstOpen = dates.find(d => !d.isClosed);
+    if (firstOpen) {
+      setSelectedDate(firstOpen.fullDate);
+    } else if (dates.length > 0) {
+      setSelectedDate(dates[0].fullDate);
+    }
   };
 
   useEffect(() => {
-    if (selectedDate && selectedBarberSchedule.length > 0) {
+    const activeSchedule = selectedBarberSchedule.length > 0 ? selectedBarberSchedule : Array.from({ length: 7 }, (_, i) => ({
+      day_of_week: i,
+      start_time: '09:00',
+      end_time: '20:00',
+      is_closed: i === 6
+    }));
+
+    if (selectedDate) {
       const dateObj = calendarDates.find(d => d.fullDate === selectedDate);
-      if (dateObj) {
-        const dayConfig = selectedBarberSchedule.find(s => s.day_of_week === dateObj.dbDayIndex);
-        if (dayConfig && !dayConfig.is_closed) {
-          generateTimeSlots(dayConfig.start_time, dayConfig.end_time);
-        } else {
-          setAvailableTimeSlots([]);
-        }
+      const dbDayIndex = dateObj ? dateObj.dbDayIndex : (new Date(selectedDate).getDay() === 0 ? 6 : new Date(selectedDate).getDay() - 1);
+      const dayConfig = activeSchedule.find(s => s.day_of_week === dbDayIndex);
+
+      if (dayConfig && !dayConfig.is_closed) {
+        generateTimeSlots(dayConfig.start_time || '09:00', dayConfig.end_time || '20:00');
+      } else if (!dayConfig) {
+        generateTimeSlots('09:00', '20:00');
+      } else {
+        setAvailableTimeSlots([]);
       }
     }
-  }, [selectedDate, selectedBarberSchedule]);
+  }, [selectedDate, selectedBarberSchedule, calendarDates]);
 
   const generateTimeSlots = (start: string, end: string) => {
     const slots = [];
@@ -796,7 +988,33 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
   };
   const shopName = shop?.name || "Salloni";
   const address = shop?.address || "Prishtinë, Kosovë";
-  const rating = shop?.rating ? parseFloat(String(shop.rating)).toFixed(1) : "0.0";
+
+  const calculatedRating = useMemo(() => {
+    if (reviews && reviews.length > 0) {
+      const avg = reviews.reduce((sum, r) => sum + (parseFloat(String(r.rating)) || 5), 0) / reviews.length;
+      return avg.toFixed(1);
+    }
+    if (shop?.rating) {
+      return parseFloat(String(shop.rating)).toFixed(1);
+    }
+    return "5.0";
+  }, [reviews, shop?.rating]);
+
+  const realOpeningHours = useMemo(() => {
+    if (shop?.opening_hours) return shop.opening_hours;
+    if (shop?.working_hours) return shop.working_hours;
+    if (shop?.open_time && shop?.close_time) return `${shop.open_time} - ${shop.close_time}`;
+
+    if (selectedBarberSchedule && selectedBarberSchedule.length > 0) {
+      const openDay = selectedBarberSchedule.find((s: any) => !s.is_closed);
+      if (openDay?.start_time && openDay?.end_time) {
+        return `${openDay.start_time} - ${openDay.end_time}`;
+      }
+    }
+    return "09:00 - 20:00";
+  }, [shop, selectedBarberSchedule]);
+
+  const rating = calculatedRating;
   const imageUrl = getShopCardImage(shop);
   const rawPortfolioData = shop?.portfolio_urls || [];
   const portfolioData = rawPortfolioData.filter((p: any) => typeof p === 'object' && p !== null ? p.category !== 'Kartela' : true);
@@ -846,52 +1064,51 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
             </div>
           </div>
 
-          {/* Desktop Hero Image Gallery */}
-          <div className="mb-8 grid gap-4 lg:grid-cols-3">
-            <div 
-              onClick={() => setZoomImage(imageUrl)}
-              className="group relative cursor-pointer overflow-hidden rounded-3xl bg-slate-900 lg:col-span-2 h-[380px]"
-            >
-              <img src={imageUrl} alt={shopName} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
-              <div className="absolute bottom-6 left-6 right-6 flex items-end justify-between">
-                <div>
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/90 backdrop-blur-md px-3 py-1 font-display text-xs font-bold text-slate-900 mb-2">
-                    <Star size={14} color="#fbbf24" fill="#fbbf24" />
-                    {rating} ({reviews.length > 0 ? reviews.length : 12} vlerësime)
-                  </span>
-                  <h1 className="font-display text-3xl font-bold text-white drop-shadow-md">{shopName}</h1>
-                  <p className="flex items-center gap-1.5 font-medium text-slate-200 text-sm mt-1">
-                    <MapPin size={16} className="text-white" />
-                    {address}
-                  </p>
+          {/* 2-COLUMN MAIN SPLIT LAYOUT AT TOP */}
+          <div className="grid gap-8 lg:grid-cols-[1fr_440px] items-start">
+            {/* LEFT COLUMN: Hero Cover, About, Services Menu, Reviews */}
+            <div className="flex flex-col gap-8">
+              {/* Desktop Hero Image Container */}
+              <div 
+                onClick={() => setZoomImage(imageUrl)}
+                className="group relative cursor-pointer overflow-hidden rounded-3xl bg-slate-900 h-[380px] shadow-lg"
+              >
+                <img src={imageUrl} alt={shopName} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/20 to-transparent" />
+                <div className="absolute bottom-6 left-6 right-6 flex items-end justify-between">
+                  <div>
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/90 backdrop-blur-md px-3 py-1 font-display text-xs font-bold text-slate-900 mb-2">
+                      <Star size={14} color="#fbbf24" fill="#fbbf24" />
+                      {rating} ({reviews.length > 0 ? reviews.length : 12} vlerësime)
+                    </span>
+                    <h1 className="font-display text-3xl font-bold text-white drop-shadow-md">{shopName}</h1>
+                    <p className="flex items-center gap-1.5 font-medium text-slate-200 text-sm mt-1">
+                      <MapPin size={16} className="text-white" />
+                      {address}
+                    </p>
+                  </div>
+                  {photos.length > 0 && (
+                    <div className="hidden sm:flex items-center gap-2">
+                      {photos.slice(0, 3).map((photoUrl: any, idx: number) => {
+                        const pUrl = typeof photoUrl === 'string' ? photoUrl : photoUrl.url;
+                        return (
+                          <div 
+                            key={idx}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setZoomImage(pUrl);
+                            }}
+                            className="h-12 w-12 rounded-xl overflow-hidden border-2 border-white/80 shadow-xs transition-transform hover:scale-110"
+                          >
+                            <img src={pUrl} alt="Thumbnail" className="h-full w-full object-cover" />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
 
-            {/* Side Gallery Photos */}
-            <div className="grid gap-4 grid-rows-2 h-[380px]">
-              {photos.slice(0, 2).map((photoUrl: string, idx: number) => (
-                <div 
-                  key={idx}
-                  onClick={() => setZoomImage(photoUrl)}
-                  className="group relative cursor-pointer overflow-hidden rounded-2xl bg-slate-100 h-full"
-                >
-                  <img src={photoUrl} alt={`${shopName} photo`} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                </div>
-              ))}
-              {photos.length === 0 && (
-                <div className="flex h-full items-center justify-center rounded-2xl bg-slate-100 p-6 text-center">
-                  <Store className="h-10 w-10 text-slate-400" />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* 2-COLUMN SPLIT LAYOUT */}
-          <div className="grid gap-8 lg:grid-cols-[1fr_420px] items-start">
-            {/* LEFT COLUMN: Overview, Staff, Services Menu, Reviews */}
-            <div className="flex flex-col gap-8">
               {/* About & Shop Info */}
               <div className="rounded-3xl border border-slate-200/80 bg-white p-8 shadow-2xs">
                 <h2 className="font-display text-xl font-bold text-slate-900 mb-3">Rreth {shopName}</h2>
@@ -906,7 +1123,7 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                     </div>
                     <div>
                       <p className="text-xs font-bold text-slate-400 uppercase">Orari</p>
-                      <p className="font-display text-sm font-bold text-slate-900">09:00 - 20:00</p>
+                      <p className="font-display text-sm font-bold text-slate-900">{realOpeningHours}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -930,107 +1147,7 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                 </div>
               </div>
 
-              {/* Staff / Barbers Selection */}
-              {staff.length > 0 && (
-                <div className="rounded-3xl border border-slate-200/80 bg-white p-8 shadow-2xs">
-                  <div className="flex items-center justify-between mb-6">
-                    <div>
-                      <h2 className="font-display text-xl font-bold text-slate-900">Zgjidh Berberin</h2>
-                      <p className="text-xs font-medium text-slate-500">Zgjidhni berberin tuaj të preferuar për terminin</p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                    {staff.map((emp: any) => {
-                      const isSelected = selectedEmployee?.id === emp.id;
-                      return (
-                        <div
-                          key={emp.id}
-                          onClick={() => setSelectedEmployee(emp)}
-                          className={`group flex cursor-pointer flex-col items-center rounded-2xl border p-4 transition-all ${
-                            isSelected 
-                              ? 'border-[#3473ef] bg-blue-50/50 shadow-md ring-2 ring-[#3473ef]/30' 
-                              : 'border-slate-200/80 bg-slate-50/50 hover:border-slate-300 hover:bg-white'
-                          }`}
-                        >
-                          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-2xs border border-slate-100">
-                            <UserIcon size={28} className={isSelected ? 'text-[#3473ef]' : 'text-slate-400'} />
-                          </div>
-                          <p className="font-display text-sm font-bold text-slate-900 text-center mb-1">{emp.name}</p>
-                          <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-500">
-                            <Star size={12} fill="#f59e0b" color="#f59e0b" />
-                            {emp.rating ? parseFloat(String(emp.rating)).toFixed(1) : "5.0"}
-                          </span>
-                          <span className={`mt-3 rounded-full px-3 py-1 text-[11px] font-bold ${
-                            isSelected ? 'bg-[#3473ef] text-white' : 'bg-slate-200/80 text-slate-700'
-                          }`}>
-                            {isSelected ? 'Zgjedhur ✓' : 'Zgjidh'}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
 
-              {/* Services Offered Menu */}
-              <div className="rounded-3xl border border-slate-200/80 bg-white p-8 shadow-2xs">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="font-display text-xl font-bold text-slate-900">Menuja e Shërbimeve</h2>
-                    <p className="text-xs font-medium text-slate-500">Zgjidhni shërbimet që dëshironi të kryeni</p>
-                  </div>
-                  <span className="rounded-full bg-blue-50 px-3 py-1 font-display text-xs font-bold text-[#3473ef]">
-                    {selectedServices.length} shërbime zgjedhur
-                  </span>
-                </div>
-
-                <div className="flex flex-col gap-6">
-                  {Object.keys(groupedServices).map((catName) => {
-                    const servicesInCat = groupedServices[catName];
-                    return (
-                      <div key={catName} className="flex flex-col gap-3">
-                        <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
-                          {catName}
-                        </p>
-                        <div className="grid gap-3">
-                          {servicesInCat.map((srv: any) => {
-                            const selected = isServiceSelected(srv);
-                            return (
-                              <div
-                                key={srv.id}
-                                onClick={() => handleToggleService(srv)}
-                                className={`flex cursor-pointer items-center justify-between rounded-2xl border p-4 transition-all ${
-                                  selected 
-                                    ? 'border-[#3473ef] bg-blue-50/40 shadow-xs' 
-                                    : 'border-slate-100 bg-slate-50/40 hover:border-slate-200 hover:bg-white'
-                                }`}
-                              >
-                                <div className="flex items-center gap-3">
-                                  <div className={`flex h-6 w-6 items-center justify-center rounded-lg border transition-colors ${
-                                    selected ? 'border-[#3473ef] bg-[#3473ef] text-white' : 'border-slate-300 bg-white'
-                                  }`}>
-                                    {selected && <Check size={14} strokeWidth={3} />}
-                                  </div>
-                                  <div>
-                                    <p className="font-display text-sm font-bold text-slate-900">{srv.name}</p>
-                                    <p className="text-xs font-medium text-slate-400">⏱️ {srv.duration || `${srv.durationMinutes || 30} min`}</p>
-                                  </div>
-                                </div>
-
-                                <div className="flex items-center gap-3">
-                                  <span className="font-display text-base font-bold text-[#3473ef]">
-                                    {srv.price ? `${srv.price} €` : 'Nga 5 €'}
-                                  </span>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
 
               {/* Customer Reviews Section */}
               <div className="rounded-3xl border border-slate-200/80 bg-white p-8 shadow-2xs">
@@ -1074,54 +1191,561 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
             </div>
 
             {/* RIGHT COLUMN: STICKY BOOKING WIDGET */}
+            {/* RIGHT COLUMN: INTERACTIVE STEP-BY-STEP BOOKING WIDGET */}
             <div className="sticky top-24 flex flex-col gap-6">
               <div className="overflow-hidden rounded-3xl border border-slate-200/90 bg-white p-6 shadow-xl">
-                <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-4">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Rezervim me OTP</p>
-                    <p className="font-display text-xl font-bold text-slate-900">Konfirmo Terminin</p>
+                {bookingSuccess ? (
+                  <div className="flex flex-col items-center gap-4 py-4 text-center">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 animate-bounce">
+                      <Check size={36} strokeWidth={3} />
+                    </div>
+
+                    <div>
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3.5 py-1 font-display text-xs font-bold text-emerald-800 mb-2">
+                        <Sparkles size={14} className="text-emerald-600" />
+                        Rezervimi u krye me sukses! 🎉
+                      </span>
+                      <h3 className="font-display text-2xl font-bold text-slate-900">Urime! Takimi u konfirmua</h3>
+                      <p className="text-xs font-medium text-slate-600 mt-1">
+                        Njoftimi u dërgua me sukses te salloni <span className="font-bold text-slate-900">{confirmedBookingDetails?.shopName}</span>.
+                      </p>
+                    </div>
+
+                    <div className="w-full rounded-2xl bg-slate-50 p-4 border border-slate-200/80 text-left flex flex-col gap-2.5 shadow-2xs">
+                      <div className="flex justify-between text-xs font-bold text-slate-800 border-b border-slate-200/60 pb-1.5">
+                        <span className="text-slate-500 font-medium">Berberi:</span>
+                        <span className="text-slate-900">{confirmedBookingDetails?.barberName}</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-bold text-slate-800 border-b border-slate-200/60 pb-1.5">
+                        <span className="text-slate-500 font-medium">Shërbimet:</span>
+                        <span className="text-slate-900 truncate max-w-[200px]">{confirmedBookingDetails?.services}</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-bold text-slate-800 border-b border-slate-200/60 pb-1.5">
+                        <span className="text-slate-500 font-medium">Data & Ora:</span>
+                        <span className="text-[#3473ef] font-bold">{confirmedBookingDetails?.date} në {confirmedBookingDetails?.time}</span>
+                      </div>
+                      <div className="flex justify-between font-display text-sm font-bold text-slate-900 pt-0.5">
+                        <span>Statusi:</span>
+                        <span className="text-emerald-600 font-bold">✓ Konfirmuar me OTP</span>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBookingSuccess(false);
+                        setWidgetStep(1);
+                        setSelectedServices([]);
+                        setSelectedTime("");
+                      }}
+                      className="w-full rounded-2xl bg-[#3473ef] py-3.5 font-display text-sm font-bold text-white shadow-md hover:bg-blue-600 cursor-pointer transition-all mt-2"
+                    >
+                      + Bëj një Rezervim të Ri
+                    </button>
                   </div>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-[#3473ef]">
-                    <Calendar size={20} />
+                ) : (
+                  <>
+                    {/* Header & Step Bar */}
+                    <div className="mb-4 border-b border-slate-100 pb-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider text-[#3473ef]">Rezervim me OTP</p>
+                      <p className="font-display text-xl font-bold text-slate-900">
+                        {widgetStep === 1 ? "1. Zgjidh Berberin" :
+                         widgetStep === 2 ? "2. Zgjidh Shërbimet" :
+                         widgetStep === 3 ? "3. Data & Ora" : "4. Konfirmo Terminin"}
+                      </p>
+                    </div>
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-[#3473ef]">
+                      <Calendar size={20} />
+                    </div>
+                  </div>
+
+                  {/* Step Pills Navigation */}
+                  <div className="mt-4 flex items-center justify-between gap-1 rounded-2xl bg-slate-100 p-1">
+                    {[
+                      { step: 1, label: "Berber" },
+                      { step: 2, label: "Shërbimi" },
+                      { step: 3, label: "Data & Ora" },
+                      { step: 4, label: "Konfirmo" }
+                    ].map((s) => {
+                      const isActive = widgetStep === s.step;
+                      const isDone = widgetStep > s.step || (
+                        (s.step === 1 && selectedEmployee) ||
+                        (s.step === 2 && selectedServices.length > 0) ||
+                        (s.step === 3 && selectedDate && selectedTime)
+                      );
+                      return (
+                        <button
+                          key={s.step}
+                          type="button"
+                          onClick={() => setWidgetStep(s.step)}
+                          className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-bold transition-all text-center cursor-pointer ${
+                            isActive
+                              ? "bg-[#3473ef] text-white shadow-xs"
+                              : isDone
+                              ? "bg-blue-50 text-[#3473ef]"
+                              : "text-slate-500 hover:text-slate-900"
+                          }`}
+                        >
+                          {s.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                {/* Selected Services Summary */}
-                <div className="mb-6 rounded-2xl bg-slate-50 p-4 border border-slate-100">
-                  <p className="text-xs font-bold text-slate-400 uppercase mb-2">Përmbledhje e zgjedhur</p>
-                  {selectedServices.length > 0 ? (
-                    <div className="flex flex-col gap-1.5">
-                      {selectedServices.map((s, idx) => (
-                        <div key={idx} className="flex items-center justify-between text-xs font-bold text-slate-800">
-                          <span>• {s.name}</span>
-                          <span className="text-[#3473ef]">{s.price ? `${s.price} €` : '5 €'}</span>
-                        </div>
-                      ))}
-                      <div className="mt-2 flex items-center justify-between border-t border-slate-200/60 pt-2 font-display text-sm font-bold text-slate-900">
+                {/* STEP 1: SELECT BARBER */}
+                {widgetStep === 1 && (
+                  <div className="flex flex-col gap-3">
+                    <p className="text-xs font-bold text-slate-400 uppercase">Stafi i sallonit</p>
+                    <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto pr-1">
+                      {(staff.length > 0 ? staff : [{ id: shop?.id || 1, name: shop?.name || "Stafi i Sallonit", rating: 5.0 }]).map((emp: any) => {
+                        const isSelected = selectedEmployee?.id === emp.id;
+                        return (
+                          <div
+                            key={emp.id}
+                            onClick={() => {
+                              setSelectedEmployee(emp);
+                              setWidgetStep(2);
+                            }}
+                            className={`flex cursor-pointer flex-col items-center rounded-2xl border p-3 transition-all ${
+                              isSelected
+                                ? 'border-[#3473ef] bg-blue-50/50 ring-2 ring-[#3473ef]/30'
+                                : 'border-slate-200/80 bg-slate-50/40 hover:bg-white'
+                            }`}
+                          >
+                            <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-slate-100 shadow-2xs">
+                              <UserIcon size={20} className={isSelected ? 'text-[#3473ef]' : 'text-slate-400'} />
+                            </div>
+                            <p className="font-display text-xs font-bold text-slate-900 text-center truncate w-full">{emp.name}</p>
+                            <span className="mt-1 text-[10px] font-bold text-amber-500">⭐ {emp.rating ? parseFloat(String(emp.rating)).toFixed(1) : "5.0"}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setWidgetStep(2)}
+                      className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#3473ef] py-3 text-xs font-bold text-white shadow-md hover:bg-blue-600 cursor-pointer"
+                    >
+                      <span>Vazhdo te Shërbimet →</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* STEP 2: SELECT SERVICES */}
+                {widgetStep === 2 && (
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-bold text-slate-400 uppercase">Trajtimet</p>
+                      <span className="text-xs font-bold text-[#3473ef]">{selectedServices.length} zgjedhur</span>
+                    </div>
+                    <div className="flex flex-col gap-2 max-h-[280px] overflow-y-auto pr-1">
+                      {availableServices.length > 0 ? (
+                        availableServices.map((srv, idx) => {
+                          const selected = isServiceSelected(srv);
+                          return (
+                            <div
+                              key={srv.id || idx}
+                              onClick={() => handleToggleService(srv)}
+                              className={`flex cursor-pointer items-center justify-between rounded-xl border p-3 transition-all ${
+                                selected ? 'border-[#3473ef] bg-blue-50/50' : 'border-slate-100 bg-slate-50/40 hover:bg-white'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${
+                                  selected ? 'border-[#3473ef] bg-[#3473ef] text-white' : 'border-slate-300 bg-white'
+                                }`}>
+                                  {selected && <Check size={12} strokeWidth={3} />}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-xs font-bold text-slate-900 truncate">{srv.name}</p>
+                                  <p className="text-[10px] text-slate-400">⏱️ {srv.duration || `${srv.durationMinutes || 30} min`}</p>
+                                </div>
+                              </div>
+                              <span className="text-xs font-bold text-[#3473ef] shrink-0">{srv.price && parseFloat(String(srv.price)) > 0 ? `${srv.price} €` : ''}</span>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        DEFAULT_SHOP_SERVICES.map((srv) => {
+                          const selected = isServiceSelected(srv);
+                          return (
+                            <div
+                              key={srv.id}
+                              onClick={() => handleToggleService(srv)}
+                              className={`flex cursor-pointer items-center justify-between rounded-xl border p-3 transition-all ${
+                                selected ? 'border-[#3473ef] bg-blue-50/50' : 'border-slate-100 bg-slate-50/40 hover:bg-white'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${
+                                  selected ? 'border-[#3473ef] bg-[#3473ef] text-white' : 'border-slate-300 bg-white'
+                                }`}>
+                                  {selected && <Check size={12} strokeWidth={3} />}
+                                </div>
+                                <p className="text-xs font-bold text-slate-900 truncate">{srv.name}</p>
+                              </div>
+                              <span className="text-xs font-bold text-[#3473ef] shrink-0">{srv.price && parseFloat(String(srv.price)) > 0 ? `${srv.price} €` : ''}</span>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        type="button"
+                        onClick={() => setWidgetStep(1)}
+                        className="px-3 py-2.5 rounded-2xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                      >
+                        ← Mbrapa
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (selectedServices.length === 0) {
+                            Alert.alert("Zgjidhni Shërbimin", "Ju lutem zgjidhni të paktën 1 shërbim te lista.");
+                            return;
+                          }
+                          setWidgetStep(3);
+                        }}
+                        className="flex-1 py-2.5 rounded-2xl bg-[#3473ef] text-xs font-bold text-white shadow-md hover:bg-blue-600 cursor-pointer text-center"
+                      >
+                        Vazhdo te Data & Ora →
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 3: SELECT DATE & TIME */}
+                {widgetStep === 3 && (
+                  <div className="flex flex-col gap-3">
+                    <p className="text-xs font-bold text-slate-400 uppercase">Data e rezervimit</p>
+                    <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+                      {calendarDates.slice(0, 10).map((item, idx) => {
+                        const isSelected = selectedDate === item.fullDate;
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            disabled={item.isClosed}
+                            onClick={() => {
+                              if (item.isClosed) return;
+                              setSelectedDate(item.fullDate);
+                              setSelectedTime("");
+                            }}
+                            className={`flex min-w-[64px] flex-col items-center justify-center rounded-xl border p-2 transition-all cursor-pointer ${
+                              item.isClosed
+                                ? "border-slate-100 bg-slate-50 opacity-40 text-slate-400"
+                                : isSelected
+                                ? "border-[#3473ef] bg-blue-50 text-[#3473ef] font-bold"
+                                : "border-slate-200/80 bg-slate-50/40 hover:bg-white text-slate-700"
+                            }`}
+                          >
+                            <span className="text-[9px] font-bold uppercase">{item.label}</span>
+                            <span className="text-[10px] font-medium">{item.fullDate.split('-').slice(1).join('/')}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <p className="text-xs font-bold text-slate-400 uppercase mt-1">Orari i lirë (Kohëzgjatja: {totalDurationMinutes} min)</p>
+                    <div className="grid grid-cols-4 gap-1.5 max-h-[160px] overflow-y-auto">
+                      {availableSlots.length > 0 ? (
+                        availableSlots.map((time, idx) => {
+                          const disabled = isSlotDisabled(time);
+                          const isSelected = selectedTime === time;
+                          return (
+                            <button
+                              key={idx}
+                              type="button"
+                              disabled={disabled}
+                              onClick={() => !disabled && setSelectedTime(time)}
+                              title={disabled ? "Kjo fashë orari është e zënë apo nuk mjafton kohëzgjatja" : `Zgjidh orarin ${time}`}
+                              className={`rounded-lg border py-2 px-1 text-center text-xs font-bold transition-all ${
+                                disabled
+                                  ? "border-slate-200/50 bg-slate-100/70 opacity-40 cursor-not-allowed text-slate-400 line-through"
+                                  : isSelected
+                                  ? "border-[#3473ef] bg-[#3473ef] text-white shadow-xs"
+                                  : "border-slate-200/80 bg-slate-50/40 hover:border-slate-300 hover:bg-white text-slate-800 cursor-pointer"
+                              }`}
+                            >
+                              {time}
+                            </button>
+                          );
+                        })
+                      ) : (
+                        <p className="col-span-4 text-xs font-semibold text-slate-400 py-3 text-center bg-slate-50 rounded-xl">
+                          Nuk ka orare të lira për këtë datë.
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        type="button"
+                        onClick={() => setWidgetStep(2)}
+                        className="px-3 py-2.5 rounded-2xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                      >
+                        ← Mbrapa
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!selectedDate || !selectedTime) {
+                            Alert.alert("Zgjidhni Orarin", "Ju lutem zgjidhni datën dhe orën.");
+                            return;
+                          }
+                          setWidgetStep(4);
+                        }}
+                        className="flex-1 py-2.5 rounded-2xl bg-[#3473ef] text-xs font-bold text-white shadow-md hover:bg-blue-600 cursor-pointer text-center"
+                      >
+                        Shiko Konfirmimin →
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 4: CONFIRMATION & OTP */}
+                {widgetStep === 4 && (
+                  <div className="flex flex-col gap-3">
+                    {/* Selected Summary Card */}
+                    <div className="rounded-2xl bg-slate-50 p-4 border border-slate-100 flex flex-col gap-2.5">
+                      <p className="text-xs font-bold text-slate-400 uppercase">Përmbledhje e plotë</p>
+                      
+                      <div className="flex justify-between text-xs font-bold text-slate-800 border-b border-slate-200/60 pb-1.5">
+                        <span className="text-slate-500 font-medium">Berberi:</span>
+                        <span className="text-slate-900">{selectedEmployee?.name || staff[0]?.name || "Stafi i Sallonit"}</span>
+                      </div>
+
+                      <div className="flex flex-col gap-1 border-b border-slate-200/60 pb-1.5">
+                        <span className="text-slate-500 font-medium text-xs">Shërbimet:</span>
+                        {selectedServices.length > 0 ? (
+                          selectedServices.map((s, idx) => (
+                            <div key={idx} className="flex justify-between text-xs font-bold text-slate-800">
+                              <span>• {s.name}</span>
+                              <span className="text-[#3473ef]">{s.price && parseFloat(String(s.price)) > 0 ? `${s.price} €` : ''}</span>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-xs font-medium text-amber-600 italic">Zgjidhni të paktën 1 shërbim te Hapi 2</p>
+                        )}
+                      </div>
+
+                      <div className="flex justify-between text-xs font-bold text-slate-800 border-b border-slate-200/60 pb-1.5">
+                        <span className="text-slate-500 font-medium">Data & Ora:</span>
+                        <span className="text-[#3473ef]">{selectedDate && selectedTime ? `${selectedDate} në ${selectedTime}` : selectedDate ? `${selectedDate}` : "Zgjidhni datën & orën"}</span>
+                      </div>
+
+                      <div className="flex justify-between font-display text-sm font-bold text-slate-900 pt-1">
                         <span>Totali:</span>
-                        <span className="text-base text-[#3473ef]">
-                          {selectedServices.reduce((sum, s) => sum + (parseFloat(String(s.price)) || 5), 0)} €
+                        <span className="text-[#3473ef]">
+                          {(() => {
+                            const totPrice = selectedServices.reduce((sum, s) => sum + (parseFloat(String(s.price)) || 0), 0);
+                            return totPrice > 0 ? `${totPrice} € (${totalDurationMinutes} min)` : `${totalDurationMinutes} min`;
+                          })()}
                         </span>
                       </div>
                     </div>
-                  ) : (
-                    <p className="text-xs font-medium text-slate-500 italic">Zgjidhni të paktën 1 shërbim te menuja në të majtë</p>
-                  )}
-                </div>
 
-                {/* Main Action Button */}
-                <button
-                  type="button"
-                  onClick={() => setShowBookingModal(true)}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#3473ef] py-4 font-display text-sm font-bold text-white shadow-lg transition-all hover:bg-blue-600 active:scale-[0.98] cursor-pointer"
-                >
-                  <Calendar size={18} />
-                  <span>Rezervo Tani me OTP →</span>
-                </button>
+                    {/* USER CREDENTIALS & OTP VERIFICATION SECTION */}
+                    {bookingOtpSent ? (
+                      <div className="rounded-2xl bg-blue-50/80 p-4 border border-blue-200/80 flex flex-col gap-3">
+                        <div className="flex items-center gap-2 text-[#3473ef]">
+                          <Smartphone size={18} />
+                          <span className="font-display text-xs font-bold">Kodi SMS u dërgua me sukses!</span>
+                        </div>
+                        <p className="text-xs font-medium text-slate-600 leading-relaxed">
+                          Kemi dërguar kodin me 6 shifra në numrin tuaj të telefonit: <span className="font-bold text-slate-900">{phone || user?.phone}</span>
+                        </p>
 
-                <p className="mt-3 text-center text-[11px] font-medium text-slate-400">
-                  ⚡ Pa parapagim — konfirmim i menjëhershëm me SMS OTP.
-                </p>
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Shkruaj Kodin 6-Shifror (OTP)</label>
+                          <input
+                            type="text"
+                            maxLength={6}
+                            placeholder="0 0 0 0 0 0"
+                            value={bookingOtpCode}
+                            onChange={(e) => setBookingOtpCode(e.target.value)}
+                            className="w-full text-center tracking-[0.4em] font-mono text-base font-bold rounded-xl border border-blue-300 bg-white px-3 py-2.5 text-slate-900 focus:border-[#3473ef] focus:outline-none shadow-xs"
+                          />
+                        </div>
+
+                        <div className="flex gap-2 mt-1">
+                          <button
+                            type="button"
+                            onClick={() => setBookingOtpSent(false)}
+                            className="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
+                          >
+                            ← Mbrapa / Ndrysho
+                          </button>
+                          <button
+                            type="button"
+                            disabled={verifyingBookingOtp}
+                            onClick={handleVerifyOtpSubmit}
+                            className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#3473ef] py-2.5 font-display text-xs font-bold text-white shadow-md hover:bg-blue-600 cursor-pointer"
+                          >
+                            {verifyingBookingOtp ? (
+                              <span>Duke verifikuar...</span>
+                            ) : (
+                              <span>Verifiko & Përfundo Rezervimin ✓</span>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-3">
+                        <div className="rounded-2xl bg-white p-4 border border-slate-200 shadow-2xs flex flex-col gap-3">
+                          {user ? (
+                            <div className="flex items-center justify-between bg-blue-50/60 p-3 rounded-xl border border-blue-100">
+                              <div>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase">Llogaria e kyçur</p>
+                                <p className="font-display text-xs font-bold text-slate-900">{user.name || user.email}</p>
+                                {(phone || user.phone) && (
+                                  <p className="text-[11px] font-medium text-[#3473ef] mt-0.5">📱 {phone || user.phone}</p>
+                                )}
+                              </div>
+                              <span className="text-[11px] font-bold bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full">Aktiv ✓</span>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col gap-3">
+                              {/* Mode Switcher */}
+                              <div className="flex rounded-xl bg-slate-100 p-1">
+                                <button
+                                  type="button"
+                                  onClick={() => setAuthMode('signup')}
+                                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                                    authMode === 'signup' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
+                                  }`}
+                                >
+                                  Klient i Ri
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setAuthMode('login')}
+                                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                                    authMode === 'login' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
+                                  }`}
+                                >
+                                  Kam Llogari (Kyçu)
+                                </button>
+                              </div>
+
+                              {authMode === 'signup' ? (
+                                <div className="flex flex-col gap-2.5">
+                                  <div>
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Emri & Mbiemri (Full Name)</label>
+                                    <input
+                                      type="text"
+                                      placeholder="e.g. Liridon Salihi"
+                                      value={firstName ? `${firstName} ${lastName}`.trim() : ''}
+                                      onChange={(e) => {
+                                        const parts = e.target.value.split(" ");
+                                        setFirstName(parts[0] || "");
+                                        setLastName(parts.slice(1).join(" ") || "");
+                                      }}
+                                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-[#3473ef] focus:bg-white focus:outline-none"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Email Adresa</label>
+                                    <input
+                                      type="email"
+                                      placeholder="email@domain.com"
+                                      value={email}
+                                      onChange={(e) => setEmail(e.target.value)}
+                                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-[#3473ef] focus:bg-white focus:outline-none"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Numri i Telefonit (+383)</label>
+                                    <input
+                                      type="tel"
+                                      placeholder="+383 4X XXX XXX"
+                                      value={phone}
+                                      onChange={(e) => setPhone(e.target.value)}
+                                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-[#3473ef] focus:bg-white focus:outline-none"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Fjalëkalimi (Password)</label>
+                                    <input
+                                      type="password"
+                                      placeholder="••••••••"
+                                      value={password}
+                                      onChange={(e) => setPassword(e.target.value)}
+                                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-[#3473ef] focus:bg-white focus:outline-none"
+                                    />
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex flex-col gap-2.5">
+                                  <div>
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Email Adresa</label>
+                                    <input
+                                      type="email"
+                                      placeholder="email@domain.com"
+                                      value={email}
+                                      onChange={(e) => setEmail(e.target.value)}
+                                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-[#3473ef] focus:bg-white focus:outline-none"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Fjalëkalimi (Password)</label>
+                                    <input
+                                      type="password"
+                                      placeholder="••••••••"
+                                      value={password}
+                                      onChange={(e) => setPassword(e.target.value)}
+                                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-[#3473ef] focus:bg-white focus:outline-none"
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Action Button: Triggers OTP Confirmation */}
+                        <div className="flex gap-2 mt-1">
+                          <button
+                            type="button"
+                            onClick={() => setWidgetStep(3)}
+                            className="px-3 py-3 rounded-2xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                          >
+                            ← Mbrapa
+                          </button>
+                          <button
+                            type="button"
+                            disabled={loading}
+                            onClick={handleConfirmOtpAndReserve}
+                            className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-[#3473ef] py-3.5 font-display text-sm font-bold text-white shadow-lg hover:bg-blue-600 cursor-pointer"
+                          >
+                            {loading ? (
+                              <span>Duke dërguar OTP...</span>
+                            ) : (
+                              <>
+                                <Calendar size={16} />
+                                <span>Konfirmo me SMS OTP →</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <p className="mt-2 text-center text-[11px] font-medium text-slate-400">
+                      ⚡ Pa parapagim — konfirmim i menjëhershëm me SMS OTP.
+                    </p>
+                  </div>
+                )}
+                  </>
+                )}
               </div>
             </div>
           </div>

@@ -123,18 +123,15 @@ export const useSubscription = (businessId: string | null, userId?: string | nul
       }
     };
 
-    const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+      const isUUID = (str: any) => typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+      const isNumeric = (str: any) => str !== null && str !== undefined && !isNaN(Number(str)) && !String(str).includes('-');
 
-    try {
-      let data = null;
-
-      const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
-      const isNumeric = (str: any) => !isNaN(str) && !isNaN(parseFloat(str));
-
-      console.log('[useSubscription] Deep Search Initiated:', { userId, businessId });
+      try {
+        let data = null;
+        console.log('[useSubscription] Deep Search Initiated:', { userId, businessId });
 
       // --- STEP 1: Direct targeted search by businessId and userId ---
-      if (businessId) {
+      if (businessId && isNumeric(businessId)) {
         const { data: bSub } = await supabase
           .from('subscriptions')
           .select('*')
@@ -145,7 +142,7 @@ export const useSubscription = (businessId: string | null, userId?: string | nul
         if (bSub) data = bSub;
       }
 
-      if (!data && userId) {
+      if (!data && userId && isUUID(userId)) {
         const { data: uSub } = await supabase
           .from('subscriptions')
           .select('*')
@@ -157,7 +154,7 @@ export const useSubscription = (businessId: string | null, userId?: string | nul
       }
 
       // --- STEP 3: Search by User Email (Ultimate Clue) ---
-      if (!data && userId) {
+      if (!data && userId && isUUID(userId)) {
         const { data: userData } = await supabase.from('users').select('email').eq('id', userId).maybeSingle();
         if (userData?.email) {
            console.log('[useSubscription] Step 3: Checking by email', userData.email);
@@ -186,87 +183,95 @@ export const useSubscription = (businessId: string | null, userId?: string | nul
 
       // --- STEP 4: Payment Bridge Self-Healing ---
       if (!data && (userId || businessId)) {
-        const targetSearchId = businessId || userId;
-        const { data: payment } = await supabase.from('subscription_payments').select('*')
-          .or(`business_id.eq.${targetSearchId},user_id.eq.${targetSearchId}`)
-          .order('paid_at', { ascending: false }).limit(1).maybeSingle();
+        let paymentQuery = supabase.from('subscription_payments').select('*');
+        if (businessId && isNumeric(businessId)) {
+          paymentQuery = paymentQuery.eq('business_id', businessId);
+        } else if (userId && isUUID(userId)) {
+          paymentQuery = paymentQuery.eq('user_id', userId);
+        } else {
+          paymentQuery = null;
+        }
 
-        if (payment?.subscription_id) {
-          console.log('[useSubscription] Step 4: Found orphaned payment', payment.subscription_id);
-          const { data: orphanedSub } = await supabase.from('subscriptions').select('*')
-            .eq('paddle_subscription_id', payment.subscription_id).maybeSingle();
+        if (paymentQuery) {
+          const { data: payment } = await paymentQuery.order('paid_at', { ascending: false }).limit(1).maybeSingle();
 
-          if (orphanedSub) {
-             data = orphanedSub;
-             // AUTO-REPAIR
-             if (businessId && orphanedSub.business_id !== businessId) {
-                await supabase.from('subscriptions').update({ business_id: businessId, user_id: userId || orphanedSub.user_id }).eq('id', orphanedSub.id);
-             }
+          if (payment?.subscription_id) {
+            console.log('[useSubscription] Step 4: Found orphaned payment', payment.subscription_id);
+            const { data: orphanedSub } = await supabase.from('subscriptions').select('*')
+              .eq('paddle_subscription_id', payment.subscription_id).maybeSingle();
+
+            if (orphanedSub) {
+               data = orphanedSub;
+               // AUTO-REPAIR
+               if (businessId && isNumeric(businessId) && orphanedSub.business_id !== businessId) {
+                  await supabase.from('subscriptions').update({ business_id: businessId, user_id: userId || orphanedSub.user_id }).eq('id', orphanedSub.id);
+               }
+            }
           }
         }
       }
 
       // --- STEP 5: Existing Account Self-Healing ---
       if (!data && (userId || businessId)) {
-        const ownerSearchId = userId || businessId;
-        const shopSearchId = businessId || userId;
-
-        // Check if a barbershop exists for this user or business ID
-        let query = supabase.from('barbershops').select('id, owner_id, status');
-        if (businessId) {
-          query = query.eq('id', businessId);
-        } else if (userId) {
-          query = query.eq('owner_id', userId);
+        let shopQuery = supabase.from('barbershops').select('id, owner_id, status');
+        if (businessId && isNumeric(businessId)) {
+          shopQuery = shopQuery.eq('id', businessId);
+        } else if (userId && isUUID(userId)) {
+          shopQuery = shopQuery.eq('owner_id', userId);
+        } else {
+          shopQuery = null;
         }
 
-        const { data: existingShop } = await query.maybeSingle();
+        if (shopQuery) {
+          const { data: existingShop } = await shopQuery.maybeSingle();
 
-        if (existingShop) {
-          // Check if ANY sub already exists for this shop before creating a synthetic one!
-          const { data: foundShopSub } = await supabase
-            .from('subscriptions')
-            .select('*')
-            .or(`business_id.eq.${existingShop.id},user_id.eq.${existingShop.owner_id || userId}`)
-            .order('updated_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          if (foundShopSub) {
-            data = foundShopSub;
-          } else {
-            console.log('[useSubscription] Step 5: Provisioning new active Solo sub for existing shop:', existingShop.id);
-            const now = new Date();
-            const endDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-            const subId = 'sub_auto_' + Date.now();
-
-            const subPayload = {
-              user_id: userId || existingShop.owner_id,
-              business_id: existingShop.id,
-              paddle_subscription_id: subId,
-              subscription_id: subId,
-              plan_id: 'solo',
-              plan_name: 'Solo',
-              status: 'active',
-              amount: 15,
-              currency: 'EUR',
-              billing_cycle: 'month',
-              current_period_start: now.toISOString(),
-              current_period_end: endDate.toISOString(),
-              cancel_at_period_end: false,
-              updated_at: now.toISOString()
-            };
-
-            const { data: createdSub } = await supabase
+          if (existingShop) {
+            // Check if ANY sub already exists for this shop before creating a synthetic one!
+            const { data: foundShopSub } = await supabase
               .from('subscriptions')
-              .upsert(subPayload, { onConflict: 'business_id' })
-              .select()
+              .select('*')
+              .eq('business_id', existingShop.id)
+              .order('updated_at', { ascending: false })
+              .limit(1)
               .maybeSingle();
 
-            data = createdSub || subPayload;
-          }
+            if (foundShopSub) {
+              data = foundShopSub;
+            } else {
+              console.log('[useSubscription] Step 5: Provisioning new active Solo sub for existing shop:', existingShop.id);
+              const now = new Date();
+              const endDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+              const subId = 'sub_auto_' + Date.now();
 
-          // Ensure shop status is active
-          await supabase.from('barbershops').update({ status: 'active', subscriptionStatus: 'active' }).eq('id', existingShop.id);
+              const subPayload = {
+                user_id: userId || existingShop.owner_id,
+                business_id: existingShop.id,
+                paddle_subscription_id: subId,
+                subscription_id: subId,
+                plan_id: 'solo',
+                plan_name: 'Solo',
+                status: 'active',
+                amount: 15,
+                currency: 'EUR',
+                billing_cycle: 'month',
+                current_period_start: now.toISOString(),
+                current_period_end: endDate.toISOString(),
+                cancel_at_period_end: false,
+                updated_at: now.toISOString()
+              };
+
+              const { data: createdSub } = await supabase
+                .from('subscriptions')
+                .upsert(subPayload, { onConflict: 'business_id' })
+                .select()
+                .maybeSingle();
+
+              data = createdSub || subPayload;
+            }
+
+            // Ensure shop status is active
+            await supabase.from('barbershops').update({ status: 'active', subscriptionStatus: 'active' }).eq('id', existingShop.id);
+          }
         }
       }
 

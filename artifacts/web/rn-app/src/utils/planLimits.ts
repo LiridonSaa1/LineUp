@@ -25,14 +25,23 @@ export interface ShopPlanDetails {
  */
 export async function getShopPlanDetails(shopId: string | number): Promise<ShopPlanDetails> {
   try {
-    // 1. Fetch barbershop owner ID and email
-    const { data: shop } = await supabase
-      .from('barbershops')
-      .select('id, owner_id, email, max_barbers')
-      .eq('id', shopId)
-      .maybeSingle();
+    const isNumeric = (str: any) => str !== null && str !== undefined && !isNaN(Number(str)) && !String(str).includes('-');
+    const isUUID = (str: any) => typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
-    const ownerId = shop?.owner_id;
+    // 1. Fetch barbershop owner ID and email
+    let shopQuery = supabase.from('barbershops').select('id, owner_id, email, max_barbers');
+    if (isNumeric(shopId)) {
+      shopQuery = shopQuery.eq('id', shopId);
+    } else if (isUUID(shopId)) {
+      shopQuery = shopQuery.eq('owner_id', shopId);
+    } else {
+      shopQuery = shopQuery.eq('id', shopId);
+    }
+
+    const { data: shop } = await shopQuery.maybeSingle();
+
+    const realShopId = shop?.id;
+    const ownerId = shop?.owner_id || (isUUID(shopId) ? String(shopId) : null);
     let email = shop?.email;
 
     // Fallback: If shop email is missing, fetch owner email from users table
@@ -46,11 +55,15 @@ export async function getShopPlanDetails(shopId: string | number): Promise<ShopP
     }
 
     // 2. Count current barbers in this specific barbershop (excluding the owner)
-    const { count: barberCount } = await supabase
-      .from('barbers')
-      .select('id', { count: 'exact', head: true })
-      .eq('shop_id', shopId)
-      .neq('user_id', ownerId || 'no-owner'); // If no ownerId, just count all
+    let barberCount = 0;
+    if (realShopId && isNumeric(realShopId)) {
+      const { count } = await supabase
+        .from('barbers')
+        .select('id', { count: 'exact', head: true })
+        .eq('shop_id', realShopId)
+        .neq('user_id', ownerId || 'no-owner');
+      barberCount = count || 0;
+    }
 
     const currentBarberCount = barberCount || 0;
 
@@ -62,7 +75,7 @@ export async function getShopPlanDetails(shopId: string | number): Promise<ShopP
     let cancelAtPeriodEnd: boolean | undefined;
     let daysRemaining: number | undefined;
 
-    if (ownerId) {
+    if (ownerId || realShopId) {
       // 3. Resolve Paddle Customer ID if it differs from owner UUID
       let paddleCustomerId: string | null = null;
       if (email) {
@@ -77,24 +90,21 @@ export async function getShopPlanDetails(shopId: string | number): Promise<ShopP
       // 4. Fetch subscription (either by business_id or UUID or Paddle ID)
       let sub = null;
 
-      try {
-        // Attempt to fetch by business_id first (new schema)
-        const { data: bSub, error: bError } = await supabase
+      if (realShopId && isNumeric(realShopId)) {
+        const { data: bSub } = await supabase
           .from('subscriptions')
           .select('*')
-          .eq('business_id', shopId)
+          .eq('business_id', realShopId)
           .maybeSingle();
+        if (bSub) sub = bSub;
+      }
 
-        if (bError) throw bError;
-        sub = bSub;
-      } catch (err) {
-        // Fallback: If business_id doesn't exist or query fails, try the old way (customer_id)
-        let query = supabase.from('subscriptions').select('*');
-        let fetchQuery = query;
-        if (shopId) {
-          fetchQuery = fetchQuery.or(`customer_id.eq.${ownerId},user_id.eq.${ownerId}${paddleCustomerId ? `,customer_id.eq.${paddleCustomerId}` : ''}`);
+      if (!sub && ownerId) {
+        let fetchQuery = supabase.from('subscriptions').select('*');
+        if (paddleCustomerId) {
+          fetchQuery = fetchQuery.or(`user_id.eq.${ownerId},customer_id.eq.${ownerId},paddle_customer_id.eq.${paddleCustomerId}`);
         } else {
-          fetchQuery = fetchQuery.or(`customer_id.eq.${ownerId},user_id.eq.${ownerId}`);
+          fetchQuery = fetchQuery.or(`user_id.eq.${ownerId},customer_id.eq.${ownerId}`);
         }
 
         const { data: fallbackSub } = await fetchQuery
