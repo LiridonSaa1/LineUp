@@ -857,8 +857,11 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
     );
   }
 
+  const isDesktop = Platform.OS === 'web' && width > 768;
+
   return (
-    <View className="flex-1 bg-[#F8FAFC]">
+    <View className="flex-1 bg-[#F8FAFC] w-full max-w-full overflow-x-hidden">
+      <div className={isDesktop ? "mx-auto w-full max-w-[1440px] px-6 lg:px-10 py-4" : "w-full"}>
       {/* Suspension Warning Banner */}
       {shopStatus === 'suspended' && (
         <Animated.View
@@ -879,7 +882,7 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
       )}
 
       {/* ── HEADER ───────────────────────────── */}
-      <View className="pt-16 pb-6 px-6 relative overflow-hidden">
+      <View className="pt-8 pb-6 px-6 relative overflow-hidden">
         <View className="absolute top-[-100] right-[-50] w-64 h-64 bg-[#3473ef]/10 rounded-full blur-3xl" />
         <View className="flex-row items-center justify-between z-10">
           <View>
@@ -1780,6 +1783,7 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
           </View>
         </View>
       </Modal>
+      </div>
     </View>
   );
 };

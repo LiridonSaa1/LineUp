@@ -577,29 +577,16 @@ export default function App() {
                   />
                 )}
                 {activeTab === 2 && (
-                  isAdminRole ? (
-                    <AdminDashboardScreen
-                      onLogout={async () => {
-                        await supabase.auth.signOut();
-                        setUser(null);
-                      }}
-                      onImpersonate={handleImpersonate}
-                    />
-                  ) : isBusinessRole ? (
-                    <BarberDashboardScreen
-                      user={user}
-                      onLogout={async () => {
-                        await supabase.auth.signOut();
-                        setUser(null);
-                      }}
-                    />
-                  ) : (
-                    <ActivityScreen
-                      user={user}
-                      onLogin={() => setActiveTab(3)}
-                      onNavigateToSearch={() => setActiveTab(1)}
-                    />
-                  )
+                  <ActivityScreen
+                    user={user}
+                    onLogin={() => setActiveTab(3)}
+                    onNavigateToSearch={() => setActiveTab(1)}
+                    onLogout={async () => {
+                      await supabase.auth.signOut();
+                      setUser(null);
+                    }}
+                    onImpersonate={handleImpersonate}
+                  />
                 )}
                 {activeTab === 3 && (
                   <ProfileScreen

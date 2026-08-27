@@ -3,7 +3,8 @@ import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Image, Dim
 import { Calendar, Clock, ChevronRight, MessageSquare, History, Lock, Search, Star, XCircle, AlertCircle, X, Check } from "lucide-react-native";
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
-import { supabase } from "@/config/supabase";
+import { BarberDashboardScreen } from "./BarberDashboardScreen";
+import { AdminDashboardScreen } from "./AdminDashboardScreen";
 
 const { width } = Dimensions.get("window");
 
@@ -11,9 +12,38 @@ interface ActivityScreenProps {
   user: any;
   onLogin: () => void;
   onNavigateToSearch: () => void;
+  onLogout?: () => void;
+  onImpersonate?: (shop: any) => void;
 }
 
-export const ActivityScreen: React.FC<ActivityScreenProps> = ({ user, onLogin, onNavigateToSearch }) => {
+export const ActivityScreen: React.FC<ActivityScreenProps> = ({
+  user,
+  onLogin,
+  onNavigateToSearch,
+  onLogout,
+  onImpersonate
+}) => {
+  const isAdminRole = user?.role === 'super_admin' || user?.role === 'admin';
+  const isBusinessRole = user?.role === 'owner' || user?.role === 'barber' || user?.role === 'employee' || user?.role === 'staf' || user?.role === 'staff';
+
+  if (isAdminRole) {
+    return (
+      <AdminDashboardScreen
+        onLogout={onLogout || (() => {})}
+        onImpersonate={onImpersonate || (() => {})}
+      />
+    );
+  }
+
+  if (isBusinessRole) {
+    return (
+      <BarberDashboardScreen
+        user={user}
+        onLogout={onLogout || (() => {})}
+      />
+    );
+  }
+
   const [allAppointments, setAllAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
