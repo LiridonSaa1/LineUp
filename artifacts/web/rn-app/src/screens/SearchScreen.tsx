@@ -85,10 +85,15 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
   // Selection States
   const [selectedTreatment, setSelectedTreatment] = useState(initialQuery);
   const [selectedCategoryName, setSelectedCategoryName] = useState(initialCategoryName);
-  const [selectedLocation, setSelectedLocation] = useState({
+  const [selectedLocation, setSelectedLocation] = useState<{
+    address: string;
+    lat?: number;
+    lng?: number;
+    place_id?: string;
+  }>({
     address: currentLocation === "Lokacioni aktual" ? "" : currentLocation,
-    lat: undefined as number | undefined,
-    lng: undefined as number | undefined
+    lat: undefined,
+    lng: undefined
   });
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [selectedTime, setSelectedTime] = useState(initialTime);
@@ -104,6 +109,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
   const [dbShops, setDbShops] = useState<any[]>([]);
   const [dbBarbers, setDbBarbers] = useState<any[]>([]);
   const [selectedMainCategory, setSelectedMainCategory] = useState<any | null>(null);
+  const isDesktop = useMemo(() => Platform.OS === 'web' && width > 768, []);
   const [showSubModal, setShowSubModal] = useState(false);
   const [selectedSubIds, setSelectedSubIds] = useState<string[]>(initialSubIds);
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
@@ -411,7 +417,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
 
           <View className="mt-8">
             <Text className="text-xl font-bold text-[#161719] mb-4">Kategoritë</Text>
-            <View className="flex-row flex-wrap justify-between">
+            <View className="flex-row flex-wrap justify-between gap-y-3">
               {categories.map((cat, i) => {
                 const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
                 return (
@@ -421,11 +427,10 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
                       setSelectedMainCategory(cat);
                       setShowSubModal(true);
                     }}
-                    className="bg-slate-50 border border-slate-100 rounded-2xl items-center justify-center py-6 mb-4"
-                    style={{ width: (width - 60) / 2 }}
+                    className="bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-2xl items-center justify-center p-5 mb-1 w-[48%] md:w-[23.5%] transition-all"
                   >
-                    <IconComponent size={32} color="#161719" strokeWidth={1.5} />
-                    <Text className="text-[13px] font-bold text-[#161719] mt-3 text-center px-2">{cat.name}</Text>
+                    <IconComponent size={30} color="#161719" strokeWidth={1.5} />
+                    <Text className="text-sm font-bold text-[#161719] mt-2.5 text-center px-1" numberOfLines={2}>{cat.name}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -753,13 +758,17 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
       transparent={true}
       onRequestClose={() => setShowSubModal(false)}
     >
-      <View className="flex-1 bg-black/50 justify-end">
+      <View className={`flex-1 justify-end ${isDesktop ? 'items-center pb-4 sm:pb-8' : ''}`}>
         <TouchableOpacity
-          className="absolute inset-0"
+          className="absolute inset-0 bg-black/45"
           activeOpacity={1}
           onPress={() => setShowSubModal(false)}
         />
-        <View className="bg-white rounded-t-[32px] h-[75%] overflow-hidden flex-col">
+        <View className={`bg-white overflow-hidden shadow-2xl flex-col ${
+          isDesktop 
+            ? 'w-full max-w-2xl lg:max-w-3xl rounded-[36px] h-auto max-h-[85vh] border border-slate-200/80' 
+            : 'w-full rounded-t-[32px] h-[75%]'
+        }`}>
           <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mt-3 mb-2" />
           <View className="flex-row items-center justify-between px-6 py-4 border-b border-slate-50">
             <View className="flex-row items-center">

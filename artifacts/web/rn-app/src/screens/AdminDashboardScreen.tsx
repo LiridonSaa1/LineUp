@@ -392,7 +392,8 @@ export const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onLo
   };
 
   const totalRevenue = useMemo(() => paddleTransactions.reduce((acc, txn) => {
-    const amount = parseFloat(txn.details?.totals?.total || "0") / 100;
+    const rawVal = (txn as any).details?.totals?.total || (txn as any).amount || "0";
+    const amount = parseFloat(rawVal) / ((txn as any).details ? 100 : 1);
     return acc + amount;
   }, 0), [paddleTransactions]);
 

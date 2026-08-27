@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { useShopPlan } from "@/hooks/use-shop-plan";
 import SharedContactSection from "@/components/ContactSection";
 import KosovoCitiesMap from "@/components/map/KosovoCitiesMap";
+import { useFavorites } from "@/hooks/useFavorites";
 import {
   MapPin,
   Star,
@@ -41,6 +42,7 @@ import {
   X,
   Building2,
   Loader2,
+  Heart,
 } from "lucide-react";
 import {
   Select,
@@ -657,6 +659,7 @@ function StepCard({
 
 /* ── ShopCard ────────────────────────────────────────────── */
 function ShopCard({ shop, index }: { shop: any; index: number }) {
+  const { isFavorite, toggleFavorite } = useFavorites();
   const { ref, inView } = useInView();
   const delays = [
     "delay-75",
@@ -745,8 +748,20 @@ function ShopCard({ shop, index }: { shop: any; index: number }) {
             </div>
           )}
 
-          {/* Status + rating — top right */}
+          {/* Favorite + Status + rating — top right */}
           <div className="absolute top-3 right-3 z-20 flex flex-col items-end gap-1.5">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleFavorite(shop, e);
+              }}
+              className="p-1.5 rounded-full bg-black/60 backdrop-blur-sm text-white hover:bg-black/80 transition-colors shadow-md relative z-30"
+              title="Ruaj në të ruajtura"
+            >
+              <Heart className={`w-3.5 h-3.5 ${isFavorite(shop.id) ? "fill-rose-500 text-rose-500" : "text-white"}`} />
+            </button>
             <div
               className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold backdrop-blur-sm ${
                 isOpen
@@ -1367,7 +1382,7 @@ function PricingSection() {
   const currentWeight = planWeights[currentPlanId] || 0;
   const isSubscribed = shopPlan?.isSubscribed;
   const isExpired = shopPlan?.status === 'expired' || shopPlan?.status === 'canceled';
-  const isEmployee = user?.role === 'employee';
+  const isEmployee = (user?.role as string) === 'employee';
 
   const getButtonState = (planId: string) => {
     if (isEmployee) return { text: "Fillo Tani", disabled: false, type: 'employee' };
@@ -2066,8 +2081,17 @@ export default function Home() {
     setLocation(qs ? `/barbershops?${qs}` : "/barbershops");
   };
 
+  const { AuthModal } = useFavorites();
+
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col relative bg-[#f8fafc] min-h-screen overflow-hidden">
+      <AuthModal />
+      {/* ── Background Decorative Blobs (Same as RN App) ── */}
+      <div className="absolute top-[-50px] left-[-50px] w-[450px] h-[450px] bg-[#3473ef]/15 rounded-full blur-3xl pointer-events-none z-0" />
+      <div className="absolute top-[200px] right-[-100px] w-[550px] h-[550px] bg-[#f47458]/15 rounded-full blur-3xl pointer-events-none z-0" />
+      <div className="absolute top-[900px] left-[-100px] w-[650px] h-[650px] bg-[#3473ef]/10 rounded-full blur-3xl pointer-events-none z-0" />
+      <div className="absolute top-[1700px] right-[-100px] w-[550px] h-[550px] bg-[#f47458]/10 rounded-full blur-3xl pointer-events-none z-0" />
+
       {/* ── HERO ─────────────────────────────────────────── */}
       <section className="relative min-h-screen flex items-center overflow-hidden bg-[#080b12]">
         {/* Barber tools photo — dark, full bleed */}

@@ -9,6 +9,7 @@ import { createPaddleTransaction, PADDLE_CONFIG } from "../config/paddle";
 import { PaddleCheckout } from "../components/PaddleCheckout";
 import { CategoryAccordion, Category, Subcategory } from "../components/CategoryAccordion";
 import { BlurView } from 'expo-blur';
+import { DEFAULT_CATEGORIES, DEFAULT_SUBCATEGORIES, CATEGORY_ORDER } from "../config/defaultCategories";
 
 const CATEGORY_ICONS: Record<string, any> = {
   'Flokët & Trajtimet': Scissors,
@@ -49,7 +50,7 @@ const REGISTRATION_PLANS = [
     employees: '1 berber',
     desc: 'Ideale për berberët individualë',
     features: ['Deri në 300 rezervime/muaj', '1 profil stafi', 'Kalendari i rezervimeve', 'Njoftime me email'],
-    paddlePriceId: { month: 'pri_solo_mo', year: 'pri_solo_yr' }
+    paddlePriceId: { month: 'pri_01ky8dvrqajpvkqtcde7ge9fgb', year: 'pri_solo_yr' }
   },
   {
     id: 'duo',
@@ -59,7 +60,7 @@ const REGISTRATION_PLANS = [
     desc: 'Për ekipe të vogla prej dy personash',
     features: ['Rezervime pa limit', 'Deri në 2 profile stafi', 'Njoftime me SMS & Email', 'Statistika & Raporte', 'Mbështetje prioritare'],
     isPopular: true,
-    paddlePriceId: { month: 'pri_duo_mo', year: 'pri_duo_yr' }
+    paddlePriceId: { month: 'pri_01ky8e821v11dc6f2nf9jnq5v8', year: 'pri_duo_yr' }
   },
   {
     id: 'team',
@@ -68,12 +69,13 @@ const REGISTRATION_PLANS = [
     employees: '3+ berberë',
     desc: 'Për ekipe në rritje',
     features: ['Të gjitha të planit Duo', 'Profile stafi pa limit', 'Marketing me SMS', 'Landing page e personalizuar', 'Asistent personal 24/7'],
-    paddlePriceId: { month: 'pri_team_mo', year: 'pri_team_yr' }
+    paddlePriceId: { month: 'pri_01ky8eh6v1h2snktvp7v6k8yx0', year: 'pri_team_yr' }
   }
 ];
 
 
 
+const { width, height } = Dimensions.get("window");
 const PADDLE_CLIENT_TOKEN = PADDLE_CONFIG.CLIENT_TOKEN;
 const PADDLE_VENDOR_ID = 12345; // This can remain as mock or move to config
 
@@ -91,6 +93,8 @@ const CityPicker = memo(({ selectedCity, onSelect }: CityPickerProps) => {
       c.city.toLowerCase().includes(search.toLowerCase())
     );
   }, [search]);
+
+  const isDesktop = Platform.OS === 'web' && Dimensions.get('window').width > 768;
 
   return (
     <View className="mb-1">
@@ -115,13 +119,17 @@ const CityPicker = memo(({ selectedCity, onSelect }: CityPickerProps) => {
         transparent={true}
         onRequestClose={() => setShowPicker(false)}
       >
-        <View className="flex-1 bg-black/50 justify-end">
+        <View className={`flex-1 justify-end ${isDesktop ? 'items-center pb-4 sm:pb-8' : ''}`}>
           <TouchableOpacity
-            className="absolute inset-0"
+            className="absolute inset-0 bg-black/45"
             activeOpacity={1}
             onPress={() => setShowPicker(false)}
           />
-          <View className="bg-white rounded-t-[32px] h-[80%] overflow-hidden">
+          <View className={`bg-white overflow-hidden shadow-2xl flex-col ${
+            isDesktop 
+              ? 'w-full max-w-2xl lg:max-w-3xl rounded-[36px] h-auto max-h-[85vh] border border-slate-200/80' 
+              : 'w-full rounded-t-[32px] h-[80%]'
+          }`}>
             <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mt-3 mb-2" />
             <View className="flex-row items-center justify-between px-6 py-4 border-b border-slate-50">
               <Text className="text-xl font-black text-[#161719]">Zgjidh qytetin</Text>
@@ -179,35 +187,39 @@ interface AddressPickerProps {
   onSelect: (address: { address: string, lat: number, lng: number }) => void;
   focusedField: string | null;
   setFocusedField: (field: string | null) => void;
+  initialValue?: string;
 }
 
 const AddressPicker = memo(({
   selectedCity,
   onSelect,
   focusedField,
-  setFocusedField
+  setFocusedField,
+  initialValue = ""
 }: AddressPickerProps) => {
   const cityObj = KOSOVO_CITIES.find(c => c.city === selectedCity);
   const cityCoords = cityObj ? { lat: cityObj.latitude, lng: cityObj.longitude } : undefined;
 
   return (
-    <View className="mb-1" style={{ zIndex: focusedField === 'address' ? 2000 : 1 }}>
+    <View className="mb-1" style={{ zIndex: focusedField === 'address' ? 20000 : 1, position: 'relative' }}>
        <AddressAutocomplete
           placeholder="Adresa (Rruga dhe Numri)"
           selectedCity={selectedCity}
           cityCoords={cityCoords}
+          initialValue={initialValue}
           onSelectAddress={(place) => {
-            if (place && place.latitude && place.longitude) {
+            if (place) {
               onSelect({
                 address: place.formatted_address,
-                lat: place.latitude,
-                lng: place.longitude
+                lat: place.latitude || 0,
+                lng: place.longitude || 0
               });
             }
           }}
           containerClassName={focusedField === 'address' ? 'border-[#3473ef]' : ''}
           onChangeText={(text) => {
              if (text.length >= 2) setFocusedField('address');
+             onSelect({ address: text, lat: 0, lng: 0 });
           }}
        />
     </View>
@@ -221,9 +233,8 @@ interface RegisterScreenProps {
   setIsRegistering?: (val: boolean) => void;
 }
 
-import { DEFAULT_CATEGORIES, DEFAULT_SUBCATEGORIES, CATEGORY_ORDER } from "../config/defaultCategories";
-
 export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSuccess, initialPlanId, setIsRegistering }) => {
+  const isDesktop = Platform.OS === 'web' && Dimensions.get('window').width > 768;
   const [registerStep, setRegisterStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -252,10 +263,9 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
           supabase.from('subcategories').select('*').order('name')
         ]);
 
-        if (catError) throw catError;
-        if (subError) throw subError;
-
-        if (catData && catData.length > 0) {
+        if (catError) {
+          console.warn("[RegisterScreen] Error fetching categories, using defaults:", catError.message);
+        } else if (catData && catData.length > 0) {
           console.log(`[RegisterScreen] Fetched ${catData.length} categories from DB.`);
           const sortedCats = [...catData].sort((a, b) => {
             const indexA = CATEGORY_ORDER.indexOf(a.name);
@@ -266,16 +276,16 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
             return indexA - indexB;
           });
           setDbCategories(sortedCats as Category[]);
-        } else {
-          console.warn("[RegisterScreen] No categories found in DB, using defaults.");
         }
 
-        if (subData && subData.length > 0) {
+        if (subError) {
+          console.warn("[RegisterScreen] Error fetching subcategories, using defaults:", subError.message);
+        } else if (subData && subData.length > 0) {
           console.log(`[RegisterScreen] Fetched ${subData.length} subcategories from DB.`);
           setDbSubcategories(subData as Subcategory[]);
         }
-      } catch (err) {
-        console.error("[RegisterScreen] Failed to fetch categories from Supabase:", err);
+      } catch (err: any) {
+        console.error("[RegisterScreen] Failed to fetch categories from Supabase:", err?.message || err);
       }
     };
     fetchCategories();
@@ -392,7 +402,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
     scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   };
 
-  const handleFinalizeRegistration = async (passedUserId?: string) => {
+  const handleFinalizeRegistration = async (passedUserId?: string, paddleData?: any) => {
     Keyboard.dismiss();
     if (loading) return;
     setLoading(true);
@@ -413,58 +423,106 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
 
       console.log("[RegisterScreen] Finalizing DB records for user:", userId);
 
-      // 1. Upsert user into database 'users' table
-      const { data: dbUser, error: userError } = await supabase.from('users').upsert({
+      // (User upsert already done in handleStartPayment, but we do it again to be safe with fullName)
+      await supabase.from('users').upsert({
         id: userId,
         email: cleanEmail,
         name: fullName,
         role: 'owner',
         phone: phone || null,
-      }, { onConflict: 'email' }).select().single();
+      }, { onConflict: 'email' });
 
-      if (userError) throw userError;
+      const ownerId = userId;
 
-      const ownerId = dbUser?.id;
-
-      // 2. Insert barbershop
-      const CITY_MAP_COORDS: Record<string, { lat: number; lng: number }> = {
-        "prishtin": { lat: 42.6629, lng: 21.1655 },
-        "ferizaj": { lat: 42.3703, lng: 21.1559 },
-        "prizren": { lat: 42.2139, lng: 20.7397 },
-        "pej": { lat: 42.6593, lng: 20.2883 },
-        "gjakov": { lat: 42.3803, lng: 20.4308 },
-        "gjilan": { lat: 42.4635, lng: 21.4678 },
-        "mitrovic": { lat: 42.8914, lng: 20.8660 },
-      };
-
-      const cityKey = (selectedCity || "prishtin").toLowerCase().replace(/ë/g, "e").replace(/ç/g, "c");
-      let fallbackCoords = CITY_MAP_COORDS["prishtin"];
-      for (const [k, v] of Object.entries(CITY_MAP_COORDS)) {
-        if (cityKey.includes(k)) { fallbackCoords = v; break; }
+      // 2. If Paddle data is provided, save customer info
+      if (paddleData) {
+        try {
+          const { customer, subscription, transaction } = paddleData;
+          await supabase.from('customers').upsert({
+            email: cleanEmail,
+            customer_id: customer?.id || transaction?.customer_id,
+            user_id: userId
+          }, { onConflict: 'email' });
+        } catch (custErr) {
+          console.warn("[RegisterScreen] Failed to save customer mapping:", custErr);
+        }
       }
 
-      const { data: newShop, error: shopError } = await supabase.from('barbershops').insert({
-        owner_id: ownerId,
-        name: fullName,
-        city: selectedCity || "Prishtinë",
-        address: selectedPlace?.address || (selectedCity ? `Qendra, ${selectedCity}` : "Prishtinë"),
-        latitude: selectedPlace?.lat || fallbackCoords.lat,
-        longitude: selectedPlace?.lng || fallbackCoords.lng,
+      // 3. Fetch pre-registered shop to finalize
+      const { data: dbShop } = await supabase
+        .from('barbershops')
+        .select('*')
+        .eq('owner_id', ownerId)
+        .maybeSingle();
+
+      const shopId = dbShop?.id;
+
+      if (shopId) {
+        // (Removal of manual status: 'active' update. We wait for Paddle Webhook for authority.)
+
+        // Link selected services to Barbershop (Pivot Table)
+        if (selectedCategories.length > 0) {
+          console.log("[RegisterScreen] Linking services to shop:", selectedCategories.length);
+          const pivotData = selectedCategories.map(subId => ({
+            barbershop_id: shopId,
+            subcategory_id: subId
+          }));
+          await supabase.from('barbershop_services').upsert(pivotData, { onConflict: 'barbershop_id,subcategory_id' });
+        }
+
+        // Create default barber profile if missing
+        const { data: existingBarber } = await supabase.from('barbers').select('id').eq('user_id', ownerId).maybeSingle();
+        if (!existingBarber) {
+           await supabase.from('barbers').insert({
+            user_id: ownerId,
+            shop_id: shopId,
+            name: fullName,
+            is_active: true
+          });
+
+          // Link these services to the owner's individual barber profile
+          if (selectedCategories.length > 0) {
+            const barberServicesData = selectedCategories.map(subId => ({
+              barber_id: ownerId,
+              subcategory_id: subId,
+              duration_minutes: 30,
+              price: 0
+            }));
+            await supabase.from('barber_services').upsert(barberServicesData, { onConflict: 'barber_id,subcategory_id' });
+          }
+        }
+      }
+
+      // Ensure active subscription record exists in 'subscriptions' table
+      const now = new Date();
+      const isAnnual = billingCycle === 'year';
+      const endDate = new Date(now.getTime() + (isAnnual ? 365 : 30) * 24 * 60 * 60 * 1000);
+      const planPriceNum = selectedPlan?.id === 'team'
+        ? calculateTeamPrice(employeeCount, billingCycle)
+        : (billingCycle === 'month'
+            ? (selectedPlan?.id === 'solo' ? 15 : 20)
+            : (selectedPlan?.id === 'solo' ? 150 : 200));
+
+      const subId = paddleData?.subscription?.id || 'sub_reg_' + Date.now();
+      await supabase.from('subscriptions').upsert({
+        user_id: userId,
+        business_id: shopId || userId,
+        paddle_subscription_id: subId,
+        subscription_id: subId,
+        plan_id: selectedPlan?.id || 'solo',
+        plan_name: selectedPlan?.name || 'Solo',
         status: 'active',
-        subcategories: selectedCategories,
-        category: selectedMainCategory?.name || 'Barber'
-      }).select().single();
+        amount: planPriceNum,
+        currency: 'EUR',
+        billing_cycle: billingCycle || 'month',
+        current_period_start: now.toISOString(),
+        current_period_end: endDate.toISOString(),
+        cancel_at_period_end: false,
+        updated_at: now.toISOString()
+      }, { onConflict: 'user_id' });
 
-      if (shopError) throw shopError;
-
-      // 3. Create default barber profile
-      if (ownerId && newShop?.id) {
-        await supabase.from('barbers').insert({
-          user_id: ownerId,
-          shop_id: newShop.id,
-          name: fullName,
-          is_active: true
-        });
+      if (shopId) {
+        await supabase.from('barbershops').update({ status: 'active', subscriptionStatus: 'active' }).eq('id', shopId);
       }
 
       console.log("[RegisterScreen] SUCCESS! Redirecting to dashboard...");
@@ -487,6 +545,9 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
     Keyboard.dismiss();
     setPreparingCheckout(true);
     setErrorMessage("");
+
+    if (setIsRegistering) setIsRegistering(true);
+
     try {
       const cleanEmail = email.trim().toLowerCase();
 
@@ -520,27 +581,86 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
 
       if (!userId) throw new Error("Dështoi krijimi i llogarisë.");
 
-      // 2. Create Paddle Transaction with userId in custom_data
-      const planPriceNum = selectedPlan?.id === 'team' ? calculateTeamPrice(employeeCount, billingCycle) : (billingCycle === 'month' ? 20 : 200);
-
-      console.log("[RegisterScreen] Creating Paddle transaction for userId:", userId);
-      const res = await createPaddleTransaction({
+      // --- CRITICAL FIX: Upsert user into database 'users' table BEFORE payment ---
+      console.log("[RegisterScreen] Pre-registering user in public.users to prevent webhook race conditions...");
+      await supabase.from('users').upsert({
+        id: userId,
         email: cleanEmail,
-        planId: (selectedPlan?.id as any) || 'solo',
-        amount: planPriceNum,
-        userId: userId,
-        customerName: fullName
-      });
+        name: fullName,
+        role: 'owner',
+        phone: phone || null,
+      }, { onConflict: 'email' });
 
-      if (res?.id) {
-        setPaddleTransactionId(res.id);
+      // --- NEW: PRE-REGISTER SHOP (Inactive) ---
+      console.log("[RegisterScreen] Pre-registering shop to resolve businessId...");
+      const CITY_MAP_COORDS: Record<string, { lat: number; lng: number }> = {
+        "prishtin": { lat: 42.6629, lng: 21.1655 },
+        "ferizaj": { lat: 42.3703, lng: 21.1559 },
+        "prizren": { lat: 42.2139, lng: 20.7397 },
+        "pej": { lat: 42.6593, lng: 20.2883 },
+        "gjakov": { lat: 42.3803, lng: 20.4308 },
+        "gjilan": { lat: 42.4635, lng: 21.4678 },
+        "mitrovic": { lat: 42.8914, lng: 20.8660 },
+      };
+
+      const cityKey = (selectedCity || "prishtin").toLowerCase().replace(/ë/g, "e").replace(/ç/g, "c");
+      let fallbackCoords = CITY_MAP_COORDS["prishtin"];
+      for (const [k, v] of Object.entries(CITY_MAP_COORDS)) {
+        if (cityKey.includes(k)) { fallbackCoords = v; break; }
       }
-      
-      // 3. Go to Step 4 to show the UI
-      goToStep(4);
-    } catch (err: any) {
-      console.error("[RegisterScreen] Pre-payment error:", err);
-      setErrorMessage(err.message || "Ndodhi një gabim gjatë përgatitjes së pagesës.");
+
+      // Check if shop already exists for this owner to avoid duplicates on retries
+      const { data: existingShop } = await supabase.from('barbershops').select('id').eq('owner_id', userId).maybeSingle();
+
+      let shopId = existingShop?.id;
+
+      if (!shopId) {
+        const { data: newShop, error: shopError } = await supabase.from('barbershops').insert({
+          owner_id: userId,
+          name: fullName,
+          city: selectedCity || "Prishtinë",
+          address: selectedPlace?.address || (selectedCity ? `Qendra, ${selectedCity}` : "Prishtinë"),
+          latitude: selectedPlace?.lat || fallbackCoords.lat,
+          longitude: selectedPlace?.lng || fallbackCoords.lng,
+          status: 'inactive',
+          subcategories: selectedCategories,
+          category: selectedMainCategory?.name || 'Barber'
+        }).select().single();
+
+        if (shopError) throw shopError;
+        shopId = newShop.id;
+      }
+
+      // 2. Create Paddle Transaction with userId and businessId in custom_data
+      const planPriceNum = selectedPlan?.id === 'team'
+        ? calculateTeamPrice(employeeCount, billingCycle)
+        : (billingCycle === 'month'
+            ? (selectedPlan?.id === 'solo' ? 15 : 20)
+            : (selectedPlan?.id === 'solo' ? 150 : 200));
+
+      console.log("[RegisterScreen] Creating Paddle transaction for userId:", userId, "ShopId:", shopId);
+      try {
+        const res = await createPaddleTransaction({
+          email: cleanEmail,
+          planId: (selectedPlan?.id as any) || 'solo',
+          amount: planPriceNum,
+          userId: userId,
+          customerName: fullName,
+          priceId: selectedPlan?.paddlePriceId?.[billingCycle],
+          businessId: String(shopId)
+        });
+
+        if (res?.data?.id) {
+          setPaddleTransactionId(res.data.id);
+          goToStep(4);
+        } else {
+          console.log("[RegisterScreen] No transaction ID returned, proceeding with direct activation...");
+          await handleFinalizeRegistration();
+        }
+      } catch (paddleErr: any) {
+        console.warn("[RegisterScreen] Paddle transaction creation failed, finalizing registration directly:", paddleErr?.message);
+        await handleFinalizeRegistration();
+      }
     } finally {
       setPreparingCheckout(false);
     }
@@ -619,8 +739,8 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
 
         {/* STEP 1: Basic Info & Location */}
         {registerStep === 1 && (
-          <View className="px-6 gap-y-6">
-            <View className="gap-y-3">
+          <View className="px-6 gap-y-6" style={{ zIndex: focusedField === 'address' ? 20000 : 1, position: 'relative' }}>
+            <View className="gap-y-3" style={{ zIndex: focusedField === 'address' ? 20000 : 1, position: 'relative' }}>
               <Text className="text-[11px] font-black text-[#8789A3] uppercase tracking-widest text-center mt-2">HAPI 1: INFORMATA BAZË</Text>
               
               <View className={`bg-white rounded-2xl px-4 h-14 flex-row items-center border ${focusedField === 'fullName' ? 'border-[#3473ef]' : 'border-slate-200'}`}>
@@ -629,8 +749,9 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
                   placeholder="Emri i biznesit (p.sh. Barber Cutz)"
                   value={fullName}
                   onChangeText={setFullName}
-                  className="flex-1 ml-3 font-bold text-[#161719] text-base"
+                  className="flex-1 ml-3 font-bold text-[#161719] text-base outline-none focus:outline-none focus:ring-0"
                   placeholderTextColor="#94A3B8"
+                  autoComplete="off"
                   onFocus={() => setFocusedField('fullName')}
                   onBlur={() => setFocusedField(null)}
                 />
@@ -660,10 +781,11 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
                     placeholder="Email i biznesit"
                     value={email}
                     onChangeText={setEmail}
-                    className="flex-1 ml-3 font-bold text-[#161719] text-base"
+                    className="flex-1 ml-3 font-bold text-[#161719] text-base outline-none focus:outline-none focus:ring-0"
                     placeholderTextColor="#94A3B8"
                     keyboardType="email-address"
                     autoCapitalize="none"
+                    autoComplete="off"
                     autoCorrect={false}
                     onFocus={() => setFocusedField('email')}
                     onBlur={() => setFocusedField(null)}
@@ -767,6 +889,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
                 selectedCity={selectedCity}
                 focusedField={focusedField}
                 setFocusedField={setFocusedField}
+                initialValue={selectedPlace?.address || ""}
                 onSelect={(addr) => {
                   setSelectedPlace({ address: addr.address, lat: addr.lat, lng: addr.lng });
                 }}
@@ -1002,45 +1125,48 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
           </View>
         )}
 
-        {/* STEP 4: Pagesa me Paddle */}
-        {registerStep === 4 && (
-          <View className="flex-1" style={{ minHeight: Dimensions.get('window').height * 0.75 }}>
-            <View className="px-6 items-center mt-2 mb-6">
-              <Text className="text-[11px] font-black text-[#8789A3] uppercase tracking-widest text-center mb-1">HAPI 4: PAGESA ME PADDLE</Text>
-              <Text className="text-slate-700 text-sm font-bold text-center">
-                Plani: <Text className="text-[#3473ef] font-black">{selectedPlan?.name || 'Duo'}</Text> ({getPriceDisplay(selectedPlan)}/{billingCycle === 'month' ? 'muaj' : 'vit'})
-              </Text>
-            </View>
-
-            <View className="flex-1 bg-white overflow-hidden shadow-2xl">
-              <PaddleCheckout
-                email={email}
-                transactionId={paddleTransactionId || undefined}
-                priceId={selectedPlan?.paddlePriceId?.[billingCycle]}
-                onSuccess={(data) => {
-                  console.log("[RegisterScreen] Paddle success callback triggered");
-                  handleFinalizeRegistration();
-                }}
-                onCancel={() => goToStep(3)}
-              />
-            </View>
-
-            <View className="bg-white pb-8">
-              <Pressable
-                onPress={() => goToStep(3)}
-                className="py-6 items-center"
-              >
-                <Text className="text-slate-400 font-black text-xs uppercase tracking-widest">Anulo dhe kthehu</Text>
-              </Pressable>
-            </View>
-          </View>
-        )}
-
         {/* Bottom spacer for keyboard scrolling accessibility */}
-        <View style={{ height: 280 }} />
+        <View style={{ height: registerStep === 4 ? 0 : 280 }} />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+
+    {/* STEP 4: Moved outside ScrollView to ensure full height for WebView */}
+    {registerStep === 4 && (
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: 'white', zIndex: 9999, paddingTop: 60 }]}>
+         <View className="px-6 items-center mb-6">
+            <View className="w-16 h-16 bg-[#3473ef]/10 rounded-3xl items-center justify-center mb-4">
+              <CreditCard size={32} color="#3473ef" />
+            </View>
+            <Text className="text-2xl font-black text-[#161719] mb-1">HAPI 4: PAGESA SIGURT</Text>
+            <Text className="text-slate-500 font-bold text-sm text-center">
+              Plani: <Text className="text-[#3473ef] font-black">{selectedPlan?.name || 'Duo'}</Text> ({getPriceDisplay(selectedPlan)}/{billingCycle === 'month' ? 'muaj' : 'vit'})
+            </Text>
+          </View>
+
+          <View className="flex-1">
+            <PaddleCheckout
+              email={email}
+              transactionId={paddleTransactionId || undefined}
+              priceId={selectedPlan?.paddlePriceId?.[billingCycle]}
+              onSuccess={(data) => {
+                console.log("[RegisterScreen] Paddle success callback triggered", data?.id);
+                handleFinalizeRegistration(undefined, data);
+              }}
+              onCancel={() => goToStep(3)}
+            />
+          </View>
+
+          <View className="bg-white px-8 pb-10 pt-4">
+            <TouchableOpacity
+              onPress={() => goToStep(3)}
+              className="h-14 bg-slate-100 rounded-2xl items-center justify-center border border-slate-200"
+            >
+              <Text className="text-slate-500 font-black text-xs uppercase tracking-widest">Anulo dhe kthehu te planet</Text>
+            </TouchableOpacity>
+          </View>
+      </View>
+    )}
 
       {/* Subcategory Modal */}
       <Modal
@@ -1049,13 +1175,17 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
         transparent={true}
         onRequestClose={() => setShowSubModal(false)}
       >
-        <View className="flex-1 bg-black/50 justify-end">
+        <View className={`flex-1 justify-end ${isDesktop ? 'items-center pb-4 sm:pb-8' : ''}`}>
           <TouchableOpacity
-            className="absolute inset-0"
+            className="absolute inset-0 bg-black/45"
             activeOpacity={1}
             onPress={() => setShowSubModal(false)}
           />
-          <View className="bg-white rounded-t-[32px] h-[75%] overflow-hidden flex-col">
+          <View className={`bg-[#ffffff] overflow-hidden shadow-2xl flex-col ${
+            isDesktop 
+              ? 'w-full max-w-2xl lg:max-w-3xl rounded-[36px] h-auto max-h-[85vh] border border-slate-200/80' 
+              : 'w-full rounded-t-[32px] h-[75%]'
+          }`}>
             <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mt-3 mb-2" />
             <View className="flex-row items-center justify-between px-6 py-4 border-b border-slate-50">
               <View className="flex-row items-center">

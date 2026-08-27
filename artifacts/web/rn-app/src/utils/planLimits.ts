@@ -92,9 +92,9 @@ export async function getShopPlanDetails(shopId: string | number): Promise<ShopP
         let query = supabase.from('subscriptions').select('*');
         let fetchQuery = query;
         if (shopId) {
-          fetchQuery = fetchQuery.or(`customer_id.eq.${ownerId}${paddleCustomerId ? `,customer_id.eq.${paddleCustomerId}` : ''}`);
+          fetchQuery = fetchQuery.or(`customer_id.eq.${ownerId},user_id.eq.${ownerId}${paddleCustomerId ? `,customer_id.eq.${paddleCustomerId}` : ''}`);
         } else {
-          fetchQuery = fetchQuery.eq('customer_id', ownerId);
+          fetchQuery = fetchQuery.or(`customer_id.eq.${ownerId},user_id.eq.${ownerId}`);
         }
 
         const { data: fallbackSub } = await fetchQuery

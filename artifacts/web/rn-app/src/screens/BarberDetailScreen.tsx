@@ -313,7 +313,7 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
 
         let finalServices: any[] = [];
 
-        // 1. If we have a selected barber, try to get their specific services first
+        // 1. Primary Source: Barber Specific Services (Authoritative for Booking)
         if (selectedEmployee) {
           const barberId = selectedEmployee.user_id || selectedEmployee.id;
           const { data: barberServices } = await supabase
@@ -335,25 +335,44 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
               };
             });
           }
-        }
+        } else {
+          // 2. Secondary Source: Barbershop Global Menu (From Pivot Table)
+          const { data: shopPivot } = await supabase
+            .from('barbershop_services')
+            .select('subcategory_id')
+            .eq('barbershop_id', shop.id);
 
-        // 2. Fallback: Load services from the Shop's subcategories list (Always visible on profile)
-        if (finalServices.length === 0) {
-          const shopSubIds = shop?.subcategories || [];
-          if (Array.isArray(shopSubIds) && shopSubIds.length > 0) {
+          if (shopPivot && shopPivot.length > 0) {
+            const shopSubIds = shopPivot.map(p => String(p.subcategory_id).trim());
             finalServices = shopSubIds.map((scId, idx) => {
-              const sc = subcatMap.get(String(scId).trim());
+              const sc = subcatMap.get(scId);
               const catName = catMap.get(String(sc?.category_id).trim()) || "Shërbime";
-              const price = parseFloat(String(sc?.estimated_price)) || 0;
               return {
-                id: scId || `shop_srv_${idx}`,
+                id: scId,
                 name: sc?.name || "Shërbim",
-                price: price,
+                price: parseFloat(String(sc?.estimated_price)) || 0,
                 duration: `${sc?.duration_minutes || 30} min`,
                 durationMinutes: sc?.duration_minutes || 30,
                 category: catName
               };
             });
+          } else {
+            // 3. Fallback for legacy shops using JSON/Array column
+            const shopSubIds = shop?.subcategories || [];
+            if (Array.isArray(shopSubIds) && shopSubIds.length > 0) {
+              finalServices = shopSubIds.map((scId, idx) => {
+                const sc = subcatMap.get(String(scId).trim());
+                const catName = catMap.get(String(sc?.category_id).trim()) || "Shërbime";
+                return {
+                  id: scId,
+                  name: sc?.name || "Shërbim",
+                  price: parseFloat(String(sc?.estimated_price)) || 0,
+                  duration: `${sc?.duration_minutes || 30} min`,
+                  durationMinutes: sc?.duration_minutes || 30,
+                  category: catName
+                };
+              });
+            }
           }
         }
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, TextInput, Modal, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Keyboard } from 'react-native';
-import { X, User, Mail, Lock, ShieldCheck, Check, Briefcase, Award } from 'lucide-react-native';
+import { X, User, Mail, Lock, ShieldCheck, Check, Briefcase, Award, AlertCircle } from 'lucide-react-native';
 import { supabase } from '@/config/supabase';
 import { createClient } from '@supabase/supabase-js';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
@@ -42,14 +42,45 @@ export const AddStaffModal: React.FC<AddStaffModalProps> = ({
   const [password, setPassword] = useState('');
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [planDetails, setPlanDetails] = useState<ShopPlanDetails | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [checkingEmail, setCheckingEmail] = useState(false);
 
   useEffect(() => {
     if (visible && shopId) {
       getShopPlanDetails(shopId).then(details => {
         setPlanDetails(details);
       });
+      setEmailError(null);
     }
   }, [visible, shopId]);
+
+  const handleEmailChange = async (val: string) => {
+    setEmail(val);
+    const clean = val.toLowerCase().trim();
+    if (!clean || !clean.includes('@') || !clean.includes('.')) {
+      setEmailError(null);
+      return;
+    }
+
+    try {
+      setCheckingEmail(true);
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', clean)
+        .maybeSingle();
+
+      if (existingUser) {
+        setEmailError('Ky email është i regjistruar tashmë me një llogari përdoruesi.');
+      } else {
+        setEmailError(null);
+      }
+    } catch (e) {
+      console.warn('Error checking email:', e);
+    } finally {
+      setCheckingEmail(false);
+    }
+  };
 
   const handleAddStaff = async () => {
     Keyboard.dismiss();
@@ -75,44 +106,63 @@ export const AddStaffModal: React.FC<AddStaffModalProps> = ({
     try {
       const fullName = `${firstName} ${lastName}`;
       const cleanEmail = email.toLowerCase().trim();
-
+      let authId: string | null = null;
       console.log('Attempting to create or resolve Auth account for:', cleanEmail);
-      let authId = null;
+      // 1. Check if user already exists in 'users' table first
+      const { data: dbUserCheck } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', cleanEmail)
+        .maybeSingle();
 
-      // 1. Create user using the admin client (bypasses active session issues)
-      const { data: authData, error: authError } = await adminAuthClient.auth.admin.createUser({
-        email: cleanEmail,
-        password: password,
-        email_confirm: true,
-        user_metadata: {
-          full_name: fullName,
-          role: 'employee'
-        }
-      });
-
-      if (authError) {
-        if (authError.message.includes('already registered') || authError.message.includes('already exists') || authError.message.includes('conflict') || authError.status === 422) {
-          // The user is already in Auth! Let's query listUsers to retrieve their UUID
-          const { data: listData, error: listErr } = await adminAuthClient.auth.admin.listUsers();
-          if (listErr) {
-            throw new Error(`Dështoi listimi i përdoruesve: ${listErr.message}`);
+      if (dbUserCheck?.id) {
+        authId = dbUserCheck.id;
+        console.log('Found existing user in DB:', authId);
+      } else {
+        // Create user using admin client
+        const { data: authData, error: authError } = await adminAuthClient.auth.admin.createUser({
+          email: cleanEmail,
+          password: password,
+          email_confirm: true,
+          user_metadata: {
+            full_name: fullName,
+            role: 'employee'
           }
-          
-          const foundUser = listData?.users?.find(u => u.email?.toLowerCase() === cleanEmail);
-          if (foundUser) {
-            authId = foundUser.id;
-            console.log('Found existing user in Auth list:', authId);
+        });
+
+        if (authError) {
+          console.warn("[AddStaff] Admin Auth create note:", authError.message);
+          // Check if user is in DB
+          const { data: retryUser } = await supabase
+            .from('users')
+            .select('id')
+            .eq('email', cleanEmail)
+            .maybeSingle();
+
+          if (retryUser?.id) {
+            authId = retryUser.id;
           } else {
-            throw new Error(`Gabim gjatë regjistrimit të stafit: ${authError.message}`);
+            // Fallback: public signUp
+            const { data: signUpData } = await supabase.auth.signUp({
+              email: cleanEmail,
+              password: password,
+              options: {
+                data: { full_name: fullName, role: 'employee' }
+              }
+            });
+
+            if (signUpData?.user?.id) {
+              authId = signUpData.user.id;
+            } else {
+              throw new Error("Përdoruesi me këtë email ekziston ose fjalëkalimi është tepër i shkurtër.");
+            }
           }
         } else {
-          throw new Error(`Gabim gjatë krijimit të llogarisë Auth: ${authError.message}`);
+          authId = authData?.user?.id || null;
         }
-      } else {
-        authId = authData.user?.id;
       }
 
-      if (!authId) throw new Error("Dështoi marrja e ID-së nga Supabase Auth.");
+      if (!authId) throw new Error("Dështoi marrja e ID-së së përdoruesit.");
 
       console.log('Auth ID resolved:', authId);
 
@@ -143,7 +193,7 @@ export const AddStaffModal: React.FC<AddStaffModalProps> = ({
           throw new Error(`Gabim gjatë sinkronizimit të përdoruesit: ${userError.message}`);
       }
 
-      console.log('User profile created/updated. Now creating barber profile...');
+      console.log('User profile created/updated. Now creating barber profile for shop:', shopId);
 
       // 3. Create entry in 'barbers' table SECOND (using admin client to guarantee write)
       const { error: barberError } = await adminAuthClient
@@ -157,7 +207,8 @@ export const AddStaffModal: React.FC<AddStaffModalProps> = ({
       if (barberError) {
         console.error('Supabase error adding to barbers:', barberError);
         let customMsg = barberError.message;
-        if (barberError.code === '23503') customMsg = "Salloni ose ID e dyqanit është e pasaktë.";
+        if (barberError.code === '23503') customMsg = "Salloni nuk u gjet. Ju lutem rifilloni aplikacionin.";
+        if (barberError.code === '23505') customMsg = "Ky përdorues është tashmë i regjistruar në sistem.";
         throw new Error(customMsg);
       }
 
@@ -169,7 +220,20 @@ export const AddStaffModal: React.FC<AddStaffModalProps> = ({
       onSuccess();
       onClose();
     } catch (error: any) {
-      Alert.alert('Gabim', error.message || 'Ndodhi një gabim gjatë shtimit të stafit.');
+      console.error('[AddStaff] Catch Block:', error);
+
+      let finalMessage = 'Ndodhi një gabim gjatë shtimit të stafit.';
+
+      if (typeof error === 'string') {
+        finalMessage = error;
+      } else if (error.message) {
+        finalMessage = error.message;
+      } else if (typeof error === 'object') {
+        // If it's a raw Postgres/Supabase object, try to extract the detail
+        finalMessage = error.error_description || error.error || JSON.stringify(error);
+      }
+
+      Alert.alert('Gabim', finalMessage);
     } finally {
       setLoading(false);
     }
@@ -268,20 +332,27 @@ export const AddStaffModal: React.FC<AddStaffModalProps> = ({
               {/* Email */}
               <View>
                 <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Email Profesional</Text>
-                <View className={`bg-slate-50 rounded-2xl px-4 h-14 flex-row items-center border ${focusedField === 'email' ? 'border-[#3473ef] bg-white' : 'border-transparent'}`}>
-                  <Mail size={18} color={focusedField === 'email' ? '#3473ef' : '#94A3B8'} />
+                <View className={`bg-slate-50 rounded-2xl px-4 h-14 flex-row items-center border ${emailError ? 'border-rose-400 bg-rose-50/20' : focusedField === 'email' ? 'border-[#3473ef] bg-white' : 'border-transparent'}`}>
+                  <Mail size={18} color={emailError ? '#EF4444' : focusedField === 'email' ? '#3473ef' : '#94A3B8'} />
                   <TextInput
                     className="flex-1 ml-3 font-bold text-[#161719]"
                     placeholder="email@kompania.com"
                     placeholderTextColor="#CBD5E1"
                     value={email}
-                    onChangeText={setEmail}
+                    onChangeText={handleEmailChange}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     onFocus={() => setFocusedField('email')}
                     onBlur={() => setFocusedField(null)}
                   />
+                  {checkingEmail && <ActivityIndicator size="small" color="#3473ef" />}
                 </View>
+                {emailError && (
+                  <Animated.View entering={FadeIn} className="mt-2 ml-1 flex-row items-center">
+                    <AlertCircle size={14} color="#EF4444" />
+                    <Text className="text-rose-500 font-bold text-xs ml-1.5">{emailError}</Text>
+                  </Animated.View>
+                )}
               </View>
 
               {/* Password */}
@@ -306,9 +377,9 @@ export const AddStaffModal: React.FC<AddStaffModalProps> = ({
 
           <TouchableOpacity
             onPress={handleAddStaff}
-            disabled={loading}
+            disabled={loading || checkingEmail || !!emailError || !firstName || !lastName || !email || !password}
             activeOpacity={0.9}
-            className={`mt-10 h-16 rounded-[24px] items-center justify-center shadow-2xl shadow-blue-200 ${loading ? 'bg-slate-200' : 'bg-[#3473ef]'}`}
+            className={`mt-10 h-16 rounded-[24px] items-center justify-center shadow-2xl ${(loading || checkingEmail || !!emailError || !firstName || !lastName || !email || !password) ? 'bg-slate-300 opacity-60' : 'bg-[#3473ef] shadow-blue-200'}`}
           >
             {loading ? (
               <ActivityIndicator color="white" />

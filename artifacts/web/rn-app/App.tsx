@@ -2,7 +2,90 @@ import React from "react";
 import { StatusBar } from "expo-status-bar";
 import { View, TouchableOpacity, Text, Dimensions, Platform, Modal, Alert } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { Home, Search, Calendar, User, Shield } from "lucide-react-native";
+import { Home, Search, Calendar, User, Shield, MapPin, ChevronDown } from "lucide-react-native";
+import { Image as RNImage } from "react-native";
+import { useWindowDimensions } from "react-native";
+
+const DesktopHeaderBar = ({
+  activeTab,
+  onTabPress,
+  tabs,
+  user,
+  selectedLocation,
+  onOpenLocation,
+  onOpenSearch,
+  onOpenRegisterShop
+}: any) => {
+  return (
+    <View className="sticky top-0 z-30 border-b border-slate-200/70 bg-white/85 backdrop-blur-xl">
+      <View className="mx-auto flex max-w-[1440px] flex-row items-center justify-between gap-6 px-6 py-4 lg:px-10">
+        {/* Brand Logo & Title */}
+        <TouchableOpacity
+          onPress={() => onTabPress(0)}
+          activeOpacity={0.8}
+          className="flex-row items-center gap-2 mr-6 lg:mr-12"
+        >
+          <Image source={require('./assets/logo.png')} className="h-16 w-16 rounded-2xl" resizeMode="contain" />
+        </TouchableOpacity>
+
+        {/* Center Nav Links */}
+        <View className="hidden flex-row items-center gap-2 lg:flex ml-4 lg:ml-8">
+          {tabs.map((tab: any, i: number) => {
+            const isActive = activeTab === i;
+            return (
+              <TouchableOpacity
+                key={i}
+                onPress={() => onTabPress(i)}
+                className={`rounded-full px-4 py-2 transition-colors ${
+                  isActive
+                    ? "bg-slate-100"
+                    : "hover:bg-slate-50"
+                }`}
+              >
+                <Text className={`text-sm ${isActive ? 'font-bold text-slate-900' : 'font-medium text-slate-500'}`}>
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Right Action Controls */}
+        <View className="flex-row items-center gap-3">
+          <TouchableOpacity
+            onPress={onOpenLocation}
+            className="flex-row items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-50"
+          >
+            <MapPin size={16} color="#3473ef" />
+            <Text className="text-sm font-medium text-slate-900">{selectedLocation}</Text>
+            <ChevronDown size={16} color="#64748B" />
+          </TouchableOpacity>
+
+          {(!user || user.role === 'client') && (
+            <TouchableOpacity
+              onPress={onOpenRegisterShop}
+              className="shrink-0 rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              <Text className="text-white font-semibold text-sm">Kyçu</Text>
+            </TouchableOpacity>
+          )}
+
+          {user && (
+            <TouchableOpacity
+              onPress={() => onTabPress(3)}
+              className="flex-row items-center bg-[#3473ef]/10 border border-[#3473ef]/20 px-3.5 py-1.5 rounded-full"
+            >
+              <View className="w-7 h-7 rounded-full bg-[#3473ef] items-center justify-center mr-2">
+                <Text className="text-white font-bold text-xs">{user.name ? user.name.charAt(0).toUpperCase() : 'U'}</Text>
+              </View>
+              <Text className="text-[#3473ef] font-bold text-xs" numberOfLines={1}>{user.name || 'Llogaria'}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    </View>
+  );
+};
 import * as Haptics from 'expo-haptics';
 import { BlurView } from 'expo-blur';
 import Animated, {
@@ -101,6 +184,9 @@ const TabButton = ({ tab, isActive, onPress }: any) => {
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export default function App() {
+  const { width: windowWidth } = useWindowDimensions();
+  const isDesktop = windowWidth >= 768;
+
   const [activeTab, setActiveTab] = React.useState(0);
   const [adminUser, setAdminUser] = React.useState<any>(null);
   // ... rest of state
@@ -147,33 +233,38 @@ export default function App() {
 
   const handleToggleFavorite = async (shop: any) => {
     if (!user) {
-      Alert.alert("Llogaria kërkohet", "Ju lutem kyçuni për të shtuar në të ruajtura.");
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.alert("Llogaria kërkohet: Ju lutem kyçuni për të shtuar në të ruajtura.");
+      } else {
+        Alert.alert("Llogaria kërkohet", "Ju lutem kyçuni për të shtuar në të ruajtura.");
+      }
       return;
     }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch (_) {}
 
-    const isFav = favorites.some(f => f.shop_id === shop.id || f.shop_id === Number(shop.id));
+    const shopId = typeof shop === 'object' ? shop.id : shop;
+    const isFav = favorites.some(f => String(f.shop_id) === String(shopId) || String(f.id) === String(shopId));
     if (isFav) {
-      const updated = favorites.filter(f => f.shop_id !== shop.id && f.shop_id !== Number(shop.id));
+      const updated = favorites.filter(f => String(f.shop_id) !== String(shopId) && String(f.id) !== String(shopId));
       setFavorites(updated);
       try {
         await supabase
           .from('favorites')
           .delete()
           .eq('user_id', user.id)
-          .eq('shop_id', shop.id);
+          .eq('shop_id', shopId);
       } catch (err) {
         console.warn("Failed to remove favorite in database:", err);
       }
     } else {
-      const newFav = { user_id: user.id, shop_id: shop.id };
+      const newFav = { user_id: user.id, shop_id: shopId };
       setFavorites([...favorites, newFav]);
       try {
         await supabase
           .from('favorites')
           .insert({
             user_id: user.id,
-            shop_id: shop.id
+            shop_id: shopId
           });
       } catch (err) {
         console.warn("Failed to insert favorite in database:", err);
@@ -241,18 +332,30 @@ export default function App() {
       // The app will now simply fall back to default user data if no specific profile is found in DB.
       console.log("[App.tsx] Checking profile for:", cleanEmail, { isRegistering, hasDbUser: !!dbUser.data });
 
-      // Fetch latest subscription
+      const parentShop = dbBarberShop.data || barberProfile.data?.barbershops;
+      const shopId = parentShop?.id;
+
+      // Fetch latest subscription - check user_id, customer_id, and shopId
+      let queryFilter = `user_id.eq.${userId},customer_id.eq.${userId},business_id.eq.${userId}`;
+      if (shopId) queryFilter += `,business_id.eq.${shopId}`;
+
       const { data: subscription } = await supabase
         .from('subscriptions')
         .select('*')
-        .eq('customer_id', userId)
-        .order('created_at', { ascending: false })
+        .or(queryFilter)
+        .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      const isExpired = subscription?.current_period_end && new Date(subscription.current_period_end) < new Date();
-      const subActive = (subscription?.status === 'active' || subscription?.status === 'trialing') && !isExpired;
-      const parentShop = dbBarberShop || barberProfile?.barbershops;
+      const now = new Date();
+      const expiryDate = subscription?.current_period_end ? new Date(subscription.current_period_end) : null;
+      const isExpired = expiryDate ? expiryDate < now : false;
+
+      const subActive = subscription
+        ? (['active', 'trialing', 'past_due', 'paused'].includes(subscription.status) ||
+           (subscription.cancel_at_period_end && !isExpired) ||
+           (subscription.status === 'canceled' && !isExpired))
+        : false;
 
       // --- LOCKOUT LOGIC ---
 
@@ -277,26 +380,29 @@ export default function App() {
 
       if (dbUser.data) {
         setUser({
-          id: dbUser.data.id,
+          id: sessionUser.id, // Always use Auth UUID
           name: dbUser.data.name || dbUser.data.full_name || email.split('@')[0],
           email: dbUser.data.email,
           role: dbUser.data.role || 'client',
-          needsPayment: isOwner && !subActive // Owner with no sub
+          shopId: parentShop?.id || null, // Provide shop context
+          needsPayment: isOwner && !subActive
         });
       } else if (dbBarberShop.data) {
         setUser({
-          id: dbBarberShop.data.id,
+          id: sessionUser.id,
           name: dbBarberShop.data.name,
           email: dbBarberShop.data.email,
           role: 'owner',
+          shopId: dbBarberShop.data.id,
           needsPayment: !subActive
         });
       } else {
         setUser({
           id: sessionUser.id,
-          name: sessionUser.user_metadata?.full_name || email.split('@')[0],
+          name: dbUser.data?.name || sessionUser.user_metadata?.full_name || email.split('@')[0],
           email: email,
-          role: sessionUser.user_metadata?.role || 'client'
+          role: dbUser.data?.role || (isBarber ? 'barber' : (sessionUser.user_metadata?.role || 'client')),
+          shopId: parentShop?.id || null
         });
       }
     } catch (err) {
@@ -392,8 +498,22 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <View className="flex-1 bg-[#ECEEF2]">
+        <View className="flex-1 bg-[#f8fafc]">
           <StatusBar style="dark" />
+
+          {/* Desktop Web Navigation Bar (Non-Home tabs or mobile) */}
+          {isDesktop && activeTab !== 0 && (
+            <DesktopHeaderBar
+              activeTab={activeTab}
+              onTabPress={onTabPress}
+              tabs={tabs}
+              user={user}
+              selectedLocation={selectedLocation}
+              onOpenLocation={() => setShowLocation(true)}
+              onOpenSearch={() => setShowSearch(true)}
+              onOpenRegisterShop={() => setShowRegisterShop(true)}
+            />
+          )}
 
           {/* Conditional Rendering: Standard App Structure for all roles */}
           <>
@@ -407,7 +527,7 @@ export default function App() {
                 onToggleFavorite={handleToggleFavorite}
               />
             ) : (
-              <View className="flex-1">
+              <View className={`flex-1 ${isDesktop ? 'w-full' : ''}`}>
                 {activeTab === 0 && (
                   <HomeScreen
                     onSelectShop={(shop) => setSelectedShop(shop)}
@@ -505,13 +625,17 @@ export default function App() {
                 transparent={true}
                 onRequestClose={() => setShowLocation(false)}
               >
-                <View className="flex-1 justify-end">
+                <View className={`flex-1 justify-end ${isDesktop ? 'items-center pb-4 sm:pb-8' : ''}`}>
                   <TouchableOpacity
-                    className="absolute inset-0 bg-black/40"
+                    className="absolute inset-0 bg-black/45 z-0"
                     activeOpacity={1}
                     onPress={() => setShowLocation(false)}
                   />
-                  <View className="h-[88%] bg-white rounded-t-[40px] overflow-hidden">
+                  <View className={`bg-white overflow-hidden shadow-2xl z-10 ${
+                    isDesktop 
+                      ? 'w-full max-w-2xl lg:max-w-3xl rounded-[36px] h-[85vh] border border-slate-200/80' 
+                      : 'w-full rounded-t-[40px] h-[88vh]'
+                  }`}>
                     <LocationScreen
                       onBack={() => setShowLocation(false)}
                       onSelectLocation={(loc) => {
@@ -531,13 +655,17 @@ export default function App() {
                 transparent={true}
                 onRequestClose={() => setShowSearch(false)}
               >
-                <View className="flex-1 justify-end">
+                <View className={`flex-1 justify-end ${isDesktop ? 'items-center pb-4 sm:pb-8' : ''}`}>
                   <TouchableOpacity
-                    className="absolute inset-0 bg-black/40"
+                    className="absolute inset-0 bg-black/45 z-0"
                     activeOpacity={1}
                     onPress={() => setShowSearch(false)}
                   />
-                  <View className="h-[88%] bg-white rounded-t-[40px] overflow-hidden">
+                  <View className={`bg-white overflow-hidden shadow-2xl z-10 ${
+                    isDesktop 
+                      ? 'w-full max-w-2xl lg:max-w-3xl rounded-[36px] h-[85vh] border border-slate-200/80' 
+                      : 'w-full rounded-t-[40px] h-[88vh]'
+                  }`}>
                     <SearchScreen
                       onClose={() => setShowSearch(false)}
                       onSearch={handleSearch}
@@ -564,16 +692,20 @@ export default function App() {
                   setSelectedPlanId(undefined);
                 }}
               >
-                <View className="flex-1 justify-end">
+                <View className={`flex-1 justify-end ${isDesktop ? 'items-center pb-4 sm:pb-8' : ''}`}>
                   <TouchableOpacity
-                    className="absolute inset-0 bg-black/40"
+                    className="absolute inset-0 bg-black/45"
                     activeOpacity={1}
                     onPress={() => {
                       setShowRegisterShop(false);
                       setSelectedPlanId(undefined);
                     }}
                   />
-                  <View className="h-[95%] bg-white rounded-t-[40px] overflow-hidden">
+                  <View className={`bg-white overflow-hidden shadow-2xl ${
+                    isDesktop 
+                      ? 'w-full max-w-2xl lg:max-w-3xl rounded-[36px] h-auto max-h-[88vh] border border-slate-200/80' 
+                      : 'w-full rounded-t-[40px] h-auto max-h-[92vh]'
+                  }`}>
                     <RegisterScreen
                       initialPlanId={selectedPlanId}
                       setIsRegistering={setIsRegistering}
@@ -598,13 +730,17 @@ export default function App() {
                 transparent={true}
                 onRequestClose={() => setShowAddAd(false)}
               >
-                <View className="flex-1 justify-end">
+                <View className={`flex-1 justify-end ${isDesktop ? 'items-center pb-4 sm:pb-8' : ''}`}>
                   <TouchableOpacity
-                    className="absolute inset-0 bg-black/40"
+                    className="absolute inset-0 bg-black/45"
                     activeOpacity={1}
                     onPress={() => setShowAddAd(false)}
                   />
-                  <View className="h-[88%] bg-white rounded-t-[40px] overflow-hidden">
+                  <View className={`bg-white overflow-hidden shadow-2xl ${
+                    isDesktop 
+                      ? 'w-full max-w-2xl lg:max-w-3xl rounded-[36px] h-auto max-h-[85vh] border border-slate-200/80' 
+                      : 'w-full rounded-t-[40px] h-auto max-h-[88vh]'
+                  }`}>
                     <AddAdModal
                       onClose={() => setShowAddAd(false)}
                       onSuccess={() => {
@@ -616,8 +752,8 @@ export default function App() {
                 </View>
               </Modal>
 
-              {/* ── MODERN ANIMATED BOTTOM BAR ────────────────────── */}
-              {!selectedShop && (
+              {/* ── MODERN ANIMATED BOTTOM BAR (MOBILE ONLY) ────────────────────── */}
+              {!selectedShop && !isDesktop && (
                 <View className="absolute bottom-10 left-6 right-6" style={{ zIndex: 100 }}>
                   <View
                     className="h-[64px] rounded-[32px] overflow-hidden shadow-2xl shadow-black/10 border border-white/60"

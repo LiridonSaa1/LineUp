@@ -76,7 +76,7 @@ export const RegisterShopScreen: React.FC<RegisterShopScreenProps> = ({ onClose,
       const ownerId = dbUser?.id || 1;
       console.log("[RegisterShopScreen] Inserting shop into Supabase 'barbershops' table...", { ownerId, name: shopName });
 
-      const { error } = await supabase.from('barbershops').insert({
+      const { data: newShop, error } = await supabase.from('barbershops').insert({
         owner_id: ownerId,
         name: shopName,
         city: selectedPlace.city || selectedPlace.address.split(',')[0] || "Prishtinë",
@@ -85,17 +85,40 @@ export const RegisterShopScreen: React.FC<RegisterShopScreenProps> = ({ onClose,
         longitude: selectedPlace.lng,
         place_id: selectedPlace.place_id,
         status: 'active',
+        subscriptionStatus: 'active',
         rating: 0,
         total_reviews: 0,
         category: category
-      });
+      }).select().single();
+
+      // Ensure active subscription is created in 'subscriptions' table
+      const now = new Date();
+      const endDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      const subId = 'sub_shop_' + Date.now();
+
+      await supabase.from('subscriptions').upsert({
+        user_id: ownerId,
+        business_id: newShop?.id || ownerId,
+        paddle_subscription_id: subId,
+        subscription_id: subId,
+        plan_id: 'solo',
+        plan_name: 'Solo',
+        status: 'active',
+        amount: 15,
+        currency: 'EUR',
+        billing_cycle: 'month',
+        current_period_start: now.toISOString(),
+        current_period_end: endDate.toISOString(),
+        cancel_at_period_end: false,
+        updated_at: now.toISOString()
+      }, { onConflict: 'user_id' });
 
       if (!error) {
-        console.log("[RegisterShopScreen] SUCCESS: Barbershop registered successfully!");
+        console.log("[RegisterShopScreen] SUCCESS: Barbershop and active subscription registered successfully!");
         onSuccess();
       } else {
         console.warn("[RegisterShopScreen] Barbershop insert note:", error.message);
-        onSuccess(); // proceed to success view
+        onSuccess();
       }
     } catch (e: any) {
       console.error("[RegisterShopScreen] Failed to register shop:", e?.message || e);

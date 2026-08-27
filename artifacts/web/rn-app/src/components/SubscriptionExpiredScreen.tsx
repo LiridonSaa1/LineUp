@@ -19,11 +19,13 @@ export const SubscriptionExpiredScreen: React.FC<SubscriptionExpiredScreenProps>
   onRenew,
   onLogout
 }) => {
-  const formattedDate = new Date(expiryDate).toLocaleDateString('sq-AL', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  });
+  const formattedDate = expiryDate && !isNaN(new Date(expiryDate).getTime())
+    ? new Date(expiryDate).toLocaleDateString('sq-AL', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      })
+    : 'së fundmi';
 
   return (
     <View className="flex-1 bg-[#F8FAFC] items-center justify-center px-8">

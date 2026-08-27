@@ -8,10 +8,12 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
+import { useFavorites } from "@/hooks/useFavorites";
+
 export default function MobileBarberProfile({ params }: { params: { id: string } }) {
   const [, setLocation] = useLocation();
   const barberId = parseInt(params.id);
-  const [favorite, setFavorite] = useState(false);
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   const { data: barber, isLoading } = useQuery({
     queryKey: ["barber-detail", barberId],
@@ -69,10 +71,10 @@ export default function MobileBarberProfile({ params }: { params: { id: string }
 
           <div className="flex gap-2">
             <button
-              onClick={() => setFavorite(!favorite)}
+              onClick={(e) => toggleFavorite(barber?.shop || barberId, e)}
               className="w-10 h-10 rounded-full bg-[#0B0D13]/60 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-95 transition-all"
             >
-              <Heart className={`w-5 h-5 ${favorite ? "fill-rose-500 text-rose-500" : ""}`} />
+              <Heart className={`w-5 h-5 ${isFavorite(barber?.shop?.id || barberId) ? "fill-rose-500 text-rose-500" : ""}`} />
             </button>
           </div>
         </div>

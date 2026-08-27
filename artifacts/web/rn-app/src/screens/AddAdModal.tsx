@@ -64,7 +64,7 @@ export const AddAdModal: React.FC<AddAdModalProps> = ({ onClose, onSuccess }) =>
   const [selectedCity, setSelectedCity] = useState("Prishtinë");
   const [citySearch, setCitySearch] = useState("");
   const [showCityPicker, setShowCityPicker] = useState(false);
-  const [selectedPlace, setSelectedPlace] = useState<{ address: string; lat: number; lng: number } | null>(null);
+  const [selectedPlace, setSelectedPlace] = useState<{ address: string; lat: number; lng: number; place_id?: string } | null>(null);
   const [selectedPlan, setSelectedPlan] = useState(PLANS[1]);
   const [adImage, setAdImage] = useState<string | null>(null);
 

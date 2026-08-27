@@ -45,20 +45,26 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [isSelected, setIsSelected] = useState<boolean>(false);
   const [selectedItem, setSelectedItem] = useState<PlaceDetails | null>(null);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const prevCityRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
-    setQuery(initialValue || "");
+    if (initialValue && initialValue !== query) {
+      setQuery(initialValue);
+      setIsSelected(true);
+    }
   }, [initialValue]);
 
-  // Sync with selectedCity: Clear address when city changes
+  // Sync with selectedCity: Clear address ONLY when city actually changes from a previous value
   useEffect(() => {
-    setQuery("");
-    setSuggestions([]);
-    setIsSelected(false);
-    setSelectedItem(null);
-    setIsOpen(false);
-    onSelectAddress(null);
+    if (prevCityRef.current !== undefined && prevCityRef.current !== selectedCity) {
+      setQuery("");
+      setSuggestions([]);
+      setIsSelected(false);
+      setSelectedItem(null);
+      setIsOpen(false);
+      onSelectAddress(null);
+    }
+    prevCityRef.current = selectedCity;
   }, [selectedCity]);
 
   const handleTextChange = (text: string) => {
@@ -226,8 +232,8 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
 
       {isOpen && suggestions.length > 0 && (
         <View
-          className="absolute top-[60] left-0 right-0 bg-white rounded-3xl border border-slate-200 p-2 shadow-2xl overflow-hidden"
-          style={{ zIndex: 10000, elevation: 20 }}
+          className="absolute top-16 left-0 right-0 bg-white rounded-3xl border border-slate-200 p-2 shadow-2xl overflow-hidden"
+          style={{ zIndex: 99999, elevation: 9999 }}
         >
           {suggestions.map((item, index) => (
             <TouchableOpacity

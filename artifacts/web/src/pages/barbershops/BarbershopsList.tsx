@@ -9,9 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { KOSOVO_CITIES } from "@/lib/kosovo-cities";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useFavorites } from "@/hooks/useFavorites";
 import {
   ArrowRight,
   Clock,
+  Heart,
   MapPin,
   Navigation,
   Package,
@@ -128,6 +130,7 @@ export default function BarbershopsList() {
   const [search, setSearch] = useState(initialSearch);
   const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
   const [selectedBarberId, setSelectedBarberId] = useState<number | null>(null);
+  const { isFavorite, toggleFavorite, AuthModal } = useFavorites();
 
   const { data: barbers = [], isLoading } = useQuery({
     queryKey: ["public-barbers"],
@@ -361,9 +364,19 @@ export default function BarbershopsList() {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-start justify-between gap-2">
                             <h3 className="truncate text-sm font-extrabold leading-tight">{shop.name}</h3>
-                            <div className="flex shrink-0 items-center gap-0.5 text-xs font-extrabold text-primary">
-                              <Star className="h-3 w-3 fill-primary" />
-                              {shop.rating != null ? Number(shop.rating).toFixed(1) : "New"}
+                            <div className="flex shrink-0 items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={(e) => toggleFavorite(shop, e)}
+                                className="p-1 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-rose-500"
+                                title="Ruaj në të ruajtura"
+                              >
+                                <Heart className={`h-4 w-4 ${isFavorite(shop.id) ? "fill-rose-500 text-rose-500" : ""}`} />
+                              </button>
+                              <div className="flex items-center gap-0.5 text-xs font-extrabold text-primary">
+                                <Star className="h-3 w-3 fill-primary" />
+                                {shop.rating != null ? Number(shop.rating).toFixed(1) : "New"}
+                              </div>
                             </div>
                           </div>
                           <p className="mt-1 flex items-center gap-1 truncate text-xs text-muted-foreground">

@@ -10,7 +10,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { withTiming } from 'react-native-reanimated';
 import { AddressAutocomplete } from '../components/AddressAutocomplete';
-import { supabase } from '@/config/supabase';
+import { supabase } from '../config/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 const USER_ID = 'demo_user_123'; // Placeholder until Auth is implemented
@@ -105,30 +106,50 @@ export const LocationScreen: React.FC<LocationScreenProps> = ({ onBack, onSelect
   const fetchData = async () => {
     setLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const currentUserId = session?.user?.id || USER_ID;
+
+      // 1. Fetch from user_locations table
       const { data: locData } = await supabase
         .from('user_locations')
         .select('home_address, work_address')
-        .eq('user_id', USER_ID)
+        .eq('user_id', currentUserId)
         .maybeSingle();
 
       if (locData) {
-        setHomeAddress(locData.home_address);
-        setWorkAddress(locData.work_address);
+        if (locData.home_address) setHomeAddress(locData.home_address);
+        if (locData.work_address) setWorkAddress(locData.work_address);
+      } else if (session?.user?.user_metadata) {
+        const meta = session.user.user_metadata;
+        if (meta.home_address) setHomeAddress(meta.home_address);
+        if (meta.work_address) setWorkAddress(meta.work_address);
       }
 
+      // Sync offline/local fallback
+      const localHome = await AsyncStorage.getItem('lineup_home_address');
+      const localWork = await AsyncStorage.getItem('lineup_work_address');
+      if (localHome && !homeAddress) setHomeAddress(localHome);
+      if (localWork && !workAddress) setWorkAddress(localWork);
+
+      // 2. Fetch recent searches
       const { data: recentData } = await supabase
         .from('recent_searches')
         .select('location_name')
-        .eq('user_id', USER_ID)
+        .eq('user_id', currentUserId)
         .order('created_at', { ascending: false })
         .limit(20);
 
-      if (recentData) {
+      if (recentData && recentData.length > 0) {
         const uniqueRecents = [...new Set(recentData.map(r => r.location_name))].slice(0, 5);
         setRecents(uniqueRecents);
+      } else {
+        const localRecentsJson = await AsyncStorage.getItem('lineup_recent_searches');
+        if (localRecentsJson) {
+          setRecents(JSON.parse(localRecentsJson));
+        }
       }
     } catch (e) {
-      console.error("Failed to fetch location data:", e);
+      console.warn("Location data fetch:", e);
     } finally {
       setLoading(false);
     }
@@ -137,20 +158,32 @@ export const LocationScreen: React.FC<LocationScreenProps> = ({ onBack, onSelect
   const handleSelect = async (city: string) => {
     const updatedRecents = [city, ...recents.filter(r => r !== city)].slice(0, 5);
     setRecents(updatedRecents);
+    await AsyncStorage.setItem('lineup_recent_searches', JSON.stringify(updatedRecents));
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const currentUserId = session?.user?.id || USER_ID;
+
+      // Delete existing and insert fresh recent search in Supabase
       await supabase
         .from('recent_searches')
         .delete()
-        .eq('user_id', USER_ID)
+        .eq('user_id', currentUserId)
         .eq('location_name', city);
 
       await supabase.from('recent_searches').insert({
-        user_id: USER_ID,
+        user_id: currentUserId,
         location_name: city
       });
+
+      // Update user_metadata in Supabase Auth
+      if (session?.user) {
+        await supabase.auth.updateUser({
+          data: { selected_location: city }
+        });
+      }
     } catch (e) {
-      console.error("Error saving recent search:", e);
+      console.warn("Error saving recent search to Supabase:", e);
     }
 
     onSelectLocation(city);
@@ -160,37 +193,59 @@ export const LocationScreen: React.FC<LocationScreenProps> = ({ onBack, onSelect
     if (!selectedPlace) return;
 
     try {
-      const updateData: any = addressType === 'home'
-        ? { home_address: selectedPlace.address, user_id: USER_ID }
-        : { work_address: selectedPlace.address, user_id: USER_ID };
+      const { data: { session } } = await supabase.auth.getSession();
+      const currentUserId = session?.user?.id || USER_ID;
 
-      const { error } = await supabase
+      const updateField = addressType === 'home' ? 'home_address' : 'work_address';
+      const addressVal = selectedPlace.address;
+
+      if (addressType === 'home') setHomeAddress(addressVal);
+      else if (addressType === 'work') setWorkAddress(addressVal);
+
+      // Save locally
+      await AsyncStorage.setItem(`lineup_${updateField}`, addressVal);
+
+      // Upsert to user_locations in Supabase
+      const updateData: any = {
+        user_id: currentUserId,
+        [updateField]: addressVal,
+        updated_at: new Date().toISOString()
+      };
+
+      const { error: upsertErr } = await supabase
         .from('user_locations')
         .upsert(updateData, { onConflict: 'user_id' });
 
-      if (!error) {
-        if (addressType === 'home') setHomeAddress(selectedPlace.address);
-        else if (addressType === 'work') setWorkAddress(selectedPlace.address);
-        setShowAddAddress(false);
-        setSelectedPlace(null);
+      if (upsertErr) {
+        // Fallback: save to user_metadata in Supabase Auth
+        if (session?.user) {
+          await supabase.auth.updateUser({
+            data: { [updateField]: addressVal }
+          });
+        }
       }
+
+      setShowAddAddress(false);
+      setSelectedPlace(null);
     } catch (e) {
-      console.error(`Error saving ${addressType} address:`, e);
+      console.error(`Error saving ${addressType} address to Supabase:`, e);
     }
   };
 
   const handleClearRecents = async () => {
     try {
-      const { error } = await supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      const currentUserId = session?.user?.id || USER_ID;
+
+      await AsyncStorage.removeItem('lineup_recent_searches');
+      setRecents([]);
+
+      await supabase
         .from('recent_searches')
         .delete()
-        .eq('user_id', USER_ID);
-
-      if (!error) {
-        setRecents([]);
-      }
+        .eq('user_id', currentUserId);
     } catch (e) {
-      console.error("Error clearing recents:", e);
+      console.warn("Error clearing recents in Supabase:", e);
     }
   };
 

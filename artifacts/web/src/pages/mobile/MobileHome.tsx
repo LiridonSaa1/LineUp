@@ -82,7 +82,11 @@ export default function MobileHome() {
   };
 
   return (
-    <div className="px-4 py-4 space-y-6">
+    <div className="px-4 py-4 space-y-6 bg-[#f8fafc] min-h-screen relative overflow-hidden">
+      {/* Decorative Blobs (rn-app background style) */}
+      <div className="absolute top-[-50px] left-[-50px] w-64 h-64 bg-[#3473ef]/15 rounded-full blur-3xl pointer-events-none z-0" />
+      <div className="absolute top-[200px] right-[-100px] w-80 h-80 bg-[#f47458]/15 rounded-full blur-3xl pointer-events-none z-0" />
+
       {/* ── City Only Selection Hero Card ── */}
       <div className="relative rounded-3xl bg-white border border-slate-200/80 p-4 shadow-sm overflow-hidden space-y-3">
         <div className="absolute -top-12 -right-12 w-36 h-36 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />

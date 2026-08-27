@@ -14,18 +14,23 @@ serve(async (req) => {
   }
 
   try {
-    const { email, planId, amount, userId, customerName, priceId } = await req.json()
+    const { email, planId, amount, userId, customerName, priceId, businessId } = await req.json()
 
-    console.log(`[Paddle] Received request:`, { email, planId, userId, priceId })
+    console.log(`[Paddle] Received request:`, { email, planId, userId, priceId, businessId })
 
     if (!email || !userId) {
       console.error('[Paddle] Missing required fields:', { email, userId })
       throw new Error('Email and User ID are required')
     }
 
+    if (!priceId) {
+      console.error('[Paddle] Missing priceId for plan:', planId)
+      throw new Error(`Missing price configuration for plan: ${planId}`)
+    }
+
     if (!PADDLE_API_KEY) {
       console.error('[Paddle] PADDLE_API_KEY is not set in environment variables')
-      throw new Error('Paddle API configuration error')
+      throw new Error('Paddle API configuration error: API Key missing')
     }
 
     const baseUrl = PADDLE_ENV === 'sandbox' ? 'https://sandbox-api.paddle.com' : 'https://api.paddle.com'
@@ -42,6 +47,7 @@ serve(async (req) => {
       customer_email: email,
       custom_data: {
         user_id: userId,
+        business_id: businessId ? String(businessId) : '',
         plan_id: planId,
         source: 'Mobile App'
       }
@@ -62,7 +68,9 @@ serve(async (req) => {
 
     if (!response.ok) {
       console.error('[Paddle API Error Details]:', JSON.stringify(data, null, 2))
-      throw new Error(data.error?.detail || `Paddle API error: ${response.status} ${response.statusText}`)
+      // Extract specific detail if available
+      const detail = data.error?.detail || data.error?.message || `Paddle API error: ${response.status} ${response.statusText}`;
+      throw new Error(detail)
     }
 
     console.log(`[Paddle] Transaction created successfully: ${data.data?.id}`)
@@ -73,6 +81,7 @@ serve(async (req) => {
     })
 
   } catch (error) {
+    console.error('[Paddle Function Catch]:', error.message)
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,

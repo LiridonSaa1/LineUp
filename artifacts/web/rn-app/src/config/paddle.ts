@@ -1,8 +1,8 @@
-import { supabase } from "./supabase";
+import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabase";
 
 // Configuration for Paddle Billing (v2)
 export const PADDLE_CONFIG = {
-  CLIENT_TOKEN: process.env.EXPO_PUBLIC_PADDLE_CLIENT_TOKEN || '',
+  CLIENT_TOKEN: process.env.EXPO_PUBLIC_PADDLE_CLIENT_TOKEN || 'test_1d2d981b0be56b45f26cb550561',
   ENVIRONMENT: (process.env.EXPO_PUBLIC_PADDLE_ENV as 'sandbox' | 'live') || 'sandbox',
   PRICES: {
     solo: 'pri_01ky8dvrqajpvkqtcde7ge9fgb',
@@ -18,36 +18,50 @@ export const PADDLE_CONFIG = {
 
 export interface CreateTransactionParams {
   email: string;
-  planId: 'solo' | 'duo' | 'team';
+  planId: string;
   amount: number;
   userId: string;
   customerName?: string;
+  priceId?: string; // Optional override
+  businessId?: string;
 }
 
 /**
- * Creates a transaction via Supabase Edge Function to keep API Key secure
+ * Creates a transaction via Supabase Edge Function
+ * Using raw fetch to ensure we can capture the actual error body from Paddle/Server
  */
-export async function createPaddleTransaction({ email, planId, amount, userId, customerName }: CreateTransactionParams) {
+export async function createPaddleTransaction({ email, planId, amount, userId, customerName, priceId }: CreateTransactionParams) {
   console.log(`[Paddle] Requesting transaction for ${email} (${planId})...`);
 
   try {
-    const { data, error } = await supabase.functions.invoke('create-paddle-transaction', {
-      body: {
+    // Use provided priceId or fallback to config
+    const finalPriceId = priceId || PADDLE_CONFIG.PRICES[planId as keyof typeof PADDLE_CONFIG.PRICES];
+
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/create-paddle-transaction`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({
         email,
         planId,
         amount,
         userId,
         customerName,
-        priceId: PADDLE_CONFIG.PRICES[planId]
-      }
+        priceId: finalPriceId
+      })
     });
 
-    if (error) {
-      console.error('[Paddle] Edge Function Error:', error);
-      throw new Error(error.message || 'Gabim gjatë krijimit të transaksionit');
+    const result = await response.json();
+
+    if (!response.ok) {
+      console.error('[Paddle] Edge Function Failed:', result);
+      // result.error is set by our Edge Function's catch block
+      throw new Error(result.error || result.message || `Server error: ${response.status}`);
     }
 
-    return data;
+    return result;
   } catch (error: any) {
     console.error('[Paddle] Request failed:', error.message);
     throw error;
@@ -55,29 +69,17 @@ export async function createPaddleTransaction({ email, planId, amount, userId, c
 }
 
 /**
- * Fetches completed transactions from Paddle API
+ * Placeholder for list transactions if needed on frontend
  */
 export async function listPaddleTransactions() {
-  const isSandbox = PADDLE_CONFIG.ENVIRONMENT === 'sandbox';
-  const baseUrl = isSandbox ? 'https://sandbox-api.paddle.com' : 'https://api.paddle.com';
+  return [];
+}
 
-  try {
-    const response = await fetch(`${baseUrl}/transactions?status=completed&per_page=50`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${PADDLE_CONFIG.API_KEY}`,
-      }
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error?.detail || 'Gabim gjatë marrjes së transaksioneve');
-    }
-
-    return data.data as PaddleTransaction[];
-  } catch (error: any) {
-    console.error('[Paddle] Failed to fetch transactions:', error.message);
-    return [];
-  }
+export interface PaddleTransaction {
+  id: string;
+  status: string;
+  customer_id: string;
+  address_id: string;
+  business_id: string | null;
+  custom_data: any;
 }

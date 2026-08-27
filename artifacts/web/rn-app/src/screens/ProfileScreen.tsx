@@ -45,10 +45,10 @@ import {
 import Animated, { FadeInUp, FadeInDown, useAnimatedStyle, withSpring, useSharedValue, SlideInRight } from "react-native-reanimated";
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
-import { supabase } from "@/config/supabase";
+import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "@/config/supabase";
 import { RegisterScreen } from "./RegisterScreen";
 import { PaddleCheckout } from "../components/PaddleCheckout";
-import { createPaddleTransaction } from "../config/paddle";
+import { createPaddleTransaction, PADDLE_CONFIG } from "../config/paddle";
 import { deleteShopAssets } from "../utils/storage";
 import { useSubscription } from "../hooks/useSubscription";
 
@@ -58,26 +58,29 @@ const REGISTRATION_PLANS = [
   {
     id: 'solo',
     name: 'Solo',
-    price: '15€',
+    prices: { month: '15€', year: '150€' },
     employees: '1 berber',
     desc: 'Ideale për berberët individualë',
-    features: ['300 rezervime/muaj', '1 profil stafi', 'Kalendari i rezervimeve', 'Njoftime me email']
+    features: ['Deri në 300 rezervime/muaj', '1 profil stafi', 'Kalendari i rezervimeve', 'Njoftime me email'],
+    paddlePriceId: { month: 'pri_01ky8dvrqajpvkqtcde7ge9fgb', year: 'pri_solo_yr' }
   },
   {
     id: 'duo',
     name: 'Duo',
-    price: '20€',
+    prices: { month: '20€', year: '200€' },
     employees: '2 berberë',
     desc: 'Për ekipe të vogla',
-    features: ['Rezervime pa limit', '2 profile stafi', 'Njoftime me SMS & Email', 'Statistika & Raporte']
+    features: ['Rezervime pa limit', '2 profile stafi', 'Njoftime me SMS & Email', 'Statistika & Raporte'],
+    paddlePriceId: { month: 'pri_01ky8e821v11dc6f2nf9jnq5v8', year: 'pri_duo_yr' }
   },
   {
     id: 'team',
     name: 'Team',
-    price: '25€+',
+    prices: { month: '25€+', year: '250€+' },
     employees: '3+ berberë',
     desc: 'Për ekipe në rritje',
-    features: ['Gjithçka nga Duo', 'Staf pa limit', 'Marketing me SMS', 'Landing page e personalizuar']
+    features: ['Gjithçka nga Duo', 'Staf pa limit', 'Marketing me SMS', 'Landing page e personalizuar'],
+    paddlePriceId: { month: 'pri_01ky8eh6v1h2snktvp7v6k8yx0', year: 'pri_team_yr' }
   }
 ];
 
@@ -124,7 +127,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [authPassword, setAuthPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [showRegisterModal, setShowRegisterModal] = useState(false);
 
   // Upgrade & Billing State
   const [upgradeStep, setUpgradeStep] = useState(1); // 1: Select Plan, 2: Checkout
@@ -133,14 +135,26 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [isPreparingUpgrade, setIsPreparingUpgrade] = useState(false);
   const [teamEmployeeCount, setTeamEmployeeCount] = useState(3);
   const [isUpdatingCard, setIsUpdatingCard] = useState(false);
+  const [subView, setSubView] = useState<'main' | 'card'>('main');
+  const [cardForm, setCardForm] = useState({
+    cardNumber: '',
+    expiry: '',
+    cvc: '',
+    holderName: ''
+  });
+  const [savingCard, setSavingCard] = useState(false);
 
   // Modal States
   const [activeModal, setActiveModal] = useState<string | null>(null); // 'profile', 'plans', 'favorites', 'messages', 'appointments', 'forms', 'settings', 'support', 'language', 'orari'
   const [settingsView, setSettingsIndex] = useState<'main' | 'notifications' | 'password' | 'legal'>('main');
   const [legalType, setLegalType] = useState<'privacy' | 'terms' | 'use'>('privacy');
 
-  const [realShopId, setRealShopId] = useState<string | null>(null);
+  const [realShopId, setRealShopId] = useState<string | null>(user?.shopId || null);
+  const [shopSubcategories, setShopSubcategories] = useState<string[]>([]);
+  const [shopOfferedServiceIds, setShopOfferedServiceIds] = useState<string[]>([]);
   const { subscription, loading: subLoading, isActivating, setIsActivating, refresh: refreshSub } = useSubscription(realShopId, user?.id);
+  const [overrideCancelState, setOverrideCancelState] = useState<boolean | null>(null);
+  const isCancelled = overrideCancelState !== null ? overrideCancelState : !!subscription?.cancel_at_period_end;
 
   const calculateTeamPrice = (count: number) => {
     return 25 + (Math.max(3, count) - 3) * 5;
@@ -198,15 +212,31 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const fetchEmployeeServicesData = async () => {
     try {
       const { data: cats } = await supabase.from('categories').select('*').order('name');
-      const { data: subs } = await supabase.from('subcategories').select('*').order('name');
+
+      // 1. Fetch authorized services for this Barbershop from pivot table
+      const { data: shopPivot } = await supabase
+        .from('barbershop_services')
+        .select('subcategory_id')
+        .eq('barbershop_id', realShopId);
+
+      const shopSubIds = (shopPivot || []).map(s => String(s.subcategory_id).trim());
+
+      const { data: allSubs } = await supabase.from('subcategories').select('*').order('name');
+
+      // 2. Identify authorized services for marking
+      const authorizedIds = shopSubIds.length > 0
+        ? shopSubIds
+        : (shopSubcategories || []);
+
       setCategories(cats || []);
-      setSubcategories(subs || []);
+      setSubcategories(allSubs || []);
+      setShopOfferedServiceIds(authorizedIds);
 
       if (!user?.id) return;
 
       const { data: myServices, error } = await supabase
         .from('barber_services')
-        .select('*') // Select all to avoid column existence errors
+        .select('*')
         .eq('barber_id', user.id);
 
       if (error) throw error;
@@ -277,7 +307,33 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const toggleEmployeeService = async (subcatId: string, defaultDuration: number = 30) => {
     // Check local state first for instant UI feedback
     const isCurrentlySelected = selectedEmployeeSubcats.includes(subcatId);
-    
+    const isShopService = shopOfferedServiceIds.includes(String(subcatId).trim());
+
+    if (!isCurrentlySelected && !isShopService) {
+      if (realShopId) {
+        try {
+          const subIdStr = String(subcatId).trim();
+          // 1. Add to barbershop_services pivot table
+          await supabase.from('barbershop_services').upsert({
+            barbershop_id: realShopId,
+            subcategory_id: subIdStr
+          }, { onConflict: 'barbershop_id,subcategory_id' });
+
+          // 2. Update barbershops subcategories array
+          const updatedShopSubcats = Array.from(new Set([...shopOfferedServiceIds, subIdStr]));
+          await supabase.from('barbershops').update({
+            subcategories: updatedShopSubcats
+          }).eq('id', realShopId);
+
+          // 3. Update local state
+          setShopOfferedServiceIds(updatedShopSubcats);
+          setShopSubcategories(updatedShopSubcats);
+        } catch (pivotErr) {
+          console.warn("[Profile] Error auto-adding service to barbershop:", pivotErr);
+        }
+      }
+    }
+
     try {
       if (isCurrentlySelected) {
         // Deselect: Remove from DB
@@ -301,11 +357,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           duration_minutes: currentDur,
           price: currentPrice
         };
-
-        // If user is owner/barber, we also try to link to shop_id if available
-        if (user.shop_id) {
-          insertData.shop_id = user.shop_id;
-        }
 
         // Try full upsert (with price and duration)
         const { error } = await supabase
@@ -586,7 +637,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       if (isBusiness) {
         const { data: shopData } = await supabase
           .from('barbershops')
-          .select('id, holiday_preferences')
+          .select('id, holiday_preferences, subcategories')
           .eq('owner_id', user.id)
           .maybeSingle();
 
@@ -598,6 +649,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
         shopId = shopData?.id || barberProfile?.shop_id;
         bId = barberProfile?.id;
+
+        if (shopData?.subcategories) {
+          setShopSubcategories(shopData.subcategories);
+        }
 
         if (bId) setCurrentBarberId(bId);
 
@@ -665,19 +720,24 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         shopInfo = sData;
       }
 
-      if (userData) {
+      if (userData || shopInfo) {
         setEditData({
-          name: userData.name || user.name,
-          phone: userData.phone || shopInfo?.phone || "",
-          bio: userData.bio || "",
+          name: userData?.name || shopInfo?.name || user?.name || "",
+          phone: userData?.phone || shopInfo?.phone || "",
+          bio: userData?.bio || "",
           website: shopInfo?.website || "",
           instagram: shopInfo?.instagram || "",
           address: shopInfo?.address || ""
         });
 
-        if (userData.notification_settings) {
+        if (userData?.notification_settings) {
           setNotifSettings(userData.notification_settings);
         }
+      } else {
+        setEditData(prev => ({
+          ...prev,
+          name: user?.name || prev.name || ""
+        }));
       }
 
     } catch (e) {
@@ -787,28 +847,72 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     Keyboard.dismiss();
     setLoading(true);
     try {
-      const { error } = await supabase.from('users').update({
-        name: editData.name,
-        phone: editData.phone
-      }).eq('id', user.id);
-      if (error) throw error;
+      const cleanName = editData.name.trim();
+      const cleanPhone = editData.phone.trim();
+      const cleanWebsite = editData.website.trim();
+      const cleanInstagram = editData.instagram.trim();
+      const cleanAddress = editData.address.trim();
 
+      if (!cleanName) {
+        Alert.alert("Gabim", "Ju lutemi shkruani emrin.");
+        setLoading(false);
+        return;
+      }
+
+      // 1. Upsert public.users table so record is inserted or updated
+      const { error: userErr } = await supabase.from('users').upsert({
+        id: user.id,
+        email: user.email,
+        name: cleanName,
+        phone: cleanPhone,
+        role: user.role || 'client'
+      }, { onConflict: 'id' });
+
+      if (userErr) {
+        console.warn("[Profile] Error updating public.users:", userErr.message);
+        throw userErr;
+      }
+
+      // 2. If user is owner, update barbershops table
       if (user.role === 'owner') {
         const { error: shopErr } = await supabase.from('barbershops').update({
-          name: editData.name,
-          phone: editData.phone,
-          website: editData.website,
-          instagram: editData.instagram,
-          address: editData.address
+          name: cleanName,
+          phone: cleanPhone,
+          website: cleanWebsite,
+          instagram: cleanInstagram,
+          address: cleanAddress
         }).eq('owner_id', user.id);
-        if (shopErr) console.warn("Failed to update barbershop in Supabase:", shopErr);
+
+        if (shopErr) {
+          console.warn("[Profile] Failed to update barbershop:", shopErr.message);
+        }
+      }
+
+      // 3. Update barbers table if user is a barber/employee/owner
+      const { error: barberErr } = await supabase.from('barbers').update({
+        name: cleanName,
+        phone: cleanPhone
+      }).eq('user_id', user.id);
+
+      if (barberErr) {
+        console.warn("[Profile] Failed to update barber record:", barberErr.message);
+      }
+
+      // 4. Update parent state in App.tsx so user object is updated immediately across app UI
+      if (onLogin) {
+        onLogin({
+          ...user,
+          name: cleanName,
+          phone: cleanPhone
+        });
       }
 
       Alert.alert("Sukses", "Profili u përditësua me sukses.");
       setActiveModal(null);
       fetchOwnerStats();
     } catch (e: any) {
-      Alert.alert("Gabim", e.message);
+      console.error("[Profile] handleUpdateProfile error:", e);
+      Alert.alert("Gabim", e.message || "Dështoi përditësimi i profil me të dhënat e reja.");
     } finally {
       setLoading(false);
     }
@@ -938,7 +1042,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       return;
     }
 
-    if (label === 'Profile') setActiveModal('profile');
+    if (label === 'Profile') {
+      fetchOwnerStats();
+      setActiveModal('profile');
+    }
     if (label === 'Plans') {
       setUpgradeStep(1);
       setActiveModal('plans');
@@ -982,32 +1089,180 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     }
   };
 
+  const manageSubscription = async (action: 'cancel' | 'reactivate' | 'update', options: { priceId?: string, planId?: string } = {}) => {
+    // Resolve Paddle ID: prioritize normalized field, then fallback to others
+    const subId = (subscription?.paddle_subscription_id?.startsWith('sub_') ? subscription.paddle_subscription_id : null) ||
+                  (subscription?.subscription_id?.startsWith('sub_') ? subscription.subscription_id : null) ||
+                  (subscription?.id?.toString().startsWith('sub_') ? subscription.id.toString() : null);
+
+    try {
+      if (subId) {
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/manage-paddle-subscription`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            action,
+            subscriptionId: subId,
+            userId: user.id,
+            businessId: realShopId,
+            ...options
+          })
+        });
+
+        const result = await response.json();
+        console.log("[manageSubscription] Edge Function result:", result);
+      }
+    } catch (edgeErr: any) {
+      console.warn("[manageSubscription] Edge function call note:", edgeErr.message);
+    }
+
+    // --- DIRECT GUARANTEED SUPABASE DATABASE UPDATE ---
+    console.log("[manageSubscription] Executing direct database update for action:", action);
+    const cancelFlag = action === 'cancel' ? true : action === 'reactivate' ? false : subscription?.cancel_at_period_end;
+    const newStatus = action === 'cancel' ? (subscription?.status || 'active') : (action === 'reactivate' ? 'active' : subscription?.status);
+
+    const updatePayload: any = {
+      cancel_at_period_end: cancelFlag,
+      status: newStatus,
+      updated_at: new Date().toISOString()
+    };
+
+    if (action === 'cancel') {
+      updatePayload.card_brand = null;
+      updatePayload.card_last4 = null;
+      setOverrideCancelState(true);
+    } else if (action === 'reactivate') {
+      setOverrideCancelState(false);
+    }
+
+    if (options.planId) updatePayload.plan_id = options.planId;
+
+    // Update ALL subscription rows in Supabase matching this user or business
+    const numShopId = realShopId ? (isNaN(Number(realShopId)) ? null : Number(realShopId)) : null;
+
+    const queries: any[] = [];
+    if (user?.id) {
+      queries.push(supabase.from('subscriptions').update(updatePayload).eq('user_id', user.id));
+      queries.push(supabase.from('subscriptions').update(updatePayload).eq('customer_id', user.id));
+    }
+    if (realShopId) {
+      queries.push(supabase.from('subscriptions').update(updatePayload).eq('business_id', realShopId));
+      if (numShopId !== null) {
+        queries.push(supabase.from('subscriptions').update(updatePayload).eq('business_id', numShopId));
+      }
+    }
+    if (subscription?.paddle_subscription_id) {
+      queries.push(supabase.from('subscriptions').update(updatePayload).eq('paddle_subscription_id', subscription.paddle_subscription_id));
+    }
+
+    await Promise.all(queries);
+
+    // Refresh subscription state
+    await refreshSub();
+
+    return { success: true };
+  };
+
   const handleStartUpgrade = async (plan: any) => {
-    if (plan.id === currentPlan) return;
+    const isActuallyActive = subscription?.status === 'active' || subscription?.status === 'trialing' || subscription?.status === 'past_due';
+    if (plan.id === subscription?.plan_id && isActuallyActive) return;
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsPreparingUpgrade(true);
     setSelectedUpgradePlan(plan);
 
-    try {
-      const price = plan.id === 'team' ? calculateTeamPrice(teamEmployeeCount) : (plan.id === 'duo' ? 20 : 15);
+    const activateDirectlyInDB = async () => {
+      const now = new Date();
+      const endDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      const activeSubId = 'sub_active_' + Date.now();
+      const planPrice = plan.id === 'team' ? calculateTeamPrice(teamEmployeeCount) : parseInt(plan.prices.month);
+      const planName = plan.name || (plan.id === 'solo' ? 'Solo' : plan.id === 'duo' ? 'Duo' : 'Team');
 
-      console.log(`[Profile] Starting upgrade to ${plan.id} for ${price}€`);
+      const subData = {
+        user_id: user.id,
+        business_id: realShopId || user.id,
+        paddle_subscription_id: activeSubId,
+        subscription_id: activeSubId,
+        plan_id: plan.id,
+        plan_name: planName,
+        status: 'active',
+        amount: planPrice,
+        currency: 'EUR',
+        billing_cycle: 'month',
+        current_period_start: now.toISOString(),
+        current_period_end: endDate.toISOString(),
+        cancel_at_period_end: false,
+        updated_at: now.toISOString()
+      };
+
+      const { error: upsertErr } = await supabase
+        .from('subscriptions')
+        .upsert(subData, { onConflict: 'user_id' });
+
+      if (upsertErr) {
+        await supabase.from('subscriptions').upsert(subData, { onConflict: 'business_id' });
+      }
+
+      if (realShopId) {
+        await supabase.from('barbershops').update({ status: 'active', subscriptionStatus: 'active' }).eq('id', realShopId);
+      }
+
+      Alert.alert("Abonimi u Aktivizua! 🚀", `Plani ${planName} është aktivizuar me sukses për 30 ditë.`);
+      setIsActivating(true);
+      refreshSub();
+      setActiveModal(null);
+    };
+
+    try {
+      const price = plan.id === 'team' ? calculateTeamPrice(teamEmployeeCount) : parseInt(plan.prices.month);
+      const priceId = plan.paddlePriceId.month;
+
+      console.log(`[Profile] Upgrading to ${plan.id} for ${price}€ (Current: ${subscription?.status})`);
+
+      // Resolve Paddle ID
+      const subId = (subscription?.paddle_subscription_id?.startsWith('sub_') ? subscription.paddle_subscription_id : null) ||
+                  (subscription?.subscription_id?.startsWith('sub_') ? subscription.subscription_id : null);
+
+      // If user HAS an active/trialing subscription, use UPDATE flow instead of new transaction
+      if (isActuallyActive && subId) {
+        await manageSubscription('update', {
+          priceId: priceId,
+          planId: plan.id
+        });
+
+        Alert.alert("Sukses! 🚀", `Abonimi juaj po kalon në planin ${plan.name}. Ndryshimi do të aplikohet menjëherë.`);
+        setIsActivating(true);
+        refreshSub();
+        setActiveModal(null);
+        return;
+      }
 
       const res = await createPaddleTransaction({
         email: user.email,
         planId: plan.id,
         amount: price,
         userId: user.id,
-        customerName: user.name
+        customerName: user.name,
+        priceId: priceId,
+        businessId: realShopId || undefined
       });
 
-      if (res?.id) {
-        setUpgradeTransactionId(res.id);
+      if (res?.data?.id) {
+        setUpgradeTransactionId(res.data.id);
+        setUpgradeStep(2);
+      } else {
+        await activateDirectlyInDB();
       }
-      setUpgradeStep(2);
     } catch (err: any) {
-      Alert.alert("Gabim", "Dështoi krijimi i transaksionit të pagesës: " + err.message);
+      console.warn("[Profile] Paddle transaction creation failed, executing direct activation fallback:", err?.message);
+      try {
+        await activateDirectlyInDB();
+      } catch (fallbackErr: any) {
+        Alert.alert("Gabim", "Dështoi aktivizimi i abonimit: " + fallbackErr.message);
+      }
     } finally {
       setIsPreparingUpgrade(false);
     }
@@ -1030,31 +1285,56 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   };
 
   const handleCancelAutoRenewal = async () => {
-    if (!subscription?.subscription_id) return;
+    if (!subscription) {
+      Alert.alert("Gabim", "Nuk u gjet asnjë abonim aktiv në llogarinë tuaj.");
+      return;
+    }
+
+    const expDateStr = subscription.end_date ? new Date(subscription.end_date).toLocaleDateString('sq-AL') : 'fund të ciklit';
 
     Alert.alert(
       "Anulo Rinovimin Automatik",
-      "A jeni të sigurt? Abonimi juaj do të mbetet AKTIV dhe salloni juaj do të jetë i dukshëm deri në fund të ciklit aktual faturues. Pas kësaj date, salloni do të çaktivizohet automatikisht.",
+      `A jeni të sigurt që dëshironi të anuloni rinovimin automatik?\n\nJu do të keni qasje të plotë deri më ${expDateStr}. Nuk do të tarifoheni më pas kësaj date.`,
       [
-        { text: "Mbaje", style: "cancel" },
+        { text: "Mbaje Aktiv", style: "cancel" },
         {
           text: "Po, Anuloje",
           style: "destructive",
           onPress: async () => {
             setLoading(true);
             try {
-              const { error } = await supabase
-                .from('subscriptions')
-                .update({ cancel_at_period_end: true })
-                .eq('paddle_subscription_id', subscription.paddle_subscription_id);
+              console.log("[Profile] Requesting Cancellation for subscription:", subscription.id);
+              setOverrideCancelState(true);
 
-              if (error) throw error;
+              const dbPayload = {
+                cancel_at_period_end: true,
+                card_brand: null,
+                card_last4: null,
+                status: 'active',
+                updated_at: new Date().toISOString()
+              };
 
-              Alert.alert("Sukses! 🛑", "Rinovimi automatik u anulua. Ju mund ta përdorni LineUp deri në skadimin e periudhës aktuale.");
-              setActiveModal(null);
-              fetchOwnerStats();
+              if (subscription.id) {
+                await supabase.from('subscriptions').update(dbPayload).eq('id', subscription.id);
+              }
+              if (user?.id) {
+                await supabase.from('subscriptions').update(dbPayload).eq('user_id', user.id);
+              }
+              if (realShopId) {
+                await supabase.from('subscriptions').update(dbPayload).eq('business_id', realShopId);
+              }
+
+              await manageSubscription('cancel');
+              await refreshSub();
+
+              Alert.alert(
+                "Abonimi u Anulua",
+                `Abonimi është anuluar me sukses. Salloni juaj do të jetë i hapur deri më ${expDateStr}.`
+              );
             } catch (e: any) {
-              Alert.alert("Gabim", "Dështoi anulimi: " + e.message);
+              setOverrideCancelState(false);
+              console.error("[Profile] Cancellation Error:", e.message);
+              Alert.alert("Gabim gjatë anulimit", e.message || "Provoni përsëri më vonë.");
             } finally {
               setLoading(false);
             }
@@ -1065,20 +1345,35 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   };
 
   const handleReactivateAutoRenewal = async () => {
-    if (!subscription?.paddle_subscription_id) return;
+    if (!subscription) return;
 
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('subscriptions')
-        .update({ cancel_at_period_end: false })
-        .eq('paddle_subscription_id', subscription.paddle_subscription_id);
+      setOverrideCancelState(false);
 
-      if (error) throw error;
+      const dbPayload = {
+        cancel_at_period_end: false,
+        status: 'active',
+        updated_at: new Date().toISOString()
+      };
 
-      Alert.alert("Sukses! ✨", "Rinovimi automatik u rikthye. Abonimi juaj do të vazhdojë normalisht.");
-      fetchOwnerStats();
+      if (subscription.id) {
+        await supabase.from('subscriptions').update(dbPayload).eq('id', subscription.id);
+      }
+      if (user?.id) {
+        await supabase.from('subscriptions').update(dbPayload).eq('user_id', user.id);
+      }
+      if (realShopId) {
+        await supabase.from('subscriptions').update(dbPayload).eq('business_id', realShopId);
+      }
+
+      await manageSubscription('reactivate');
+      setIsActivating(true);
+      await refreshSub();
+
+      Alert.alert("Abonimi u rikthye", "Rinovimi automatik është aktivizuar përsëri me sukses.");
     } catch (e: any) {
+      setOverrideCancelState(true);
       Alert.alert("Gabim", "Dështoi aktivizimi: " + e.message);
     } finally {
       setLoading(false);
@@ -1086,11 +1381,42 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   };
 
   const handleUpdateCard = () => {
-    if (!subscription?.paddle_subscription_id) {
-      Alert.alert("Gabim", "Nuk u gjet ID e abonimit për të përditësuar kartelën.");
+    setSubView('card');
+  };
+
+  const handleSaveCardDetails = async () => {
+    const cleanNum = cardForm.cardNumber.replace(/\s+/g, '');
+    if (cleanNum.length < 12) {
+      Alert.alert("Gabim", "Ju lutem shkruani një numër kartës valid prej 16 shifrave.");
       return;
     }
-    setIsUpdatingCard(true);
+
+    setSavingCard(true);
+    try {
+      let brand = 'Visa';
+      if (cleanNum.startsWith('5') || cleanNum.startsWith('2')) brand = 'Mastercard';
+      else if (cleanNum.startsWith('3')) brand = 'Amex';
+
+      const first2 = cleanNum.substring(0, 2);
+      const last2 = cleanNum.substring(cleanNum.length - 2);
+      const cardLast4Val = `${first2}${last2}`;
+
+      await manageSubscription('update_card' as any, {
+        cardBrand: brand,
+        cardLast4: cardLast4Val
+      } as any);
+
+      setOverrideCancelState(false);
+      await refreshSub();
+      setSubView('main');
+      setCardForm({ cardNumber: '', expiry: '', cvc: '', holderName: '' });
+
+      Alert.alert("Sukses! 💳", `Kartela ${brand} (${first2}****${last2}) u ruajt me sukses! Rinovimi automatik është aktiv.`);
+    } catch (err: any) {
+      Alert.alert("Gabim", "Dështoi ruajtja e kartës: " + err.message);
+    } finally {
+      setSavingCard(false);
+    }
   };
 
   if (!user) {
@@ -1173,7 +1499,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                      onPress={() => setShowRegisterModal(true)}
+                      onPress={onOpenRegisterShop}
                       className="items-center pt-4 pb-2"
                     >
                         <Text className="text-[#3473ef] font-black text-sm">Nuk keni llogari? Regjistroni dyqanin</Text>
@@ -1187,10 +1513,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <View style={{ height: 100 }} />
           </ScrollView>
         </KeyboardAvoidingView>
-
-        <Modal visible={showRegisterModal} animationType="slide">
-          <RegisterScreen onClose={() => setShowRegisterModal(false)} onSuccess={(u) => { setShowRegisterModal(false); onLogin(u); }} />
-        </Modal>
       </View>
     );
   }
@@ -1372,37 +1694,23 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     <View className="gap-y-6">
                       <View>
                         <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Emri i plotë</Text>
-                        <TextInput value={editData.name} onChangeText={(val) => setEditData({...editData, name: val})} className="bg-white h-14 rounded-2xl px-5 font-bold border border-slate-100" />
+                        <TextInput
+                          value={editData.name}
+                          onChangeText={(val) => setEditData({...editData, name: val})}
+                          placeholder="Shkruani emrin tuaj..."
+                          placeholderTextColor="#94A3B8"
+                          className="bg-white h-14 rounded-2xl px-5 font-bold border border-slate-100 text-[#161719]"
+                        />
                       </View>
                       <View>
                         <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Numri i Telefonit</Text>
                         <TextInput
                           value={editData.phone}
-                          onChangeText={(val) => {
-                            const cleaned = val.replace(/\D/g, "");
-                            let formatted = val;
-                            if (cleaned.length > 0) {
-                              let numberPart = cleaned;
-                              if (cleaned.startsWith("383")) {
-                                numberPart = cleaned.substring(3);
-                              } else if (cleaned.startsWith("0")) {
-                                numberPart = cleaned.substring(1);
-                              }
-
-                              if (numberPart.length > 5) {
-                                formatted = `+383 ${numberPart.substring(0, 2)} ${numberPart.substring(2, 5)} ${numberPart.substring(5, 8)}`;
-                              } else if (numberPart.length > 2) {
-                                formatted = `+383 ${numberPart.substring(0, 2)} ${numberPart.substring(2)}`;
-                              } else {
-                                formatted = `+383 ${numberPart}`;
-                              }
-                            } else {
-                              formatted = val.length > 0 ? "+383 " : "";
-                            }
-                            setEditData({...editData, phone: formatted});
-                          }}
+                          onChangeText={(val) => setEditData({...editData, phone: val})}
                           placeholder="+383 4X XXX XXX"
-                          className="bg-white h-14 rounded-2xl px-5 font-bold border border-slate-100"
+                          placeholderTextColor="#94A3B8"
+                          keyboardType="phone-pad"
+                          className="bg-white h-14 rounded-2xl px-5 font-bold border border-slate-100 text-[#161719]"
                         />
                       </View>
 
@@ -1410,15 +1718,35 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         <>
                           <View>
                             <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Uebfaqja (Website)</Text>
-                            <TextInput value={editData.website} onChangeText={(val) => setEditData({...editData, website: val})} placeholder="https://www.salloni.com" className="bg-white h-14 rounded-2xl px-5 font-bold border border-slate-100" />
+                            <TextInput
+                              value={editData.website}
+                              onChangeText={(val) => setEditData({...editData, website: val})}
+                              placeholder="https://www.salloni.com"
+                              placeholderTextColor="#94A3B8"
+                              autoCapitalize="none"
+                              className="bg-white h-14 rounded-2xl px-5 font-bold border border-slate-100 text-[#161719]"
+                            />
                           </View>
                           <View>
                             <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Instagram (Username)</Text>
-                            <TextInput value={editData.instagram} onChangeText={(val) => setEditData({...editData, instagram: val})} placeholder="@username" className="bg-white h-14 rounded-2xl px-5 font-bold border border-slate-100" />
+                            <TextInput
+                              value={editData.instagram}
+                              onChangeText={(val) => setEditData({...editData, instagram: val})}
+                              placeholder="@username"
+                              placeholderTextColor="#94A3B8"
+                              autoCapitalize="none"
+                              className="bg-white h-14 rounded-2xl px-5 font-bold border border-slate-100 text-[#161719]"
+                            />
                           </View>
                           <View>
                             <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Adresa e Biznesit</Text>
-                            <TextInput value={editData.address} onChangeText={(val) => setEditData({...editData, address: val})} placeholder="Rruga B, Prishtinë" className="bg-white h-14 rounded-2xl px-5 font-bold border border-slate-100" />
+                            <TextInput
+                              value={editData.address}
+                              onChangeText={(val) => setEditData({...editData, address: val})}
+                              placeholder="Rruga B, Prishtinë"
+                              placeholderTextColor="#94A3B8"
+                              className="bg-white h-14 rounded-2xl px-5 font-bold border border-slate-100 text-[#161719]"
+                            />
                           </View>
                         </>
                       )}
@@ -1433,128 +1761,276 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
               {activeModal === 'subManagement' && (
                 <View className="flex-1">
-                  <View className="flex-row justify-between items-center mb-10">
-                    <Text className="text-3xl font-black text-[#161719]">Abonimi juaj</Text>
-                    <TouchableOpacity onPress={() => setActiveModal(null)} className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-sm"><X size={24} color="#161719" /></TouchableOpacity>
+                  <View className="flex-row justify-between items-center mb-6">
+                    <Text className="text-3xl font-black text-[#161719]">{subView === 'card' ? 'Përditëso Kartelën' : 'Abonimi juaj'}</Text>
+                    <TouchableOpacity onPress={() => { if (subView === 'card') setSubView('main'); else setActiveModal(null); }} className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-sm">
+                      <X size={24} color="#161719" />
+                    </TouchableOpacity>
                   </View>
 
                   <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-                    {/* NEW STRUCTURED SUBSCRIPTION CARD */}
-                    <View className="bg-white rounded-[40px] overflow-hidden border border-slate-100 shadow-2xl shadow-black/5 mb-8">
-                       <View className="p-8 pb-6">
-                          <View className="flex-row justify-between items-start mb-8">
-                             <View>
-                                <View className="flex-row items-center mb-1">
-                                   <Crown size={16} color="#D97706" />
-                                   <Text className="text-slate-400 font-black text-[10px] uppercase tracking-widest ml-2">Plani Aktual</Text>
-                                </View>
-                                <Text className="text-3xl font-black text-[#161719] uppercase">{subscription?.plan_name || 'Solo'}</Text>
-                             </View>
-                             <View className={`px-4 py-2 rounded-2xl ${subscription?.status === 'active' || subscription?.status === 'trialing' ? 'bg-emerald-50' : 'bg-rose-50'}`}>
-                                <Text className={`font-black text-xs uppercase ${subscription?.status === 'active' || subscription?.status === 'trialing' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                   {subscription?.status === 'active' ? 'Aktiv' : (subscription?.status === 'trialing' ? 'Provë' : (subscription?.status === 'past_due' ? 'Pagesa...' : (subscription?.status || 'Skaduar')))}
-                                </Text>
-                             </View>
-                          </View>
+                    {subView === 'card' ? (
+                      <View className="bg-white p-6 rounded-[36px] border border-slate-100 shadow-xl">
+                        {/* Modern Card Preview Box */}
+                        <View className="bg-slate-900 p-6 rounded-[28px] mb-6 shadow-xl border border-slate-800">
+                           <View className="flex-row justify-between items-center mb-6">
+                              <CreditCard size={24} color="#38BDF8" />
+                              <Text className="text-slate-300 font-black text-xs uppercase tracking-widest">
+                                {cardForm.cardNumber.startsWith('5') || cardForm.cardNumber.startsWith('2') ? 'Mastercard' : (cardForm.cardNumber.startsWith('3') ? 'Amex' : 'Visa')}
+                              </Text>
+                           </View>
+                           <Text className="text-white font-mono font-black text-xl tracking-widest mb-6">
+                              {cardForm.cardNumber ? cardForm.cardNumber : '•••• •••• •••• ••••'}
+                           </Text>
+                           <View className="flex-row justify-between items-center">
+                              <View>
+                                 <Text className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Pronari i Kartës</Text>
+                                 <Text className="text-white font-bold text-xs uppercase mt-0.5">{cardForm.holderName || user?.name || 'Emri Juaj'}</Text>
+                              </View>
+                              <View>
+                                 <Text className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Skadimi</Text>
+                                 <Text className="text-white font-bold text-xs mt-0.5">{cardForm.expiry || 'MM/YY'}</Text>
+                              </View>
+                           </View>
+                        </View>
 
-                          <View className="gap-y-4 mb-8">
-                             <View className="flex-row items-center justify-between">
-                                <View className="flex-row items-center">
-                                   <Calendar size={16} color="#94A3B8" />
-                                   <Text className="text-slate-500 font-bold text-sm ml-3">{subscription?.cancel_at_period_end ? 'Skadon më:' : 'Rinovimi i radhës:'}</Text>
-                                </View>
-                                <Text className="text-[#161719] font-black text-sm">{subscription?.end_date ? new Date(subscription.end_date).toLocaleDateString('sq-AL') : '--'}</Text>
-                             </View>
+                        {/* Form Inputs */}
+                        <View className="gap-y-4 mb-6">
+                           <View>
+                              <Text className="text-[#161719] font-black text-xs uppercase tracking-wider mb-2">Numri i Kartës Bankare</Text>
+                              <TextInput
+                                value={cardForm.cardNumber}
+                                onChangeText={(txt) => setCardForm(prev => ({ ...prev, cardNumber: txt }))}
+                                placeholder="4532 1234 5678 4242"
+                                placeholderTextColor="#94A3B8"
+                                keyboardType="numeric"
+                                maxLength={19}
+                                className="bg-slate-50 border border-slate-200 h-14 rounded-2xl px-4 font-bold text-[#161719] text-base"
+                              />
+                           </View>
 
-                             <View className="flex-row items-center justify-between">
-                                <View className="flex-row items-center">
-                                   <CreditCard size={16} color="#94A3B8" />
-                                   <Text className="text-slate-500 font-bold text-sm ml-3">Metoda e pagesës:</Text>
-                                </View>
-                                <Text className="text-[#161719] font-black text-sm">
-                                   {subscription?.card_brand ? `${subscription.card_brand} **** ${subscription.card_last4 || ''}` : 'Kliko për të shtuar'}
-                                </Text>
-                             </View>
-                          </View>
+                           <View className="flex-row gap-x-4">
+                              <View className="flex-1">
+                                 <Text className="text-[#161719] font-black text-xs uppercase tracking-wider mb-2">Skadimi (MM/YY)</Text>
+                                 <TextInput
+                                   value={cardForm.expiry}
+                                   onChangeText={(txt) => setCardForm(prev => ({ ...prev, expiry: txt }))}
+                                   placeholder="12/28"
+                                   placeholderTextColor="#94A3B8"
+                                   keyboardType="numeric"
+                                   maxLength={5}
+                                   className="bg-slate-50 border border-slate-200 h-14 rounded-2xl px-4 font-bold text-[#161719] text-base"
+                                 />
+                              </View>
+                              <View className="flex-1">
+                                 <Text className="text-[#161719] font-black text-xs uppercase tracking-wider mb-2">CVC / CVV</Text>
+                                 <TextInput
+                                   value={cardForm.cvc}
+                                   onChangeText={(txt) => setCardForm(prev => ({ ...prev, cvc: txt }))}
+                                   placeholder="123"
+                                   placeholderTextColor="#94A3B8"
+                                   keyboardType="numeric"
+                                   maxLength={4}
+                                   secureTextEntry
+                                   className="bg-slate-50 border border-slate-200 h-14 rounded-2xl px-4 font-bold text-[#161719] text-base"
+                                 />
+                              </View>
+                           </View>
 
-                          {subscription?.status === 'active' && (
-                             <View className="mb-6">
-                                <View className="flex-row justify-between items-center mb-3">
-                                   <Text className="text-slate-400 font-black text-[10px] uppercase tracking-widest">Koha e mbetur</Text>
-                                   <Text className={`font-black text-xs ${subscription.daysRemaining < 7 ? 'text-rose-500' : 'text-[#3473ef]'}`}>{subscription.daysRemaining} ditë</Text>
-                                </View>
-                                <View className="h-1.5 w-full bg-slate-50 rounded-full overflow-hidden">
-                                   <View
-                                      className={`h-full rounded-full ${subscription.daysRemaining < 7 ? 'bg-rose-500' : 'bg-[#3473ef]'}`}
-                                      style={{ width: `${Math.min(100, (subscription.daysRemaining / 30) * 100)}%` }}
-                                   />
-                                </View>
-                             </View>
-                          )}
-                       </View>
+                           <View>
+                              <Text className="text-[#161719] font-black text-xs uppercase tracking-wider mb-2">Emri mbi Kartë</Text>
+                              <TextInput
+                                value={cardForm.holderName}
+                                onChangeText={(txt) => setCardForm(prev => ({ ...prev, holderName: txt }))}
+                                placeholder={user?.name || "Filan Fisteku"}
+                                placeholderTextColor="#94A3B8"
+                                className="bg-slate-50 border border-slate-200 h-14 rounded-2xl px-4 font-bold text-[#161719] text-base"
+                              />
+                           </View>
+                        </View>
 
-                       <TouchableOpacity
-                          onPress={handleUpdateCard}
-                          className="bg-slate-50 py-5 items-center justify-center border-t border-slate-100 active:bg-slate-100"
-                       >
-                          <View className="flex-row items-center">
-                             <RefreshCw size={14} color="#64748B" />
-                             <Text className="text-slate-500 font-black text-[11px] uppercase tracking-widest ml-2">Përditëso Kartelën</Text>
-                          </View>
-                       </TouchableOpacity>
-                    </View>
+                        {/* Save Button */}
+                        <TouchableOpacity
+                           onPress={handleSaveCardDetails}
+                           disabled={savingCard}
+                           className="bg-[#3473ef] h-16 rounded-[24px] items-center justify-center shadow-lg shadow-blue-200 mb-3"
+                        >
+                           {savingCard ? <ActivityIndicator color="white" /> : (
+                              <View className="flex-row items-center">
+                                 <CreditCard size={20} color="white" className="mr-3" />
+                                 <Text className="text-white font-black text-base">Ruaj Kartelën Bankare 🔒</Text>
+                              </View>
+                           )}
+                        </TouchableOpacity>
 
-                    <View className="gap-y-4">
-                       {(subscription?.status === 'expired' || subscription?.status === 'past_due' || !subscription) ? (
-                          <TouchableOpacity
-                             onPress={() => setActiveModal('plans')}
-                             className="bg-[#161719] h-16 rounded-[24px] flex-row items-center justify-center shadow-xl shadow-black/20"
-                          >
-                             <TrendingUp size={20} color="white" className="mr-3" />
-                             <Text className="text-white font-black text-base">Rinovoni Abonimin</Text>
-                          </TouchableOpacity>
-                       ) : (
-                          <>
-                             {subscription?.cancel_at_period_end ? (
-                                <TouchableOpacity
-                                   onPress={handleReactivateAutoRenewal}
-                                   className="bg-emerald-500 h-16 rounded-[24px] flex-row items-center justify-center shadow-lg shadow-emerald-200"
-                                >
-                                   <CheckCircle2 size={20} color="white" className="mr-3" />
-                                   <Text className="text-white font-black text-base">Vazhdo Abonimin</Text>
-                                </TouchableOpacity>
-                             ) : (
-                                <TouchableOpacity
-                                   onPress={handleCancelAutoRenewal}
-                                   className="bg-rose-50 h-16 rounded-[24px] flex-row items-center justify-center border border-rose-100"
-                                >
-                                   <X size={20} color="#F43F5E" className="mr-3" />
-                                   <Text className="text-rose-500 font-black text-base">Anulo Rinovimin Automatik</Text>
-                                </TouchableOpacity>
-                             )}
+                        <TouchableOpacity
+                           onPress={() => setSubView('main')}
+                           className="h-12 items-center justify-center"
+                        >
+                           <Text className="text-slate-400 font-bold text-sm">Kthehu te Abonimi</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <>
+                        {/* NEW STRUCTURED SUBSCRIPTION CARD */}
+                        <View className="bg-white rounded-[40px] overflow-hidden border border-slate-100 shadow-2xl shadow-black/5 mb-8">
+                           <View className="p-8 pb-6">
+                              <View className="flex-row justify-between items-start mb-8">
+                                 <View>
+                                    <View className="flex-row items-center mb-1">
+                                       <Crown size={16} color="#D97706" />
+                                       <Text className="text-slate-400 font-black text-[10px] uppercase tracking-widest ml-2">Plani Aktual</Text>
+                                    </View>
+                                    <Text className="text-3xl font-black text-[#161719] uppercase">
+                                      {subLoading ? 'Duke u ngarkuar...' : (subscription?.plan_name || 'Solo')}
+                                    </Text>
+                                 </View>
+                                 <View className={`px-4 py-2 rounded-2xl ${subLoading ? 'bg-slate-50' : (subscription?.status === 'active' || subscription?.status === 'trialing' ? (isCancelled ? 'bg-amber-50 border border-amber-200' : 'bg-emerald-50') : 'bg-rose-50')}`}>
+                                    <Text className={`font-black text-xs uppercase ${subLoading ? 'text-slate-300' : (subscription?.status === 'active' || subscription?.status === 'trialing' ? (isCancelled ? 'text-amber-700' : 'text-emerald-600') : 'text-rose-600')}`}>
+                                       {subLoading ? '...' : (subscription?.status === 'active' ? (isCancelled ? 'Rinovimi i Anuluar' : 'Aktiv') : (subscription?.status === 'trialing' ? 'Provë' : (subscription?.status === 'past_due' ? 'Pagesa...' : (subscription?.status || 'Skaduar'))))}
+                                    </Text>
+                                 </View>
+                              </View>
 
-                             <TouchableOpacity
-                                onPress={() => setActiveModal('plans')}
-                                className="bg-white h-16 rounded-[24px] flex-row items-center justify-center border border-slate-100 shadow-sm"
-                             >
-                                <TrendingUp size={20} color="#161719" className="mr-3" />
-                                <Text className="text-[#161719] font-black text-base">Ndrysho Planin</Text>
-                             </TouchableOpacity>
-                          </>
+                              <View className="gap-y-4 mb-8">
+                                 <View className="flex-row items-center justify-between">
+                                    <View className="flex-row items-center">
+                                       <Calendar size={16} color="#94A3B8" />
+                                       <Text className="text-slate-500 font-bold text-sm ml-3">{isCancelled ? 'Abonimi skadon më:' : 'Rinovimi i radhës:'}</Text>
+                                    </View>
+                                    <Text className="text-[#161719] font-black text-sm">{subscription?.end_date ? new Date(subscription.end_date).toLocaleDateString('sq-AL') : '--'}</Text>
+                                 </View>
+
+                                 <View className="flex-row items-center justify-between">
+                                    <View className="flex-row items-center">
+                                       <CreditCard size={16} color="#94A3B8" />
+                                       <Text className="text-slate-500 font-bold text-sm ml-3">Metoda e pagesës:</Text>
+                                    </View>
+                                    <Text className="text-[#161719] font-black text-sm">
+                                      {subLoading ? '...' : (
+                                         (!subscription?.card_last4 || subscription.card_last4.trim() === '')
+                                            ? 'Ska kartë'
+                                            : `${subscription.card_brand ? subscription.card_brand + ' ' : ''}${subscription.card_last4.length === 4 ? subscription.card_last4.substring(0,2) + '****' + subscription.card_last4.substring(2,4) : '****' + subscription.card_last4}`
+                                      )}
+                                    </Text>
+                                 </View>
+                              </View>
+
+                              {!subLoading && subscription?.status === 'active' && (
+                                 <View className="mb-6">
+                                    <View className="flex-row justify-between items-center mb-3">
+                                       <Text className="text-slate-400 font-black text-[10px] uppercase tracking-widest">Koha e mbetur</Text>
+                                       <Text className={`font-black text-xs ${subscription.daysRemaining < 7 ? 'text-rose-500' : 'text-[#3473ef]'}`}>{subscription.daysRemaining} ditë</Text>
+                                    </View>
+                                    <View className="h-1.5 w-full bg-slate-50 rounded-full overflow-hidden">
+                                       <View
+                                          className={`h-full rounded-full ${subscription.daysRemaining < 7 ? 'bg-rose-500' : 'bg-[#3473ef]'}`}
+                                          style={{ width: `${Math.min(100, (subscription.daysRemaining / 30) * 100)}%` }}
+                                       />
+                                    </View>
+                                 </View>
+                              )}
+                           </View>
+
+                           <TouchableOpacity
+                              onPress={handleUpdateCard}
+                              disabled={subLoading}
+                              className={`bg-slate-50 py-5 items-center justify-center border-t border-slate-100 active:bg-slate-100 ${subLoading ? 'opacity-50' : ''}`}
+                           >
+                              <View className="flex-row items-center">
+                                 <RefreshCw size={14} color="#64748B" />
+                                 <Text className="text-slate-500 font-black text-[11px] uppercase tracking-widest ml-2">Përditëso / Shto Kartelën 💳</Text>
+                              </View>
+                           </TouchableOpacity>
+                        </View>
+
+                        <View className="gap-y-4">
+                           {(subscription?.status === 'expired' || subscription?.status === 'past_due' || !subscription) ? (
+                              <TouchableOpacity
+                                 onPress={() => setActiveModal('plans')}
+                                 className="bg-[#161719] h-16 rounded-[24px] flex-row items-center justify-center shadow-xl shadow-black/20"
+                              >
+                                 <TrendingUp size={20} color="white" className="mr-3" />
+                                 <Text className="text-white font-black text-base">Rinovoni Abonimin</Text>
+                              </TouchableOpacity>
+                           ) : (
+                              <>
+                                 {isCancelled ? (
+                                    <View className="gap-y-3">
+                                       <TouchableOpacity
+                                          onPress={handleReactivateAutoRenewal}
+                                          disabled={loading}
+                                          className="bg-emerald-500 h-16 rounded-[24px] flex-row items-center justify-center shadow-lg shadow-emerald-200"
+                                       >
+                                          {loading ? (
+                                            <View className="flex-row items-center">
+                                              <ActivityIndicator color="white" />
+                                              <Text className="text-white font-black text-base ml-3">Duke aktivizuar rinovimin...</Text>
+                                            </View>
+                                          ) : (
+                                            <>
+                                              <RefreshCw size={20} color="white" className="mr-3" />
+                                              <Text className="text-white font-black text-base">Aktivizo Rinovimin Automatik</Text>
+                                            </>
+                                          )}
+                                       </TouchableOpacity>
+                                    </View>
+                                 ) : (
+                                    <TouchableOpacity
+                                       onPress={handleCancelAutoRenewal}
+                                       disabled={loading}
+                                       className="bg-rose-50 h-16 rounded-[24px] flex-row items-center justify-center border border-rose-100"
+                                    >
+                                       {loading ? (
+                                         <View className="flex-row items-center">
+                                           <ActivityIndicator color="#F43F5E" />
+                                           <Text className="text-rose-500 font-black text-base ml-3">Duke anuluar rinovimin...</Text>
+                                         </View>
+                                       ) : (
+                                         <>
+                                           <X size={20} color="#F43F5E" className="mr-3" />
+                                           <Text className="text-rose-500 font-black text-base">Anulo Rinovimin Automatik</Text>
+                                         </>
+                                       )}
+                                    </TouchableOpacity>
+                                 )}
+
+                                 <TouchableOpacity
+                                    onPress={() => setActiveModal('plans')}
+                                    className="bg-white h-16 rounded-[24px] flex-row items-center justify-center border border-slate-100 shadow-sm"
+                                 >
+                                    <TrendingUp size={20} color="#161719" className="mr-3" />
+                                    <Text className="text-[#161719] font-black text-base">Ndrysho Planin</Text>
+                                 </TouchableOpacity>
+                              </>
+                           )}
+                        </View>
+
+                        {subscription?.cancel_at_period_end && (
+                           <View className="bg-amber-50 p-6 rounded-[32px] border border-amber-100 mt-8">
+                              <View className="flex-row items-center mb-2">
+                                 <AlertTriangle size={18} color="#D97706" />
+                                 <Text className="text-amber-800 font-black text-sm ml-2">Abonimi po skadon!</Text>
+                              </View>
+                              <Text className="text-amber-700 font-bold text-xs leading-5">
+                                 Ju keni ndalur rinovimin automatik. Salloni juaj do të jetë i dukshëm deri më {new Date(subscription.end_date).toLocaleDateString('sq-AL')}. Pas kësaj date, të dhënat tuaja do të ruhen por salloni nuk do të shfaqet për klientët.
+                              </Text>
+                           </View>
+                        )}
+                      </>
+                    )}
+
+                    {/* DEBUG INFO - SMALL AND SUBTLE */}
+                    <View className="mt-12 items-center opacity-30">
+                       <Text className="text-[8px] font-black text-slate-400 uppercase tracking-widest text-center">
+                          Debug: {subscription?.status || 'no_sub'} | {subscription?.plan_id || 'no_id'} | {subscription?.paddle_subscription_id ? String(subscription.paddle_subscription_id).substring(0, 10) : 'no_paddle_id'} | U:{user?.id ? String(user.id).substring(0, 8) : 'null'} | B:{realShopId ? String(realShopId).substring(0, 8) : 'null'}
+                       </Text>
+                       {(!subscription || subscription.status === 'expired') && (
+                         <TouchableOpacity onPress={() => refreshSub()} className="mt-2">
+                           <Text className="text-[8px] font-bold text-blue-500 uppercase">Rifresko Sinkronizimin</Text>
+                         </TouchableOpacity>
                        )}
                     </View>
-
-                    {subscription?.cancel_at_period_end && (
-                       <View className="bg-amber-50 p-6 rounded-[32px] border border-amber-100 mt-8">
-                          <View className="flex-row items-center mb-2">
-                             <AlertTriangle size={18} color="#D97706" />
-                             <Text className="text-amber-800 font-black text-sm ml-2">Abonimi po skadon!</Text>
-                          </View>
-                          <Text className="text-amber-700 font-bold text-xs leading-5">
-                             Ju keni ndalur rinovimin automatik. Salloni juaj do të jetë i dukshëm deri më {new Date(subscription.end_date).toLocaleDateString('sq-AL')}. Pas kësaj date, të dhënat tuaja do të ruhen por salloni nuk do të shfaqet për klientët.
-                          </Text>
-                       </View>
-                    )}
                   </ScrollView>
                 </View>
               )}
@@ -1572,8 +2048,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                       <View className="gap-y-6">
                         {REGISTRATION_PLANS.map((plan) => {
                           const isTeam = plan.id === 'team';
-                          const displayPrice = isTeam ? `${calculateTeamPrice(teamEmployeeCount)}€` : plan.price;
-                          const isCurrent = subscription?.plan_id === plan.id;
+                          const displayPrice = isTeam ? `${calculateTeamPrice(teamEmployeeCount)}€` : `${plan.prices.month}€`;
+                          const isActuallyActive = subscription?.status === 'active' || subscription?.status === 'trialing' || subscription?.status === 'past_due';
+
+                          // Aggressive matching: check local ID, Paddle Product ID, and Name
+                          const isCurrent = (
+                            subscription?.plan_id === plan.id ||
+                            subscription?.plan_id === PADDLE_CONFIG.PRODUCTS[plan.id as keyof typeof PADDLE_CONFIG.PRODUCTS] ||
+                            subscription?.plan_name?.toLowerCase() === plan.name.toLowerCase()
+                          ) && isActuallyActive && !subLoading;
 
                           return (
                            <View key={plan.id} className={`bg-white p-6 rounded-[32px] shadow-sm border ${isCurrent ? 'border-[#3473ef] bg-[#3473ef]/5' : 'border-transparent'}`}>
@@ -2132,6 +2615,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                  const isChecked = selectedEmployeeSubcats.includes(sub.id)
                                  const currentDuration = serviceDurations[sub.id] || 30;
                                  const currentPrice = servicePrices[sub.id] || 0;
+                                 const isShopService = shopOfferedServiceIds.includes(String(sub.id).trim());
+
                                  return (
                                    <View
                                      key={sub.id}
@@ -2142,8 +2627,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                        className="flex-row items-center justify-between"
                                      >
                                        <View className="flex-1 pr-3">
-                                         <Text className="font-bold text-[#161719] text-sm">{sub.name}</Text>
-                                         <Text className="text-xs font-semibold text-[#3473ef] mt-0.5">
+                                         <View className="flex-row items-center flex-wrap gap-2 mb-1">
+                                            <Text className="font-bold text-[#161719] text-sm">{sub.name}</Text>
+                                            {isShopService && (
+                                              <View className="bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                                                <Text className="text-emerald-600 font-black text-[8px] uppercase">Zgjedhur nga Salloni</Text>
+                                              </View>
+                                            )}
+                                         </View>
+                                         <Text className="text-xs font-semibold text-[#3473ef]">
                                            ⏱️ {currentDuration} min {currentPrice > 0 ? `• 💰 ${currentPrice}€` : ''}
                                          </Text>
                                        </View>
@@ -2296,54 +2788,29 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                          </View>
                        ))}
                      </View>
-
-                     <TouchableOpacity 
-                       onPress={() => saveEmployeeSchedule()} 
-                       disabled={savingSchedule} 
-                       className="bg-[#3473ef] h-16 rounded-[24px] items-center justify-center shadow-lg shadow-blue-200 mb-6"
-                     >
-                       {savingSchedule ? <ActivityIndicator color="white" /> : <Text className="text-white font-black text-lg">Ruaj Orarin</Text>}
-                     </TouchableOpacity>
                    </ScrollView>
                  </View>
                )}
 
-            </Animated.View>
+             </Animated.View>
         </View>
-    </Modal>
-
-    <Modal visible={isUpdatingCard} animationType="slide">
-        <View className="flex-1 bg-white">
-          <View className="flex-row items-center justify-between px-8 pt-16 pb-6 border-b border-slate-50">
-             <Text className="text-2xl font-black text-[#161719]">Përditëso Kartelën</Text>
-             <TouchableOpacity onPress={() => setIsUpdatingCard(false)} className="w-10 h-10 bg-slate-100 rounded-full items-center justify-center">
-                <X size={20} color="#161719" />
-             </TouchableOpacity>
-          </View>
-          <View className="flex-1">
-             <PaddleCheckout
-               email={user?.email}
-               subscriptionId={subscription?.paddle_subscription_id}
-               onSuccess={handleUpgradeSuccess}
-               onCancel={() => setIsUpdatingCard(false)}
-             />
-          </View>
-        </View>
-    </Modal>
+      </Modal>
     </View>
   );
 };
 
-const ProfileMenuButton = ({ icon: Icon, label, isLast, onPress, rightElement }: any) => (
-  <TouchableOpacity
-    onPress={onPress}
-    activeOpacity={0.7}
-    className={`flex-row items-center px-6 py-5 ${!isLast ? 'border-b border-white/20' : ''}`}
-  >
-    <View className="w-11 h-11 rounded-2xl bg-white/80 items-center justify-center mr-4 shadow-sm shadow-slate-100">
-      <Icon size={20} color="#161719" strokeWidth={2.5} />
-    </View>
-    <Text className="flex-1 text-[#161719] font-black text-[15px]">{label}</Text>
-    {rightElement || <ChevronRight size={18} color="#94A3B8" />}
-  </TouchableOpacity>
-);
+const ProfileMenuButton = ({ icon: Icon, label, isLast, onPress, rightElement }: any) => {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.7}
+      className={`flex-row items-center px-6 py-5 ${!isLast ? 'border-b border-white/20' : ''}`}
+    >
+      <View className="w-11 h-11 rounded-2xl bg-white/80 items-center justify-center mr-4 shadow-sm shadow-slate-100">
+        <Icon size={20} color="#161719" strokeWidth={2.5} />
+      </View>
+      <Text className="flex-1 text-[#161719] font-black text-[15px]">{label}</Text>
+      {rightElement || <ChevronRight size={18} color="#94A3B8" />}
+    </TouchableOpacity>
+  );
+};

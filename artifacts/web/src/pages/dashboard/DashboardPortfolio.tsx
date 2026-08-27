@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import { Tabs, TabsContent, SelectGroup } from "@radix-ui/react-tabs";
+import { Tabs, TabsContent } from "@radix-ui/react-tabs";
 
 const PORTFOLIO_CATEGORIES = [
   "Flokë & Stilim",
@@ -52,7 +52,7 @@ export default function DashboardPortfolio() {
 
   useEffect(() => {
     if (ownerShop) {
-      setPortfolioPhotos(ownerShop.portfolio_urls || []);
+      setPortfolioPhotos((ownerShop as any).portfolio_urls || []);
       const img = (ownerShop as any).image_card || (ownerShop as any).card_image || (ownerShop as any).image_url || "";
       setShopImageUrl(img || "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1000&auto=format&fit=crop&q=80");
     }

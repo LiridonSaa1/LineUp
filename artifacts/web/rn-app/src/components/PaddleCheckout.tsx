@@ -1,7 +1,9 @@
 import React, { useState } from "react";
-import { View, ActivityIndicator, StyleSheet, Text, TouchableOpacity } from "react-native";
+import { View, ActivityIndicator, StyleSheet, Text, TouchableOpacity, Dimensions } from "react-native";
 import { WebView } from "react-native-webview";
 import { PADDLE_CONFIG } from "../config/paddle";
+
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 interface PaddleCheckoutProps {
   email: string;
@@ -17,84 +19,141 @@ export const PaddleCheckout = ({ email, transactionId, priceId, subscriptionId, 
 
   const html = `
     <!DOCTYPE html>
-    <html>
+    <html lang="sq">
       <head>
+        <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
         <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
         <style>
-          * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-          body { background-color: #ffffff; width: 100%; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-          .loading-container { text-align: center; width: 80%; }
-          .loading-text { font-weight: 700; color: #64748b; margin-bottom: 10px; font-size: 16px; }
-          .error-text { color: #f43f5e; font-weight: 600; font-size: 14px; }
+          * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, system-ui, sans-serif; }
+          body {
+            background-color: #ffffff;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+          }
+          .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3473ef;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+          }
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+          #status-msg {
+            color: #64748b;
+            font-weight: 800;
+            font-size: 16px;
+            padding: 20px;
+          }
+          #error-msg {
+            color: #ef4444;
+            font-size: 14px;
+            margin-top: 10px;
+            padding: 0 40px;
+          }
         </style>
       </head>
       <body>
-        <div class="loading-container" id="status-container">
-          <div class="loading-text" id="status-msg">Duke hapur dritaren e sigurt të pagesës...</div>
-          <div id="error-details" class="error-text"></div>
+        <div id="status-container">
+          <div class="loader" style="margin: 0 auto 20px auto;"></div>
+          <div id="status-msg">Duke hapur sistemin e pagesave...</div>
+          <div id="error-msg"></div>
         </div>
 
+        <div id="checkout-container" style="width: 100%;"></div>
+
         <script type="text/javascript">
-          window.onerror = function(msg, url, line) {
-            document.getElementById('error-details').innerHTML = "Script Error: " + msg;
-            return false;
+          function logToRN(msg) {
+            if (window.ReactNativeWebView) {
+              window.ReactNativeWebView.postMessage(JSON.stringify({ event: 'log', message: msg }));
+            }
+          }
+
+          window.onerror = function(message, source, lineno, colno, error) {
+            const err = message + " at " + lineno + ":" + colno;
+            logToRN("JS ERROR: " + err);
+            document.getElementById('error-msg').innerHTML = "Script Error: " + err;
+            return true;
           };
 
-          // Timeout for loading
-          const loadTimeout = setTimeout(() => {
-            if (document.getElementById('status-msg').style.display !== 'none') {
-              document.getElementById('status-msg').innerHTML = "Vonesë në ngarkim. Kontrolloni lidhjen.";
-            }
-          }, 15000);
+          function init() {
+            try {
+              if (typeof Paddle === 'undefined') {
+                logToRN("Paddle SDK not found yet, retrying in 1s...");
+                setTimeout(init, 1000);
+                return;
+              }
 
-          try {
-            console.log('Initializing Paddle...');
-            if (typeof Paddle === 'undefined') {
-              throw new Error('Paddle SDK not loaded. Kontrolloni lidhjen tuaj.');
-            }
-            Paddle.Environment.set('${PADDLE_CONFIG.ENVIRONMENT}');
-            Paddle.Initialize({
-              token: '${PADDLE_CONFIG.CLIENT_TOKEN}',
-              eventCallback: function(data) {
-                console.log('Paddle Event:', data.name);
-                if (data.name === 'checkout.completed') {
-                  window.ReactNativeWebView.postMessage(JSON.stringify({ event: 'success', data: data.data }));
-                } else if (data.name === 'checkout.closed') {
-                  window.ReactNativeWebView.postMessage(JSON.stringify({ event: 'cancel' }));
-                } else if (data.name === 'checkout.loaded') {
-                  clearTimeout(loadTimeout);
-                  document.getElementById('status-container').style.display = 'none';
-                } else if (data.name === 'checkout.error') {
-                   clearTimeout(loadTimeout);
-                   document.getElementById('status-msg').innerHTML = 'Gabim nga Paddle API';
-                   document.getElementById('error-details').innerHTML = data.data?.error?.detail || 'Ju lutem provoni përsëri.';
+              logToRN("Paddle SDK Ready. Initializing with token: " + '${PADDLE_CONFIG.CLIENT_TOKEN}');
+
+              Paddle.Environment.set('${PADDLE_CONFIG.ENVIRONMENT}');
+              Paddle.Initialize({
+                token: '${PADDLE_CONFIG.CLIENT_TOKEN}',
+                eventCallback: function(data) {
+                  logToRN("Paddle Event: " + data.name);
+                  if (data.name === 'checkout.loaded') {
+                    document.getElementById('status-container').style.display = 'none';
+                  }
+                  if (data.name === 'checkout.completed') {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({ event: 'success', data: data.data }));
+                  }
+                  if (data.name === 'checkout.closed') {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({ event: 'cancel' }));
+                  }
+                  if (data.name === 'checkout.error') {
+                     logToRN("Paddle API Error: " + JSON.stringify(data.data));
+                     document.getElementById('error-msg').innerHTML = "Paddle Error: " + (data.data?.error?.detail || "Gabim në procesim.");
+                  }
                 }
-              }
-            });
+              });
 
-            const checkoutOptions = {
-              settings: {
-                displayMode: 'overlay', // Using overlay but it fills the WebView container
-                theme: 'light',
-                locale: 'sq'
-              }
-            };
+              const options = {
+                settings: {
+                  displayMode: 'overlay', // Using overlay for better mobile support
+                  theme: 'light',
+                  locale: 'sq'
+                },
+                customer: { email: '${email}' }
+              };
 
-            if ('${transactionId || ""}') {
-              checkoutOptions.transactionId = '${transactionId}';
-            } else if ('${subscriptionId || ""}') {
-              checkoutOptions.subscriptionId = '${subscriptionId}';
-            } else {
-              checkoutOptions.items = [{ priceId: '${priceId || "pri_01ky8e821v11dc6f2nf9jnq5v8"}', quantity: 1 }];
-              checkoutOptions.customer = { email: '${email}' };
+              const txId = '${transactionId || ""}';
+              const pId = '${priceId || "pri_01ky8e821v11dc6f2nf9jnq5v8"}';
+              const subId = '${subscriptionId || ""}';
+
+              if (subId && subId !== 'undefined' && subId !== '') {
+                logToRN("Opening card update for Subscription ID: " + subId);
+                Paddle.Checkout.open({
+                  settings: options.settings,
+                  subscriptionId: subId
+                });
+              } else {
+                if (txId && txId !== 'undefined' && txId !== '') {
+                  options.transactionId = txId;
+                  logToRN("Opening checkout with Transaction ID: " + txId);
+                } else {
+                  options.items = [{ priceId: pId, quantity: 1 }];
+                  logToRN("Opening checkout with Price ID: " + pId);
+                }
+                Paddle.Checkout.open(options);
+              }
+            } catch (e) {
+              logToRN("Init Exception: " + e.message);
+              document.getElementById('error-msg').innerHTML = "Init Error: " + e.message;
             }
-
-             Paddle.Checkout.open(checkoutOptions);
-          } catch (e) {
-            document.getElementById('status-msg').innerHTML = 'Gabim gjatë ngarkimit.';
-            document.getElementById('error-details').innerHTML = e.message;
           }
+
+          // Give it a small delay to ensure script tag is parsed
+          setTimeout(init, 500);
         </script>
       </body>
     </html>
@@ -104,23 +163,20 @@ export const PaddleCheckout = ({ email, transactionId, priceId, subscriptionId, 
     <View style={{ flex: 1, backgroundColor: 'white' }}>
       <WebView
         key={webViewKey}
-        originWhitelist={['*']}
         source={{ html }}
+        style={{ flex: 1 }}
+        javaScriptEnabled={true}
+        domStorageEnabled={true}
+        startInLoadingState={true}
+        originWhitelist={['*']}
         onMessage={(event) => {
           try {
             const msg = JSON.parse(event.nativeEvent.data);
             if (msg.event === 'success') onSuccess(msg.data);
             if (msg.event === 'cancel') onCancel();
-          } catch (e) {
-            console.warn("WebView message parse error:", e);
-          }
+            if (msg.event === 'log') console.log('[Paddle Checkout]', msg.message);
+          } catch (e) {}
         }}
-        javaScriptEnabled={true}
-        domStorageEnabled={true}
-        startInLoadingState={true}
-        scalesPageToFit={true}
-        keyboardDisplayRequiresUserAction={false}
-        hideKeyboardAccessoryView={false}
         renderLoading={() => (
           <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center', backgroundColor: 'white' }]}>
             <ActivityIndicator size="large" color="#3473ef" />
@@ -129,9 +185,9 @@ export const PaddleCheckout = ({ email, transactionId, priceId, subscriptionId, 
       />
       <TouchableOpacity
         onPress={() => setWebViewKey(prev => prev + 1)}
-        style={{ padding: 10, alignItems: 'center', borderTopWidth: 1, borderTopColor: '#f1f5f9' }}
+        style={{ padding: 15, alignItems: 'center', borderTopWidth: 1, borderTopColor: '#f1f5f9' }}
       >
-        <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: '700' }}>RI-NGARKONI PAGESËN</Text>
+        <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: '800' }}>RI-NGARKONI PAGESËN</Text>
       </TouchableOpacity>
     </View>
   );

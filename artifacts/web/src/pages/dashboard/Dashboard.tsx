@@ -408,4 +408,20 @@ export default function Dashboard() {
                 <Flag className="w-5 h-5 text-amber-500" /> Pushimet Zyrtare në Kosovë (2026)
               </h3>
               <p className="text-xs text-muted-foreground mb-4">Ditët e pushimit zyrtar ku rezervimet duhet të menaxhohen.</p>
-              <div className="space-y
+              <div className="space-y-2">
+                {KOSOVO_HOLIDAYS_2026.slice(0, 5).map((h) => (
+                  <div key={h.name} className="flex items-center justify-between text-xs p-2.5 rounded-xl bg-muted/40 border border-border/40">
+                    <span className="font-bold text-foreground flex items-center gap-2">
+                      <span>{h.icon}</span> {h.name}
+                    </span>
+                    <span className="text-muted-foreground font-mono font-medium">{h.date}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}

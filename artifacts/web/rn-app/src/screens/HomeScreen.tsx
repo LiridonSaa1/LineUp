@@ -13,6 +13,17 @@ import * as Haptics from 'expo-haptics';
 
 // Remove global width constant to support responsiveness with useWindowDimensions() inside components
 
+const CATEGORY_COUNTS: Record<string, string> = {
+  'Flokët & Trajtimet': '128 sallone',
+  'Ngjyrosja e Flokëve': '74 sallone',
+  'Mjekra & Rruajtja': '98 sallone',
+  'Vetulla & Qerpikë': '52 sallone',
+  'Thonjtë': '61 sallone',
+  'Makeup': '38 sallone',
+  'Fytyra & Kujdesi i Lëkurës': '27 sallone',
+  'Depilim & Trup': '19 sallone'
+};
+
 const CATEGORY_ICONS: Record<string, any> = {
   'Flokët & Trajtimet': Scissors,
   'Ngjyrosja e Flokëve': Palette,
@@ -135,6 +146,9 @@ const ShopCard = React.memo(({ item, isFavorite, onToggleFavorite, onSelect, wid
   </TouchableOpacity>
 ));
 
+import { WebFooter } from "../components/WebFooter";
+import { DesktopHomeWeb } from "../components/home/DesktopHomeWeb";
+
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   onSelectShop,
   onOpenLocation,
@@ -154,6 +168,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   user
 }) => {
   const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
   const [loading, setLoading] = useState(true);
   const [recommendedShops, setRecommendedShops] = useState<any[]>([]);
   const [newShops, setNewShops] = useState<any[]>([]);
@@ -252,7 +267,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           .from('barbershops')
           .select('*')
           .eq('status', 'active')
-          .order('total_reviews', { ascending: false })
+          .order('rating', { ascending: false })
           .limit(10),
         supabase
           .from('barbershops')
@@ -339,13 +354,41 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     );
   };
 
+  if (isDesktop && Platform.OS === 'web') {
+    return (
+      <DesktopHomeWeb
+        categories={categories}
+        recommendedShops={recommendedShops}
+        newShops={newShops}
+        ads={ads}
+        user={user}
+        selectedLocation={selectedLocation}
+        onSelectShop={onSelectShop}
+        onOpenLocation={onOpenLocation}
+        onOpenSearch={onOpenSearch}
+        onStartPlan={(pId) => onStartPlan && onStartPlan(pId)}
+        onManagePlan={onManagePlan || (() => {})}
+        onUpgradePlan={(pId) => onUpgradePlan && onUpgradePlan(pId)}
+        onDowngradePlan={(pId) => onDowngradePlan && onDowngradePlan(pId)}
+        onRenewPlan={(pId) => onRenewPlan && onRenewPlan(pId)}
+        currentPlanInfo={currentPlanInfo}
+        teamEmployees={teamEmployees}
+        setTeamEmployees={setTeamEmployees}
+        favorites={favorites}
+        onToggleFavorite={onToggleFavorite || (() => {})}
+        activeTab={0}
+        onTabPress={() => {}}
+      />
+    );
+  }
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       className="flex-1"
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
-      <View className="flex-1 bg-[#ECEEF2]">
+      <View className="flex-1 bg-[#f8fafc]">
       {/* Background Decorative Blobs */}
       <View className="absolute top-[-50] left-[-50] w-64 h-64 bg-[#3473ef]/15 rounded-full blur-3xl" />
       <View className="absolute top-[200] right-[-100] w-80 h-80 bg-[#f47458]/15 rounded-full blur-3xl" />
@@ -359,286 +402,501 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         }
       >
 
-        {/* ── HEADER SECTION ───────────────────────────── */}
-        <View className="px-6 pt-14 pb-4">
-          <TouchableOpacity
-            onPress={onOpenLocation}
-            className="flex-row items-center mb-8 px-1"
-          >
-            <MapPin size={20} color="#3473ef" strokeWidth={2.5} />
-            <Text className="text-base font-extrabold mx-2 text-[#161719]">{selectedLocation}</Text>
-            <ChevronDown size={18} color="#161719" strokeWidth={3} />
-          </TouchableOpacity>
+        {/* ── HEADER SECTION (MOBILE ONLY) ───────────────────── */}
+        {!isDesktop && (
+          <View className="px-6 pt-14 pb-4">
+            <TouchableOpacity
+              onPress={onOpenLocation}
+              activeOpacity={0.7}
+              className="flex-row items-center mb-8 px-1"
+            >
+              <MapPin size={20} color="#3473ef" strokeWidth={2.5} />
+              <Text className="text-base font-extrabold mx-2 text-[#161719]">{selectedLocation}</Text>
+              <ChevronDown size={18} color="#161719" strokeWidth={3} />
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={onOpenSearch}
-            className="overflow-hidden border border-white/90 shadow-2xl shadow-black/10"
-            style={{ borderRadius: 100, backgroundColor: 'rgba(255, 255, 255, 0.6)' }}
-          >
-            <BlurView intensity={80} tint="light" className="flex-row items-center pl-5 pr-1.5 py-1.5">
-              <Search size={22} color="#161719" strokeWidth={3} />
-              <View className="flex-1 ml-3 h-12 justify-center">
-                <Text className="text-[16px] text-[#4b5563] font-extrabold">
+            <TouchableOpacity
+              onPress={onOpenSearch}
+              activeOpacity={0.7}
+              className="overflow-hidden border border-white/90 shadow-2xl shadow-black/10"
+              style={{ borderRadius: 100, backgroundColor: 'rgba(255, 255, 255, 0.6)' }}
+            >
+              <View pointerEvents="none">
+                <BlurView intensity={80} tint="light" className="flex-row items-center pl-5 pr-1.5 py-1.5">
+                  <Search size={22} color="#161719" strokeWidth={3} />
+                  <View className="flex-1 ml-3 h-12 justify-center">
+                    <Text className="text-[16px] text-[#4b5563] font-extrabold">
+                      Kërko sallone, trajtime...
+                    </Text>
+                  </View>
+                  <View className="bg-black px-8 h-12 rounded-full items-center justify-center ml-2 shadow-lg">
+                    <Text className="text-white font-black text-base">Kërko</Text>
+                  </View>
+                </BlurView>
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* ───────────────────────────────────────────────────────────── */}
+        {/* ── DESKTOP 3-COLUMN LAYOUT vs MOBILE LAYOUT ────────────────── */}
+        {/* ───────────────────────────────────────────────────────────── */}
+
+        {isDesktop ? (
+          <View className="max-w-7xl w-full mx-auto px-6 pt-6">
+            {/* HERO SECTION FOR DESKTOP */}
+            <View className="mb-10 bg-white/40 p-8 rounded-[36px] border border-white/80 shadow-sm backdrop-blur-md">
+              <View className="flex-row items-start justify-between mb-6">
+                <View className="flex-1 pr-8">
+                  <Text className="text-4xl font-black text-[#161719] mb-3 leading-tight">
+                    Rezervo termin te berberi{"\n"}më i mirë në Kosovë
+                  </Text>
+                  <Text className="text-slate-500 font-extrabold text-base">
+                    Shfleto sallonet, zgjidh orën që të përshtatet dhe konfirmo me OTP — pa telefonata.
+                  </Text>
+                </View>
+
+                {/* Right Stats */}
+                <View className="flex-row items-center gap-x-8 pt-2">
+                  <View className="items-center">
+                    <Text className="text-3xl font-black text-[#161719]">450+</Text>
+                    <Text className="text-slate-400 font-extrabold text-xs">Sallone</Text>
+                  </View>
+                  <View className="items-center">
+                    <Text className="text-3xl font-black text-[#161719]">28k</Text>
+                    <Text className="text-slate-400 font-extrabold text-xs">Termine</Text>
+                  </View>
+                  <View className="items-center">
+                    <Text className="text-3xl font-black text-[#3473ef]">4.9</Text>
+                    <Text className="text-slate-400 font-extrabold text-xs">Vlerësim</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Hero Search Bar */}
+              <TouchableOpacity
+                onPress={onOpenSearch}
+                className="bg-white rounded-full border border-slate-200 shadow-lg shadow-black/5 p-2 flex-row items-center"
+              >
+                <Search size={22} color="#94A3B8" className="ml-4 mr-3" />
+                <Text className="flex-1 text-slate-400 font-bold text-base ml-2">
                   Kërko sallone, trajtime...
                 </Text>
-              </View>
-              <View className="bg-black px-8 h-12 rounded-full items-center justify-center ml-2 shadow-lg">
-                <Text className="text-white font-black text-base">Kërko</Text>
-              </View>
-            </BlurView>
-          </TouchableOpacity>
-        </View>
+                <View className="bg-black px-8 py-3 rounded-full shadow-md">
+                  <Text className="text-white font-black text-sm">Kërko</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
 
-      {/* ── CATEGORIES GRID ──────────────────────────── */}
-      <View className="px-6 mt-4">
-        <View className="flex-row flex-wrap justify-between">
-          {categories.map((cat, i) => {
-            const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
-            return (
-              <View key={i} className="items-center mb-6" style={{ width: '22%' }}>
-                <View
-                  className="overflow-hidden border border-white/60 shadow-sm mb-2"
-                  style={{ borderRadius: 28, backgroundColor: 'rgba(255, 255, 255, 0.4)' }}
-                >
-                  <BlurView intensity={30} tint="light" className="w-[70px] h-[70px] items-center justify-center">
+            {/* 3 COLUMNS SECTION */}
+            <View className="flex-row items-start justify-between">
+              {/* LEFT SIDEBAR: SHËRBIMET (STICKY) */}
+              <View className="w-64 gap-y-3 lg:sticky lg:top-24 lg:self-start">
+                <Text className="text-slate-400 font-black text-xs uppercase tracking-widest mb-2 px-1">
+                  SHËRBIMET
+                </Text>
+                {categories.map((cat, i) => {
+                  const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
+                  const count = CATEGORY_COUNTS[cat.name] || '45 sallone';
+                  return (
                     <TouchableOpacity
-                      activeOpacity={0.7}
-                      className="items-center justify-center w-full h-full"
+                      key={i}
                       onPress={() => {
                         setSelectedMainCategory(cat);
                         setShowSubModal(true);
                       }}
+                      activeOpacity={0.8}
+                      className="bg-white hover:bg-slate-50 p-3 rounded-2xl border border-slate-200/80 shadow-sm flex-row items-center transition-all group"
                     >
-                      <IconComponent size={32} color="#161719" strokeWidth={1.5} />
-                    </TouchableOpacity>
-                  </BlurView>
-                </View>
-                <Text className="text-[11px] text-center font-bold text-[#161719] leading-3" numberOfLines={2}>{cat.name}</Text>
-              </View>
-            );
-          })}
-        </View>
-      </View>
-
-      {/* ── ADVERTISEMENT CAROUSEL ─────────────────── */}
-      <View className="mt-4 px-6">
-        <View className="flex-row items-center justify-between mb-4 px-1">
-          <Text className="text-xl font-black text-[#161719]">Partnerët tanë</Text>
-        </View>
-
-        <ScrollView
-          ref={adsScrollRef}
-          horizontal
-          pagingEnabled={false}
-          snapToInterval={width - 48}
-          decelerationRate="fast"
-          showsHorizontalScrollIndicator={false}
-          className="rounded-[28px] overflow-hidden shadow-sm"
-          style={{ height: 224 }}
-        >
-          {ads.map((ad, i) => {
-            const isCleanBanner = ad.only_button || ad.onlyButton || ad.business_name === 'Vehees' || ad.business_name === 'noasim' || ad.business_name === 'Noasim' || ad.business_name === 'NOA IPTV' || ad.business_name === 'Technova';
-            return (
-              <TouchableOpacity
-                key={i}
-                onPress={() => ad.url && Linking.openURL(ad.url)}
-                activeOpacity={0.95}
-                style={{ width: width - 48, height: 224 }}
-                className="relative overflow-hidden rounded-[28px] bg-slate-900 shadow-md border border-slate-200/40"
-              >
-                {/* Background Banner Image */}
-                <Image
-                  source={getAdImageSource(ad)}
-                  resizeMode={ad.business_name === 'NOA IPTV' || ad.business_name === 'Technova' ? "stretch" : "cover"}
-                  className="absolute inset-0 w-full h-full"
-                />
-
-                {/* Overlay for standard text ads */}
-                {!isCleanBanner && (
-                  <View className="absolute inset-0" style={{ backgroundColor: ad.color, opacity: 0.85 }} />
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
-
-      {/* ── RECOMMENDED SECTION ──────────────────────── */}
-      <View className="mt-4 px-6">
-        <View className="flex-row items-center justify-between mb-4">
-          <Text className="text-2xl font-bold text-[#161719]">Të rekomanduara</Text>
-        </View>
-        <View className="overflow-hidden">
-          <Animated.ScrollView
-            ref={recommendedScrollRef}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            snapToInterval={(width - 48) * 0.63 + 16}
-            decelerationRate="fast"
-          >
-            {recommendedShops.map(renderShopCard)}
-          </Animated.ScrollView>
-        </View>
-      </View>
-
-      {/* ── PRICING PLANS ───────────────────────────── */}
-      <View className="mt-4 px-6">
-        <Text className="text-xl font-black text-[#161719] mb-4">Planet e Çmimeve</Text>
-
-        <View className="overflow-hidden">
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            snapToInterval={(width - 48) * 0.7 + 16}
-            decelerationRate="fast"
-          >
-            <PricingCard
-              planId="solo"
-              title="Solo"
-              price="15€"
-              employees="1 berber"
-              desc="Ideale për berberët individualë"
-              icon={User}
-              onPress={() => onStartPlan && onStartPlan('solo')}
-              currentPlanInfo={currentPlanInfo}
-              userRole={user?.role}
-              onUpgrade={() => onUpgradePlan?.('solo')}
-              onDowngrade={() => onDowngradePlan?.('solo')}
-              onRenew={() => onRenewPlan?.('solo')}
-              onManage={onManagePlan}
-              width={width}
-            />
-            <PricingCard
-              planId="duo"
-              title="Duo"
-              price="20€"
-              employees="2 berberë"
-              desc="Për ekipe të vogla prej dy personash"
-              icon={Scissors}
-              isPopular
-              onPress={() => onStartPlan && onStartPlan('duo')}
-              currentPlanInfo={currentPlanInfo}
-              userRole={user?.role}
-              onUpgrade={() => onUpgradePlan?.('duo')}
-              onDowngrade={() => onDowngradePlan?.('duo')}
-              onRenew={() => onRenewPlan?.('duo')}
-              onManage={onManagePlan}
-              width={width}
-            />
-            <PricingCard
-              planId="team"
-              title="Team"
-              price={`${25 + (Math.max(3, parseInt(teamEmployees || "3")) - 3) * 5}€`}
-              employees={`${teamEmployees} berberë`}
-              desc="Për ekipe në rritje"
-              icon={Grid}
-              isTeam
-              teamEmployees={teamEmployees}
-              setTeamEmployees={setTeamEmployees}
-              onPress={() => onStartPlan && onStartPlan('team')}
-              currentPlanInfo={currentPlanInfo}
-              userRole={user?.role}
-              onUpgrade={() => onUpgradePlan?.('team')}
-              onDowngrade={() => onDowngradePlan?.('team')}
-              onRenew={() => onRenewPlan?.('team')}
-              onManage={onManagePlan}
-              width={width}
-            />
-          </ScrollView>
-        </View>
-      </View>
-
-      {/* ── NEW TO LINEUP SECTION ───────────────────── */}
-      {newShops.length > 0 && (
-        <View className="mt-4 px-6">
-          <View className="flex-row items-center justify-between mb-4">
-            <Text className="text-2xl font-bold text-[#161719]">Të reja në LineUp</Text>
-          </View>
-          <View className="overflow-hidden">
-            <ScrollView
-              ref={newToLineUpScrollRef}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              snapToInterval={(width - 48) * 0.63 + 16}
-              decelerationRate="fast"
-            >
-              {newShops.map(renderShopCard)}
-            </ScrollView>
-          </View>
-        </View>
-      )}
-
-      {/* ── HOW TO USE (TIMELINE STYLE) ──────────────── */}
-      <View className="mt-4 px-6 pb-20">
-        <View className="flex-row items-center justify-between mb-6">
-          <View>
-            <Text className="text-3xl font-black text-[#161719]">Si funksionon</Text>
-            <Text className="text-[#8789A3] font-bold mt-1">Përjetoni stilimin më të mirë në 3 hapa</Text>
-          </View>
-        </View>
-
-        <View 
-          className="overflow-hidden border border-white/60 shadow-lg" 
-          style={{ borderRadius: 32, backgroundColor: 'rgba(255, 255, 255, 0.4)' }}
-        >
-          <BlurView intensity={30} tint="light" className="p-6 relative">
-            {/* Timeline Vertical Line Connector */}
-            <View 
-              className="absolute left-[38px] top-12 bottom-12 w-[1px] bg-slate-300" 
-              style={{ borderStyle: 'dashed', borderWidth: 1, borderColor: '#cbd5e1' }}
-            />
-
-            <View className="gap-y-8">
-              {[
-                {
-                  step: "01",
-                  title: "Gjej dyqanin tënd",
-                  desc: "Kërko sipas qytetit, shfleto vlerësimet dhe eksploro fotot e berberive më të mira të Kosovës.",
-                  icon: Search,
-                  color: "#3473ef"
-                },
-                {
-                  step: "02",
-                  title: "Zgjidhni një vend",
-                  desc: "Zgjidhni berberin tuaj dhe orën e preferuar nga disponueshmëria në kohë reale.",
-                  icon: MapPin,
-                  color: "#f47458"
-                },
-                {
-                  step: "03",
-                  title: "Konfirmo me OTP",
-                  desc: "Konfirmoni terminin tuaj menjëherë pa pasur nevojë për telefonata të lodhshme.",
-                  icon: Shield,
-                  color: "#10b981"
-                },
-              ].map((item, i) => (
-                <View key={i} className="flex-row items-start relative z-10">
-                  {/* Left Circle Icon */}
-                  <View 
-                    className="w-11 h-11 rounded-full items-center justify-center border-2 border-white shadow-sm"
-                    style={{ backgroundColor: item.color }}
-                  >
-                    <item.icon size={20} color="white" strokeWidth={2.5} />
-                  </View>
-
-                  {/* Right Content */}
-                  <View className="flex-1 ml-5">
-                    <View className="flex-row items-center justify-between mb-1">
-                      <Text className="text-lg font-black text-[#161719]">{item.title}</Text>
-                      <View className="bg-white/60 px-2 py-0.5 rounded-full border border-white/80">
-                        <Text className="text-[10px] font-black text-[#8789A3] tracking-widest">{item.step}</Text>
+                      <View className="w-10 h-10 rounded-xl bg-slate-100 items-center justify-center mr-3 group-hover:bg-[#3473ef] transition-colors">
+                        <IconComponent size={20} color="#161719" strokeWidth={2} />
                       </View>
-                    </View>
-                    <Text className="text-[#8789A3] font-semibold leading-5 text-[13px]">{item.desc}</Text>
+                      <View className="flex-1">
+                        <Text className="text-[#161719] font-black text-xs" numberOfLines={1}>{cat.name}</Text>
+                        <Text className="text-slate-400 font-bold text-[10px] mt-0.5">{count}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* MIDDLE COLUMN: MAIN FEED CONTENT */}
+              <View className="flex-1 mx-6 gap-y-8">
+                {/* Partnerët tanë */}
+                <View>
+                  <Text className="text-xl font-black text-[#161719] mb-4">Partnerët tanë</Text>
+                  <ScrollView
+                    ref={adsScrollRef}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    className="rounded-[28px] overflow-hidden"
+                  >
+                    {ads.map((ad, i) => (
+                      <TouchableOpacity
+                        key={i}
+                        onPress={() => ad.url && Linking.openURL(ad.url)}
+                        style={{ width: 560, height: 220 }}
+                        className="mr-4 rounded-[28px] overflow-hidden bg-slate-900 shadow-md relative"
+                      >
+                        <Image
+                          source={getAdImageSource(ad)}
+                          className="w-full h-full"
+                          resizeMode="cover"
+                        />
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+
+                {/* Të rekomanduara */}
+                <View>
+                  <View className="flex-row items-center justify-between mb-4">
+                    <Text className="text-2xl font-black text-[#161719]">Të rekomanduara</Text>
+                    <TouchableOpacity onPress={onOpenSearch}>
+                      <Text className="text-[#3473ef] font-extrabold text-sm">Shiko të gjitha</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <View className="flex-row flex-wrap gap-4">
+                    {recommendedShops.map(renderShopCard)}
                   </View>
                 </View>
-              ))}
-            </View>
-          </BlurView>
-        </View>
-      </View>
 
-    </ScrollView>
+                {/* Të reja në LineUp */}
+                {newShops.length > 0 && (
+                  <View>
+                    <Text className="text-2xl font-black text-[#161719] mb-4">Të reja në LineUp</Text>
+                    <View className="flex-row flex-wrap gap-4">
+                      {newShops.map(renderShopCard)}
+                    </View>
+                  </View>
+                )}
+
+                {/* Si funksionon */}
+                <View className="bg-white/80 p-8 rounded-[32px] border border-white shadow-sm">
+                  <Text className="text-2xl font-black text-[#161719] mb-1">Si funksionon</Text>
+                  <Text className="text-slate-400 font-bold text-sm mb-6">Përjetoni stilimin më të mirë në 3 hapa</Text>
+                  <View className="gap-y-6">
+                    {[
+                      { step: "01", title: "Gjej dyqanin tënd", desc: "Kërko sipas qytetit, shfleto vlerësimet dhe eksploro fotot e berberive më të mira.", icon: Search, color: "#3473ef" },
+                      { step: "02", title: "Zgjidhni një vend", desc: "Zgjidhni berberin tuaj dhe orën e preferuar nga disponueshmëria në kohë reale.", icon: MapPin, color: "#f47458" },
+                      { step: "03", title: "Konfirmo me OTP", desc: "Konfirmoni terminin tuaj menjëherë pa pasur nevojë për telefonata të lodhshme.", icon: Shield, color: "#10b981" }
+                    ].map((item, i) => (
+                      <View key={i} className="flex-row items-start">
+                        <View className="w-10 h-10 rounded-full items-center justify-center mr-4" style={{ backgroundColor: item.color }}>
+                          <item.icon size={18} color="white" strokeWidth={2.5} />
+                        </View>
+                        <View className="flex-1">
+                          <Text className="text-base font-black text-[#161719]">{item.title}</Text>
+                          <Text className="text-slate-400 font-semibold text-xs mt-0.5">{item.desc}</Text>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              </View>
+
+              {/* RIGHT SIDEBAR: PLANET E ÇMIMEVE (STICKY) */}
+              <View className="w-72 gap-y-4 lg:sticky lg:top-24 lg:self-start">
+                <Text className="text-slate-400 font-black text-xs uppercase tracking-widest mb-2 px-1">
+                  PLANET E ÇMIMEVE
+                </Text>
+                <PricingCard
+                  planId="solo"
+                  title="Solo"
+                  price="15€"
+                  employees="1 berber"
+                  desc="Ideale për berberët individualë"
+                  icon={User}
+                  onPress={() => onStartPlan && onStartPlan('solo')}
+                  currentPlanInfo={currentPlanInfo}
+                  userRole={user?.role}
+                  onUpgrade={() => onUpgradePlan?.('solo')}
+                  onDowngrade={() => onDowngradePlan?.('solo')}
+                  onRenew={() => onRenewPlan?.('solo')}
+                  onManage={onManagePlan}
+                  width={width}
+                />
+                <PricingCard
+                  planId="duo"
+                  title="Duo"
+                  price="20€"
+                  employees="2 berberë"
+                  desc="Për sallone të vogla me 2 berberë"
+                  icon={Scissors}
+                  isPopular
+                  onPress={() => onStartPlan && onStartPlan('duo')}
+                  currentPlanInfo={currentPlanInfo}
+                  userRole={user?.role}
+                  onUpgrade={() => onUpgradePlan?.('duo')}
+                  onDowngrade={() => onDowngradePlan?.('duo')}
+                  onRenew={() => onRenewPlan?.('duo')}
+                  onManage={onManagePlan}
+                  width={width}
+                />
+                <PricingCard
+                  planId="team"
+                  title="Team"
+                  price={`${25 + (Math.max(3, parseInt(teamEmployees || "3")) - 3) * 5}€`}
+                  employees={`${teamEmployees} berberë`}
+                  desc="Për ekipe në rritje"
+                  icon={Grid}
+                  isTeam
+                  teamEmployees={teamEmployees}
+                  setTeamEmployees={setTeamEmployees}
+                  onPress={() => onStartPlan && onStartPlan('team')}
+                  currentPlanInfo={currentPlanInfo}
+                  userRole={user?.role}
+                  onUpgrade={() => onUpgradePlan?.('team')}
+                  onDowngrade={() => onDowngradePlan?.('team')}
+                  onRenew={() => onRenewPlan?.('team')}
+                  onManage={onManagePlan}
+                  width={width}
+                />
+              </View>
+            </View>
+          </View>
+        ) : (
+          /* MOBILE LAYOUT */
+          <>
+            {/* ── CATEGORIES GRID ──────────────────────────── */}
+            <View className="px-6 mt-4">
+              <View className="flex-row flex-wrap justify-between">
+                {categories.map((cat, i) => {
+                  const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
+                  return (
+                    <View key={i} className="items-center mb-6" style={{ width: '22%' }}>
+                      <View
+                        className="overflow-hidden border border-white/60 shadow-sm mb-2"
+                        style={{ borderRadius: 28, backgroundColor: 'rgba(255, 255, 255, 0.4)' }}
+                      >
+                        <BlurView intensity={30} tint="light" className="w-[70px] h-[70px] items-center justify-center">
+                          <TouchableOpacity
+                            activeOpacity={0.7}
+                            className="items-center justify-center w-full h-full"
+                            onPress={() => {
+                              setSelectedMainCategory(cat);
+                              setShowSubModal(true);
+                            }}
+                          >
+                            <IconComponent size={32} color="#161719" strokeWidth={1.5} />
+                          </TouchableOpacity>
+                        </BlurView>
+                      </View>
+                      <Text className="text-[11px] text-center font-bold text-[#161719] leading-3" numberOfLines={2}>{cat.name}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* ── ADVERTISEMENT CAROUSEL ─────────────────── */}
+            <View className="mt-4 px-6">
+              <View className="flex-row items-center justify-between mb-4 px-1">
+                <Text className="text-xl font-black text-[#161719]">Partnerët tanë</Text>
+              </View>
+
+              <ScrollView
+                ref={adsScrollRef}
+                horizontal
+                pagingEnabled={false}
+                snapToInterval={width - 48}
+                decelerationRate="fast"
+                showsHorizontalScrollIndicator={false}
+                className="rounded-[28px] overflow-hidden shadow-sm"
+                style={{ height: 224 }}
+              >
+                {ads.map((ad, i) => {
+                  const isCleanBanner = ad.only_button || ad.onlyButton || ad.business_name === 'Vehees' || ad.business_name === 'noasim' || ad.business_name === 'Noasim' || ad.business_name === 'NOA IPTV' || ad.business_name === 'Technova';
+                  return (
+                    <TouchableOpacity
+                      key={i}
+                      onPress={() => ad.url && Linking.openURL(ad.url)}
+                      activeOpacity={0.95}
+                      style={{ width: width - 48, height: 224 }}
+                      className="relative overflow-hidden rounded-[28px] bg-slate-900 shadow-md border border-slate-200/40"
+                    >
+                      <Image
+                        source={getAdImageSource(ad)}
+                        resizeMode={ad.business_name === 'NOA IPTV' || ad.business_name === 'Technova' ? "stretch" : "cover"}
+                        className="absolute inset-0 w-full h-full"
+                      />
+                      {!isCleanBanner && (
+                        <View className="absolute inset-0" style={{ backgroundColor: ad.color, opacity: 0.85 }} />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
+            {/* ── RECOMMENDED SECTION ──────────────────────── */}
+            <View className="mt-4 px-6">
+              <View className="flex-row items-center justify-between mb-4">
+                <Text className="text-2xl font-bold text-[#161719]">Të rekomanduara</Text>
+              </View>
+              <View className="overflow-hidden">
+                <Animated.ScrollView
+                  ref={recommendedScrollRef}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  snapToInterval={(width - 48) * 0.63 + 16}
+                  decelerationRate="fast"
+                >
+                  {recommendedShops.map(renderShopCard)}
+                </Animated.ScrollView>
+              </View>
+            </View>
+
+            {/* ── PRICING PLANS ───────────────────────────── */}
+            <View className="mt-4 px-6">
+              <Text className="text-xl font-black text-[#161719] mb-4">Planet e Çmimeve</Text>
+
+              <View className="overflow-hidden">
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  snapToInterval={(width - 48) * 0.7 + 16}
+                  decelerationRate="fast"
+                >
+                  <PricingCard
+                    planId="solo"
+                    title="Solo"
+                    price="15€"
+                    employees="1 berber"
+                    desc="Ideale për berberët individualë"
+                    icon={User}
+                    onPress={() => onStartPlan && onStartPlan('solo')}
+                    currentPlanInfo={currentPlanInfo}
+                    userRole={user?.role}
+                    onUpgrade={() => onUpgradePlan?.('solo')}
+                    onDowngrade={() => onDowngradePlan?.('solo')}
+                    onRenew={() => onRenewPlan?.('solo')}
+                    onManage={onManagePlan}
+                    width={width}
+                  />
+                  <PricingCard
+                    planId="duo"
+                    title="Duo"
+                    price="20€"
+                    employees="2 berberë"
+                    desc="Për ekipe të vogla prej dy personash"
+                    icon={Scissors}
+                    isPopular
+                    onPress={() => onStartPlan && onStartPlan('duo')}
+                    currentPlanInfo={currentPlanInfo}
+                    userRole={user?.role}
+                    onUpgrade={() => onUpgradePlan?.('duo')}
+                    onDowngrade={() => onDowngradePlan?.('duo')}
+                    onRenew={() => onRenewPlan?.('duo')}
+                    onManage={onManagePlan}
+                    width={width}
+                  />
+                  <PricingCard
+                    planId="team"
+                    title="Team"
+                    price={`${25 + (Math.max(3, parseInt(teamEmployees || "3")) - 3) * 5}€`}
+                    employees={`${teamEmployees} berberë`}
+                    desc="Për ekipe në rritje"
+                    icon={Grid}
+                    isTeam
+                    teamEmployees={teamEmployees}
+                    setTeamEmployees={setTeamEmployees}
+                    onPress={() => onStartPlan && onStartPlan('team')}
+                    currentPlanInfo={currentPlanInfo}
+                    userRole={user?.role}
+                    onUpgrade={() => onUpgradePlan?.('team')}
+                    onDowngrade={() => onDowngradePlan?.('team')}
+                    onRenew={() => onRenewPlan?.('team')}
+                    onManage={onManagePlan}
+                    width={width}
+                  />
+                </ScrollView>
+              </View>
+            </View>
+
+            {/* ── NEW TO LINEUP SECTION ───────────────────── */}
+            {newShops.length > 0 && (
+              <View className="mt-4 px-6">
+                <View className="flex-row items-center justify-between mb-4">
+                  <Text className="text-2xl font-bold text-[#161719]">Të reja në LineUp</Text>
+                </View>
+                <View className="overflow-hidden">
+                  <ScrollView
+                    ref={newToLineUpScrollRef}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    snapToInterval={(width - 48) * 0.63 + 16}
+                    decelerationRate="fast"
+                  >
+                    {newShops.map(renderShopCard)}
+                  </ScrollView>
+                </View>
+              </View>
+            )}
+
+            {/* ── HOW TO USE (TIMELINE STYLE) ──────────────── */}
+            <View className="mt-4 px-6 pb-20">
+              <View className="flex-row items-center justify-between mb-6">
+                <View>
+                  <Text className="text-3xl font-black text-[#161719]">Si funksionon</Text>
+                  <Text className="text-[#8789A3] font-bold mt-1">Përjetoni stilimin më të mirë në 3 hapa</Text>
+                </View>
+              </View>
+
+              <View 
+                className="overflow-hidden border border-white/60 shadow-lg" 
+                style={{ borderRadius: 32, backgroundColor: 'rgba(255, 255, 255, 0.4)' }}
+              >
+                <BlurView intensity={30} tint="light" className="p-6 relative">
+                  <View 
+                    className="absolute left-[38px] top-12 bottom-12 w-[1px] bg-slate-300" 
+                    style={{ borderStyle: 'dashed', borderWidth: 1, borderColor: '#cbd5e1' }}
+                  />
+
+                  <View className="gap-y-8">
+                    {[
+                      { step: "01", title: "Gjej dyqanin tënd", desc: "Kërko sipas qytetit, shfleto vlerësimet dhe eksploro fotot e berberive më të mira të Kosovës.", icon: Search, color: "#3473ef" },
+                      { step: "02", title: "Zgjidhni një vend", desc: "Zgjidhni berberin tuaj dhe orën e preferuar nga disponueshmëria në kohë reale.", icon: MapPin, color: "#f47458" },
+                      { step: "03", title: "Konfirmo me OTP", desc: "Konfirmoni terminin tuaj menjëherë pa pasur nevojë për telefonata të lodhshme.", icon: Shield, color: "#10b981" },
+                    ].map((item, i) => (
+                      <View key={i} className="flex-row items-start relative z-10">
+                        <View 
+                          className="w-11 h-11 rounded-full items-center justify-center border-2 border-white shadow-sm"
+                          style={{ backgroundColor: item.color }}
+                        >
+                          <item.icon size={20} color="white" strokeWidth={2.5} />
+                        </View>
+
+                        <View className="flex-1 ml-5">
+                          <View className="flex-row items-center justify-between mb-1">
+                            <Text className="text-lg font-black text-[#161719]">{item.title}</Text>
+                            <View className="bg-white/60 px-2 py-0.5 rounded-full border border-white/80">
+                              <Text className="text-[10px] font-black text-[#8789A3] tracking-widest">{item.step}</Text>
+                            </View>
+                          </View>
+                          <Text className="text-[#8789A3] font-semibold leading-5 text-[13px]">{item.desc}</Text>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                </BlurView>
+              </View>
+            </View>
+          </>
+        )}
+
+        {/* ── WEB FOOTER FOR DESKTOP SCREENS ─────────────────── */}
+        {isDesktop && (
+          <WebFooter
+            onNavigateTab={(tabIndex) => {
+              if (tabIndex === 3 && onManagePlan) onManagePlan();
+              else if (tabIndex === 1 && onOpenSearch) onOpenSearch();
+            }}
+            onOpenRegisterShop={() => onStartPlan && onStartPlan('solo')}
+          />
+        )}
+
+      </ScrollView>
 
     {/* Subcategory Modal */}
     <Modal
@@ -647,13 +905,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       transparent={true}
       onRequestClose={() => setShowSubModal(false)}
     >
-      <View className="flex-1 bg-black/50 justify-end">
+      <View className={`flex-1 justify-end ${isDesktop ? 'items-center pb-4 sm:pb-8' : ''}`}>
         <TouchableOpacity
-          className="absolute inset-0"
+          className="absolute inset-0 bg-black/45"
           activeOpacity={1}
           onPress={() => setShowSubModal(false)}
         />
-        <View className="bg-white rounded-t-[32px] h-[75%] overflow-hidden flex-col">
+        <View className={`bg-white overflow-hidden shadow-2xl flex-col ${
+          isDesktop 
+            ? 'w-full max-w-2xl lg:max-w-3xl rounded-[36px] h-auto max-h-[85vh] border border-slate-200/80' 
+            : 'w-full rounded-t-[32px] h-[75%]'
+        }`}>
           <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mt-3 mb-2" />
           <View className="flex-row items-center justify-between px-6 py-4 border-b border-slate-50">
             <View className="flex-row items-center">

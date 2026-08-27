@@ -6,11 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/lib/supabase";
+import { useFavorites } from "@/hooks/useFavorites";
 import {
   ArrowLeft,
   CalendarCheck,
   Clock,
   Globe,
+  Heart,
   Instagram,
   MapPin,
   Navigation,
@@ -97,6 +99,8 @@ export default function BarberDetail() {
 
   const shop = data?.shop;
   const barbers = data?.barbers || [];
+
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   const { data: servicesRes, isLoading: servicesLoading } = useListServices(shopId, {
     query: { enabled: !!shopId, queryKey: getListServicesQueryKey(shopId) },
@@ -196,12 +200,24 @@ export default function BarberDetail() {
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/65 to-slate-950/20" />
 
         <div className="container relative z-10 mx-auto flex min-h-[420px] max-w-6xl flex-col justify-between px-4 py-6 sm:px-6">
-          <Button variant="ghost" size="sm" asChild className="w-fit rounded-full bg-white/10 text-white hover:bg-white/20 hover:text-white">
-            <Link href="/barbershops">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Mbrapa
-            </Link>
-          </Button>
+          <div className="flex items-center justify-between">
+            <Button variant="ghost" size="sm" asChild className="w-fit rounded-full bg-white/10 text-white hover:bg-white/20 hover:text-white">
+              <Link href="/barbershops">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Mbrapa
+              </Link>
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => toggleFavorite(shop, e)}
+              className="rounded-full bg-white/10 text-white hover:bg-white/20 hover:text-white"
+              title="Ruaj në të ruajtura"
+            >
+              <Heart className={`h-5 w-5 ${isFavorite(shop.id) ? "fill-rose-500 text-rose-500" : "text-white"}`} />
+            </Button>
+          </div>
 
           <div className="pb-6">
             <div className="mb-4 flex flex-wrap items-center gap-2">
