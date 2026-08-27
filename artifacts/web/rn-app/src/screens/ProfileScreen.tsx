@@ -1423,7 +1423,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     const isDesktop = Platform.OS === 'web' && width > 768;
 
     return (
-      <View className="flex-1 bg-[#f8fafc] justify-center items-center p-4 sm:p-6 w-full max-w-full overflow-x-hidden min-h-screen">
+      <View className="flex-1 bg-[#f8fafc] justify-center items-center p-4 sm:p-6 w-full max-w-full py-10 lg:py-16">
         {/* Background Decorative Blobs */}
         <View className="absolute top-[-50] left-[-50] w-72 h-72 bg-[#3473ef]/10 rounded-full blur-3xl pointer-events-none" />
         <View className="absolute bottom-[-50] right-[-50] w-96 h-96 bg-[#f47458]/10 rounded-full blur-3xl pointer-events-none" />

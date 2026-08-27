@@ -2,6 +2,19 @@ import React from "react";
 import { View, Text, TouchableOpacity, Image, Linking } from "react-native";
 import { MapPin, Instagram, Facebook, Mail } from "lucide-react-native";
 
+const logoImg = require('../../assets/logo.png');
+const extractUri = (mod: any): string => {
+  if (!mod) return "";
+  if (typeof mod === "string") return mod;
+  if (typeof mod === "object") {
+    if (typeof mod.default === "string") return mod.default;
+    if (mod.default && typeof mod.default === "object" && typeof mod.default.uri === "string") return mod.default.uri;
+    if (typeof mod.uri === "string") return mod.uri;
+    if (typeof mod.src === "string") return mod.src;
+  }
+  return String(mod || "");
+};
+
 interface WebFooterProps {
   onNavigateTab?: (tabIndex: number) => void;
   onOpenRegisterShop?: () => void;
@@ -18,10 +31,8 @@ export const WebFooter: React.FC<WebFooterProps> = ({
       <View className="mx-auto max-w-[1440px] px-6 py-12 md:px-10 flex-row flex-wrap justify-between gap-8">
         {/* Brand Info */}
         <View className="w-full md:w-1/4">
-          <View className="flex-row items-center gap-2 mb-3">
-            <View className="h-9 w-9 items-center justify-center rounded-xl bg-slate-900">
-              <Text className="text-sm font-black text-white">L</Text>
-            </View>
+          <View className="flex-row items-center gap-3 mb-3">
+            <img src={extractUri(logoImg)} alt="LineUp Logo" className="h-10 w-10 object-contain rounded-xl" />
             <Text className="text-xl font-black text-slate-900">LineUp</Text>
           </View>
           <Text className="max-w-xs text-sm text-slate-500 font-semibold leading-relaxed">
