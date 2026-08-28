@@ -51,6 +51,7 @@ import { PaddleCheckout } from "../components/PaddleCheckout";
 import { createPaddleTransaction, PADDLE_CONFIG } from "../config/paddle";
 import { deleteShopAssets } from "../utils/storage";
 import { useSubscription } from "../hooks/useSubscription";
+import { MobileAppDownloadCard } from "../components/MobileAppDownloadCard";
 
 const { width, height } = Dimensions.get("window");
 
@@ -1511,8 +1512,17 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     );
   }
 
-  const isBusinessRole = user?.role === 'owner' || user?.role === 'barber' || user?.role === 'employee';
+  const isBusinessRole = user?.role === 'owner' || user?.role === 'barber' || user?.role === 'employee' || user?.role === 'staf' || user?.role === 'staff' || user?.role === 'admin' || user?.role === 'super_admin';
   const isDesktop = Platform.OS === 'web' && width > 768;
+
+  if (Platform.OS === 'web' && isBusinessRole) {
+    return (
+      <MobileAppDownloadCard
+        user={user}
+        onLogout={onLogout}
+      />
+    );
+  }
 
   return (
     <View className="flex-1 bg-[#f8fafc] w-full max-w-full overflow-x-hidden">

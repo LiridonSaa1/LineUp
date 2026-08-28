@@ -109,6 +109,8 @@ import { RegisterScreen } from "./src/screens/RegisterScreen";
 import { BarberDashboardScreen } from "./src/screens/BarberDashboardScreen";
 import { AdminDashboardScreen } from "./src/screens/AdminDashboardScreen";
 import { AddAdModal } from "./src/screens/AddAdModal";
+import { MobileAppBanner } from "./src/components/MobileAppBanner";
+import { MobileAppDownloadCard } from "./src/components/MobileAppDownloadCard";
 import { supabase } from "./src/config/supabase";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DEFAULT_CATEGORIES, DEFAULT_SUBCATEGORIES, CATEGORY_ORDER } from "./src/config/defaultCategories";
@@ -500,6 +502,9 @@ export default function App() {
       <SafeAreaProvider>
         <View className="flex-1 bg-[#f8fafc]">
           <StatusBar style="dark" />
+
+          {/* Smart Mobile Browser App Download Banner */}
+          <MobileAppBanner />
 
           {/* Desktop Web Navigation Bar (Non-Home tabs or mobile) */}
           {isDesktop && activeTab !== 0 && (
