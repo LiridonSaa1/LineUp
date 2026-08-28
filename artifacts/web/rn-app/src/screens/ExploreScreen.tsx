@@ -550,12 +550,15 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
         const { count: aCount } = await supabase.from('appointments').select('id', { count: 'exact', head: true });
         const { data: shopsData } = await supabase.from('barbershops').select('rating').eq('status', 'active');
 
-        let formattedShops = sCount && sCount > 0 ? `${sCount}` : "450+";
-        let formattedAppts = aCount && aCount > 0 ? (aCount > 1000 ? `${(aCount / 1000).toFixed(1)}k` : `${aCount}`) : "28k";
-        let avgRatingStr = "4.9";
+        const totalShops = sCount !== null && sCount !== undefined ? sCount : 0;
+        const totalAppts = aCount !== null && aCount !== undefined ? aCount : 0;
+
+        let formattedShops = `${totalShops}`;
+        let formattedAppts = totalAppts >= 1000 ? `${(totalAppts / 1000).toFixed(1).replace('.0', '')}k` : `${totalAppts}`;
+        let avgRatingStr = "5.0";
 
         if (shopsData && shopsData.length > 0) {
-          const ratings = shopsData.map(s => parseFloat(s.rating || "0")).filter(r => r > 0);
+          const ratings = shopsData.map(s => parseFloat(s.rating || "0")).filter(r => !isNaN(r) && r > 0);
           if (ratings.length > 0) {
             const sum = ratings.reduce((acc, curr) => acc + curr, 0);
             avgRatingStr = (sum / ratings.length).toFixed(1);

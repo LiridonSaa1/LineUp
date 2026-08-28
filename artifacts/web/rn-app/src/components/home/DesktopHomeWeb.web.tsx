@@ -230,14 +230,14 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
           }
         }
 
-        const formatCount = (num: number, suffix = '+') => {
+        const formatCount = (num: number) => {
           if (num >= 1000) return `${(num / 1000).toFixed(1).replace('.0', '')}k`;
-          return num > 0 ? `${num}${suffix}` : '0';
+          return `${num}`;
         };
 
         setStats({
-          shopsCount: formatCount(totalShops, '+'),
-          appointmentsCount: formatCount(totalAppts, totalAppts >= 1000 ? '' : '+'),
+          shopsCount: formatCount(totalShops),
+          appointmentsCount: formatCount(totalAppts),
           avgRating: avgRating.toFixed(1)
         });
       } catch (e) {
