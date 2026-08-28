@@ -29,6 +29,8 @@ const DesktopHeaderBar = ({
   onOpenSearch,
   onOpenRegisterShop
 }: any) => {
+  if (Platform.OS !== 'web') return null;
+
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
       <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-6 px-6 py-4 lg:px-10">
@@ -796,44 +798,40 @@ export default function App() {
                   animationType="fade"
                   onRequestClose={() => setShowAuthAlert(false)}
                 >
-                  <View className="flex-1 items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 z-50">
-                    <div className="w-full max-w-md overflow-hidden rounded-3xl bg-white p-6 shadow-2xl transition-all border border-slate-100">
-                      <div className="flex flex-col items-center text-center">
-                        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 border border-blue-100/60 shadow-2xs">
-                          <User size={32} color="#3473ef" />
-                        </div>
+                  <View className="flex-1 items-center justify-center bg-slate-900/60 p-4 z-50">
+                    <View className="w-full max-w-md overflow-hidden rounded-3xl bg-white p-6 shadow-2xl border border-slate-100 items-center text-center">
+                      <View className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 border border-blue-100/60 shadow-2xs">
+                        <User size={32} color="#3473ef" />
+                      </View>
 
-                        <h3 className="font-display text-xl font-bold text-slate-900 mb-2">
-                          Llogaria Kërkohet
-                        </h3>
+                      <Text className="text-xl font-bold text-slate-900 mb-2 text-center">
+                        Llogaria Kërkohet
+                      </Text>
 
-                        <p className="text-sm font-medium text-slate-500 leading-relaxed mb-6">
-                          Ju lutem kyçuni ose krijoni një llogari për të ruajtur sallonin tuaj të preferuar te lista e të ruajturave.
-                        </p>
+                      <Text className="text-sm font-medium text-slate-500 leading-relaxed mb-6 text-center">
+                        Ju lutem kyçuni ose krijoni një llogari për të ruajtur sallonin tuaj të preferuar te lista e të ruajturave.
+                      </Text>
 
-                        <div className="flex w-full flex-col gap-2.5">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowAuthAlert(false);
-                              setShowRegisterShop(true);
-                            }}
-                            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#3473ef] py-3.5 px-4 font-display text-sm font-bold text-white shadow-md transition-all hover:bg-blue-600 active:scale-[0.98] cursor-pointer"
-                          >
-                            <User size={18} color="white" />
-                            Kyçu ose Regjistrohu
-                          </button>
+                      <View className="flex w-full flex-col gap-2.5">
+                        <TouchableOpacity
+                          onPress={() => {
+                            setShowAuthAlert(false);
+                            setShowRegisterShop(true);
+                          }}
+                          className="flex-row w-full items-center justify-center gap-2 rounded-2xl bg-[#3473ef] py-3.5 px-4 shadow-md"
+                        >
+                          <User size={18} color="white" />
+                          <Text className="text-sm font-bold text-white">Kyçu ose Regjistrohu</Text>
+                        </TouchableOpacity>
 
-                          <button
-                            type="button"
-                            onClick={() => setShowAuthAlert(false)}
-                            className="w-full rounded-2xl border border-slate-200 bg-white py-3 px-4 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 cursor-pointer"
-                          >
-                            Më vonë
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                        <TouchableOpacity
+                          onPress={() => setShowAuthAlert(false)}
+                          className="w-full items-center justify-center rounded-2xl border border-slate-200 bg-white py-3 px-4"
+                        >
+                          <Text className="text-sm font-semibold text-slate-600">Më vonë</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
                   </View>
                 </Modal>
               )}
