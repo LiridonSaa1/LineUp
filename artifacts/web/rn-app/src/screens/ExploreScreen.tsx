@@ -596,40 +596,40 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
             }
           `}</style>
         )}
-        {/* TOP HERO BANNER & REAL STATS ABOVE BOTH MAP & CARDS */}
-        <View className="mx-auto w-full max-w-[1440px] px-6 lg:px-10 pt-8 pb-4">
-          <View className="flex-col gap-4 lg:flex-row lg:items-center lg:justify-between border-b border-slate-200/80 pb-6">
-            <View className="max-w-2xl">
-              <Text className="font-display text-2xl font-black text-slate-900 leading-tight tracking-tight sm:text-3xl lg:text-4xl">
-                Rezervo termin te berberi më i mirë në Kosovë
+        {/* TOP HERO BANNER & REAL STATS MATCHING HOMEPAGE EXACTLY */}
+        <View className="mx-auto w-full max-w-[1440px] px-6 lg:px-10 pt-10 pb-8">
+          <View className="flex-col gap-6 lg:flex-row lg:items-end lg:justify-between border-b border-slate-200/80 pb-8">
+            <View className="max-w-xl">
+              <Text className="font-display text-4xl font-bold text-slate-900 leading-[1.05] tracking-tight sm:text-5xl">
+                Rezervo termin te berberi{"\n"}më i mirë në Kosovë
               </Text>
-              <Text className="mt-2 text-sm font-medium text-slate-500 leading-relaxed">
+              <Text className="mt-3 text-base font-medium text-slate-500 leading-relaxed">
                 Shfleto sallonet, zgjidh orën që të përshtatet dhe konfirmo me OTP — pa telefonata.
               </Text>
             </View>
 
-            {/* REAL DYNAMIC STATS BADGES */}
-            <View className="flex-row items-center gap-6 rounded-2xl bg-white border border-slate-200/80 px-6 py-4 shadow-2xs">
+            {/* REAL DYNAMIC STATS MATCHING HOMEPAGE EXACTLY */}
+            <View className="flex-row items-center gap-6 rounded-2xl bg-white border border-slate-200/80 px-6 py-4 shadow-2xs lg:justify-end">
               <View className="items-center">
-                <Text className="font-display text-2xl font-black text-slate-900">{stats.shopsCount}</Text>
-                <Text className="text-xs font-bold text-slate-400 uppercase tracking-wider">Sallone</Text>
+                <Text className="font-display text-2xl font-bold text-slate-900">{stats.shopsCount}</Text>
+                <Text className="text-xs font-semibold text-slate-500">Sallone</Text>
               </View>
               <View className="h-8 w-[1px] bg-slate-200" />
               <View className="items-center">
-                <Text className="font-display text-2xl font-black text-slate-900">{stats.appointmentsCount}</Text>
-                <Text className="text-xs font-bold text-slate-400 uppercase tracking-wider">Termine</Text>
+                <Text className="font-display text-2xl font-bold text-slate-900">{stats.appointmentsCount}</Text>
+                <Text className="text-xs font-semibold text-slate-500">Termine</Text>
               </View>
               <View className="h-8 w-[1px] bg-slate-200" />
               <View className="items-center">
-                <Text className="font-display text-2xl font-black text-[#3473ef]">{stats.avgRating}</Text>
-                <Text className="text-xs font-bold text-slate-400 uppercase tracking-wider">Vlerësim</Text>
+                <Text className="font-display text-2xl font-bold text-[#3473ef]">{stats.avgRating}</Text>
+                <Text className="text-xs font-semibold text-slate-500">Vlerësim</Text>
               </View>
             </View>
           </View>
         </View>
 
         {/* Desktop Split Screen Content - Centered to max-w-[1440px] px-6 lg:px-10 matching Homepage */}
-        <View className="mx-auto flex-row w-full max-w-[1440px] px-6 lg:px-10 gap-6 h-[calc(100vh-250px)] min-h-[550px] relative pb-6">
+        <View className="mx-auto flex-row w-full max-w-[1440px] px-6 lg:px-10 gap-8 h-[calc(100vh-280px)] min-h-[580px] relative pb-16">
           {/* Left Side: Barbershop Cards Rail */}
           <View className="w-[480px] bg-white border border-slate-200/80 rounded-3xl flex-col h-full overflow-hidden shadow-xs">
             <ScrollView className="flex-1 px-6 pt-6" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
