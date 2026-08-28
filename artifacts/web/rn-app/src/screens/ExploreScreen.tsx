@@ -580,6 +580,19 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
   if (isDesktop) {
     return (
       <View className="flex-1 bg-[#f8fafc] flex-col items-center overflow-y-auto">
+        {Platform.OS === 'web' && (
+          <style>{`
+            @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Space+Grotesk:wght@300..700&display=swap');
+            
+            body, button, input, select, textarea, span, p, div {
+              font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+            }
+            
+            h1, h2, h3, h4, h5, h6, .font-display, [class*="font-black"], [class*="font-bold"], [class*="font-extrabold"], [class*="font-semibold"] {
+              font-family: 'Space Grotesk', 'DM Sans', sans-serif !important;
+            }
+          `}</style>
+        )}
         {/* TOP HERO BANNER & REAL STATS ABOVE BOTH MAP & CARDS */}
         <View className="mx-auto w-full max-w-[1440px] px-6 lg:px-10 pt-8 pb-4">
           <View className="flex-col gap-4 lg:flex-row lg:items-center lg:justify-between border-b border-slate-200/80 pb-6">

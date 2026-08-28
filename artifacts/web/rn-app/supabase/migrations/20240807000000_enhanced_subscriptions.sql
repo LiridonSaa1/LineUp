@@ -33,8 +33,8 @@ CREATE TABLE IF NOT EXISTS public.subscription_notifications (
 ALTER TABLE public.subscription_payments ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Owners can view their own payments" ON public.subscription_payments;
-CREATE POLICY "Owners can view their own payments"
-ON public.subscription_payments
+DROP POLICY IF EXISTS "Owners can view their own payments" ON public.subscription_payments;
+CREATE POLICY "Owners can view their own payments" ON public.subscription_payments
 FOR SELECT
 USING (
     business_id IN (
@@ -43,8 +43,8 @@ USING (
 );
 
 DROP POLICY IF EXISTS "Admins can view all payments" ON public.subscription_payments;
-CREATE POLICY "Admins can view all payments"
-ON public.subscription_payments
+DROP POLICY IF EXISTS "Admins can view all payments" ON public.subscription_payments;
+CREATE POLICY "Admins can view all payments" ON public.subscription_payments
 FOR ALL
 TO authenticated
 USING (

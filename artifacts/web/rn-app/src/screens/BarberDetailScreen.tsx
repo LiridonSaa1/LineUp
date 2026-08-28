@@ -1263,69 +1263,77 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                     </View>
 
                     <TouchableOpacity
-                      type="button"
                       onPress={() => {
                         setBookingSuccess(false);
                         setWidgetStep(1);
                         setSelectedServices([]);
                         setSelectedTime("");
                       }}
-                      className="w-full rounded-2xl bg-[#3473ef] py-3.5 font-display text-sm font-bold text-white shadow-md hover:bg-blue-600 cursor-pointer transition-all mt-2"
+                      className="w-full rounded-2xl bg-[#3473ef] py-3.5 items-center justify-center shadow-md mt-2"
                     >
-                      + Bëj një Rezervim të Ri
+                      <Text className="text-white font-black text-sm">+ Bëj një Rezervim të Ri</Text>
                     </TouchableOpacity>
                   </View>
                 ) : (
                   <>
-                    {/* Header & Step Bar */}
                     <View className="mb-4 border-b border-slate-100 pb-4">
-                  <View className="flex items-center justify-between">
-                    <View>
-                      <Text className="text-xs font-bold uppercase tracking-wider text-[#3473ef]">Rezervim me OTP</Text>
-                      <Text className="font-display text-xl font-bold text-slate-900">
-                        {widgetStep === 1 ? "1. Zgjidh Berberin" :
-                         widgetStep === 2 ? "2. Zgjidh Shërbimet" :
-                         widgetStep === 3 ? "3. Data & Ora" : "4. Konfirmo Terminin"}
-                      </Text>
-                    </View>
-                    <View className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-[#3473ef]">
-                      <Calendar size={20} />
-                    </View>
-                  </View>
+                      <View className="flex-row items-center justify-between">
+                        <View>
+                          <Text className="text-[10px] font-black uppercase tracking-wider text-[#3473ef]">Rezervim i Shpejtë</Text>
+                          <Text className="text-xl font-black text-[#161719]">
+                            {widgetStep === 1 ? "1. Zgjidh Berberin" :
+                             widgetStep === 2 ? "2. Zgjidh Shërbimet" :
+                             widgetStep === 3 ? "3. Data & Ora" : "4. Konfirmo Terminin"}
+                          </Text>
+                        </View>
+                        <View className="w-10 h-10 items-center justify-center rounded-2xl bg-blue-50">
+                          <Calendar size={20} color="#3473ef" />
+                        </View>
+                      </View>
 
-                  {/* Step Pills Navigation */}
-                  <View className="mt-4 flex items-center justify-between gap-1 rounded-2xl bg-slate-100 p-1">
-                    {[
-                      { step: 1, label: "Berber" },
-                      { step: 2, label: "Shërbimi" },
-                      { step: 3, label: "Data & Ora" },
-                      { step: 4, label: "Konfirmo" }
-                    ].map((s) => {
-                      const isActive = widgetStep === s.step;
-                      const isDone = widgetStep > s.step || (
-                        (s.step === 1 && selectedEmployee) ||
-                        (s.step === 2 && selectedServices.length > 0) ||
-                        (s.step === 3 && selectedDate && selectedTime)
-                      );
-                      return (
-                        <TouchableOpacity
-                          key={s.step}
-                          type="button"
-                          onPress={() => setWidgetStep(s.step)}
-                          className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-bold transition-all text-center cursor-pointer ${
-                            isActive
-                              ? "bg-[#3473ef] text-white shadow-xs"
-                              : isDone
-                              ? "bg-blue-50 text-[#3473ef]"
-                              : "text-slate-500 hover:text-slate-900"
-                          }`}
-                        >
-                          {s.label}
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
+                      {/* Step Pills Navigation */}
+                      <View className="mt-4 flex-row items-center justify-between gap-1.5 rounded-2xl bg-slate-100 p-1.5">
+                        {[
+                          { step: 1, label: "Berber" },
+                          { step: 2, label: "Shërbimi" },
+                          { step: 3, label: "Data & Ora" },
+                          { step: 4, label: "Konfirmo" }
+                        ].map((s) => {
+                          const isActive = widgetStep === s.step;
+                          const isDone = widgetStep > s.step || (
+                            (s.step === 1 && selectedEmployee) ||
+                            (s.step === 2 && selectedServices.length > 0) ||
+                            (s.step === 3 && selectedDate && selectedTime)
+                          );
+                          return (
+                            <TouchableOpacity
+                              key={s.step}
+                              onPress={() => setWidgetStep(s.step)}
+                              activeOpacity={0.8}
+                              className={`flex-1 py-2 px-1 rounded-xl items-center justify-center ${
+                                isActive
+                                  ? "bg-[#3473ef] shadow-sm"
+                                  : isDone
+                                  ? "bg-blue-50"
+                                  : "bg-transparent"
+                              }`}
+                            >
+                              <Text
+                                className={`text-[11px] text-center ${
+                                  isActive
+                                    ? "text-white font-black"
+                                    : isDone
+                                    ? "text-[#3473ef] font-bold"
+                                    : "text-slate-500 font-bold"
+                                }`}
+                              >
+                                {s.label}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </View>
 
                 {/* STEP 1: SELECT BARBER */}
                 {widgetStep === 1 && (

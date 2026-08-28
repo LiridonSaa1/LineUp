@@ -34,8 +34,8 @@ CREATE INDEX IF NOT EXISTS idx_subscriptions_paddle_id ON public.subscriptions(p
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users can view their own subscriptions" ON public.subscriptions;
-CREATE POLICY "Users can view their own subscriptions"
-ON public.subscriptions
+DROP POLICY IF EXISTS "Users can view their own subscriptions" ON public.subscriptions;
+CREATE POLICY "Users can view their own subscriptions" ON public.subscriptions
 FOR SELECT
 TO authenticated
 USING (
@@ -45,8 +45,8 @@ USING (
 );
 
 DROP POLICY IF EXISTS "Users can update their own subscriptions" ON public.subscriptions;
-CREATE POLICY "Users can update their own subscriptions"
-ON public.subscriptions
+DROP POLICY IF EXISTS "Users can update their own subscriptions" ON public.subscriptions;
+CREATE POLICY "Users can update their own subscriptions" ON public.subscriptions
 FOR UPDATE
 TO authenticated
 USING (
@@ -61,8 +61,8 @@ WITH CHECK (
 );
 
 DROP POLICY IF EXISTS "Users can insert their own subscriptions" ON public.subscriptions;
-CREATE POLICY "Users can insert their own subscriptions"
-ON public.subscriptions
+DROP POLICY IF EXISTS "Users can insert their own subscriptions" ON public.subscriptions;
+CREATE POLICY "Users can insert their own subscriptions" ON public.subscriptions
 FOR INSERT
 TO authenticated
 WITH CHECK (true);

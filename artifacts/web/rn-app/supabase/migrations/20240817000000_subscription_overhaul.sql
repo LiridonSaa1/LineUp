@@ -20,13 +20,13 @@ ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow public access" ON public.subscriptions;
 
-CREATE POLICY "Users can view their own subscriptions"
-ON public.subscriptions
+DROP POLICY IF EXISTS "Users can view their own subscriptions" ON public.subscriptions;
+CREATE POLICY "Users can view their own subscriptions" ON public.subscriptions
 FOR SELECT
 USING (auth.uid() = user_id);
 
-CREATE POLICY "Admins can view all subscriptions"
-ON public.subscriptions
+DROP POLICY IF EXISTS "Admins can view all subscriptions" ON public.subscriptions;
+CREATE POLICY "Admins can view all subscriptions" ON public.subscriptions
 FOR ALL
 TO authenticated
 USING (

@@ -502,6 +502,19 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <View className="flex-1 bg-[#f8fafc]">
+          {Platform.OS === 'web' && (
+            <style>{`
+              @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Space+Grotesk:wght@300..700&display=swap');
+              
+              body, button, input, select, textarea, span, p, div {
+                font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+              }
+              
+              h1, h2, h3, h4, h5, h6, .font-display, [class*="font-black"], [class*="font-bold"], [class*="font-extrabold"], [class*="font-semibold"] {
+                font-family: 'Space Grotesk', 'DM Sans', sans-serif !important;
+              }
+            `}</style>
+          )}
           <StatusBar style="dark" />
 
           {/* Smart Mobile Browser App Download Banner */}
