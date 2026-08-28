@@ -375,6 +375,20 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
               <span className="truncate">{selectedLocation}</span>
               <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
             </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (user) {
+                  onTabPress && onTabPress(3);
+                } else {
+                  onOpenRegisterShop();
+                }
+              }}
+              className="shrink-0 rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 cursor-pointer"
+            >
+              {user ? (user.name || "Profili") : "Kyçu"}
+            </button>
           </div>
         </div>
       </header>
