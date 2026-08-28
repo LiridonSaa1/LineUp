@@ -318,7 +318,7 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             className="flex cursor-pointer shrink-0 items-center gap-2 mr-6 lg:mr-12"
           >
-            <img src={extractUri(logoImg)} alt="LineUp" className="h-16 w-16 object-contain rounded-2xl transition-transform hover:scale-105" />
+            <img src={extractUri(logoImg)} alt="LineUp" className="h-9 w-9 object-contain rounded-xl transition-transform hover:scale-105" />
           </div>
 
           <nav className="hidden items-center gap-2 lg:flex ml-4 lg:ml-8">

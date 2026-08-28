@@ -37,7 +37,7 @@ const DesktopHeaderBar = ({
           activeOpacity={0.8}
           className="flex-row shrink-0 items-center gap-2 mr-6 lg:mr-12"
         >
-          <RNImage source={logoImg} className="h-16 w-16 rounded-2xl" resizeMode="contain" />
+          <RNImage source={logoImg} className="h-9 w-9 rounded-xl" resizeMode="contain" />
         </TouchableOpacity>
 
         <View className="hidden flex-row items-center gap-2 lg:flex ml-4 lg:ml-8">
@@ -711,17 +711,17 @@ export default function App() {
               >
                 <View className={`flex-1 justify-end ${isDesktop ? 'items-center pb-4 sm:pb-8' : ''}`}>
                   <TouchableOpacity
-                    className="absolute inset-0 bg-black/45"
+                    className="absolute inset-0 bg-black/45 z-0"
                     activeOpacity={1}
                     onPress={() => {
                       setShowRegisterShop(false);
                       setSelectedPlanId(undefined);
                     }}
                   />
-                  <View className={`bg-white overflow-hidden shadow-2xl ${
+                  <View className={`bg-white overflow-hidden shadow-2xl z-10 ${
                     isDesktop 
-                      ? 'w-full max-w-2xl lg:max-w-3xl rounded-[36px] h-auto max-h-[88vh] border border-slate-200/80' 
-                      : 'w-full rounded-t-[40px] h-auto max-h-[92vh]'
+                      ? 'w-full max-w-2xl lg:max-w-3xl rounded-[36px] h-[88vh] border border-slate-200/80' 
+                      : 'w-full rounded-t-[40px] h-[92vh]'
                   }`}>
                     <RegisterScreen
                       initialPlanId={selectedPlanId}
