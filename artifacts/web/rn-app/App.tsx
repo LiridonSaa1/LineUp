@@ -37,7 +37,7 @@ const DesktopHeaderBar = ({
           activeOpacity={0.8}
           className="flex-row shrink-0 items-center gap-2 mr-6 lg:mr-12"
         >
-          <RNImage source={logoImg} style={{ width: 28, height: 28, maxWidth: 28, maxHeight: 28 }} className="rounded-lg" resizeMode="contain" />
+          <RNImage source={logoImg} style={{ width: 40, height: 40, maxWidth: 40, maxHeight: 40 }} className="rounded-xl" resizeMode="contain" />
         </TouchableOpacity>
 
         <View className="hidden flex-row items-center gap-2 lg:flex ml-4 lg:ml-8">
