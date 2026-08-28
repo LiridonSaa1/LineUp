@@ -1768,14 +1768,14 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                             type="button"
                             disabled={loading}
                             onPress={handleConfirmOtpAndReserve}
-                            className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-[#3473ef] py-3.5 font-display text-sm font-bold text-white shadow-lg hover:bg-blue-600 cursor-pointer"
+                            className="flex-1 flex flex-row items-center justify-center gap-2 rounded-2xl bg-[#3473ef] py-3.5 px-4 font-display text-sm font-bold text-white shadow-lg hover:bg-blue-600 cursor-pointer"
                           >
                             {loading ? (
-                              <Text>Duke dërguar OTP...</Text>
+                              <Text className="text-white font-bold text-sm">Duke dërguar OTP...</Text>
                             ) : (
                               <>
-                                <Calendar size={16} />
-                                <Text>Konfirmo me SMS OTP →</Text>
+                                <Calendar size={18} color="white" strokeWidth={2.5} />
+                                <Text className="text-white font-bold text-sm">Konfirmo me SMS OTP →</Text>
                               </>
                             )}
                           </TouchableOpacity>
