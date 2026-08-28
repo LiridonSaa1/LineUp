@@ -70,7 +70,7 @@ export const PaddleCheckout = ({ email, transactionId, priceId, subscriptionId, 
           <div id="error-msg"></div>
         </div>
 
-        <div id="checkout-container" style="width: 100%;"></div>
+        <div id="checkout-container" class="checkout-container" style="width: 100%; min-height: 480px;"></div>
 
         <script type="text/javascript">
           function logToRN(msg) {
