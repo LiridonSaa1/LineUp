@@ -25,8 +25,6 @@ const DesktopHeaderBar = ({
   user,
   selectedLocation,
   onOpenLocation,
-  onOpenSearch,
-  onOpenRegisterShop
 }: any) => {
   return (
     <View className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
@@ -43,7 +41,7 @@ const DesktopHeaderBar = ({
           <TouchableOpacity
             onPress={() => onTabPress(0)}
             activeOpacity={0.8}
-            className={`rounded-full px-4 py-2 transition-colors ${activeTab === 0 ? 'bg-slate-100' : 'hover:bg-slate-50'}`}
+            className={`rounded-full px-4 py-2 transition-colors ${activeTab === 0 ? 'bg-slate-100 font-bold text-slate-900' : 'hover:bg-slate-50 text-slate-500'}`}
           >
             <Text className={`text-sm ${activeTab === 0 ? 'font-bold text-slate-900' : 'font-medium text-slate-500'}`}>
               Ballina
@@ -53,7 +51,7 @@ const DesktopHeaderBar = ({
           <TouchableOpacity
             onPress={() => onTabPress(1)}
             activeOpacity={0.8}
-            className={`rounded-full px-4 py-2 transition-colors ${activeTab === 1 ? 'bg-slate-100' : 'hover:bg-slate-50'}`}
+            className={`rounded-full px-4 py-2 transition-colors ${activeTab === 1 ? 'bg-slate-100 font-bold text-slate-900' : 'hover:bg-slate-50 text-slate-500'}`}
           >
             <Text className={`text-sm ${activeTab === 1 ? 'font-bold text-slate-900' : 'font-medium text-slate-500'}`}>
               Kërko
@@ -113,16 +111,6 @@ const DesktopHeaderBar = ({
               Kontakt
             </Text>
           </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => onTabPress(2)}
-            activeOpacity={0.8}
-            className={`rounded-full px-4 py-2 transition-colors ${activeTab === 2 ? 'bg-slate-100' : 'hover:bg-slate-50'}`}
-          >
-            <Text className={`text-sm ${activeTab === 2 ? 'font-bold text-slate-900' : 'font-medium text-slate-500'}`}>
-              Aktiviteti
-            </Text>
-          </TouchableOpacity>
         </View>
 
         <View className="ml-auto flex flex-row items-center gap-3">
@@ -134,22 +122,6 @@ const DesktopHeaderBar = ({
             <MapPin size={16} color="#3473ef" />
             <Text className="text-sm font-medium text-slate-900">{selectedLocation}</Text>
             <ChevronDown size={16} color="#94A3B8" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => {
-              if (user) {
-                onTabPress(3);
-              } else {
-                onOpenRegisterShop();
-              }
-            }}
-            activeOpacity={0.8}
-            className="shrink-0 rounded-full bg-slate-900 px-5 py-2.5"
-          >
-            <Text className="text-white font-semibold text-sm">
-              {user ? (user.name || "Profili") : "Kyçu"}
-            </Text>
           </TouchableOpacity>
         </View>
       </View>
