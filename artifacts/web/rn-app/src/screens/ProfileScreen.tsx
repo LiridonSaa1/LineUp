@@ -1137,6 +1137,23 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       setOverrideCancelState(true);
     } else if (action === 'reactivate') {
       setOverrideCancelState(false);
+    } else if (action === 'update_card') {
+      if (options.cardBrand) updatePayload.card_brand = options.cardBrand;
+      if (options.cardLast4) updatePayload.card_last4 = options.cardLast4;
+      if (options.cardExpMonth) updatePayload.card_exp_month = options.cardExpMonth;
+      if (options.cardExpYear) updatePayload.card_exp_year = options.cardExpYear;
+      updatePayload.cancel_at_period_end = false;
+      updatePayload.status = 'active';
+
+      const now = new Date();
+      if (!subscription?.end_date || new Date(subscription.end_date) < now) {
+        const newEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        updatePayload.current_period_start = now.toISOString();
+        updatePayload.current_period_end = newEnd.toISOString();
+        updatePayload.end_date = newEnd.toISOString();
+        updatePayload.next_billed_at = newEnd.toISOString();
+      }
+      setOverrideCancelState(false);
     }
 
     if (options.planId) updatePayload.plan_id = options.planId;
@@ -1382,13 +1399,63 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   };
 
   const handleUpdateCard = () => {
+    setCardForm({
+      cardNumber: '',
+      expiry: '',
+      cvc: '',
+      holderName: user?.name || ''
+    });
     setSubView('card');
   };
 
+  const handleCardNumberChange = (txt: string) => {
+    const digits = txt.replace(/\D/g, '').substring(0, 16);
+    const parts = digits.match(/.{1,4}/g);
+    const formatted = parts ? parts.join(' ') : digits;
+    setCardForm(prev => ({ ...prev, cardNumber: formatted }));
+  };
+
+  const handleExpiryChange = (txt: string) => {
+    const digits = txt.replace(/\D/g, '').substring(0, 4);
+    let formatted = digits;
+    if (digits.length >= 3) {
+      formatted = `${digits.substring(0, 2)}/${digits.substring(2)}`;
+    }
+    setCardForm(prev => ({ ...prev, expiry: formatted }));
+  };
+
   const handleSaveCardDetails = async () => {
-    const cleanNum = cardForm.cardNumber.replace(/\s+/g, '');
-    if (cleanNum.length < 12) {
-      Alert.alert("Gabim", "Ju lutem shkruani një numër kartës valid prej 16 shifrave.");
+    const cleanNum = cardForm.cardNumber.replace(/\D/g, '');
+    if (cleanNum.length < 15 || cleanNum.length > 19) {
+      Alert.alert("Numër i Pavlefshëm 💳", "Ju lutem shkruani një numër kartës bankare të vlefshëm prej 16 shifrave.");
+      return;
+    }
+
+    let expMonth: number | null = null;
+    let expYear: number | null = null;
+    if (cardForm.expiry.includes('/')) {
+      const parts = cardForm.expiry.split('/');
+      const m = parseInt(parts[0], 10);
+      const y = parseInt(parts[1], 10);
+      if (!isNaN(m) && m >= 1 && m <= 12) expMonth = m;
+      if (!isNaN(y)) expYear = y < 100 ? 2000 + y : y;
+    }
+
+    if (!expMonth || !expYear) {
+      Alert.alert("Data e Skadimit 📅", "Ju lutem shkruani datën e skadimit të kartës në formatin MM/YY (p.sh. 12/28).");
+      return;
+    }
+
+    const now = new Date();
+    const expDate = new Date(expYear, expMonth, 0, 23, 59, 59);
+    if (expDate < now) {
+      Alert.alert("Kartelë e Skaduar ⚠️", "Kjo kartelë bankare ka skaduar. Ju lutem përdorni një kartelë aktive.");
+      return;
+    }
+
+    const cleanCvc = cardForm.cvc.replace(/\D/g, '');
+    if (cleanCvc.length < 3 || cleanCvc.length > 4) {
+      Alert.alert("CVC i Pavlefshëm 🔒", "Ju lutem shkruani kodin e sigurisë CVC (3 ose 4 shifra).");
       return;
     }
 
@@ -1397,6 +1464,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       let brand = 'Visa';
       if (cleanNum.startsWith('5') || cleanNum.startsWith('2')) brand = 'Mastercard';
       else if (cleanNum.startsWith('3')) brand = 'Amex';
+      else if (cleanNum.startsWith('6')) brand = 'Discover';
 
       const first2 = cleanNum.substring(0, 2);
       const last2 = cleanNum.substring(cleanNum.length - 2);
@@ -1404,15 +1472,22 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
       await manageSubscription('update_card' as any, {
         cardBrand: brand,
-        cardLast4: cardLast4Val
+        cardLast4: cardLast4Val,
+        cardExpMonth: expMonth,
+        cardExpYear: expYear,
+        holderName: cardForm.holderName || user?.name || ''
       } as any);
 
       setOverrideCancelState(false);
+      setIsActivating(true);
       await refreshSub();
       setSubView('main');
       setCardForm({ cardNumber: '', expiry: '', cvc: '', holderName: '' });
 
-      Alert.alert("Sukses! 💳", `Kartela ${brand} (${first2}****${last2}) u ruajt me sukses! Rinovimi automatik është aktiv.`);
+      Alert.alert(
+        "Kartela u Përditësua! 💳",
+        `Kartela ${brand} (${first2}****${last2}) u ruajt me sukses!\n\nAbonimi juaj është Aktiv dhe rinovimi automatik është në funksion.`
+      );
     } catch (err: any) {
       Alert.alert("Gabim", "Dështoi ruajtja e kartës: " + err.message);
     } finally {
@@ -1531,7 +1606,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       <View className="absolute top-[200] right-[-100] w-80 h-80 bg-[#f47458]/10 rounded-full blur-3xl pointer-events-none" />
 
       <ScrollView className="flex-1 w-full" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
-        <div className={isDesktop ? "mx-auto w-full max-w-[1440px] px-6 lg:px-10 py-8 overflow-hidden" : "w-full overflow-hidden"}>
+        <View className={isDesktop ? "mx-auto w-full max-w-[1440px] px-6 lg:px-10 py-8 overflow-hidden" : "w-full overflow-hidden"}>
           {/* ── HEADER ───────────────────────────── */}
           <View className={`pt-12 pb-10 px-8 bg-white/60 backdrop-blur-md rounded-[40px] relative overflow-hidden shadow-xs border border-white/60 mb-6 ${isDesktop ? 'mt-4' : 'pt-16 rounded-t-none rounded-b-[50px]'}`}>
             <Animated.View entering={FadeInDown} className="flex-row items-center justify-between flex-wrap gap-6">
@@ -1590,7 +1665,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           </View>
 
           {/* ── MAIN CONTENT GRID ───────────────────────────── */}
-          <div className={isDesktop ? "grid lg:grid-cols-2 gap-8 items-start px-2" : "px-6 pt-2"}>
+          <View className={isDesktop ? "grid lg:grid-cols-2 gap-8 items-start px-2" : "px-6 pt-2"}>
             {/* COLUMN 1: PERSONAL */}
             <View>
               {isEmployeeRole && hasLoadedServices && selectedEmployeeSubcats.length === 0 && (
@@ -1686,8 +1761,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 <Text className="text-white font-black text-base">Dil nga Llogaria</Text>
               </TouchableOpacity>
             </View>
-          </div>
-        </div>
+          </View>
+        </View>
       </ScrollView>
 
       <Modal visible={activeModal !== null} animationType="slide" transparent={activeModal === 'plans' && upgradeStep === 2 ? false : true} onRequestClose={() => setActiveModal(null)}>
@@ -1842,7 +1917,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                               <Text className="text-[#161719] font-black text-xs uppercase tracking-wider mb-2">Numri i Kartës Bankare</Text>
                               <TextInput
                                 value={cardForm.cardNumber}
-                                onChangeText={(txt) => setCardForm(prev => ({ ...prev, cardNumber: txt }))}
+                                onChangeText={handleCardNumberChange}
                                 placeholder="4532 1234 5678 4242"
                                 placeholderTextColor="#94A3B8"
                                 keyboardType="numeric"
@@ -1856,7 +1931,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                  <Text className="text-[#161719] font-black text-xs uppercase tracking-wider mb-2">Skadimi (MM/YY)</Text>
                                  <TextInput
                                    value={cardForm.expiry}
-                                   onChangeText={(txt) => setCardForm(prev => ({ ...prev, expiry: txt }))}
+                                   onChangeText={handleExpiryChange}
                                    placeholder="12/28"
                                    placeholderTextColor="#94A3B8"
                                    keyboardType="numeric"
@@ -1952,7 +2027,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                       {subLoading ? '...' : (
                                          (!subscription?.card_last4 || subscription.card_last4.trim() === '')
                                             ? 'Ska kartë'
-                                            : `${subscription.card_brand ? subscription.card_brand + ' ' : ''}${subscription.card_last4.length === 4 ? subscription.card_last4.substring(0,2) + '****' + subscription.card_last4.substring(2,4) : '****' + subscription.card_last4}`
+                                            : `${subscription.card_brand ? subscription.card_brand + ' ' : ''}${subscription.card_last4.length === 4 ? subscription.card_last4.substring(0,2) + '****' + subscription.card_last4.substring(2,4) : '****' + subscription.card_last4}${subscription.card_exp_month && subscription.card_exp_year ? ' (' + (subscription.card_exp_month < 10 ? '0' + subscription.card_exp_month : subscription.card_exp_month) + '/' + (subscription.card_exp_year % 100) + ')' : ''}`
                                       )}
                                     </Text>
                                  </View>

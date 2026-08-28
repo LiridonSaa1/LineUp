@@ -1593,14 +1593,14 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                         </Text>
 
                         <View>
-                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Shkruaj Kodin 6-Shifror (OTP)</label>
-                          <input
-                            type="text"
+                          <Text className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Shkruaj Kodin 6-Shifror (OTP)</Text>
+                          <TextInput
+                            keyboardType="numeric"
                             maxLength={6}
                             placeholder="0 0 0 0 0 0"
                             value={bookingOtpCode}
-                            onChange={(e) => setBookingOtpCode(e.target.value)}
-                            className="w-full text-center tracking-[0.4em] font-mono text-base font-bold rounded-xl border border-blue-300 bg-white px-3 py-2.5 text-slate-900 focus:border-[#3473ef] focus:outline-none shadow-xs"
+                            onChangeText={(val) => setBookingOtpCode(val)}
+                            className="w-full text-center tracking-[0.4em] font-mono text-base font-bold rounded-xl border border-blue-300 bg-white px-3 py-2.5 text-slate-900"
                           />
                         </View>
 
@@ -1667,74 +1667,75 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                               {authMode === 'signup' ? (
                                 <View className="flex flex-col gap-2.5">
                                   <View>
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Emri & Mbiemri (Full Name)</label>
-                                    <input
-                                      type="text"
+                                    <Text className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Emri & Mbiemri (Full Name)</Text>
+                                    <TextInput
                                       placeholder="e.g. Liridon Salihi"
                                       value={firstName ? `${firstName} ${lastName}`.trim() : ''}
-                                      onChange={(e) => {
-                                        const parts = e.target.value.split(" ");
+                                      onChangeText={(val) => {
+                                        const parts = val.split(" ");
                                         setFirstName(parts[0] || "");
                                         setLastName(parts.slice(1).join(" ") || "");
                                       }}
-                                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-[#3473ef] focus:bg-white focus:outline-none"
+                                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-bold text-slate-900"
                                     />
                                   </View>
 
                                   <View>
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Email Adresa</label>
-                                    <input
-                                      type="email"
+                                    <Text className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Email Adresa</Text>
+                                    <TextInput
+                                      keyboardType="email-address"
+                                      autoCapitalize="none"
                                       placeholder="email@domain.com"
                                       value={email}
-                                      onChange={(e) => setEmail(e.target.value)}
-                                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-[#3473ef] focus:bg-white focus:outline-none"
+                                      onChangeText={(val) => setEmail(val)}
+                                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-bold text-slate-900"
                                     />
                                   </View>
 
                                   <View>
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Numri i Telefonit (+383)</label>
-                                    <input
-                                      type="tel"
+                                    <Text className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Numri i Telefonit (+383)</Text>
+                                    <TextInput
+                                      keyboardType="phone-pad"
                                       placeholder="+383 4X XXX XXX"
                                       value={phone}
-                                      onChange={(e) => setPhone(e.target.value)}
-                                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-[#3473ef] focus:bg-white focus:outline-none"
+                                      onChangeText={(val) => setPhone(val)}
+                                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-bold text-slate-900"
                                     />
                                   </View>
 
                                   <View>
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Fjalëkalimi (Password)</label>
-                                    <input
-                                      type="password"
+                                    <Text className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Fjalëkalimi (Password)</Text>
+                                    <TextInput
+                                      secureTextEntry={true}
                                       placeholder="••••••••"
                                       value={password}
-                                      onChange={(e) => setPassword(e.target.value)}
-                                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-[#3473ef] focus:bg-white focus:outline-none"
+                                      onChangeText={(val) => setPassword(val)}
+                                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-bold text-slate-900"
                                     />
                                   </View>
                                 </View>
                               ) : (
                                 <View className="flex flex-col gap-2.5">
                                   <View>
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Email Adresa</label>
-                                    <input
-                                      type="email"
+                                    <Text className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Email Adresa</Text>
+                                    <TextInput
+                                      keyboardType="email-address"
+                                      autoCapitalize="none"
                                       placeholder="email@domain.com"
                                       value={email}
-                                      onChange={(e) => setEmail(e.target.value)}
-                                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-[#3473ef] focus:bg-white focus:outline-none"
+                                      onChangeText={(val) => setEmail(val)}
+                                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-bold text-slate-900"
                                     />
                                   </View>
 
                                   <View>
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Fjalëkalimi (Password)</label>
-                                    <input
-                                      type="password"
+                                    <Text className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Fjalëkalimi (Password)</Text>
+                                    <TextInput
+                                      secureTextEntry={true}
                                       placeholder="••••••••"
                                       value={password}
-                                      onChange={(e) => setPassword(e.target.value)}
-                                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-[#3473ef] focus:bg-white focus:outline-none"
+                                      onChangeText={(val) => setPassword(val)}
+                                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-bold text-slate-900"
                                     />
                                   </View>
                                 </View>
