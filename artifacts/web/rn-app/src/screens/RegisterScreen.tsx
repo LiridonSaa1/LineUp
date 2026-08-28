@@ -413,17 +413,35 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
     try {
       const cleanEmail = email.trim().toLowerCase();
 
-      let userId = passedUserId;
-      if (!userId) {
-        const { data: authUser } = await supabase.auth.getUser();
-        userId = authUser.user?.id;
+      // 1. Create/Register User ONLY AFTER successful Paddle payment
+      console.log("[RegisterScreen] Finalizing registration AFTER successful Paddle payment...");
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: cleanEmail,
+        password: password,
+        options: {
+          data: {
+            full_name: fullName,
+            role: 'owner',
+          }
+        }
+      });
+
+      let userId = authData?.user?.id || passedUserId;
+
+      if (authError && (authError.message.includes("already registered") || authError.message.includes("already been registered"))) {
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password: password,
+        });
+        if (signInError) throw new Error("Ky email është i regjistruar. Ju lutemi përdorni fjalëkalimin e saktë.");
+        userId = signInData?.user?.id;
+      } else if (authError) {
+        throw authError;
       }
 
-      if (!userId) throw new Error("Sesioni skadoi. Ju lutemi hyni përsëri.");
+      if (!userId) throw new Error("Dështoi krijimi i llogarisë.");
 
-      console.log("[RegisterScreen] Finalizing DB records for user:", userId);
-
-      // (User upsert already done in handleStartPayment, but we do it again to be safe with fullName)
+      // 2. Upsert user into database 'users' table
       await supabase.from('users').upsert({
         id: userId,
         email: cleanEmail,
@@ -434,7 +452,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
 
       const ownerId = userId;
 
-      // 2. If Paddle data is provided, save customer info
+      // 3. Save customer mapping if paddleData provided
       if (paddleData) {
         try {
           const { customer, subscription, transaction } = paddleData;
@@ -448,21 +466,49 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
         }
       }
 
-      // 3. Fetch pre-registered shop to finalize
-      const { data: dbShop } = await supabase
-        .from('barbershops')
-        .select('*')
-        .eq('owner_id', ownerId)
-        .maybeSingle();
+      // 4. Create Active Barbershop
+      const CITY_MAP_COORDS: Record<string, { lat: number; lng: number }> = {
+        "prishtin": { lat: 42.6629, lng: 21.1655 },
+        "ferizaj": { lat: 42.3703, lng: 21.1559 },
+        "prizren": { lat: 42.2139, lng: 20.7397 },
+        "pej": { lat: 42.6593, lng: 20.2883 },
+        "gjakov": { lat: 42.3803, lng: 20.4308 },
+        "gjilan": { lat: 42.4635, lng: 21.4678 },
+        "mitrovic": { lat: 42.8914, lng: 20.8660 },
+      };
 
-      const shopId = dbShop?.id;
+      const cityKey = (selectedCity || "prishtin").toLowerCase().replace(/ë/g, "e").replace(/ç/g, "c");
+      let fallbackCoords = CITY_MAP_COORDS["prishtin"];
+      for (const [k, v] of Object.entries(CITY_MAP_COORDS)) {
+        if (cityKey.includes(k)) { fallbackCoords = v; break; }
+      }
+
+      const { data: existingShop } = await supabase.from('barbershops').select('id').eq('owner_id', ownerId).maybeSingle();
+      let shopId = existingShop?.id;
+
+      if (!shopId) {
+        const { data: newShop, error: shopError } = await supabase.from('barbershops').insert({
+          owner_id: ownerId,
+          name: fullName,
+          city: selectedCity || "Prishtinë",
+          address: selectedPlace?.address || (selectedCity ? `Qendra, ${selectedCity}` : "Prishtinë"),
+          latitude: selectedPlace?.lat || fallbackCoords.lat,
+          longitude: selectedPlace?.lng || fallbackCoords.lng,
+          status: 'active',
+          subscriptionStatus: 'active',
+          subcategories: selectedCategories,
+          category: selectedMainCategory?.name || 'Barber'
+        }).select().single();
+
+        if (shopError) throw shopError;
+        shopId = newShop.id;
+      } else {
+        await supabase.from('barbershops').update({ status: 'active', subscriptionStatus: 'active' }).eq('id', shopId);
+      }
 
       if (shopId) {
-        // (Removal of manual status: 'active' update. We wait for Paddle Webhook for authority.)
-
         // Link selected services to Barbershop (Pivot Table)
         if (selectedCategories.length > 0) {
-          console.log("[RegisterScreen] Linking services to shop:", selectedCategories.length);
           const pivotData = selectedCategories.map(subId => ({
             barbershop_id: shopId,
             subcategory_id: subId
@@ -480,7 +526,6 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
             is_active: true
           });
 
-          // Link these services to the owner's individual barber profile
           if (selectedCategories.length > 0) {
             const barberServicesData = selectedCategories.map(subId => ({
               barber_id: ownerId,
@@ -521,11 +566,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
         updated_at: now.toISOString()
       }, { onConflict: 'user_id' });
 
-      if (shopId) {
-        await supabase.from('barbershops').update({ status: 'active', subscriptionStatus: 'active' }).eq('id', shopId);
-      }
-
-      console.log("[RegisterScreen] SUCCESS! Redirecting to dashboard...");
+      console.log("[RegisterScreen] SUCCESS! Account and Shop created AFTER payment. Redirecting...");
       onSuccess({
         id: userId,
         name: fullName,
@@ -550,117 +591,30 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
 
     try {
       const cleanEmail = email.trim().toLowerCase();
-
-      // 1. Create/Register User FIRST to get userId
-      console.log("[RegisterScreen] Registering user before payment...");
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: cleanEmail,
-        password: password,
-        options: {
-          data: {
-            full_name: fullName,
-            role: 'owner',
-          }
-        }
-      });
-
-      let userId = authData?.user?.id;
-
-      // Handle "already registered" - try to sign in to get ID
-      if (authError && (authError.message.includes("already registered") || authError.message.includes("already been registered"))) {
-        console.log("[RegisterScreen] User exists, signing in to retrieve ID...");
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password: password,
-        });
-        if (signInError) throw new Error("Ky email është i regjistruar. Ju lutemi përdorni fjalëkalimin e saktë.");
-        userId = signInData?.user?.id;
-      } else if (authError) {
-        throw authError;
-      }
-
-      if (!userId) throw new Error("Dështoi krijimi i llogarisë.");
-
-      // --- CRITICAL FIX: Upsert user into database 'users' table BEFORE payment ---
-      console.log("[RegisterScreen] Pre-registering user in public.users to prevent webhook race conditions...");
-      await supabase.from('users').upsert({
-        id: userId,
-        email: cleanEmail,
-        name: fullName,
-        role: 'owner',
-        phone: phone || null,
-      }, { onConflict: 'email' });
-
-      // --- NEW: PRE-REGISTER SHOP (Inactive) ---
-      console.log("[RegisterScreen] Pre-registering shop to resolve businessId...");
-      const CITY_MAP_COORDS: Record<string, { lat: number; lng: number }> = {
-        "prishtin": { lat: 42.6629, lng: 21.1655 },
-        "ferizaj": { lat: 42.3703, lng: 21.1559 },
-        "prizren": { lat: 42.2139, lng: 20.7397 },
-        "pej": { lat: 42.6593, lng: 20.2883 },
-        "gjakov": { lat: 42.3803, lng: 20.4308 },
-        "gjilan": { lat: 42.4635, lng: 21.4678 },
-        "mitrovic": { lat: 42.8914, lng: 20.8660 },
-      };
-
-      const cityKey = (selectedCity || "prishtin").toLowerCase().replace(/ë/g, "e").replace(/ç/g, "c");
-      let fallbackCoords = CITY_MAP_COORDS["prishtin"];
-      for (const [k, v] of Object.entries(CITY_MAP_COORDS)) {
-        if (cityKey.includes(k)) { fallbackCoords = v; break; }
-      }
-
-      // Check if shop already exists for this owner to avoid duplicates on retries
-      const { data: existingShop } = await supabase.from('barbershops').select('id').eq('owner_id', userId).maybeSingle();
-
-      let shopId = existingShop?.id;
-
-      if (!shopId) {
-        const { data: newShop, error: shopError } = await supabase.from('barbershops').insert({
-          owner_id: userId,
-          name: fullName,
-          city: selectedCity || "Prishtinë",
-          address: selectedPlace?.address || (selectedCity ? `Qendra, ${selectedCity}` : "Prishtinë"),
-          latitude: selectedPlace?.lat || fallbackCoords.lat,
-          longitude: selectedPlace?.lng || fallbackCoords.lng,
-          status: 'inactive',
-          subcategories: selectedCategories,
-          category: selectedMainCategory?.name || 'Barber'
-        }).select().single();
-
-        if (shopError) throw shopError;
-        shopId = newShop.id;
-      }
-
-      // 2. Create Paddle Transaction with userId and businessId in custom_data
       const planPriceNum = selectedPlan?.id === 'team'
         ? calculateTeamPrice(employeeCount, billingCycle)
         : (billingCycle === 'month'
             ? (selectedPlan?.id === 'solo' ? 15 : 20)
             : (selectedPlan?.id === 'solo' ? 150 : 200));
 
-      console.log("[RegisterScreen] Creating Paddle transaction for userId:", userId, "ShopId:", shopId);
+      console.log("[RegisterScreen] Preparing Paddle checkout without creating account beforehand...");
       try {
         const res = await createPaddleTransaction({
           email: cleanEmail,
           planId: (selectedPlan?.id as any) || 'solo',
           amount: planPriceNum,
-          userId: userId,
           customerName: fullName,
-          priceId: selectedPlan?.paddlePriceId?.[billingCycle],
-          businessId: String(shopId)
+          priceId: selectedPlan?.paddlePriceId?.[billingCycle]
         });
 
         if (res?.data?.id) {
           setPaddleTransactionId(res.data.id);
-          goToStep(4);
-        } else {
-          console.log("[RegisterScreen] No transaction ID returned, proceeding with direct activation...");
-          await handleFinalizeRegistration();
         }
       } catch (paddleErr: any) {
-        console.warn("[RegisterScreen] Paddle transaction creation failed, finalizing registration directly:", paddleErr?.message);
-        await handleFinalizeRegistration();
+        console.warn("[RegisterScreen] Paddle transaction prep warning:", paddleErr?.message);
       }
+
+      goToStep(4);
     } finally {
       setPreparingCheckout(false);
     }

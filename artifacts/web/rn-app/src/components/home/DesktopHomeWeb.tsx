@@ -315,26 +315,52 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
       <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-6 px-6 py-4 lg:px-10">
           <div
-            onClick={() => onTabPress(0)}
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             className="flex cursor-pointer shrink-0 items-center gap-2 mr-6 lg:mr-12"
           >
             <img src={extractUri(logoImg)} alt="LineUp" className="h-16 w-16 object-contain rounded-2xl transition-transform hover:scale-105" />
           </div>
 
           <nav className="hidden items-center gap-2 lg:flex ml-4 lg:ml-8">
-            {["Ballina", "Kërko", "Aktiviteti", "Profili"].map((item, i) => (
-              <button
-                key={item}
-                onClick={() => onTabPress(i)}
-                className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                  activeTab === i
-                    ? "bg-slate-100 font-bold text-slate-900"
-                    : "text-slate-500 hover:text-slate-900"
-                }`}
-              >
-                {item}
-              </button>
-            ))}
+            <button
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              className="rounded-full px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
+            >
+              Ballina
+            </button>
+            <button
+              onClick={onOpenSearch}
+              className="rounded-full px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
+            >
+              Kërko
+            </button>
+            <button
+              onClick={() => {
+                const el = document.getElementById("recommended-section");
+                if (el) el.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="rounded-full px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
+            >
+              Të rekomanduara
+            </button>
+            <button
+              onClick={() => {
+                const el = document.getElementById("how-it-works-section");
+                if (el) el.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="rounded-full px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
+            >
+              Si funksionon
+            </button>
+            <button
+              onClick={() => {
+                const el = document.getElementById("contact-section");
+                if (el) el.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="rounded-full px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
+            >
+              Kontakt
+            </button>
           </nav>
 
           <div className="ml-auto flex min-w-0 items-center gap-3">
@@ -346,13 +372,6 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
               <MapPin className="h-4 w-4 shrink-0 text-[#3473ef]" />
               <span className="truncate">{selectedLocation}</span>
               <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
-            </button>
-
-            <button
-              onClick={() => onTabPress(3)}
-              className="shrink-0 rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-            >
-              {user ? (user.name || "Profili") : "Kyçu"}
             </button>
           </div>
         </div>
@@ -562,7 +581,7 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
           </section>
 
           {/* Recommended Salons */}
-          <section>
+          <section id="recommended-section" className="scroll-mt-28">
             <div className="flex items-baseline justify-between gap-4">
               <h2 className="font-display text-2xl font-bold tracking-tight text-slate-900">
                 Të rekomanduara
@@ -636,7 +655,7 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
           </section>
 
           {/* How It Works (Enhanced Step-by-Step UI) */}
-          <section>
+          <section id="how-it-works-section" className="scroll-mt-28">
             <div className="flex items-baseline justify-between">
               <div>
                 <h2 className="font-display text-2xl font-bold tracking-tight text-slate-900">
@@ -711,7 +730,7 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
                           HAPI {n}
                         </span>
                       </div>
-                      <p className="mt-2 text-sm leading-relaxed text-slate-600 font-medium">{text}</p>
+                      <p className="mt-2 text-sm leading-relaxed text-[#475569] font-medium">{text}</p>
 
                       <div className="mt-3 flex items-center gap-1.5 text-xs font-bold text-slate-700">
                         <span className="h-1.5 w-1.5 rounded-full bg-[#10b981]" />
@@ -725,7 +744,7 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
           </section>
 
           {/* Contact Form Section (Na Kontaktoni) */}
-          <section>
+          <section id="contact-section" className="scroll-mt-28">
             <div className="flex flex-col gap-1">
               <h2 className="font-display text-2xl font-bold tracking-tight text-slate-900">
                 Na Kontaktoni
