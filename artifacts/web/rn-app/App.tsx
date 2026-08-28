@@ -29,60 +29,65 @@ const DesktopHeaderBar = ({
   onOpenSearch,
   onOpenRegisterShop
 }: any) => {
-  if (Platform.OS !== 'web') return null;
-
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-6 px-6 py-4 lg:px-10">
-        <div
-          onClick={() => onTabPress(0)}
-          className="flex cursor-pointer shrink-0 items-center gap-2 mr-6 lg:mr-12"
+    <View className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
+      <View className="mx-auto flex max-w-[1440px] flex-row items-center justify-between gap-6 px-6 py-4 lg:px-10">
+        <TouchableOpacity
+          onPress={() => onTabPress(0)}
+          activeOpacity={0.8}
+          className="flex-row shrink-0 items-center gap-2 mr-6 lg:mr-12"
         >
-          <img src={extractUri(logoImg)} alt="LineUp" className="h-16 w-16 object-contain rounded-2xl transition-transform hover:scale-105" />
-        </div>
+          <RNImage source={logoImg} className="h-16 w-16 rounded-2xl" resizeMode="contain" />
+        </TouchableOpacity>
 
-        <nav className="hidden items-center gap-2 lg:flex ml-4 lg:ml-8">
+        <View className="hidden flex-row items-center gap-2 lg:flex ml-4 lg:ml-8">
           {["Ballina", "Kërko", "Aktiviteti", "Profili"].map((item, i) => (
-            <button
+            <TouchableOpacity
               key={item}
-              onClick={() => onTabPress(i)}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+              onPress={() => onTabPress(i)}
+              activeOpacity={0.8}
+              className={`rounded-full px-4 py-2 transition-colors ${
                 activeTab === i
-                  ? "bg-slate-100 font-bold text-slate-900"
-                  : "text-slate-500 hover:text-slate-900"
+                  ? "bg-slate-100"
+                  : "hover:bg-slate-50"
               }`}
             >
-              {item}
-            </button>
+              <Text className={`text-sm ${activeTab === i ? 'font-bold text-slate-900' : 'font-medium text-slate-500'}`}>
+                {item}
+              </Text>
+            </TouchableOpacity>
           ))}
-        </nav>
+        </View>
 
-        <div className="ml-auto flex min-w-0 items-center gap-3">
-          <button
-            type="button"
-            onClick={onOpenLocation}
-            className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-50 cursor-pointer"
+        <View className="ml-auto flex flex-row items-center gap-3">
+          <TouchableOpacity
+            onPress={onOpenLocation}
+            activeOpacity={0.8}
+            className="flex-row items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2"
           >
-            <MapPin className="h-4 w-4 shrink-0 text-[#3473ef]" />
-            <span className="truncate">{selectedLocation}</span>
-            <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
-          </button>
+            <MapPin size={16} color="#3473ef" />
+            <Text className="text-sm font-medium text-slate-900">{selectedLocation}</Text>
+            <ChevronDown size={16} color="#94A3B8" />
+          </TouchableOpacity>
 
-          <button
-            onClick={() => {
+          <TouchableOpacity
+            onPress={() => {
               if (user) {
                 onTabPress(3);
               } else {
                 onOpenRegisterShop();
               }
             }}
-            className="shrink-0 rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 cursor-pointer"
+            activeOpacity={0.8}
+            className="shrink-0 rounded-full bg-slate-900 px-5 py-2.5"
           >
-            {user ? (user.name || "Profili") : "Kyçu"}
-          </button>
-        </div>
-      </div>
-    </header>
+            <Text className="text-white font-semibold text-sm">
+              {user ? (user.name || "Profili") : "Kyçu"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
   );
 };
 import * as Haptics from 'expo-haptics';

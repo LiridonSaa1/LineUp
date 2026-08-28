@@ -200,7 +200,7 @@ export const ActivityScreen: React.FC<ActivityScreenProps> = ({
           contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 32 }}
           showsVerticalScrollIndicator={false}
         >
-          <div className={isDesktop ? "mx-auto w-full max-w-[1440px] px-6 lg:px-10 py-8" : "w-full"}>
+          <View className={isDesktop ? "mx-auto w-full max-w-[1440px] px-6 lg:px-10 py-8" : "w-full"}>
             <View className="items-center justify-center py-20 bg-white border border-slate-200/80 rounded-[36px] shadow-xs p-8 max-w-xl mx-auto">
               <View className="w-20 h-20 rounded-2xl bg-blue-50 items-center justify-center mb-6">
                 <Lock size={36} color="#3473ef" strokeWidth={2.5} />
@@ -219,7 +219,7 @@ export const ActivityScreen: React.FC<ActivityScreenProps> = ({
                 <Text className="text-white text-base font-black">Kyçu Tani</Text>
               </TouchableOpacity>
             </View>
-          </div>
+          </View>
         </ScrollView>
       </View>
     );
@@ -237,7 +237,7 @@ export const ActivityScreen: React.FC<ActivityScreenProps> = ({
         contentContainerStyle={{ paddingBottom: 120 }}
         keyboardShouldPersistTaps="handled"
       >
-        <div className={isDesktop ? "mx-auto w-full max-w-[1440px] px-6 lg:px-10 py-8" : "w-full px-6 pt-6"}>
+        <View className={isDesktop ? "mx-auto w-full max-w-[1440px] px-6 lg:px-10 py-8" : "w-full px-6 pt-6"}>
           {/* Header - Glassmorphism */}
           <View className={`pt-8 pb-8 px-8 bg-white/70 backdrop-blur-md rounded-[36px] shadow-xs border border-white/80 mb-8 ${isDesktop ? 'mt-4' : 'rounded-t-none'}`}>
             <View className="relative">
@@ -249,7 +249,7 @@ export const ActivityScreen: React.FC<ActivityScreenProps> = ({
         {loading ? (
           <ActivityIndicator size="large" color="#3473ef" className="mt-20 self-center" />
         ) : (
-          <div className={isDesktop ? "grid lg:grid-cols-2 gap-8 items-start" : "flex flex-col"}>
+          <View className={isDesktop ? "grid lg:grid-cols-2 gap-8 items-start" : "flex flex-col"}>
             {/* --- UPCOMING SECTION --- */}
             <View className="mb-8">
               <View className="flex-row items-center mb-4 ml-1">
@@ -376,9 +376,9 @@ export const ActivityScreen: React.FC<ActivityScreenProps> = ({
                 </View>
               )}
             </View>
-          </div>
+          </View>
         )}
-        </div>
+        </View>
       </ScrollView>
 
       {/* --- REVIEW MODAL --- */}

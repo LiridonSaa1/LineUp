@@ -422,7 +422,7 @@ export const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onLo
         contentContainerStyle={{ paddingTop: 90, paddingBottom: 140 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} colors={["#3473ef"]} />}
     >
-      <div className={isDesktop ? "mx-auto w-full max-w-[1440px] px-6 lg:px-10 py-4" : "w-full"}>
+      <View className={isDesktop ? "mx-auto w-full max-w-[1440px] px-6 lg:px-10 py-4" : "w-full"}>
       <Animated.View entering={FadeInDown.delay(100)} className="flex-row gap-3 mb-8">
         <View className="flex-1 bg-white p-5 rounded-[32px] border border-slate-100 shadow-sm">
           <View className="w-10 h-10 rounded-2xl bg-emerald-50 items-center justify-center mb-3">
@@ -451,7 +451,7 @@ export const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onLo
         <HubButton icon={Bell} title="Suporti" subtitle="Kërkesat e ndihmës" color="#6366f1" onPress={() => { setSearchQuery(""); setActiveModal('support'); }} badge={supportMessagesList.filter(m => m.status !== 'closed').length} />
         <HubButton icon={SlidersHorizontal} title="Sistemi" subtitle="Konfigurimet" color="#64748B" onPress={() => { setSearchQuery(""); setActiveModal('system'); }} />
       </View>
-      </div>
+      </View>
     </ScrollView>
   );
 
