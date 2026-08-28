@@ -580,39 +580,43 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
   if (isDesktop) {
     return (
       <View className="flex-1 bg-[#f8fafc] flex-col items-center overflow-y-auto">
+        {/* TOP HERO BANNER & REAL STATS ABOVE BOTH MAP & CARDS */}
+        <View className="mx-auto w-full max-w-[1440px] px-6 lg:px-10 pt-8 pb-4">
+          <View className="flex-col gap-4 lg:flex-row lg:items-center lg:justify-between border-b border-slate-200/80 pb-6">
+            <View className="max-w-2xl">
+              <Text className="font-display text-2xl font-black text-slate-900 leading-tight tracking-tight sm:text-3xl lg:text-4xl">
+                Rezervo termin te berberi më i mirë në Kosovë
+              </Text>
+              <Text className="mt-2 text-sm font-medium text-slate-500 leading-relaxed">
+                Shfleto sallonet, zgjidh orën që të përshtatet dhe konfirmo me OTP — pa telefonata.
+              </Text>
+            </View>
+
+            {/* REAL DYNAMIC STATS BADGES */}
+            <View className="flex-row items-center gap-6 rounded-2xl bg-white border border-slate-200/80 px-6 py-4 shadow-2xs">
+              <View className="items-center">
+                <Text className="font-display text-2xl font-black text-slate-900">{stats.shopsCount}</Text>
+                <Text className="text-xs font-bold text-slate-400 uppercase tracking-wider">Sallone</Text>
+              </View>
+              <View className="h-8 w-[1px] bg-slate-200" />
+              <View className="items-center">
+                <Text className="font-display text-2xl font-black text-slate-900">{stats.appointmentsCount}</Text>
+                <Text className="text-xs font-bold text-slate-400 uppercase tracking-wider">Termine</Text>
+              </View>
+              <View className="h-8 w-[1px] bg-slate-200" />
+              <View className="items-center">
+                <Text className="font-display text-2xl font-black text-[#3473ef]">{stats.avgRating}</Text>
+                <Text className="text-xs font-bold text-slate-400 uppercase tracking-wider">Vlerësim</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
         {/* Desktop Split Screen Content - Centered to max-w-[1440px] px-6 lg:px-10 matching Homepage */}
-        <View className="mx-auto flex-row w-full max-w-[1440px] px-6 lg:px-10 pt-6 gap-6 h-[calc(100vh-140px)] min-h-[550px] relative">
+        <View className="mx-auto flex-row w-full max-w-[1440px] px-6 lg:px-10 gap-6 h-[calc(100vh-250px)] min-h-[550px] relative pb-6">
           {/* Left Side: Barbershop Cards Rail */}
           <View className="w-[480px] bg-white border border-slate-200/80 rounded-3xl flex-col h-full overflow-hidden shadow-xs">
             <ScrollView className="flex-1 px-6 pt-6" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-              
-              {/* HERO TITLE & DYNAMIC STATS SECTION ON SEARCH PAGE */}
-              <View className="mb-5 flex-col gap-2">
-                <Text className="font-display text-xl sm:text-2xl font-black text-slate-900 leading-snug">
-                  Rezervo termin te berberi më i mirë në Kosovë
-                </Text>
-                <Text className="text-xs font-medium text-slate-500 leading-relaxed">
-                  Shfleto sallonet, zgjidh orën që të përshtatet dhe konfirmo me OTP — pa telefonata.
-                </Text>
-
-                {/* REAL DYNAMIC STATS BADGES */}
-                <View className="flex-row items-center justify-between bg-slate-50 border border-slate-100 rounded-2xl p-3 my-2 shadow-2xs">
-                  <View className="items-center flex-1">
-                    <Text className="font-display text-base sm:text-lg font-black text-slate-900">{stats.shopsCount}</Text>
-                    <Text className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sallone</Text>
-                  </View>
-                  <View className="w-[1px] h-6 bg-slate-200" />
-                  <View className="items-center flex-1">
-                    <Text className="font-display text-base sm:text-lg font-black text-slate-900">{stats.appointmentsCount}</Text>
-                    <Text className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Termine</Text>
-                  </View>
-                  <View className="w-[1px] h-6 bg-slate-200" />
-                  <View className="items-center flex-1">
-                    <Text className="font-display text-base sm:text-lg font-black text-[#3473ef]">{stats.avgRating}</Text>
-                    <Text className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Vlerësim</Text>
-                  </View>
-                </View>
-              </View>
 
               {/* SEARCH INPUT BAR ABOVE CARDS LIST */}
               <View className="mb-6 flex-col gap-3">

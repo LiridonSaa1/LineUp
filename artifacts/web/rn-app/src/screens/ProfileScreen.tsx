@@ -1016,7 +1016,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     );
   };
 
-  const isEmployeeRole = user?.role === 'employee' || user?.role === 'staf' || user?.role === 'staff' || user?.role === 'barber';
+  const isOwnerRole = user?.role === 'owner' || user?.role === 'super_admin' || user?.role === 'admin';
+  const isEmployeeRole = !isOwnerRole && (user?.role === 'employee' || user?.role === 'staf' || user?.role === 'staff');
 
   const promptNoServicesAlert = () => {
     Alert.alert(
@@ -1225,7 +1226,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       }
 
       if (realShopId) {
-        await supabase.from('barbershops').update({ status: 'active', subscriptionStatus: 'active' }).eq('id', realShopId);
+        await supabase.from('barbershops').update({ status: 'active' }).eq('id', realShopId);
       }
 
       Alert.alert("Abonimi u Aktivizua! 🚀", `Plani ${planName} është aktivizuar me sukses për 30 ditë.`);
@@ -1602,15 +1603,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const isBusinessRole = user?.role === 'owner' || user?.role === 'barber' || user?.role === 'employee' || user?.role === 'staf' || user?.role === 'staff' || user?.role === 'admin' || user?.role === 'super_admin';
   const isDesktop = Platform.OS === 'web' && width > 768;
 
-  if (Platform.OS === 'web' && isBusinessRole) {
-    return (
-      <MobileAppDownloadCard
-        user={user}
-        onLogout={onLogout}
-      />
-    );
-  }
-
   return (
     <View className="flex-1 bg-[#f8fafc] w-full max-w-full overflow-x-hidden">
       {/* Background Decorative Blobs */}
@@ -1633,13 +1625,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 </View>
                 <View className="ml-6">
                   <Text className="text-slate-400 font-black text-[10px] uppercase tracking-[2px] mb-1">
-                    {user.role === 'owner' ? 'Pronar i Biznesit' : user.role === 'barber' ? 'Berber' : user.role === 'super_admin' ? 'Super Admin' : (user.role === 'employee' || user.role === 'staf' || user.role === 'staff') ? 'Punëtor i verifikuar' : 'Klient'}
+                    {user.role === 'owner' ? 'Pronar i Biznesit' : user.role === 'super_admin' ? 'Super Admin' : (user.role === 'employee' || user.role === 'staf' || user.role === 'staff') ? 'Punëtor i verifikuar' : (user.role === 'barber' ? 'Berber i verifikuar' : 'Klient')}
                   </Text>
                   <Text className="text-2xl lg:text-3xl font-black text-[#161719] tracking-tight mb-1">{user.name}</Text>
                   <View className="flex-row items-center bg-indigo-50 px-3 py-1 rounded-full self-start border border-blue-100">
                     <CheckCircle2 size={12} color="#3473ef" strokeWidth={3} />
                     <Text className="text-[#3473ef] font-black text-[10px] ml-1.5 uppercase">
-                      {(user.role === 'employee' || user.role === 'staf' || user.role === 'staff' || user.role === 'barber') ? 'Punëtor i Verifikuar' : 'Partner i Verifikuar'}
+                      {isOwnerRole ? 'Partner i Verifikuar (Pronar)' : (isEmployeeRole ? 'Punëtor i Verifikuar' : 'Klient i Verifikuar')}
                     </Text>
                   </View>
                 </View>
@@ -2038,7 +2030,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                     <Text className="text-[#161719] font-black text-sm">
                                       {subLoading ? '...' : (
                                          (!subscription?.card_last4 || subscription.card_last4.trim() === '')
-                                            ? 'Ska kartë'
+                                            ? (subscription?.paddle_subscription_id ? 'Paddle Online (Kartelë 💳)' : 'E lidhur me Paddle 💳')
                                             : `${subscription.card_brand ? subscription.card_brand + ' ' : ''}${subscription.card_last4.length === 4 ? subscription.card_last4.substring(0,2) + '****' + subscription.card_last4.substring(2,4) : '****' + subscription.card_last4}${subscription.card_exp_month && subscription.card_exp_year ? ' (' + (subscription.card_exp_month < 10 ? '0' + subscription.card_exp_month : subscription.card_exp_month) + '/' + (subscription.card_exp_year % 100) + ')' : ''}`
                                       )}
                                     </Text>

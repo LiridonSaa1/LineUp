@@ -495,7 +495,6 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
           latitude: selectedPlace?.lat || fallbackCoords.lat,
           longitude: selectedPlace?.lng || fallbackCoords.lng,
           status: 'active',
-          subscriptionStatus: 'active',
           subcategories: selectedCategories,
           category: selectedMainCategory?.name || 'Barber'
         }).select().single();
@@ -503,7 +502,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
         if (shopError) throw shopError;
         shopId = newShop.id;
       } else {
-        await supabase.from('barbershops').update({ status: 'active', subscriptionStatus: 'active' }).eq('id', shopId);
+        await supabase.from('barbershops').update({ status: 'active' }).eq('id', shopId);
       }
 
       if (shopId) {

@@ -327,16 +327,13 @@ export default function App() {
       ]);
 
       const userId = sessionUser.id;
-      const isOwner = !!dbBarberShop.data;
-      const isBarber = !!barberProfile.data;
+      const isOwner = !!dbBarberShop.data || dbUser.data?.role === 'owner';
+      const isBarber = !isOwner && (dbUser.data?.role === 'barber' || dbUser.data?.role === 'employee' || (!!barberProfile.data && !isOwner));
 
-      // --- LOGIC FOR ACCOUNTS WITHOUT PROFILES ---
-      // We removed the forced "Deleted Account" logout to prevent race conditions during registration.
-      // The app will now simply fall back to default user data if no specific profile is found in DB.
-      console.log("[App.tsx] Checking profile for:", cleanEmail, { isRegistering, hasDbUser: !!dbUser.data });
+      console.log("[App.tsx] Checking profile for:", cleanEmail, { isRegistering, isOwner, isBarber, hasDbUser: !!dbUser.data });
 
-      const parentShop = dbBarberShop.data || barberProfile.data?.barbershops;
-      const shopId = parentShop?.id;
+      const parentShop = dbBarberShop.data;
+      const shopId = parentShop?.id || barberProfile.data?.shop_id;
 
       // Fetch latest subscription - check user_id, customer_id, and shopId
       let queryFilter = `user_id.eq.${userId},customer_id.eq.${userId},business_id.eq.${userId}`;
@@ -354,60 +351,41 @@ export default function App() {
       const expiryDate = subscription?.current_period_end ? new Date(subscription.current_period_end) : null;
       const isExpired = expiryDate ? expiryDate < now : false;
 
-      const subActive = subscription
+      const subActive = (parentShop?.status === 'active') || (subscription
         ? (['active', 'trialing', 'past_due', 'paused'].includes(subscription.status) ||
            (subscription.cancel_at_period_end && !isExpired) ||
            (subscription.status === 'canceled' && !isExpired))
-        : false;
+        : false);
 
       // --- LOCKOUT LOGIC ---
 
       // 1. Admin Suspension (Manual)
-      if (parentShop?.status === 'suspended' && subActive) {
+      if (parentShop?.status === 'suspended') {
         Alert.alert("Llogari e Bllokuar", "Salloni juaj është pezulluar nga administratori.");
         await supabase.auth.signOut();
         setUser(null);
         return;
       }
 
-      // 2. Subscription Expiry
-      if (parentShop && !subActive) {
-        if (isBarber) {
-          Alert.alert("Abonimi ka Skaduar", "Salloni ku punoni nuk ka abonim aktiv.");
-          await supabase.auth.signOut();
-          setUser(null);
-          return;
-        }
-        // If owner, we continue but pass needsPayment flag
+      // 2. Subscription Expiry for non-owner barbers
+      if (parentShop && !subActive && isBarber && !isOwner) {
+        Alert.alert("Abonimi ka Skaduar", "Salloni ku punoni nuk ka abonim aktiv.");
+        await supabase.auth.signOut();
+        setUser(null);
+        return;
       }
 
-      if (dbUser.data) {
-        setUser({
-          id: sessionUser.id, // Always use Auth UUID
-          name: dbUser.data.name || dbUser.data.full_name || email.split('@')[0],
-          email: dbUser.data.email,
-          role: dbUser.data.role || 'client',
-          shopId: parentShop?.id || null, // Provide shop context
-          needsPayment: isOwner && !subActive
-        });
-      } else if (dbBarberShop.data) {
-        setUser({
-          id: sessionUser.id,
-          name: dbBarberShop.data.name,
-          email: dbBarberShop.data.email,
-          role: 'owner',
-          shopId: dbBarberShop.data.id,
-          needsPayment: !subActive
-        });
-      } else {
-        setUser({
-          id: sessionUser.id,
-          name: dbUser.data?.name || sessionUser.user_metadata?.full_name || email.split('@')[0],
-          email: email,
-          role: dbUser.data?.role || (isBarber ? 'barber' : (sessionUser.user_metadata?.role || 'client')),
-          shopId: parentShop?.id || null
-        });
-      }
+      const isAdmin = dbUser.data?.role === 'super_admin' || dbUser.data?.role === 'admin' || sessionUser.user_metadata?.role === 'super_admin' || sessionUser.user_metadata?.role === 'admin';
+      const determinedRole = isAdmin ? (dbUser.data?.role || 'super_admin') : (isOwner ? 'owner' : (dbUser.data?.role || (isBarber ? 'barber' : (sessionUser.user_metadata?.role || 'client'))));
+
+      setUser({
+        id: sessionUser.id,
+        name: dbBarberShop.data?.name || dbUser.data?.name || dbUser.data?.full_name || sessionUser.user_metadata?.full_name || email.split('@')[0],
+        email: dbUser.data?.email || cleanEmail,
+        role: determinedRole,
+        shopId: shopId || null,
+        needsPayment: isOwner && !subActive && !isAdmin
+      });
     } catch (err) {
       console.warn("Error fetching profile:", err);
     }

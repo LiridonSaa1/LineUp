@@ -85,7 +85,6 @@ export const RegisterShopScreen: React.FC<RegisterShopScreenProps> = ({ onClose,
         longitude: selectedPlace.lng,
         place_id: selectedPlace.place_id,
         status: 'active',
-        subscriptionStatus: 'active',
         rating: 0,
         total_reviews: 0,
         category: category

@@ -159,8 +159,8 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
     return days;
   };
 
-  const isOwner = user?.role === 'owner' || user?.role === 'super_admin' || user?.role === 'barber'; // Assuming owner
-  const tabs = isOwner ? ['Pasqyra', 'Stafi', 'Portfolio'] : ['Pasqyra', 'Takimet', 'Portfolio'];
+  const isOwner = user?.role === 'owner' || user?.role === 'super_admin';
+  const tabs = isOwner ? ['Pasqyra', 'Takimet', 'Stafi', 'Portfolio'] : ['Pasqyra', 'Takimet', 'Portfolio'];
   const TAB_WIDTH = (width - 48) / tabs.length;
   const tabPosition = useSharedValue(0);
 
@@ -203,9 +203,9 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
         .maybeSingle();
       currentBarberId = bData?.id || null;
 
-      const isEmployee = ['employee', 'staff', 'staf', 'barber'].includes(user?.role || '');
+      const isEmployee = ['employee', 'staff', 'staf'].includes(user?.role || '');
 
-      // If employee or barber, query only appointments assigned to this specific barber
+      // If employee, query only appointments assigned to this specific barber
       let query = supabase
         .from('appointments')
         .select('*')
@@ -327,10 +327,10 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
     setLoading(true);
     try {
       let shopData: any = null;
-      let sId: any = null;
+      let sId: any = user?.shopId || null;
       let currentBarberId: any = null;
 
-      // Always check if the current user is registered as a barber in the system
+      // Check if the current user is registered as a barber in the system
       const { data: barberProfile } = await supabase
         .from('barbers')
         .select('id, shop_id')
@@ -339,15 +339,11 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
 
       currentBarberId = barberProfile?.id;
 
-      if (user.role === 'employee' || user.role === 'staff' || user.role === 'staf' || user.role === 'barber') {
-        sId = barberProfile?.shop_id;
-        if (sId) {
-          const { data: s } = await supabase.from('barbershops').select('*').eq('id', sId).maybeSingle();
-          shopData = s;
-        }
+      if (!sId && barberProfile?.shop_id) {
+        sId = barberProfile.shop_id;
       }
 
-      // Fallback or Owner check
+      // Check barbershops table by owner_id
       if (!sId) {
         const { data: s } = await supabase.from('barbershops').select('*').eq('owner_id', user.id).maybeSingle();
         if (s) {
@@ -356,13 +352,25 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
         }
       }
 
-      // Last resort fallback
-      if (!sId) sId = barberProfile?.shop_id;
+      // Fallback by user email if not found
+      if (!sId && user?.email) {
+        const { data: s } = await supabase.from('barbershops').select('*').ilike('email', user.email.trim()).maybeSingle();
+        if (s) {
+          shopData = s;
+          sId = s.id;
+        }
+      }
+
+      // Fetch shop details if not already loaded
+      if (sId && !shopData) {
+        const { data: s } = await supabase.from('barbershops').select('*').eq('id', sId).maybeSingle();
+        shopData = s;
+      }
 
       if (!sId) {
-         console.warn("No shop ID resolved for user:", user.id);
-         setLoading(false);
-         return;
+        console.warn("No shop ID resolved for user:", user.id);
+        setLoading(false);
+        return;
       }
 
       if (shopData) {
@@ -373,7 +381,7 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
       }
       setRealShopId(sId);
 
-      const isEmployee = ['employee', 'staff', 'staf', 'barber'].includes(user?.role || '');
+      const isEmployee = ['employee', 'staff', 'staf'].includes(user?.role || '');
 
       // Fast parallel fetch for all dashboard components
       const [dbBarbersRes, dbSchedulesRes, apptsRes, planInfo] = await Promise.all([
@@ -381,7 +389,7 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
         (async () => { try { return await supabase.from('barber_schedules').select('*').eq('barber_id', sId); } catch { return { data: [] }; } })(),
         (async () => {
           try {
-            let query = supabase.from('appointments').select('*').eq('shop_id', sId).neq('status', 'cancelled').neq('status', 'refused');
+            let query = supabase.from('appointments').select('*').eq('shop_id', sId);
             if (isEmployee && currentBarberId) {
               query = query.eq('barber_id', currentBarberId);
             }
@@ -397,7 +405,7 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
 
             const enriched = (rawAppts || []).map(a => ({
               ...a,
-              users: userData?.find(u => u.id === a.user_id) || null
+              users: userData?.find(u => u.id === a.user_id) || (a.customer_name ? { name: a.customer_name, phone: a.customer_phone || '' } : null)
             }));
 
             return { data: enriched };
@@ -428,21 +436,18 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
       const appts = (apptsRes as any)?.data || [];
 
       console.log(`[Dashboard] Fetched ${appts.length} appointments for shop ${sId}`);
-      if (isEmployee) console.log(`[Dashboard] Filtered by barber ${currentBarberId}`);
 
       setEmployees(dbBarbers);
       setShopSchedule(dbSchedules);
       setAppointments(appts);
       setSubscriptionDetails(planInfo);
 
-      // Logic to auto-select staff filter removed to ensure "Add Staff" button is visible to owners
-
       setCurrentPlan(planInfo.planId);
       setEmployeeLimit(planInfo.maxBarbers);
 
       const today = new Date().toISOString().split('T')[0];
-      const todayAppts = appts.filter((a: any) => a.date === today);
-      const confirmedAppts = todayAppts.filter((a: any) => a.status === 'confirmed');
+      const todayAppts = appts.filter((a: any) => a.date === today && a.status !== 'cancelled' && a.status !== 'refused');
+      const confirmedAppts = todayAppts.filter((a: any) => a.status === 'confirmed' || a.status === 'completed');
       const revenue = confirmedAppts.reduce((sum: number, a: any) => sum + (parseFloat(a.price) || 0), 0);
 
       const activeBookingsCount = appts.filter((a: any) => a.status !== 'cancelled' && a.status !== 'refused').length;
@@ -450,7 +455,7 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
       setStats({
         todayRevenue: revenue,
         activeBookings: activeBookingsCount,
-        totalStaff: planInfo.currentBarberCount,
+        totalStaff: dbBarbers.length || 1,
         targetRevenue: 500
       });
 
@@ -744,7 +749,7 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
       }
 
       if (realShopId) {
-        await supabase.from('barbershops').update({ status: 'active', subscriptionStatus: 'active' }).eq('id', realShopId);
+        await supabase.from('barbershops').update({ status: 'active' }).eq('id', realShopId);
       }
 
       Alert.alert("Abonimi u Aktivizua! 🚀", `Plani ${planName} është aktivizuar me sukses për 30 ditë.`);
@@ -912,7 +917,7 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
           <Animated.View style={[indicatorStyle, { position: 'absolute', width: TAB_WIDTH - 4, height: 48, backgroundColor: 'white', borderRadius: 18, left: 6, top: 6, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 5 }]} />
           {tabs.map((label, index) => (
             <TouchableOpacity key={index} onPress={() => handleTabPress(index)} className="flex-1 items-center justify-center z-10">
-              <Text className={`font-black text-[10px] ${activeTabIndex === index ? 'text-[#161719]' : 'text-[#8789A3]'}`}>{label}</Text>
+              <Text className={`font-black text-xs sm:text-sm tracking-wide ${activeTabIndex === index ? 'text-[#161719]' : 'text-[#8789A3]'}`}>{label}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -1049,9 +1054,112 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
             )}
 
             <View className="flex-row gap-4 mb-8">
-              <Animated.View entering={FadeInDown.delay(200)} className="flex-1"><View className="bg-white rounded-[32px] p-5 shadow-lg shadow-slate-100 border border-slate-50 items-center"><View className="w-10 h-10 bg-indigo-50 rounded-xl items-center justify-center mb-3"><Calendar size={20} color="#6366f1" strokeWidth={2.5} /></View><Text className="text-slate-400 font-bold text-[10px] uppercase tracking-wider mb-1">Gjithsej Takime</Text><Text className="text-2xl font-black text-[#161719]">{stats.activeBookings}</Text></View></Animated.View>
-              <Animated.View entering={FadeInDown.delay(300)} className="flex-1"><View className="bg-white rounded-[32px] p-5 shadow-lg shadow-slate-100 border border-slate-50 items-center"><View className="w-10 h-10 bg-purple-50 rounded-xl items-center justify-center mb-3"><Users size={20} color="#a855f7" strokeWidth={2.5} /></View><Text className="text-slate-400 font-bold text-[10px] uppercase tracking-wider mb-1">Stafi</Text><Text className="text-2xl font-black text-[#161719]">{stats.totalStaff}</Text></View></Animated.View>
+              <Animated.View entering={FadeInDown.delay(200)} className="flex-1">
+                <View className="bg-white rounded-[32px] p-5 shadow-lg shadow-slate-100 border border-slate-50 items-center">
+                  <View className="w-10 h-10 bg-indigo-50 rounded-xl items-center justify-center mb-3">
+                    <Calendar size={20} color="#6366f1" strokeWidth={2.5} />
+                  </View>
+                  <Text className="text-slate-400 font-bold text-[10px] uppercase tracking-wider mb-1">Gjithsej Takime</Text>
+                  <Text className="text-2xl font-black text-[#161719]">{stats.activeBookings}</Text>
+                </View>
+              </Animated.View>
+              <Animated.View entering={FadeInDown.delay(300)} className="flex-1">
+                <View className="bg-white rounded-[32px] p-5 shadow-lg shadow-slate-100 border border-slate-50 items-center">
+                  <View className="w-10 h-10 bg-purple-50 rounded-xl items-center justify-center mb-3">
+                    <Users size={20} color="#a855f7" strokeWidth={2.5} />
+                  </View>
+                  <Text className="text-slate-400 font-bold text-[10px] uppercase tracking-wider mb-1">Stafi</Text>
+                  <Text className="text-2xl font-black text-[#161719]">{stats.totalStaff}</Text>
+                </View>
+              </Animated.View>
             </View>
+
+            {/* Today's Appointments Live List on Overview */}
+            <Animated.View entering={FadeInDown.delay(350)} className="mb-8">
+              <View className="flex-row justify-between items-center mb-4 px-1">
+                <View>
+                  <Text className="text-xl font-black text-[#161719]">Terminet e Sotme</Text>
+                  <Text className="text-slate-400 font-bold text-xs">
+                    {appointments.filter(a => a.date === new Date().toISOString().split('T')[0]).length} rezervime për sot
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setActiveTabIndex(1)}
+                  className="flex-row items-center gap-1 bg-[#3473ef]/10 px-3 py-1.5 rounded-xl"
+                >
+                  <Text className="text-[#3473ef] font-black text-xs">Kalendari</Text>
+                  <ChevronRight size={14} color="#3473ef" />
+                </TouchableOpacity>
+              </View>
+
+              {appointments.filter(a => a.date === new Date().toISOString().split('T')[0]).length > 0 ? (
+                <View className="gap-y-3">
+                  {appointments
+                    .filter(a => a.date === new Date().toISOString().split('T')[0])
+                    .slice(0, 5)
+                    .map((appt, i) => (
+                      <View key={appt.id || i} className="bg-white p-4 rounded-[24px] border border-slate-100 shadow-sm flex-row items-center justify-between">
+                        <View className="flex-1 pr-3">
+                          <View className="flex-row items-center gap-2 mb-1.5">
+                            <View className="bg-blue-50 px-2 py-0.5 rounded-md">
+                              <Text className="text-[#3473ef] font-black text-xs">
+                                {appt.time ? appt.time.substring(0, 5) : '10:00'}
+                              </Text>
+                            </View>
+                            <View className={`px-2 py-0.5 rounded-md ${
+                              appt.status === 'completed' ? 'bg-emerald-50' :
+                              appt.status === 'cancelled' ? 'bg-rose-50' : 'bg-indigo-50'
+                            }`}>
+                              <Text className={`font-black text-[9px] uppercase ${
+                                appt.status === 'completed' ? 'text-emerald-600' :
+                                appt.status === 'cancelled' ? 'text-rose-600' : 'text-indigo-600'
+                              }`}>
+                                {appt.status || 'confirmed'}
+                              </Text>
+                            </View>
+                          </View>
+                          <Text className="font-black text-[#161719] text-sm">
+                            {appt.users?.name || appt.customer_name || 'Klient'}
+                          </Text>
+                          <Text className="text-slate-400 font-bold text-[11px]" numberOfLines={1}>
+                            {appt.service || 'Shërbim'}
+                          </Text>
+                        </View>
+                        <View className="items-end">
+                          {appt.price > 0 && (
+                            <Text className="font-black text-base text-[#161719] mb-1.5">
+                              {appt.price}€
+                            </Text>
+                          )}
+                          {appt.status !== 'completed' && appt.status !== 'cancelled' && (
+                            <View className="flex-row gap-1.5">
+                              <TouchableOpacity
+                                onPress={() => handleUpdateStatus(appt.id, 'completed')}
+                                className="bg-emerald-500 px-2.5 py-1 rounded-lg active:scale-95"
+                              >
+                                <Text className="text-white font-black text-[9px] uppercase">Përfundo</Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                onPress={() => handleUpdateStatus(appt.id, 'cancelled')}
+                                className="bg-rose-500 px-2.5 py-1 rounded-lg active:scale-95"
+                              >
+                                <Text className="text-white font-black text-[9px] uppercase">Anulo</Text>
+                              </TouchableOpacity>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    ))}
+                </View>
+              ) : (
+                <View className="items-center justify-center py-8 bg-white rounded-[24px] border border-dashed border-slate-200">
+                  <Calendar size={28} color="#CBD5E1" strokeWidth={1.5} />
+                  <Text className="text-slate-400 font-bold mt-2 text-xs">
+                    Nuk keni rezervime për sot.
+                  </Text>
+                </View>
+              )}
+            </Animated.View>
 
             <Animated.View entering={FadeInDown.delay(400)}>
               <View className="bg-white rounded-[40px] p-6 shadow-xl shadow-slate-200 border border-slate-50 mb-8">
@@ -1069,301 +1177,274 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
           </View>
         )}
 
-        {/* TAB 1: Stafi / Takimet */}
+        {/* TAB 1: Takimet (Appointments Calendar for Owner & Staff) */}
         {activeTabIndex === 1 && (
           <View className="px-6">
-            {isOwner ? (
-              selectedStaffFilter ? (
-                <>
-                  {/* Selected Barber Header & Back Button */}
-                  <View className="flex-row items-center mb-6 px-1">
-                    <TouchableOpacity
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        setSelectedStaffFilter(null);
-                      }}
-                      className="w-10 h-10 bg-white rounded-full items-center justify-center shadow-sm border border-slate-100 mr-4"
-                    >
-                      <ChevronRight size={20} color="#161719" style={{ transform: [{ rotate: '180deg' }] }} />
-                    </TouchableOpacity>
-                    <View className="flex-1">
-                      <Text className="text-xl font-black text-[#161719]">
-                        {employees.find(e => e.id === selectedStaffFilter)?.name || 'Berberi'}
-                      </Text>
-                      <Text className="text-slate-400 font-bold text-xs">Orari i rezervimeve</Text>
-                    </View>
-                  </View>
+            <View className="mb-4 px-1">
+              <Text className="text-xl font-black text-[#161719]">Kalendari i rezervimeve</Text>
+              <Text className="text-slate-400 font-bold text-xs">Terminet e caktuara sipas ditëve dhe stafit</Text>
+            </View>
 
-                  {/* Horizontal Day Selector (Reused) */}
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-6 py-2">
-                    {getNext14Days().map((d, index) => {
-                      const dateStr = d.toISOString().split('T')[0];
-                      const isSelected = dateStr === selectedDateStr;
-                      const dayNum = d.getDate();
-                      const dayName = daysOfWeek[d.getDay()];
-                      const isToday = dateStr === new Date().toISOString().split('T')[0];
+            {/* Horizontal Day Selector */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4 py-2">
+              {getNext14Days().map((d, index) => {
+                const dateStr = d.toISOString().split('T')[0];
+                const isSelected = dateStr === selectedDateStr;
+                const dayNum = d.getDate();
+                const dayName = daysOfWeek[d.getDay()];
+                const isToday = dateStr === new Date().toISOString().split('T')[0];
 
-                      return (
-                        <TouchableOpacity
-                          key={index}
-                          onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            setSelectedDateStr(dateStr);
-                          }}
-                          className={`mr-3 w-16 h-20 rounded-3xl items-center justify-center border ${
-                            isSelected
-                              ? 'bg-[#3473ef] border-[#3473ef] shadow-lg shadow-blue-200'
-                              : 'bg-white border-slate-100 shadow-sm'
-                          }`}
-                        >
-                          <Text className={`font-black text-[9px] uppercase ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>
-                            {dayName}
-                          </Text>
-                          <Text className={`text-xl font-black mt-1 ${isSelected ? 'text-white' : 'text-[#161719]'}`}>
-                            {dayNum}
-                          </Text>
-                          {isToday && !isSelected && (
-                            <View className="w-1.5 h-1.5 bg-[#3473ef] rounded-full mt-1" />
-                          )}
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </ScrollView>
-
-                  {/* Appointments list for selected staff */}
-                  <View className="gap-y-4">
-                    {appointments.filter(a => a.date === selectedDateStr && String(a.barber_id).trim() === String(selectedStaffFilter).trim()).length > 0 ? (
-                      appointments.filter(a => a.date === selectedDateStr && String(a.barber_id).trim() === String(selectedStaffFilter).trim()).map((appt, i) => (
-                        <Animated.View key={appt.id} entering={FadeInDown.delay(i * 100)}>
-                          <View className="bg-white p-5 rounded-[32px] border border-slate-100 shadow-sm flex-row items-center justify-between">
-                            <View className="flex-1 pr-4">
-                              <View className="flex-row items-center mb-2">
-                                <View className="bg-blue-50 px-2.5 py-1 rounded-lg">
-                                  <Text className="text-[#3473ef] font-black text-xs">
-                                    {appt.time ? appt.time.substring(0, 5) : '00:00'}
-                                  </Text>
-                                </View>
-                                <View className="bg-indigo-50 px-2.5 py-1 rounded-lg ml-2">
-                                  <Text className="text-indigo-600 font-black text-[9px] uppercase tracking-wider">
-                                    {appt.status}
-                                  </Text>
-                                </View>
-                              </View>
-                              <Text className="font-black text-[#161719] text-base mb-1">
-                                {appt.users?.name || 'Klient i LineUp'}
-                              </Text>
-                              <Text className="text-slate-400 font-bold text-xs">
-                                {appt.service || 'Shërbim i përgjithshëm'}
-                              </Text>
-                            </View>
-                            <View className="items-end">
-                              {appt.price > 0 && (
-                                <Text className="font-black text-lg text-[#161719] mb-3">
-                                  {appt.price}€
-                                </Text>
-                              )}
-                            </View>
-                          </View>
-                        </Animated.View>
-                      ))
-                    ) : (
-                      <View className="items-center justify-center py-20 bg-white rounded-[32px] border border-slate-100 shadow-sm">
-                        <Calendar size={48} color="#CBD5E1" strokeWidth={1.5} />
-                        <Text className="text-slate-400 font-bold mt-4">
-                          Nuk ka rezervime për këtë berber.
-                        </Text>
-                      </View>
+                return (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => {
+                      try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch (_) {}
+                      setSelectedDateStr(dateStr);
+                    }}
+                    className={`mr-3 w-16 h-20 rounded-3xl items-center justify-center border ${
+                      isSelected
+                        ? 'bg-[#3473ef] border-[#3473ef] shadow-lg shadow-blue-200'
+                        : 'bg-white border-slate-100 shadow-sm'
+                    }`}
+                  >
+                    <Text className={`font-black text-[9px] uppercase ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>
+                      {dayName}
+                    </Text>
+                    <Text className={`text-xl font-black mt-1 ${isSelected ? 'text-white' : 'text-[#161719]'}`}>
+                      {dayNum}
+                    </Text>
+                    {isToday && !isSelected && (
+                      <View className="w-1.5 h-1.5 bg-[#3473ef] rounded-full mt-1" />
                     )}
-                  </View>
-                </>
-              ) : (
-                <>
-                  <View className="flex-row justify-between items-center mb-6 px-1">
-                    <View>
-                      <Text className="text-xl font-black text-[#161719]">Ekipi juaj</Text>
-                      <Text className="text-slate-400 font-bold text-xs">
-                        {subscriptionDetails?.currentBarberCount || 0}/{employeeLimit} berberë • Plani {(currentPlan || 'solo').toUpperCase()}
-                      </Text>
-                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Staff Filter Chips (for owners with staff) */}
+            {isOwner && employees.length > 0 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-6">
+                <TouchableOpacity
+                  onPress={() => setSelectedStaffFilter(null)}
+                  className={`mr-2 px-4 py-2 rounded-2xl border ${
+                    selectedStaffFilter === null
+                      ? 'bg-[#161719] border-[#161719]'
+                      : 'bg-white border-slate-200'
+                  }`}
+                >
+                  <Text className={`font-black text-xs ${selectedStaffFilter === null ? 'text-white' : 'text-slate-700'}`}>
+                    Të gjithë ({appointments.filter(a => a.date === selectedDateStr).length})
+                  </Text>
+                </TouchableOpacity>
+                {employees.map((emp) => {
+                  const isSelected = selectedStaffFilter === emp.id;
+                  const count = appointments.filter(a => a.date === selectedDateStr && String(a.barber_id).trim() === String(emp.id).trim()).length;
+                  return (
                     <TouchableOpacity
-                      onPress={async () => {
-                        const sId = realShopId || user?.id;
-                        if (sId) {
-                          const planInfo = await getShopPlanDetails(sId);
-                          setCurrentPlan(planInfo.planId);
-                          setEmployeeLimit(planInfo.maxBarbers);
-
-                          if (planInfo.currentBarberCount >= planInfo.maxBarbers) {
-                            Alert.alert(
-                              "Limit i Arritur",
-                              `Plani juaj aktiv (${planInfo.planName}) lejon vetëm ${planInfo.maxBarbers} berber(ë) shtesë.\nAktualisht keni ${planInfo.currentBarberCount} berber(ë). A dëshironi ta përmirësoni planin (Upgrade)?`,
-                              [
-                                { text: "Anulo", style: "cancel" },
-                                { text: "Përmirëso Planin", onPress: triggerUpgradeFlow }
-                              ]
-                            );
-                            return;
-                          }
-                        }
-                        setShowAddStaffModal(true);
-                      }}
-                      className="w-12 h-12 bg-[#3473ef] rounded-2xl items-center justify-center shadow-lg shadow-[#3473ef]/30"
+                      key={emp.id}
+                      onPress={() => setSelectedStaffFilter(emp.id)}
+                      className={`mr-2 px-4 py-2 rounded-2xl border ${
+                        isSelected
+                          ? 'bg-[#3473ef] border-[#3473ef]'
+                          : 'bg-white border-slate-200'
+                      }`}
                     >
-                      {isPreparingUpgrade ? (
-                        <ActivityIndicator size="small" color="white" />
-                      ) : (
-                        <Plus size={24} color="white" strokeWidth={3} />
-                      )}
-                    </TouchableOpacity>
-                  </View>
-
-                  <View className="gap-y-4">
-                    {employees
-                      .filter(emp => emp.user_id !== user.id)
-                      .map((emp, i) => {
-                        const empAppts = appointments.filter(a => String(a.barber_id).trim() === String(emp.id).trim() && a.status !== 'cancelled' && a.status !== 'refused').length;
-
-                        return (
-                          <Animated.View key={emp.id} entering={FadeInDown.delay(i * 100)}>
-                            <TouchableOpacity
-                              onPress={() => {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                                setSelectedStaffFilter(emp.id);
-                              }}
-                              className="bg-white p-5 rounded-[32px] border border-slate-100 shadow-sm flex-row items-center active:scale-[0.98]"
-                            >
-                              <View className="w-16 h-16 rounded-[22px] mr-4 bg-slate-100 items-center justify-center border border-slate-200"><UserIcon size={28} color="#94A3B8" /></View>
-                              <View className="flex-1"><Text className="font-black text-[#161719] text-base mb-0.5">{emp.name}</Text><Text className="text-slate-400 font-bold text-xs">{emp.role}</Text></View>
-                              <View className="items-end bg-slate-50 px-4 py-3 rounded-2xl border border-slate-100"><Text className="font-black text-lg text-[#3473ef] leading-5">{empAppts}</Text><Text className="text-[#8789A3] font-bold text-[8px] uppercase tracking-tighter">Termine</Text></View>
-                            </TouchableOpacity>
-                          </Animated.View>
-                        );
-                      })}
-                    {employees.filter(e => e.user_id !== user.id).length === 0 && (
-                       <View className="items-center justify-center py-10 bg-slate-50 rounded-[32px] border border-dashed border-slate-200">
-                          <Users size={32} color="#CBD5E1" />
-                          <Text className="text-slate-400 font-bold mt-4 text-xs">Nuk keni shtuar ende asnjë staf.</Text>
-                       </View>
-                    )}
-                  </View>
-                </>
-              )
-            ) : (
-              <>
-                <View className="mb-4 px-1">
-                  <Text className="text-xl font-black text-[#161719]">Kalendari i rezervimeve</Text>
-                  <Text className="text-slate-400 font-bold text-xs">Terminet tuaja të caktuara sipas ditëve</Text>
-                </View>
-
-                {/* Horizontal Day Selector */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-6 py-2">
-                  {getNext14Days().map((d, index) => {
-                    const dateStr = d.toISOString().split('T')[0];
-                    const isSelected = dateStr === selectedDateStr;
-                    const dayNum = d.getDate();
-                    const dayName = daysOfWeek[d.getDay()];
-                    const isToday = dateStr === new Date().toISOString().split('T')[0];
-                    
-                    return (
-                      <TouchableOpacity
-                        key={index}
-                        onPress={() => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                          setSelectedDateStr(dateStr);
-                        }}
-                        className={`mr-3 w-16 h-20 rounded-3xl items-center justify-center border ${
-                          isSelected 
-                            ? 'bg-[#3473ef] border-[#3473ef] shadow-lg shadow-blue-200' 
-                            : 'bg-white border-slate-100 shadow-sm'
-                        }`}
-                      >
-                        <Text className={`font-black text-[9px] uppercase ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>
-                          {dayName}
-                        </Text>
-                        <Text className={`text-xl font-black mt-1 ${isSelected ? 'text-white' : 'text-[#161719]'}`}>
-                          {dayNum}
-                        </Text>
-                        {isToday && !isSelected && (
-                          <View className="w-1.5 h-1.5 bg-[#3473ef] rounded-full mt-1" />
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-
-                {/* Day Appointments list */}
-                <View className="gap-y-4">
-                  {appointments.filter(a => a.date === selectedDateStr).length > 0 ? (
-                    appointments.filter(a => a.date === selectedDateStr).map((appt, i) => (
-                      <Animated.View key={appt.id} entering={FadeInDown.delay(i * 100)}>
-                        <View className="bg-white p-5 rounded-[32px] border border-slate-100 shadow-sm flex-row items-center justify-between">
-                          <View className="flex-1 pr-4">
-                            <View className="flex-row items-center mb-2">
-                              <View className="bg-blue-50 px-2.5 py-1 rounded-lg">
-                                <Text className="text-[#3473ef] font-black text-xs">
-                                  {appt.time ? appt.time.substring(0, 5) : '00:00'}
-                                </Text>
-                              </View>
-                              <View className="bg-indigo-50 px-2.5 py-1 rounded-lg ml-2">
-                                <Text className="text-indigo-600 font-black text-[9px] uppercase tracking-wider">
-                                  {appt.status}
-                                </Text>
-                              </View>
-                            </View>
-                            <Text className="font-black text-[#161719] text-base mb-1">
-                              {appt.users?.name || 'Klient i LineUp'}
-                            </Text>
-                            <Text className="text-slate-400 font-bold text-xs">
-                              {appt.service || 'Shërbim i përgjithshëm'}
-                            </Text>
-                            {appt.users?.phone && (
-                              <Text className="text-slate-400 font-bold text-[10px] mt-1">
-                                Tel: {appt.users.phone}
-                              </Text>
-                            )}
-                          </View>
-                          <View className="items-end">
-                            {appt.price > 0 && (
-                              <Text className="font-black text-lg text-[#161719] mb-3">
-                                {appt.price}€
-                              </Text>
-                            )}
-                            {appt.status !== 'completed' && appt.status !== 'cancelled' && (
-                              <View className="flex-row gap-2">
-                                <TouchableOpacity
-                                  onPress={() => handleUpdateStatus(appt.id, 'completed')}
-                                  className="bg-emerald-500 px-3 py-1.5 rounded-xl shadow-sm active:scale-95"
-                                >
-                                  <Text className="text-white font-black text-[10px] uppercase">Përfundo</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                  onPress={() => handleUpdateStatus(appt.id, 'cancelled')}
-                                  className="bg-rose-500 px-3 py-1.5 rounded-xl shadow-sm active:scale-95"
-                                >
-                                  <Text className="text-white font-black text-[10px] uppercase">Anulo</Text>
-                                </TouchableOpacity>
-                              </View>
-                            )}
-                          </View>
-                        </View>
-                      </Animated.View>
-                    ))
-                  ) : (
-                    <View className="items-center justify-center py-20 bg-white rounded-[32px] border border-slate-100 shadow-sm">
-                      <Calendar size={48} color="#CBD5E1" strokeWidth={1.5} />
-                      <Text className="text-slate-400 font-bold mt-4">
-                        Nuk ka rezervime për këtë ditë.
+                      <Text className={`font-black text-xs ${isSelected ? 'text-white' : 'text-slate-700'}`}>
+                        {emp.name} ({count})
                       </Text>
-                    </View>
-                  )}
-                </View>
-              </>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
             )}
+
+            {/* Appointments list for selected day and filter */}
+            <View className="gap-y-4">
+              {appointments.filter(a => {
+                if (a.date !== selectedDateStr) return false;
+                if (selectedStaffFilter && String(a.barber_id).trim() !== String(selectedStaffFilter).trim()) return false;
+                return true;
+              }).length > 0 ? (
+                appointments.filter(a => {
+                  if (a.date !== selectedDateStr) return false;
+                  if (selectedStaffFilter && String(a.barber_id).trim() !== String(selectedStaffFilter).trim()) return false;
+                  return true;
+                }).map((appt, i) => {
+                  const assignedBarber = employees.find(e => String(e.id).trim() === String(appt.barber_id).trim());
+
+                  return (
+                    <Animated.View key={appt.id || i} entering={FadeInDown.delay(i * 60)}>
+                      <View className="bg-white p-5 rounded-[32px] border border-slate-100 shadow-sm flex-row items-center justify-between">
+                        <View className="flex-1 pr-4">
+                          <View className="flex-row items-center mb-2">
+                            <View className="bg-blue-50 px-2.5 py-1 rounded-lg">
+                              <Text className="text-[#3473ef] font-black text-xs">
+                                {appt.time ? appt.time.substring(0, 5) : '00:00'}
+                              </Text>
+                            </View>
+                            <View className={`px-2.5 py-1 rounded-lg ml-2 ${
+                              appt.status === 'completed' ? 'bg-emerald-50' :
+                              appt.status === 'cancelled' ? 'bg-rose-50' : 'bg-indigo-50'
+                            }`}>
+                              <Text className={`font-black text-[9px] uppercase tracking-wider ${
+                                appt.status === 'completed' ? 'text-emerald-600' :
+                                appt.status === 'cancelled' ? 'text-rose-600' : 'text-indigo-600'
+                              }`}>
+                                {appt.status || 'confirmed'}
+                              </Text>
+                            </View>
+                            {assignedBarber && !selectedStaffFilter && (
+                              <View className="bg-slate-100 px-2 py-0.5 rounded-lg ml-1.5">
+                                <Text className="text-slate-600 font-bold text-[9px]">
+                                  {assignedBarber.name}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                          <Text className="font-black text-[#161719] text-base mb-1">
+                            {appt.users?.name || appt.customer_name || 'Klient i LineUp'}
+                          </Text>
+                          <Text className="text-slate-400 font-bold text-xs mb-1">
+                            {appt.service || 'Shërbim i përgjithshëm'}
+                          </Text>
+                          {(appt.users?.phone || appt.customer_phone) && (
+                            <Text className="text-slate-500 font-bold text-[11px]">
+                              📞 {appt.users?.phone || appt.customer_phone}
+                            </Text>
+                          )}
+                        </View>
+                        <View className="items-end">
+                          {appt.price > 0 && (
+                            <Text className="font-black text-lg text-[#161719] mb-3">
+                              {appt.price}€
+                            </Text>
+                          )}
+                          {appt.status !== 'completed' && appt.status !== 'cancelled' && (
+                            <View className="flex-row gap-2">
+                              <TouchableOpacity
+                                onPress={() => handleUpdateStatus(appt.id, 'completed')}
+                                className="bg-emerald-500 px-3 py-1.5 rounded-xl shadow-sm active:scale-95"
+                              >
+                                <Text className="text-white font-black text-[10px] uppercase">Përfundo</Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                onPress={() => handleUpdateStatus(appt.id, 'cancelled')}
+                                className="bg-rose-500 px-3 py-1.5 rounded-xl shadow-sm active:scale-95"
+                              >
+                                <Text className="text-white font-black text-[10px] uppercase">Anulo</Text>
+                              </TouchableOpacity>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    </Animated.View>
+                  );
+                })
+              ) : (
+                <View className="items-center justify-center py-20 bg-white rounded-[32px] border border-slate-100 shadow-sm">
+                  <Calendar size={48} color="#CBD5E1" strokeWidth={1.5} />
+                  <Text className="text-slate-400 font-bold mt-4">
+                    Nuk ka rezervime për këtë ditë.
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
         )}
 
-        {/* TAB 2: Portfolio */}
-        {activeTabIndex === 2 && (
+        {/* TAB 2 (Owner only): Stafi (Team Management) */}
+        {isOwner && activeTabIndex === 2 && (
+          <View className="px-6">
+            <View className="flex-row justify-between items-center mb-6 px-1">
+              <View>
+                <Text className="text-xl font-black text-[#161719]">Ekipi juaj</Text>
+                <Text className="text-slate-400 font-bold text-xs">
+                  {subscriptionDetails?.currentBarberCount || employees.length}/{employeeLimit} berberë • Plani {(currentPlan || 'solo').toUpperCase()}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={async () => {
+                  const sId = realShopId || user?.id;
+                  if (sId) {
+                    const planInfo = await getShopPlanDetails(sId);
+                    setCurrentPlan(planInfo.planId);
+                    setEmployeeLimit(planInfo.maxBarbers);
+
+                    if (planInfo.currentBarberCount >= planInfo.maxBarbers) {
+                      Alert.alert(
+                        "Limit i Arritur",
+                        `Plani juaj aktiv (${planInfo.planName}) lejon vetëm ${planInfo.maxBarbers} berber(ë) shtesë.\nAktualisht keni ${planInfo.currentBarberCount} berber(ë). A dëshironi ta përmirësoni planin (Upgrade)?`,
+                        [
+                          { text: "Anulo", style: "cancel" },
+                          { text: "Përmirëso Planin", onPress: triggerUpgradeFlow }
+                        ]
+                      );
+                      return;
+                    }
+                  }
+                  setShowAddStaffModal(true);
+                }}
+                className="w-12 h-12 bg-[#3473ef] rounded-2xl items-center justify-center shadow-lg shadow-[#3473ef]/30"
+              >
+                {isPreparingUpgrade ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <Plus size={24} color="white" strokeWidth={3} />
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <View className="gap-y-4">
+              {employees.map((emp, i) => {
+                const empAppts = appointments.filter(a => String(a.barber_id).trim() === String(emp.id).trim() && a.status !== 'cancelled' && a.status !== 'refused').length;
+
+                return (
+                  <Animated.View key={emp.id || i} entering={FadeInDown.delay(i * 100)}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch (_) {}
+                        setSelectedStaffFilter(emp.id);
+                        setActiveTabIndex(1); // Switch to Takimet tab filtered by this staff
+                      }}
+                      className="bg-white p-5 rounded-[32px] border border-slate-100 shadow-sm flex-row items-center active:scale-[0.98]"
+                    >
+                      <View className="w-16 h-16 rounded-[22px] mr-4 bg-slate-100 items-center justify-center border border-slate-200">
+                        <UserIcon size={28} color="#94A3B8" />
+                      </View>
+                      <View className="flex-1">
+                        <Text className="font-black text-[#161719] text-base mb-0.5">{emp.name}</Text>
+                        <Text className="text-slate-400 font-bold text-xs">{emp.role || 'Berber'}</Text>
+                        {emp.phone && (
+                          <Text className="text-slate-400 font-bold text-[10px] mt-0.5">📞 {emp.phone}</Text>
+                        )}
+                      </View>
+                      <View className="items-end bg-slate-50 px-4 py-3 rounded-2xl border border-slate-100">
+                        <Text className="font-black text-lg text-[#3473ef] leading-5">{empAppts}</Text>
+                        <Text className="text-[#8789A3] font-bold text-[8px] uppercase tracking-tighter">Termine</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </Animated.View>
+                );
+              })}
+              {employees.length === 0 && (
+                <View className="items-center justify-center py-10 bg-slate-50 rounded-[32px] border border-dashed border-slate-200">
+                  <Users size={32} color="#CBD5E1" />
+                  <Text className="text-slate-400 font-bold mt-4 text-xs">Nuk keni shtuar ende asnjë staf.</Text>
+                  <TouchableOpacity
+                    onPress={() => setShowAddStaffModal(true)}
+                    className="mt-4 bg-[#3473ef] px-4 py-2 rounded-xl flex-row items-center gap-1"
+                  >
+                    <Plus size={16} color="white" strokeWidth={3} />
+                    <Text className="text-white font-black text-xs">Shto Staf Tani</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* TAB Portfolio: (Index 3 for Owner, Index 2 for Staff) */}
+        {((isOwner && activeTabIndex === 3) || (!isOwner && activeTabIndex === 2)) && (
           <View className="px-6">
             <View className="mb-8 px-1">
               <Text className="text-xl font-black text-[#161719]">Portofoli i punës</Text>

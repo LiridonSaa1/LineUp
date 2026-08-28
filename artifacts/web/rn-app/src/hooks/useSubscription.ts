@@ -279,7 +279,7 @@ export const useSubscription = (businessId: string | null, userId?: string | nul
             }
 
             // Ensure shop status is active
-            await supabase.from('barbershops').update({ status: 'active', subscriptionStatus: 'active' }).eq('id', existingShop.id);
+            await supabase.from('barbershops').update({ status: 'active' }).eq('id', existingShop.id);
           }
         }
       }

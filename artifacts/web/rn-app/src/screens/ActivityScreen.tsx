@@ -6,6 +6,7 @@ import * as Haptics from 'expo-haptics';
 import { BarberDashboardScreen } from "./BarberDashboardScreen";
 import { AdminDashboardScreen } from "./AdminDashboardScreen";
 import { MobileAppDownloadCard } from "../components/MobileAppDownloadCard";
+import { supabase } from "../config/supabase";
 
 const { width } = Dimensions.get("window");
 
@@ -26,17 +27,6 @@ export const ActivityScreen: React.FC<ActivityScreenProps> = ({
 }) => {
   const isAdminRole = user?.role === 'super_admin' || user?.role === 'admin';
   const isBusinessRole = user?.role === 'owner' || user?.role === 'barber' || user?.role === 'employee' || user?.role === 'staf' || user?.role === 'staff';
-
-  // On Web, Business & Admin roles are directed to download the Mobile App
-  if (Platform.OS === 'web' && (isAdminRole || isBusinessRole)) {
-    return (
-      <MobileAppDownloadCard
-        user={user}
-        onLogout={onLogout}
-        onBackToHome={onNavigateToSearch}
-      />
-    );
-  }
 
   if (isAdminRole) {
     return (

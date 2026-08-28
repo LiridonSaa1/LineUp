@@ -270,19 +270,7 @@ export const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onLo
   }, []);
 
   useEffect(() => {
-    let isMounted = true;
-
-    // Use InteractionManager to ensure the UI is stable before fetching
-    const task = InteractionManager.runAfterInteractions(() => {
-      if (isMounted) {
-        fetchData(true);
-      }
-    });
-
-    return () => {
-      isMounted = false;
-      if (task) task.cancel();
-    };
+    fetchData(true);
   }, [fetchData]);
 
   const handleToggleShopStatus = useCallback(async (shopId: number, currentStatus: string) => {
