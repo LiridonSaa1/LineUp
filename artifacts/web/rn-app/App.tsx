@@ -123,22 +123,6 @@ const DesktopHeaderBar = ({
             <Text className="text-sm font-medium text-slate-900">{selectedLocation}</Text>
             <ChevronDown size={16} color="#94A3B8" />
           </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => {
-              if (user) {
-                onTabPress(3);
-              } else {
-                onOpenRegisterShop();
-              }
-            }}
-            activeOpacity={0.8}
-            className="shrink-0 rounded-full bg-slate-900 px-5 py-2.5"
-          >
-            <Text className="text-white font-semibold text-sm">
-              {user ? (user.name || "Profili") : "Kyçu"}
-            </Text>
-          </TouchableOpacity>
         </View>
       </View>
     </View>
