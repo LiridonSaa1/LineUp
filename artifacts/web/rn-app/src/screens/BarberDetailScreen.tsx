@@ -1376,12 +1376,12 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
 
                 {/* STEP 2: SELECT SERVICES */}
                 {widgetStep === 2 && (
-                  <View className="flex flex-col gap-3">
-                    <View className="flex items-center justify-between">
-                      <Text className="text-xs font-bold text-slate-400 uppercase">Trajtimet</Text>
-                      <Text className="text-xs font-bold text-[#3473ef]">{selectedServices.length} zgjedhur</Text>
+                  <View className="flex flex-col gap-3 text-left items-start w-full">
+                    <View className="flex flex-row items-center justify-between w-full">
+                      <Text className="text-xs font-bold text-slate-400 uppercase text-left">Trajtimet</Text>
+                      <Text className="text-xs font-bold text-[#3473ef] text-right">{selectedServices.length} zgjedhur</Text>
                     </View>
-                    <View className="flex flex-col gap-2 max-h-[280px] overflow-y-auto pr-1">
+                    <View className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-1 w-full">
                       {availableServices.length > 0 ? (
                         availableServices.map((srv, idx) => {
                           const selected = isServiceSelected(srv);
@@ -1389,22 +1389,22 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                             <View
                               key={srv.id || idx}
                               onPress={() => handleToggleService(srv)}
-                              className={`flex cursor-pointer items-center justify-between rounded-xl border p-3 transition-all ${
+                              className={`flex flex-row cursor-pointer items-center justify-between rounded-2xl border p-3.5 transition-all text-left w-full ${
                                 selected ? 'border-[#3473ef] bg-blue-50/50' : 'border-slate-100 bg-slate-50/40 hover:bg-white'
                               }`}
                             >
-                              <View className="flex items-center gap-2 min-w-0">
+                              <View className="flex flex-row items-center gap-3 min-w-0 flex-1 text-left">
                                 <View className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${
                                   selected ? 'border-[#3473ef] bg-[#3473ef] text-white' : 'border-slate-300 bg-white'
                                 }`}>
                                   {selected && <Check size={12} strokeWidth={3} />}
                                 </View>
-                                <View className="min-w-0">
-                                  <Text className="text-xs font-bold text-slate-900 truncate">{srv.name}</Text>
-                                  <Text className="text-[10px] text-slate-400">⏱️ {srv.duration || `${srv.durationMinutes || 30} min`}</Text>
+                                <View className="min-w-0 flex-1 text-left items-start">
+                                  <Text className="text-xs font-bold text-slate-900 truncate text-left">{srv.name}</Text>
+                                  <Text className="text-[10px] text-slate-400 text-left">⏱️ {srv.duration || `${srv.durationMinutes || 30} min`}</Text>
                                 </View>
                               </View>
-                              <Text className="text-xs font-bold text-[#3473ef] shrink-0">{srv.price && parseFloat(String(srv.price)) > 0 ? `${srv.price} €` : ''}</Text>
+                              <Text className="text-xs font-bold text-[#3473ef] shrink-0 ml-2">{srv.price && parseFloat(String(srv.price)) > 0 ? `${srv.price} €` : ''}</Text>
                             </View>
                           );
                         })
@@ -1415,29 +1415,32 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                             <View
                               key={srv.id}
                               onPress={() => handleToggleService(srv)}
-                              className={`flex cursor-pointer items-center justify-between rounded-xl border p-3 transition-all ${
+                              className={`flex flex-row cursor-pointer items-center justify-between rounded-2xl border p-3.5 transition-all text-left w-full ${
                                 selected ? 'border-[#3473ef] bg-blue-50/50' : 'border-slate-100 bg-slate-50/40 hover:bg-white'
                               }`}
                             >
-                              <View className="flex items-center gap-2 min-w-0">
+                              <View className="flex flex-row items-center gap-3 min-w-0 flex-1 text-left">
                                 <View className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${
                                   selected ? 'border-[#3473ef] bg-[#3473ef] text-white' : 'border-slate-300 bg-white'
                                 }`}>
                                   {selected && <Check size={12} strokeWidth={3} />}
                                 </View>
-                                <Text className="text-xs font-bold text-slate-900 truncate">{srv.name}</Text>
+                                <View className="min-w-0 flex-1 text-left items-start">
+                                  <Text className="text-xs font-bold text-slate-900 truncate text-left">{srv.name}</Text>
+                                  <Text className="text-[10px] text-slate-400 text-left">⏱️ {srv.duration || `${srv.durationMinutes || 30} min`}</Text>
+                                </View>
                               </View>
-                              <Text className="text-xs font-bold text-[#3473ef] shrink-0">{srv.price && parseFloat(String(srv.price)) > 0 ? `${srv.price} €` : ''}</Text>
+                              <Text className="text-xs font-bold text-[#3473ef] shrink-0 ml-2">{srv.price && parseFloat(String(srv.price)) > 0 ? `${srv.price} €` : ''}</Text>
                             </View>
                           );
                         })
                       )}
                     </View>
-                    <View className="flex gap-2 mt-2">
+                    <View className="flex flex-row items-center justify-between w-full gap-2 mt-2">
                       <TouchableOpacity
                         type="button"
                         onPress={() => setWidgetStep(1)}
-                        className="px-3 py-2.5 rounded-2xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                        className="px-4 py-2.5 rounded-2xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer text-left"
                       >
                         ← Mbrapa
                       </TouchableOpacity>
