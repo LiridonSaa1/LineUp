@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, TextInput, Modal, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Keyboard } from 'react-native';
 import { X, User, Mail, Lock, ShieldCheck, Check, Briefcase, Award, AlertCircle } from 'lucide-react-native';
-import { supabase } from '@/config/supabase';
+import { supabase } from "../config/supabase";
 import { createClient } from '@supabase/supabase-js';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import { getShopPlanDetails, ShopPlanDetails } from '../utils/planLimits';

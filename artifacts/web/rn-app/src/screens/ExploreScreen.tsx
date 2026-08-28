@@ -9,7 +9,7 @@ import Animated, {
 import { withTiming } from "react-native-reanimated";
 import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BlurView } from 'expo-blur';
-import { supabase } from "@/config/supabase";
+import { supabase } from "../config/supabase";
 import { getShopCardImage } from "../utils/imageUtils";
 import { WebFooter } from "../components/WebFooter";
 import { DEFAULT_SUBCATEGORIES } from "../config/defaultCategories";

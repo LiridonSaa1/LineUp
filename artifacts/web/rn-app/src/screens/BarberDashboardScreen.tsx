@@ -48,7 +48,7 @@ import Animated, {
   FadeInRight,
   Layout
 } from 'react-native-reanimated';
-import { supabase } from '@/config/supabase';
+import { supabase } from "../config/supabase";
 import { AddStaffModal } from '../components/AddStaffModal';
 import { DEFAULT_CATEGORIES } from '../config/defaultCategories';
 import * as ImagePicker from 'expo-image-picker';

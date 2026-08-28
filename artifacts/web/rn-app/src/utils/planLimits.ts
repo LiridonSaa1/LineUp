@@ -1,5 +1,5 @@
-import { supabase } from '@/config/supabase';
-import { PADDLE_CONFIG } from '@/config/paddle';
+import { supabase } from "../config/supabase";
+import { PADDLE_CONFIG } from "../config/paddle";
 
 export interface ShopPlanDetails {
   planId: 'solo' | 'duo' | 'team';

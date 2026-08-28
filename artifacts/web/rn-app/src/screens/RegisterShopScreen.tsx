@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Dimensions, Modal, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
 import { X, Store, MapPin, Camera, Check, ChevronRight, Info, Search, ChevronDown } from 'lucide-react-native';
 import { AddressAutocomplete } from '../components/AddressAutocomplete';
-import { supabase } from '@/config/supabase';
+import { supabase } from "../config/supabase";
 
 const { width } = Dimensions.get('window');
 

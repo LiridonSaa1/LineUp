@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Dimensions, Image, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { X, Megaphone, MapPin, Camera, Check, ChevronDown, Info, Search, Building2, Calendar, Sparkles, Zap, Award } from 'lucide-react-native';
 import { AddressAutocomplete } from '../components/AddressAutocomplete';
-import { supabase } from '@/config/supabase';
+import { supabase } from "../config/supabase";
 import * as ImagePicker from 'expo-image-picker';
 import { uploadFile } from '../utils/storage';
 

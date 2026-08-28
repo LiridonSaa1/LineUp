@@ -45,7 +45,7 @@ import {
 import Animated, { FadeInUp, FadeInDown, useAnimatedStyle, withSpring, useSharedValue, SlideInRight } from "react-native-reanimated";
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
-import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "@/config/supabase";
+import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "../config/supabase";
 import { RegisterScreen } from "./RegisterScreen";
 import { PaddleCheckout } from "../components/PaddleCheckout";
 import { createPaddleTransaction, PADDLE_CONFIG } from "../config/paddle";

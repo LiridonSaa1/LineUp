@@ -2,9 +2,9 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { View, Text, ScrollView, TouchableOpacity, Pressable, Image, Dimensions, Modal, TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Keyboard, Linking, Share } from "react-native";
 import { ArrowLeft, Share2, Star, MapPin, Phone, MessageSquare, Compass, Globe, Heart, Calendar, Check, X, User as UserIcon, Clock, Scissors as ScissorsIcon, Mail, Lock, ChevronRight, Hash, AlertCircle, Instagram, Sparkles, Store, Palette, Eye, Hand, Smile, Shield, Zap, Smartphone } from "lucide-react-native";
 import Animated, { FadeInUp, FadeIn, FadeInDown } from "react-native-reanimated";
-import { supabase } from "@/config/supabase";
+import { supabase } from "../config/supabase";
 import { getShopCardImage } from "../utils/imageUtils";
-import { sendTwilioOTP, verifyTwilioOTP } from "@/config/twilio";
+import { sendTwilioOTP, verifyTwilioOTP } from "../config/twilio";
 import { DEFAULT_CATEGORIES, DEFAULT_SUBCATEGORIES } from "../config/defaultCategories";
 import * as Haptics from 'expo-haptics';
 

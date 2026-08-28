@@ -4,7 +4,7 @@ import { X, Search, MapPin, Calendar, Grid, Scissors, Hand, Eye, Sparkles, User,
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { withTiming } from 'react-native-reanimated';
 import { AddressAutocomplete } from '../components/AddressAutocomplete';
-import { supabase } from '@/config/supabase';
+import { supabase } from "../config/supabase";
 
 const { width } = Dimensions.get('window');
 const USER_ID = 'demo_user_123';

@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/config/supabase';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { supabase } from "../config/supabase";
 
 export interface SubscriptionData {
   id: string;
@@ -37,6 +37,14 @@ export const useSubscription = (businessId: string | null, userId?: string | nul
   const [loading, setLoading] = useState(true);
   const [isActivating, setIsActivating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const fetchSubscription = useCallback(async (isRetry = false) => {
     // We can fetch by userId (preferred for new users) or businessId
@@ -56,6 +64,7 @@ export const useSubscription = (businessId: string | null, userId?: string | nul
     };
 
     const handleSubscriptionData = (data: any) => {
+      if (!isMountedRef.current) return;
       if (data) {
         console.log('[useSubscription] Processing sub data:', { status: data.status, end: data.current_period_end });
 
@@ -275,16 +284,16 @@ export const useSubscription = (businessId: string | null, userId?: string | nul
         }
       }
 
-      if (!data && userId) {
+      if (!data && userId && isMountedRef.current) {
         setIsActivating(true);
       }
 
       handleSubscriptionData(data);
     } catch (err: any) {
       console.error('[useSubscription] Error fetching for ' + identifier + ':', err.message);
-      setError(err.message);
+      if (isMountedRef.current) setError(err.message);
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) setLoading(false);
     }
   }, [businessId, userId]);
 

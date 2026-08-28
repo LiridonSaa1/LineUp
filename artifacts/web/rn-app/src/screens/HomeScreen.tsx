@@ -6,7 +6,7 @@ import Animated, {
   FadeInUp,
   FadeIn,
 } from "react-native-reanimated";
-import { supabase } from "@/config/supabase";
+import { supabase } from "../config/supabase";
 import { getShopCardImage } from "../utils/imageUtils";
 import { getShopPlanDetails } from "../utils/planLimits";
 import * as Haptics from 'expo-haptics';
@@ -495,7 +495,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     );
   };
 
-  if (isDesktop && Platform.OS === 'web') {
+  if (Platform.OS === 'web') {
     return (
       <View className="flex-1 bg-[#f8fafc]">
         <DesktopHomeWeb

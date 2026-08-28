@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, memo, useRef } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Pressable, TextInput, Dimensions, ActivityIndicator, Keyboard, StyleSheet, FlatList, Modal, KeyboardAvoidingView, Platform } from "react-native";
 import { User, CreditCard, Shield, Store, Mail, Lock, Eye, EyeOff, Phone, ChevronDown, Search, ArrowLeft, Check, ChevronRight, Zap, Sparkles, MapPin, X, Scissors, Hand, Smile, Waves, Palette } from "lucide-react-native";
 import { AddressAutocomplete } from '../components/AddressAutocomplete';
-import { supabase } from "@/config/supabase";
+import { supabase } from "../config/supabase";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { WebView } from "react-native-webview";
 import { createPaddleTransaction, PADDLE_CONFIG } from "../config/paddle";
