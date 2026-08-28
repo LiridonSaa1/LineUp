@@ -413,24 +413,40 @@ export default function App() {
     }
   }, [isRegistering]);
 
+  const [authLoading, setAuthLoading] = React.useState<boolean>(true);
+
   React.useEffect(() => {
+    let isMounted = true;
+
     // Check active session on startup
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user?.email) {
-        fetchUserProfile(session.user.email, session.user);
+        fetchUserProfile(session.user.email, session.user).finally(() => {
+          if (isMounted) setAuthLoading(false);
+        });
+      } else {
+        if (isMounted) setAuthLoading(false);
       }
+    }).catch(() => {
+      if (isMounted) setAuthLoading(false);
     });
 
     // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user?.email) {
-        fetchUserProfile(session.user.email, session.user);
-      } else {
+        fetchUserProfile(session.user.email, session.user).finally(() => {
+          if (isMounted) setAuthLoading(false);
+        });
+      } else if (event === 'SIGNED_OUT') {
         setUser(null);
+        if (isMounted) setAuthLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, [fetchUserProfile]);
 
   const handleImpersonate = (targetUser: any) => {

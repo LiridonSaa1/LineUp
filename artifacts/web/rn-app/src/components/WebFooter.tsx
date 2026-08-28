@@ -3,17 +3,6 @@ import { View, Text, TouchableOpacity, Image, Linking } from "react-native";
 import { MapPin, Instagram, Facebook, Mail } from "lucide-react-native";
 
 const logoImg = require('../../assets/logo.png');
-const extractUri = (mod: any): string => {
-  if (!mod) return "";
-  if (typeof mod === "string") return mod;
-  if (typeof mod === "object") {
-    if (typeof mod.default === "string") return mod.default;
-    if (mod.default && typeof mod.default === "object" && typeof mod.default.uri === "string") return mod.default.uri;
-    if (typeof mod.uri === "string") return mod.uri;
-    if (typeof mod.src === "string") return mod.src;
-  }
-  return String(mod || "");
-};
 
 interface WebFooterProps {
   onNavigateTab?: (tabIndex: number) => void;
@@ -27,12 +16,12 @@ export const WebFooter: React.FC<WebFooterProps> = ({
   onOpenLegal
 }) => {
   return (
-    <footer className="mt-16 border-t border-slate-200 bg-white">
+    <View className="mt-16 border-t border-slate-200 bg-white">
       <View className="mx-auto max-w-[1440px] px-6 py-12 md:px-10 flex-row flex-wrap justify-between gap-8">
         {/* Brand Info */}
         <View className="w-full md:w-1/4">
           <View className="flex-row items-center gap-3 mb-3">
-            <img src={extractUri(logoImg)} alt="LineUp Logo" className="h-10 w-10 object-contain rounded-xl" />
+            <Image source={logoImg} className="h-10 w-10 rounded-xl" resizeMode="contain" />
             <Text className="text-xl font-black text-slate-900">LineUp</Text>
           </View>
           <Text className="max-w-xs text-sm text-slate-500 font-semibold leading-relaxed">
@@ -48,49 +37,59 @@ export const WebFooter: React.FC<WebFooterProps> = ({
               <Text className="text-sm text-slate-500 font-bold hover:text-slate-900">Ballina</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => onNavigateTab && onNavigateTab(1)}>
-              <Text className="text-sm text-slate-500 font-bold hover:text-slate-900">Kërko</Text>
+              <Text className="text-sm text-slate-500 font-bold hover:text-slate-900">Kërko Sallonet</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => onNavigateTab && onNavigateTab(2)}>
-              <Text className="text-sm text-slate-500 font-bold hover:text-slate-900">Aktiviteti</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => onNavigateTab && onNavigateTab(3)}>
-              <Text className="text-sm text-slate-500 font-bold hover:text-slate-900">Profili</Text>
+              <Text className="text-sm text-slate-500 font-bold hover:text-slate-900">Aktiviteti Im</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Për bizneset */}
+        {/* Për Bizneset */}
         <View className="w-1/2 md:w-1/5">
-          <Text className="text-sm font-black text-slate-900 mb-3">Për bizneset</Text>
+          <Text className="text-sm font-black text-slate-900 mb-3">Për Bizneset</Text>
           <View className="gap-y-2">
-            <TouchableOpacity onPress={() => onNavigateTab && onNavigateTab(3)}>
-              <Text className="text-sm text-slate-500 font-bold hover:text-slate-900">Planet e çmimeve</Text>
+            <TouchableOpacity onPress={() => onOpenRegisterShop && onOpenRegisterShop()}>
+              <Text className="text-sm text-slate-500 font-bold hover:text-slate-900">Regjistro Sallonin</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => onOpenRegisterShop && onOpenRegisterShop()}>
-              <Text className="text-sm text-[#3473ef] font-black hover:underline">Bëhu partner 🚀</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => onNavigateTab && onNavigateTab(3)}>
-              <Text className="text-sm text-slate-500 font-bold hover:text-slate-900">Ndihmë</Text>
+              <Text className="text-sm text-slate-500 font-bold hover:text-slate-900">Planet & Çmimet</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Kontakt */}
-        <View className="w-full md:w-1/5">
-          <Text className="text-sm font-black text-slate-900 mb-3">Kontakt</Text>
-          <View className="gap-y-2">
-            <Text className="text-sm text-slate-500 font-bold">info@lineup.ks</Text>
-            <Text className="text-sm text-slate-500 font-bold">+383 44 000 000</Text>
-            <Text className="text-sm text-slate-500 font-bold">Prishtinë, Kosovë</Text>
+        {/* Mbështetja */}
+        <View className="w-full md:w-1/4">
+          <Text className="text-sm font-black text-slate-900 mb-3">Mbështetja & Kontakt</Text>
+          <View className="gap-y-2 mb-4">
+            <View className="flex-row items-center gap-2">
+              <Mail size={16} color="#64748b" />
+              <Text className="text-sm text-slate-500 font-semibold">suport@lineup-ks.com</Text>
+            </View>
+            <View className="flex-row items-center gap-2">
+              <MapPin size={16} color="#64748b" />
+              <Text className="text-sm text-slate-500 font-semibold">Prishtinë, Kosovë</Text>
+            </View>
           </View>
         </View>
       </View>
 
-      <View className="border-t border-slate-200 py-5 text-center">
-        <Text className="text-xs text-slate-400 font-bold">
-          © {new Date().getFullYear()} LineUp. Të gjitha të drejtat e rezervuara.
-        </Text>
+      {/* Bottom Bar */}
+      <View className="border-t border-slate-100 py-6 px-6 md:px-10">
+        <View className="mx-auto max-w-[1440px] flex-row flex-wrap items-center justify-between gap-4">
+          <Text className="text-xs font-semibold text-slate-400">
+            © {new Date().getFullYear()} LineUp. Të gjitha të drejtat të rezervuara.
+          </Text>
+          <View className="flex-row items-center gap-6">
+            <TouchableOpacity onPress={() => onOpenLegal && onOpenLegal('privacy')}>
+              <Text className="text-xs font-bold text-slate-500 hover:text-slate-900">Politika e Privatësisë</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => onOpenLegal && onOpenLegal('terms')}>
+              <Text className="text-xs font-bold text-slate-500 hover:text-slate-900">Kushtet e Përdorimit</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
-    </footer>
+    </View>
   );
 };

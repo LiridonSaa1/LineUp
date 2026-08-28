@@ -1063,208 +1063,208 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
   if (isDesktop) {
     return (
       <View className="flex-1 bg-[#f8fafc] overflow-y-auto">
-        <div className="mx-auto w-full max-w-[1440px] px-6 lg:px-10 py-8">
+        <View className="mx-auto w-full max-w-[1440px] px-6 lg:px-10 py-8">
           {/* Top Desktop Breadcrumb & Navigation */}
-          <div className="mb-6 flex items-center justify-between">
-            <button
+          <View className="mb-6 flex items-center justify-between">
+            <TouchableOpacity
               type="button"
-              onClick={onBack}
+              onPress={onBack}
               className="group inline-flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white px-4 py-2.5 font-display text-sm font-bold text-slate-700 shadow-2xs transition-all hover:bg-slate-50 hover:text-slate-900 cursor-pointer"
             >
               <ArrowLeft size={18} className="text-slate-500 group-hover:text-slate-900" />
-              <span>← Kthehu te Kërkimi</span>
-            </button>
+              <Text>← Kthehu te Kërkimi</Text>
+            </TouchableOpacity>
 
-            <div className="flex items-center gap-3">
-              <button
+            <View className="flex items-center gap-3">
+              <TouchableOpacity
                 type="button"
-                onClick={handleFavoriteToggle}
+                onPress={handleFavoriteToggle}
                 className="flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white px-4 py-2.5 font-display text-sm font-bold text-slate-700 shadow-2xs transition-transform hover:scale-105 cursor-pointer"
               >
                 <Heart size={18} color={isFavLocal ? "#ef4444" : "#64748b"} fill={isFavLocal ? "#ef4444" : "transparent"} />
-                <span>{isFavLocal ? "Në të ruajtura" : "Ruaj"}</span>
-              </button>
+                <Text>{isFavLocal ? "Në të ruajtura" : "Ruaj"}</Text>
+              </TouchableOpacity>
 
-              <button
+              <TouchableOpacity
                 type="button"
-                onClick={handleShare}
+                onPress={handleShare}
                 className="flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white px-4 py-2.5 font-display text-sm font-bold text-slate-700 shadow-2xs transition-transform hover:scale-105 cursor-pointer"
               >
                 <Share2 size={18} className="text-slate-500" />
-                <span>Shpërndaj</span>
-              </button>
-            </div>
-          </div>
+                <Text>Shpërndaj</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
           {/* 2-COLUMN MAIN SPLIT LAYOUT AT TOP */}
-          <div className="grid gap-8 lg:grid-cols-[1fr_440px] items-start">
+          <View className="grid gap-8 lg:grid-cols-[1fr_440px] items-start">
             {/* LEFT COLUMN: Hero Cover, About, Services Menu, Reviews */}
-            <div className="flex flex-col gap-8">
+            <View className="flex flex-col gap-8">
               {/* Desktop Hero Image Container */}
-              <div 
-                onClick={() => setZoomImage(imageUrl)}
+              <View 
+                onPress={() => setZoomImage(imageUrl)}
                 className="group relative cursor-pointer overflow-hidden rounded-3xl bg-slate-900 h-[380px] shadow-lg"
               >
-                <img src={imageUrl} alt={shopName} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/20 to-transparent" />
-                <div className="absolute bottom-6 left-6 right-6 flex items-end justify-between">
-                  <div>
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/90 backdrop-blur-md px-3 py-1 font-display text-xs font-bold text-slate-900 mb-2">
+                <Image source={{ uri: imageUrl }} className="h-full w-full rounded-3xl" resizeMode="cover" />
+                <View className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/20 to-transparent" />
+                <View className="absolute bottom-6 left-6 right-6 flex items-end justify-between">
+                  <View>
+                    <Text className="inline-flex items-center gap-1.5 rounded-full bg-white/90 backdrop-blur-md px-3 py-1 font-display text-xs font-bold text-slate-900 mb-2">
                       <Star size={14} color="#fbbf24" fill="#fbbf24" />
                       {rating} ({reviews.length > 0 ? reviews.length : 12} vlerësime)
-                    </span>
-                    <h1 className="font-display text-3xl font-bold text-white drop-shadow-md">{shopName}</h1>
-                    <p className="flex items-center gap-1.5 font-medium text-slate-200 text-sm mt-1">
+                    </Text>
+                    <Text className="font-display text-3xl font-bold text-white drop-shadow-md">{shopName}</Text>
+                    <Text className="flex items-center gap-1.5 font-medium text-slate-200 text-sm mt-1">
                       <MapPin size={16} className="text-white" />
                       {address}
-                    </p>
-                  </div>
+                    </Text>
+                  </View>
                   {photos.length > 0 && (
-                    <div className="hidden sm:flex items-center gap-2">
+                    <View className="hidden sm:flex items-center gap-2">
                       {photos.slice(0, 3).map((photoUrl: any, idx: number) => {
                         const pUrl = typeof photoUrl === 'string' ? photoUrl : photoUrl.url;
                         return (
-                          <div 
+                          <View 
                             key={idx}
-                            onClick={(e) => {
+                            onPress={(e) => {
                               e.stopPropagation();
                               setZoomImage(pUrl);
                             }}
                             className="h-12 w-12 rounded-xl overflow-hidden border-2 border-white/80 shadow-xs transition-transform hover:scale-110"
                           >
-                            <img src={pUrl} alt="Thumbnail" className="h-full w-full object-cover" />
-                          </div>
+                            <Image source={{ uri: pUrl }} className="h-full w-full rounded-2xl" resizeMode="cover" />
+                          </View>
                         );
                       })}
-                    </div>
+                    </View>
                   )}
-                </div>
-              </div>
+                </View>
+              </View>
 
               {/* About & Shop Info */}
-              <div className="rounded-3xl border border-slate-200/80 bg-white p-8 shadow-2xs">
-                <h2 className="font-display text-xl font-bold text-slate-900 mb-3">Rreth {shopName}</h2>
-                <p className="text-sm font-medium text-slate-600 leading-relaxed mb-6">
+              <View className="rounded-3xl border border-slate-200/80 bg-white p-8 shadow-2xs">
+                <Text className="font-display text-xl font-bold text-slate-900 mb-3">Rreth {shopName}</Text>
+                <Text className="text-sm font-medium text-slate-600 leading-relaxed mb-6">
                   {shop?.description || `${shopName} është një nga sallonet më premium në zonë, duke ofruar shërbime profesionale të prerjes së flokëve, stilimit të mjekrës dhe kujdesit për lëkurën.`}
-                </p>
+                </Text>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 border-t border-slate-100 pt-6">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-[#3473ef]">
+                <View className="grid grid-cols-2 sm:grid-cols-3 gap-4 border-t border-slate-100 pt-6">
+                  <View className="flex items-center gap-3">
+                    <View className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-[#3473ef]">
                       <Clock size={20} />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-slate-400 uppercase">Orari</p>
-                      <p className="font-display text-sm font-bold text-slate-900">{realOpeningHours}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                    </View>
+                    <View>
+                      <Text className="text-xs font-bold text-slate-400 uppercase">Orari</Text>
+                      <Text className="font-display text-sm font-bold text-slate-900">{realOpeningHours}</Text>
+                    </View>
+                  </View>
+                  <View className="flex items-center gap-3">
+                    <View className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
                       <Star size={20} fill="#fbbf24" color="#fbbf24" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-slate-400 uppercase">Vlerësimi</p>
-                      <p className="font-display text-sm font-bold text-slate-900">{rating} / 5.0</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                    </View>
+                    <View>
+                      <Text className="text-xs font-bold text-slate-400 uppercase">Vlerësimi</Text>
+                      <Text className="font-display text-sm font-bold text-slate-900">{rating} / 5.0</Text>
+                    </View>
+                  </View>
+                  <View className="flex items-center gap-3">
+                    <View className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
                       <Shield size={20} />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-slate-400 uppercase">Statusi</p>
-                      <p className="font-display text-sm font-bold text-emerald-600">Verifikuar ✓</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                    </View>
+                    <View>
+                      <Text className="text-xs font-bold text-slate-400 uppercase">Statusi</Text>
+                      <Text className="font-display text-sm font-bold text-emerald-600">Verifikuar ✓</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
 
 
 
               {/* Customer Reviews Section */}
-              <div className="rounded-3xl border border-slate-200/80 bg-white p-8 shadow-2xs">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="font-display text-xl font-bold text-slate-900">Vlerësimet nga Klientët</h2>
-                    <p className="text-xs font-medium text-slate-500">Përvojat e klientëve të verifikuar te {shopName}</p>
-                  </div>
-                  <span className="inline-flex items-center gap-1 rounded-xl bg-amber-50 px-3 py-1 font-display text-sm font-bold text-slate-900 border border-amber-200/60">
+              <View className="rounded-3xl border border-slate-200/80 bg-white p-8 shadow-2xs">
+                <View className="flex items-center justify-between mb-6">
+                  <View>
+                    <Text className="font-display text-xl font-bold text-slate-900">Vlerësimet nga Klientët</Text>
+                    <Text className="text-xs font-medium text-slate-500">Përvojat e klientëve të verifikuar te {shopName}</Text>
+                  </View>
+                  <Text className="inline-flex items-center gap-1 rounded-xl bg-amber-50 px-3 py-1 font-display text-sm font-bold text-slate-900 border border-amber-200/60">
                     <Star size={14} color="#fbbf24" fill="#fbbf24" />
                     {rating} / 5.0
-                  </span>
-                </div>
+                  </Text>
+                </View>
 
-                <div className="flex flex-col gap-4">
+                <View className="flex flex-col gap-4">
                   {reviews.length > 0 ? (
                     reviews.map((rev: any, idx: number) => (
-                      <div key={idx} className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 font-bold text-white text-xs">
+                      <View key={idx} className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4">
+                        <View className="flex items-center justify-between mb-2">
+                          <View className="flex items-center gap-2">
+                            <View className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 font-bold text-white text-xs">
                               {(rev.users?.name || rev.name || "K").charAt(0).toUpperCase()}
-                            </div>
-                            <span className="font-display text-sm font-bold text-slate-900">{rev.users?.name || rev.name || "Klient i verifikuar"}</span>
-                          </div>
-                          <span className="flex items-center gap-1 text-xs font-bold text-amber-500">
+                            </View>
+                            <Text className="font-display text-sm font-bold text-slate-900">{rev.users?.name || rev.name || "Klient i verifikuar"}</Text>
+                          </View>
+                          <Text className="flex items-center gap-1 text-xs font-bold text-amber-500">
                             <Star size={12} fill="#f59e0b" color="#f59e0b" />
                             {rev.rating || 5}.0
-                          </span>
-                        </div>
-                        <p className="text-xs font-medium text-slate-600 leading-relaxed">{rev.comment}</p>
-                      </div>
+                          </Text>
+                        </View>
+                        <Text className="text-xs font-medium text-slate-600 leading-relaxed">{rev.comment}</Text>
+                      </View>
                     ))
                   ) : (
-                    <div className="py-8 text-center">
-                      <p className="text-sm font-medium text-slate-500">Nuk ka ende vlerësime të shkruara. Bëhu i pari që rezervon dhe vlerëson!</p>
-                    </div>
+                    <View className="py-8 text-center">
+                      <Text className="text-sm font-medium text-slate-500">Nuk ka ende vlerësime të shkruara. Bëhu i pari që rezervon dhe vlerëson!</Text>
+                    </View>
                   )}
-                </div>
-              </div>
-            </div>
+                </View>
+              </View>
+            </View>
 
             {/* RIGHT COLUMN: STICKY BOOKING WIDGET */}
             {/* RIGHT COLUMN: INTERACTIVE STEP-BY-STEP BOOKING WIDGET */}
-            <div className="sticky top-24 flex flex-col gap-6">
-              <div className="overflow-hidden rounded-3xl border border-slate-200/90 bg-white p-6 shadow-xl">
+            <View className="sticky top-24 flex flex-col gap-6">
+              <View className="overflow-hidden rounded-3xl border border-slate-200/90 bg-white p-6 shadow-xl">
                 {bookingSuccess ? (
-                  <div className="flex flex-col items-center gap-4 py-4 text-center">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 animate-bounce">
+                  <View className="flex flex-col items-center gap-4 py-4 text-center">
+                    <View className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 animate-bounce">
                       <Check size={36} strokeWidth={3} />
-                    </div>
+                    </View>
 
-                    <div>
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3.5 py-1 font-display text-xs font-bold text-emerald-800 mb-2">
+                    <View>
+                      <Text className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3.5 py-1 font-display text-xs font-bold text-emerald-800 mb-2">
                         <Sparkles size={14} className="text-emerald-600" />
                         Rezervimi u krye me sukses! 🎉
-                      </span>
-                      <h3 className="font-display text-2xl font-bold text-slate-900">Urime! Takimi u konfirmua</h3>
-                      <p className="text-xs font-medium text-slate-600 mt-1">
-                        Njoftimi u dërgua me sukses te salloni <span className="font-bold text-slate-900">{confirmedBookingDetails?.shopName}</span>.
-                      </p>
-                    </div>
+                      </Text>
+                      <Text className="font-display text-2xl font-bold text-slate-900">Urime! Takimi u konfirmua</Text>
+                      <Text className="text-xs font-medium text-slate-600 mt-1">
+                        Njoftimi u dërgua me sukses te salloni <Text className="font-bold text-slate-900">{confirmedBookingDetails?.shopName}</Text>.
+                      </Text>
+                    </View>
 
-                    <div className="w-full rounded-2xl bg-slate-50 p-4 border border-slate-200/80 text-left flex flex-col gap-2.5 shadow-2xs">
-                      <div className="flex justify-between text-xs font-bold text-slate-800 border-b border-slate-200/60 pb-1.5">
-                        <span className="text-slate-500 font-medium">Berberi:</span>
-                        <span className="text-slate-900">{confirmedBookingDetails?.barberName}</span>
-                      </div>
-                      <div className="flex justify-between text-xs font-bold text-slate-800 border-b border-slate-200/60 pb-1.5">
-                        <span className="text-slate-500 font-medium">Shërbimet:</span>
-                        <span className="text-slate-900 truncate max-w-[200px]">{confirmedBookingDetails?.services}</span>
-                      </div>
-                      <div className="flex justify-between text-xs font-bold text-slate-800 border-b border-slate-200/60 pb-1.5">
-                        <span className="text-slate-500 font-medium">Data & Ora:</span>
-                        <span className="text-[#3473ef] font-bold">{confirmedBookingDetails?.date} në {confirmedBookingDetails?.time}</span>
-                      </div>
-                      <div className="flex justify-between font-display text-sm font-bold text-slate-900 pt-0.5">
-                        <span>Statusi:</span>
-                        <span className="text-emerald-600 font-bold">✓ Konfirmuar me OTP</span>
-                      </div>
-                    </div>
+                    <View className="w-full rounded-2xl bg-slate-50 p-4 border border-slate-200/80 text-left flex flex-col gap-2.5 shadow-2xs">
+                      <View className="flex justify-between text-xs font-bold text-slate-800 border-b border-slate-200/60 pb-1.5">
+                        <Text className="text-slate-500 font-medium">Berberi:</Text>
+                        <Text className="text-slate-900">{confirmedBookingDetails?.barberName}</Text>
+                      </View>
+                      <View className="flex justify-between text-xs font-bold text-slate-800 border-b border-slate-200/60 pb-1.5">
+                        <Text className="text-slate-500 font-medium">Shërbimet:</Text>
+                        <Text className="text-slate-900 truncate max-w-[200px]">{confirmedBookingDetails?.services}</Text>
+                      </View>
+                      <View className="flex justify-between text-xs font-bold text-slate-800 border-b border-slate-200/60 pb-1.5">
+                        <Text className="text-slate-500 font-medium">Data & Ora:</Text>
+                        <Text className="text-[#3473ef] font-bold">{confirmedBookingDetails?.date} në {confirmedBookingDetails?.time}</Text>
+                      </View>
+                      <View className="flex justify-between font-display text-sm font-bold text-slate-900 pt-0.5">
+                        <Text>Statusi:</Text>
+                        <Text className="text-emerald-600 font-bold">✓ Konfirmuar me OTP</Text>
+                      </View>
+                    </View>
 
-                    <button
+                    <TouchableOpacity
                       type="button"
-                      onClick={() => {
+                      onPress={() => {
                         setBookingSuccess(false);
                         setWidgetStep(1);
                         setSelectedServices([]);
@@ -1273,28 +1273,28 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                       className="w-full rounded-2xl bg-[#3473ef] py-3.5 font-display text-sm font-bold text-white shadow-md hover:bg-blue-600 cursor-pointer transition-all mt-2"
                     >
                       + Bëj një Rezervim të Ri
-                    </button>
-                  </div>
+                    </TouchableOpacity>
+                  </View>
                 ) : (
                   <>
                     {/* Header & Step Bar */}
-                    <div className="mb-4 border-b border-slate-100 pb-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-[#3473ef]">Rezervim me OTP</p>
-                      <p className="font-display text-xl font-bold text-slate-900">
+                    <View className="mb-4 border-b border-slate-100 pb-4">
+                  <View className="flex items-center justify-between">
+                    <View>
+                      <Text className="text-xs font-bold uppercase tracking-wider text-[#3473ef]">Rezervim me OTP</Text>
+                      <Text className="font-display text-xl font-bold text-slate-900">
                         {widgetStep === 1 ? "1. Zgjidh Berberin" :
                          widgetStep === 2 ? "2. Zgjidh Shërbimet" :
                          widgetStep === 3 ? "3. Data & Ora" : "4. Konfirmo Terminin"}
-                      </p>
-                    </div>
-                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-[#3473ef]">
+                      </Text>
+                    </View>
+                    <View className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-[#3473ef]">
                       <Calendar size={20} />
-                    </div>
-                  </div>
+                    </View>
+                  </View>
 
                   {/* Step Pills Navigation */}
-                  <div className="mt-4 flex items-center justify-between gap-1 rounded-2xl bg-slate-100 p-1">
+                  <View className="mt-4 flex items-center justify-between gap-1 rounded-2xl bg-slate-100 p-1">
                     {[
                       { step: 1, label: "Berber" },
                       { step: 2, label: "Shërbimi" },
@@ -1308,10 +1308,10 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                         (s.step === 3 && selectedDate && selectedTime)
                       );
                       return (
-                        <button
+                        <TouchableOpacity
                           key={s.step}
                           type="button"
-                          onClick={() => setWidgetStep(s.step)}
+                          onPress={() => setWidgetStep(s.step)}
                           className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-bold transition-all text-center cursor-pointer ${
                             isActive
                               ? "bg-[#3473ef] text-white shadow-xs"
@@ -1321,23 +1321,23 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                           }`}
                         >
                           {s.label}
-                        </button>
+                        </TouchableOpacity>
                       );
                     })}
-                  </div>
-                </div>
+                  </View>
+                </View>
 
                 {/* STEP 1: SELECT BARBER */}
                 {widgetStep === 1 && (
-                  <div className="flex flex-col gap-3">
-                    <p className="text-xs font-bold text-slate-400 uppercase">Stafi i sallonit</p>
-                    <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto pr-1">
+                  <View className="flex flex-col gap-3">
+                    <Text className="text-xs font-bold text-slate-400 uppercase">Stafi i sallonit</Text>
+                    <View className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto pr-1">
                       {(staff.length > 0 ? staff : [{ id: shop?.id || 1, name: shop?.name || "Stafi i Sallonit", rating: 5.0 }]).map((emp: any) => {
                         const isSelected = selectedEmployee?.id === emp.id;
                         return (
-                          <div
+                          <View
                             key={emp.id}
-                            onClick={() => {
+                            onPress={() => {
                               setSelectedEmployee(emp);
                               setWidgetStep(2);
                             }}
@@ -1347,95 +1347,95 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                                 : 'border-slate-200/80 bg-slate-50/40 hover:bg-white'
                             }`}
                           >
-                            <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-slate-100 shadow-2xs">
+                            <View className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-slate-100 shadow-2xs">
                               <UserIcon size={20} className={isSelected ? 'text-[#3473ef]' : 'text-slate-400'} />
-                            </div>
-                            <p className="font-display text-xs font-bold text-slate-900 text-center truncate w-full">{emp.name}</p>
-                            <span className="mt-1 text-[10px] font-bold text-amber-500">⭐ {emp.rating ? parseFloat(String(emp.rating)).toFixed(1) : "5.0"}</span>
-                          </div>
+                            </View>
+                            <Text className="font-display text-xs font-bold text-slate-900 text-center truncate w-full">{emp.name}</Text>
+                            <Text className="mt-1 text-[10px] font-bold text-amber-500">⭐ {emp.rating ? parseFloat(String(emp.rating)).toFixed(1) : "5.0"}</Text>
+                          </View>
                         );
                       })}
-                    </div>
-                    <button
+                    </View>
+                    <TouchableOpacity
                       type="button"
-                      onClick={() => setWidgetStep(2)}
+                      onPress={() => setWidgetStep(2)}
                       className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#3473ef] py-3 text-xs font-bold text-white shadow-md hover:bg-blue-600 cursor-pointer"
                     >
-                      <span>Vazhdo te Shërbimet →</span>
-                    </button>
-                  </div>
+                      <Text>Vazhdo te Shërbimet →</Text>
+                    </TouchableOpacity>
+                  </View>
                 )}
 
                 {/* STEP 2: SELECT SERVICES */}
                 {widgetStep === 2 && (
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-bold text-slate-400 uppercase">Trajtimet</p>
-                      <span className="text-xs font-bold text-[#3473ef]">{selectedServices.length} zgjedhur</span>
-                    </div>
-                    <div className="flex flex-col gap-2 max-h-[280px] overflow-y-auto pr-1">
+                  <View className="flex flex-col gap-3">
+                    <View className="flex items-center justify-between">
+                      <Text className="text-xs font-bold text-slate-400 uppercase">Trajtimet</Text>
+                      <Text className="text-xs font-bold text-[#3473ef]">{selectedServices.length} zgjedhur</Text>
+                    </View>
+                    <View className="flex flex-col gap-2 max-h-[280px] overflow-y-auto pr-1">
                       {availableServices.length > 0 ? (
                         availableServices.map((srv, idx) => {
                           const selected = isServiceSelected(srv);
                           return (
-                            <div
+                            <View
                               key={srv.id || idx}
-                              onClick={() => handleToggleService(srv)}
+                              onPress={() => handleToggleService(srv)}
                               className={`flex cursor-pointer items-center justify-between rounded-xl border p-3 transition-all ${
                                 selected ? 'border-[#3473ef] bg-blue-50/50' : 'border-slate-100 bg-slate-50/40 hover:bg-white'
                               }`}
                             >
-                              <div className="flex items-center gap-2 min-w-0">
-                                <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${
+                              <View className="flex items-center gap-2 min-w-0">
+                                <View className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${
                                   selected ? 'border-[#3473ef] bg-[#3473ef] text-white' : 'border-slate-300 bg-white'
                                 }`}>
                                   {selected && <Check size={12} strokeWidth={3} />}
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="text-xs font-bold text-slate-900 truncate">{srv.name}</p>
-                                  <p className="text-[10px] text-slate-400">⏱️ {srv.duration || `${srv.durationMinutes || 30} min`}</p>
-                                </div>
-                              </div>
-                              <span className="text-xs font-bold text-[#3473ef] shrink-0">{srv.price && parseFloat(String(srv.price)) > 0 ? `${srv.price} €` : ''}</span>
-                            </div>
+                                </View>
+                                <View className="min-w-0">
+                                  <Text className="text-xs font-bold text-slate-900 truncate">{srv.name}</Text>
+                                  <Text className="text-[10px] text-slate-400">⏱️ {srv.duration || `${srv.durationMinutes || 30} min`}</Text>
+                                </View>
+                              </View>
+                              <Text className="text-xs font-bold text-[#3473ef] shrink-0">{srv.price && parseFloat(String(srv.price)) > 0 ? `${srv.price} €` : ''}</Text>
+                            </View>
                           );
                         })
                       ) : (
                         DEFAULT_SHOP_SERVICES.map((srv) => {
                           const selected = isServiceSelected(srv);
                           return (
-                            <div
+                            <View
                               key={srv.id}
-                              onClick={() => handleToggleService(srv)}
+                              onPress={() => handleToggleService(srv)}
                               className={`flex cursor-pointer items-center justify-between rounded-xl border p-3 transition-all ${
                                 selected ? 'border-[#3473ef] bg-blue-50/50' : 'border-slate-100 bg-slate-50/40 hover:bg-white'
                               }`}
                             >
-                              <div className="flex items-center gap-2 min-w-0">
-                                <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${
+                              <View className="flex items-center gap-2 min-w-0">
+                                <View className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${
                                   selected ? 'border-[#3473ef] bg-[#3473ef] text-white' : 'border-slate-300 bg-white'
                                 }`}>
                                   {selected && <Check size={12} strokeWidth={3} />}
-                                </div>
-                                <p className="text-xs font-bold text-slate-900 truncate">{srv.name}</p>
-                              </div>
-                              <span className="text-xs font-bold text-[#3473ef] shrink-0">{srv.price && parseFloat(String(srv.price)) > 0 ? `${srv.price} €` : ''}</span>
-                            </div>
+                                </View>
+                                <Text className="text-xs font-bold text-slate-900 truncate">{srv.name}</Text>
+                              </View>
+                              <Text className="text-xs font-bold text-[#3473ef] shrink-0">{srv.price && parseFloat(String(srv.price)) > 0 ? `${srv.price} €` : ''}</Text>
+                            </View>
                           );
                         })
                       )}
-                    </div>
-                    <div className="flex gap-2 mt-2">
-                      <button
+                    </View>
+                    <View className="flex gap-2 mt-2">
+                      <TouchableOpacity
                         type="button"
-                        onClick={() => setWidgetStep(1)}
+                        onPress={() => setWidgetStep(1)}
                         className="px-3 py-2.5 rounded-2xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer"
                       >
                         ← Mbrapa
-                      </button>
-                      <button
+                      </TouchableOpacity>
+                      <TouchableOpacity
                         type="button"
-                        onClick={() => {
+                        onPress={() => {
                           if (selectedServices.length === 0) {
                             Alert.alert("Zgjidhni Shërbimin", "Ju lutem zgjidhni të paktën 1 shërbim te lista.");
                             return;
@@ -1445,24 +1445,24 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                         className="flex-1 py-2.5 rounded-2xl bg-[#3473ef] text-xs font-bold text-white shadow-md hover:bg-blue-600 cursor-pointer text-center"
                       >
                         Vazhdo te Data & Ora →
-                      </button>
-                    </div>
-                  </div>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                 )}
 
                 {/* STEP 3: SELECT DATE & TIME */}
                 {widgetStep === 3 && (
-                  <div className="flex flex-col gap-3">
-                    <p className="text-xs font-bold text-slate-400 uppercase">Data e rezervimit</p>
-                    <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+                  <View className="flex flex-col gap-3">
+                    <Text className="text-xs font-bold text-slate-400 uppercase">Data e rezervimit</Text>
+                    <View className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
                       {calendarDates.slice(0, 10).map((item, idx) => {
                         const isSelected = selectedDate === item.fullDate;
                         return (
-                          <button
+                          <TouchableOpacity
                             key={idx}
                             type="button"
                             disabled={item.isClosed}
-                            onClick={() => {
+                            onPress={() => {
                               if (item.isClosed) return;
                               setSelectedDate(item.fullDate);
                               setSelectedTime("");
@@ -1475,25 +1475,25 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                                 : "border-slate-200/80 bg-slate-50/40 hover:bg-white text-slate-700"
                             }`}
                           >
-                            <span className="text-[9px] font-bold uppercase">{item.label}</span>
-                            <span className="text-[10px] font-medium">{item.fullDate.split('-').slice(1).join('/')}</span>
-                          </button>
+                            <Text className="text-[9px] font-bold uppercase">{item.label}</Text>
+                            <Text className="text-[10px] font-medium">{item.fullDate.split('-').slice(1).join('/')}</Text>
+                          </TouchableOpacity>
                         );
                       })}
-                    </div>
+                    </View>
 
-                    <p className="text-xs font-bold text-slate-400 uppercase mt-1">Orari i lirë (Kohëzgjatja: {totalDurationMinutes} min)</p>
-                    <div className="grid grid-cols-4 gap-1.5 max-h-[160px] overflow-y-auto">
+                    <Text className="text-xs font-bold text-slate-400 uppercase mt-1">Orari i lirë (Kohëzgjatja: {totalDurationMinutes} min)</Text>
+                    <View className="grid grid-cols-4 gap-1.5 max-h-[160px] overflow-y-auto">
                       {availableSlots.length > 0 ? (
                         availableSlots.map((time, idx) => {
                           const disabled = isSlotDisabled(time);
                           const isSelected = selectedTime === time;
                           return (
-                            <button
+                            <TouchableOpacity
                               key={idx}
                               type="button"
                               disabled={disabled}
-                              onClick={() => !disabled && setSelectedTime(time)}
+                              onPress={() => !disabled && setSelectedTime(time)}
                               title={disabled ? "Kjo fashë orari është e zënë apo nuk mjafton kohëzgjatja" : `Zgjidh orarin ${time}`}
                               className={`rounded-lg border py-2 px-1 text-center text-xs font-bold transition-all ${
                                 disabled
@@ -1504,27 +1504,27 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                               }`}
                             >
                               {time}
-                            </button>
+                            </TouchableOpacity>
                           );
                         })
                       ) : (
-                        <p className="col-span-4 text-xs font-semibold text-slate-400 py-3 text-center bg-slate-50 rounded-xl">
+                        <Text className="col-span-4 text-xs font-semibold text-slate-400 py-3 text-center bg-slate-50 rounded-xl">
                           Nuk ka orare të lira për këtë datë.
-                        </p>
+                        </Text>
                       )}
-                    </div>
+                    </View>
 
-                    <div className="flex gap-2 mt-2">
-                      <button
+                    <View className="flex gap-2 mt-2">
+                      <TouchableOpacity
                         type="button"
-                        onClick={() => setWidgetStep(2)}
+                        onPress={() => setWidgetStep(2)}
                         className="px-3 py-2.5 rounded-2xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer"
                       >
                         ← Mbrapa
-                      </button>
-                      <button
+                      </TouchableOpacity>
+                      <TouchableOpacity
                         type="button"
-                        onClick={() => {
+                        onPress={() => {
                           if (!selectedDate || !selectedTime) {
                             Alert.alert("Zgjidhni Orarin", "Ju lutem zgjidhni datën dhe orën.");
                             return;
@@ -1534,65 +1534,65 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                         className="flex-1 py-2.5 rounded-2xl bg-[#3473ef] text-xs font-bold text-white shadow-md hover:bg-blue-600 cursor-pointer text-center"
                       >
                         Shiko Konfirmimin →
-                      </button>
-                    </div>
-                  </div>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                 )}
 
                 {/* STEP 4: CONFIRMATION & OTP */}
                 {widgetStep === 4 && (
-                  <div className="flex flex-col gap-3">
+                  <View className="flex flex-col gap-3">
                     {/* Selected Summary Card */}
-                    <div className="rounded-2xl bg-slate-50 p-4 border border-slate-100 flex flex-col gap-2.5">
-                      <p className="text-xs font-bold text-slate-400 uppercase">Përmbledhje e plotë</p>
+                    <View className="rounded-2xl bg-slate-50 p-4 border border-slate-100 flex flex-col gap-2.5">
+                      <Text className="text-xs font-bold text-slate-400 uppercase">Përmbledhje e plotë</Text>
                       
-                      <div className="flex justify-between text-xs font-bold text-slate-800 border-b border-slate-200/60 pb-1.5">
-                        <span className="text-slate-500 font-medium">Berberi:</span>
-                        <span className="text-slate-900">{selectedEmployee?.name || staff[0]?.name || "Stafi i Sallonit"}</span>
-                      </div>
+                      <View className="flex justify-between text-xs font-bold text-slate-800 border-b border-slate-200/60 pb-1.5">
+                        <Text className="text-slate-500 font-medium">Berberi:</Text>
+                        <Text className="text-slate-900">{selectedEmployee?.name || staff[0]?.name || "Stafi i Sallonit"}</Text>
+                      </View>
 
-                      <div className="flex flex-col gap-1 border-b border-slate-200/60 pb-1.5">
-                        <span className="text-slate-500 font-medium text-xs">Shërbimet:</span>
+                      <View className="flex flex-col gap-1 border-b border-slate-200/60 pb-1.5">
+                        <Text className="text-slate-500 font-medium text-xs">Shërbimet:</Text>
                         {selectedServices.length > 0 ? (
                           selectedServices.map((s, idx) => (
-                            <div key={idx} className="flex justify-between text-xs font-bold text-slate-800">
-                              <span>• {s.name}</span>
-                              <span className="text-[#3473ef]">{s.price && parseFloat(String(s.price)) > 0 ? `${s.price} €` : ''}</span>
-                            </div>
+                            <View key={idx} className="flex justify-between text-xs font-bold text-slate-800">
+                              <Text>• {s.name}</Text>
+                              <Text className="text-[#3473ef]">{s.price && parseFloat(String(s.price)) > 0 ? `${s.price} €` : ''}</Text>
+                            </View>
                           ))
                         ) : (
-                          <p className="text-xs font-medium text-amber-600 italic">Zgjidhni të paktën 1 shërbim te Hapi 2</p>
+                          <Text className="text-xs font-medium text-amber-600 italic">Zgjidhni të paktën 1 shërbim te Hapi 2</Text>
                         )}
-                      </div>
+                      </View>
 
-                      <div className="flex justify-between text-xs font-bold text-slate-800 border-b border-slate-200/60 pb-1.5">
-                        <span className="text-slate-500 font-medium">Data & Ora:</span>
-                        <span className="text-[#3473ef]">{selectedDate && selectedTime ? `${selectedDate} në ${selectedTime}` : selectedDate ? `${selectedDate}` : "Zgjidhni datën & orën"}</span>
-                      </div>
+                      <View className="flex justify-between text-xs font-bold text-slate-800 border-b border-slate-200/60 pb-1.5">
+                        <Text className="text-slate-500 font-medium">Data & Ora:</Text>
+                        <Text className="text-[#3473ef]">{selectedDate && selectedTime ? `${selectedDate} në ${selectedTime}` : selectedDate ? `${selectedDate}` : "Zgjidhni datën & orën"}</Text>
+                      </View>
 
-                      <div className="flex justify-between font-display text-sm font-bold text-slate-900 pt-1">
-                        <span>Totali:</span>
-                        <span className="text-[#3473ef]">
+                      <View className="flex justify-between font-display text-sm font-bold text-slate-900 pt-1">
+                        <Text>Totali:</Text>
+                        <Text className="text-[#3473ef]">
                           {(() => {
                             const totPrice = selectedServices.reduce((sum, s) => sum + (parseFloat(String(s.price)) || 0), 0);
                             return totPrice > 0 ? `${totPrice} € (${totalDurationMinutes} min)` : `${totalDurationMinutes} min`;
                           })()}
-                        </span>
-                      </div>
-                    </div>
+                        </Text>
+                      </View>
+                    </View>
 
                     {/* USER CREDENTIALS & OTP VERIFICATION SECTION */}
                     {bookingOtpSent ? (
-                      <div className="rounded-2xl bg-blue-50/80 p-4 border border-blue-200/80 flex flex-col gap-3">
-                        <div className="flex items-center gap-2 text-[#3473ef]">
+                      <View className="rounded-2xl bg-blue-50/80 p-4 border border-blue-200/80 flex flex-col gap-3">
+                        <View className="flex items-center gap-2 text-[#3473ef]">
                           <Smartphone size={18} />
-                          <span className="font-display text-xs font-bold">Kodi SMS u dërgua me sukses!</span>
-                        </div>
-                        <p className="text-xs font-medium text-slate-600 leading-relaxed">
-                          Kemi dërguar kodin me 6 shifra në numrin tuaj të telefonit: <span className="font-bold text-slate-900">{phone || user?.phone}</span>
-                        </p>
+                          <Text className="font-display text-xs font-bold">Kodi SMS u dërgua me sukses!</Text>
+                        </View>
+                        <Text className="text-xs font-medium text-slate-600 leading-relaxed">
+                          Kemi dërguar kodin me 6 shifra në numrin tuaj të telefonit: <Text className="font-bold text-slate-900">{phone || user?.phone}</Text>
+                        </Text>
 
-                        <div>
+                        <View>
                           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Shkruaj Kodin 6-Shifror (OTP)</label>
                           <input
                             type="text"
@@ -1602,71 +1602,71 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                             onChange={(e) => setBookingOtpCode(e.target.value)}
                             className="w-full text-center tracking-[0.4em] font-mono text-base font-bold rounded-xl border border-blue-300 bg-white px-3 py-2.5 text-slate-900 focus:border-[#3473ef] focus:outline-none shadow-xs"
                           />
-                        </div>
+                        </View>
 
-                        <div className="flex gap-2 mt-1">
-                          <button
+                        <View className="flex gap-2 mt-1">
+                          <TouchableOpacity
                             type="button"
-                            onClick={() => setBookingOtpSent(false)}
+                            onPress={() => setBookingOtpSent(false)}
                             className="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
                           >
                             ← Mbrapa / Ndrysho
-                          </button>
-                          <button
+                          </TouchableOpacity>
+                          <TouchableOpacity
                             type="button"
                             disabled={verifyingBookingOtp}
-                            onClick={handleVerifyOtpSubmit}
+                            onPress={handleVerifyOtpSubmit}
                             className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#3473ef] py-2.5 font-display text-xs font-bold text-white shadow-md hover:bg-blue-600 cursor-pointer"
                           >
                             {verifyingBookingOtp ? (
-                              <span>Duke verifikuar...</span>
+                              <Text>Duke verifikuar...</Text>
                             ) : (
-                              <span>Verifiko & Përfundo Rezervimin ✓</span>
+                              <Text>Verifiko & Përfundo Rezervimin ✓</Text>
                             )}
-                          </button>
-                        </div>
-                      </div>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
                     ) : (
-                      <div className="flex flex-col gap-3">
-                        <div className="rounded-2xl bg-white p-4 border border-slate-200 shadow-2xs flex flex-col gap-3">
+                      <View className="flex flex-col gap-3">
+                        <View className="rounded-2xl bg-white p-4 border border-slate-200 shadow-2xs flex flex-col gap-3">
                           {user ? (
-                            <div className="flex items-center justify-between bg-blue-50/60 p-3 rounded-xl border border-blue-100">
-                              <div>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase">Llogaria e kyçur</p>
-                                <p className="font-display text-xs font-bold text-slate-900">{user.name || user.email}</p>
+                            <View className="flex items-center justify-between bg-blue-50/60 p-3 rounded-xl border border-blue-100">
+                              <View>
+                                <Text className="text-[10px] font-bold text-slate-400 uppercase">Llogaria e kyçur</Text>
+                                <Text className="font-display text-xs font-bold text-slate-900">{user.name || user.email}</Text>
                                 {(phone || user.phone) && (
-                                  <p className="text-[11px] font-medium text-[#3473ef] mt-0.5">📱 {phone || user.phone}</p>
+                                  <Text className="text-[11px] font-medium text-[#3473ef] mt-0.5">📱 {phone || user.phone}</Text>
                                 )}
-                              </div>
-                              <span className="text-[11px] font-bold bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full">Aktiv ✓</span>
-                            </div>
+                              </View>
+                              <Text className="text-[11px] font-bold bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full">Aktiv ✓</Text>
+                            </View>
                           ) : (
-                            <div className="flex flex-col gap-3">
+                            <View className="flex flex-col gap-3">
                               {/* Mode Switcher */}
-                              <div className="flex rounded-xl bg-slate-100 p-1">
-                                <button
+                              <View className="flex rounded-xl bg-slate-100 p-1">
+                                <TouchableOpacity
                                   type="button"
-                                  onClick={() => setAuthMode('signup')}
+                                  onPress={() => setAuthMode('signup')}
                                   className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                                     authMode === 'signup' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
                                   }`}
                                 >
                                   Klient i Ri
-                                </button>
-                                <button
+                                </TouchableOpacity>
+                                <TouchableOpacity
                                   type="button"
-                                  onClick={() => setAuthMode('login')}
+                                  onPress={() => setAuthMode('login')}
                                   className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                                     authMode === 'login' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
                                   }`}
                                 >
                                   Kam Llogari (Kyçu)
-                                </button>
-                              </div>
+                                </TouchableOpacity>
+                              </View>
 
                               {authMode === 'signup' ? (
-                                <div className="flex flex-col gap-2.5">
-                                  <div>
+                                <View className="flex flex-col gap-2.5">
+                                  <View>
                                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Emri & Mbiemri (Full Name)</label>
                                     <input
                                       type="text"
@@ -1679,9 +1679,9 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                                       }}
                                       className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-[#3473ef] focus:bg-white focus:outline-none"
                                     />
-                                  </div>
+                                  </View>
 
-                                  <div>
+                                  <View>
                                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Email Adresa</label>
                                     <input
                                       type="email"
@@ -1690,9 +1690,9 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                                       onChange={(e) => setEmail(e.target.value)}
                                       className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-[#3473ef] focus:bg-white focus:outline-none"
                                     />
-                                  </div>
+                                  </View>
 
-                                  <div>
+                                  <View>
                                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Numri i Telefonit (+383)</label>
                                     <input
                                       type="tel"
@@ -1701,9 +1701,9 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                                       onChange={(e) => setPhone(e.target.value)}
                                       className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-[#3473ef] focus:bg-white focus:outline-none"
                                     />
-                                  </div>
+                                  </View>
 
-                                  <div>
+                                  <View>
                                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Fjalëkalimi (Password)</label>
                                     <input
                                       type="password"
@@ -1712,11 +1712,11 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                                       onChange={(e) => setPassword(e.target.value)}
                                       className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-[#3473ef] focus:bg-white focus:outline-none"
                                     />
-                                  </div>
-                                </div>
+                                  </View>
+                                </View>
                               ) : (
-                                <div className="flex flex-col gap-2.5">
-                                  <div>
+                                <View className="flex flex-col gap-2.5">
+                                  <View>
                                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Email Adresa</label>
                                     <input
                                       type="email"
@@ -1725,9 +1725,9 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                                       onChange={(e) => setEmail(e.target.value)}
                                       className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-[#3473ef] focus:bg-white focus:outline-none"
                                     />
-                                  </div>
+                                  </View>
 
-                                  <div>
+                                  <View>
                                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Fjalëkalimi (Password)</label>
                                     <input
                                       type="password"
@@ -1736,52 +1736,52 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                                       onChange={(e) => setPassword(e.target.value)}
                                       className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-[#3473ef] focus:bg-white focus:outline-none"
                                     />
-                                  </div>
-                                </div>
+                                  </View>
+                                </View>
                               )}
-                            </div>
+                            </View>
                           )}
-                        </div>
+                        </View>
 
                         {/* Action Button: Triggers OTP Confirmation */}
-                        <div className="flex gap-2 mt-1">
-                          <button
+                        <View className="flex gap-2 mt-1">
+                          <TouchableOpacity
                             type="button"
-                            onClick={() => setWidgetStep(3)}
+                            onPress={() => setWidgetStep(3)}
                             className="px-3 py-3 rounded-2xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer"
                           >
                             ← Mbrapa
-                          </button>
-                          <button
+                          </TouchableOpacity>
+                          <TouchableOpacity
                             type="button"
                             disabled={loading}
-                            onClick={handleConfirmOtpAndReserve}
+                            onPress={handleConfirmOtpAndReserve}
                             className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-[#3473ef] py-3.5 font-display text-sm font-bold text-white shadow-lg hover:bg-blue-600 cursor-pointer"
                           >
                             {loading ? (
-                              <span>Duke dërguar OTP...</span>
+                              <Text>Duke dërguar OTP...</Text>
                             ) : (
                               <>
                                 <Calendar size={16} />
-                                <span>Konfirmo me SMS OTP →</span>
+                                <Text>Konfirmo me SMS OTP →</Text>
                               </>
                             )}
-                          </button>
-                        </div>
-                      </div>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
                     )}
 
-                    <p className="mt-2 text-center text-[11px] font-medium text-slate-400">
+                    <Text className="mt-2 text-center text-[11px] font-medium text-slate-400">
                       ⚡ Pa parapagim — konfirmim i menjëhershëm me SMS OTP.
-                    </p>
-                  </div>
+                    </Text>
+                  </View>
                 )}
                   </>
                 )}
-              </div>
-            </div>
-          </div>
-        </div>
+              </View>
+            </View>
+          </View>
+        </View>
       </View>
     );
   }

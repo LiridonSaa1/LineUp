@@ -214,9 +214,10 @@ export const ActivityScreen: React.FC<ActivityScreenProps> = ({
               <TouchableOpacity
                 onPress={onLogin}
                 activeOpacity={0.9}
-                className="w-full h-14 bg-[#161719] rounded-2xl items-center justify-center shadow-lg hover:scale-[1.01] transition-transform cursor-pointer"
+                className="w-full h-16 sm:h-18 bg-[#161719] hover:bg-[#3473ef] rounded-[24px] flex-row items-center justify-center gap-3 px-8 shadow-xl shadow-black/20 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
               >
-                <Text className="text-white text-base font-black">Kyçu Tani</Text>
+                <Text className="text-white text-lg sm:text-xl font-black tracking-wide">Kyçu Tani</Text>
+                <ChevronRight size={24} color="white" strokeWidth={3} />
               </TouchableOpacity>
             </View>
           </View>

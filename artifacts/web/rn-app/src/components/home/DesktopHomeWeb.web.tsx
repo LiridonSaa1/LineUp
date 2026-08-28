@@ -149,6 +149,10 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
   onTabPress,
   onSelectCategory,
 }) => {
+  if (Platform.OS !== 'web') {
+    return null;
+  }
+
   const [adIndex, setAdIndex] = React.useState(0);
   const [realCategoryCounts, setRealCategoryCounts] = React.useState<Record<string, number>>({});
 

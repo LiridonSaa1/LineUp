@@ -549,32 +549,35 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
             <ScrollView className="flex-1 px-6 pt-6" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
               
               {/* SEARCH INPUT BAR ABOVE CARDS LIST */}
-              <div className="mb-6 flex flex-col gap-3">
-                <div 
-                  onClick={onOpenSearch} 
-                  className="group flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200/90 bg-slate-50 px-4 py-3 shadow-2xs transition-all hover:border-slate-300 hover:bg-white"
+              <View className="mb-6 flex-col gap-3">
+                <TouchableOpacity 
+                  onPress={onOpenSearch} 
+                  activeOpacity={0.8}
+                  className="flex-row items-center gap-3 rounded-2xl border border-slate-200/90 bg-slate-50 px-4 py-3"
                 >
-                  <Search className="h-5 w-5 shrink-0 text-slate-400 group-hover:text-slate-600" />
-                  <span className="flex-1 truncate text-sm font-medium text-slate-600">
+                  <Search size={20} color="#94a3b8" />
+                  <Text className="flex-1 truncate text-sm font-medium text-slate-600">
                     {initialSearch || initialCategoryName || "Kërko sallone, trajtime..."}
-                  </span>
+                  </Text>
                   {initialCity && initialCity !== "Të gjitha" && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-[#3473ef] border border-blue-100">
-                      <MapPin className="h-3 w-3 text-[#3473ef]" />
-                      {initialCity}
-                    </span>
+                    <View className="flex-row items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 border border-blue-100">
+                      <MapPin size={12} color="#3473ef" />
+                      <Text className="text-xs font-bold text-[#3473ef]">{initialCity}</Text>
+                    </View>
                   )}
-                </div>
-              </div>
+                </TouchableOpacity>
+              </View>
 
-              <div className="flex items-center justify-between mb-4">
-                <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
+              <View className="flex-row items-center justify-between mb-4">
+                <Text className="font-display text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
                   SALLONET E REKOMANDUARA NË HARTË
-                </p>
-                <span className="rounded-full bg-slate-100 px-3 py-1 font-display text-xs font-bold text-slate-600">
-                  <span className="text-[#3473ef] font-bold">{filteredShops.length}</span> sallone
-                </span>
-              </div>
+                </Text>
+                <View className="rounded-full bg-slate-100 px-3 py-1 flex-row items-center">
+                  <Text className="text-xs font-bold text-slate-600">
+                    <Text className="text-[#3473ef] font-bold">{filteredShops.length}</Text> sallone
+                  </Text>
+                </View>
+              </View>
 
               {loading ? (
                 <View className="py-20 items-center justify-center">
@@ -586,73 +589,70 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
                   <View className="w-16 h-16 rounded-full bg-slate-100 items-center justify-center mb-4">
                     <Search size={28} color="#8789A3" />
                   </View>
-                  <h3 className="font-display text-lg font-bold text-slate-900 text-center">Nuk u gjet asnjë sallon në këtë zonë</h3>
+                  <Text className="font-display text-lg font-bold text-slate-900 text-center">Nuk u gjet asnjë sallon në këtë zonë</Text>
                 </View>
               ) : (
                 filteredShops.map((shop, i) => {
                   const isFav = favorites?.some(f => f.shop_id === shop.id || f.shop_id === Number(shop.id));
                   return (
-                    <div 
+                    <TouchableOpacity 
                       key={shop.id || i} 
-                      onClick={() => onSelectShop(shop)}
-                      className="group mb-4 flex cursor-pointer items-center gap-4 rounded-3xl border border-slate-200/80 bg-white p-3 shadow-2xs transition-all hover:border-[#3473ef] hover:shadow-md"
+                      onPress={() => onSelectShop(shop)}
+                      activeOpacity={0.8}
+                      className="mb-4 flex-row items-center gap-4 rounded-3xl border border-slate-200/80 bg-white p-3 shadow-xs"
                     >
                       {/* Left: Compact Thumbnail Image */}
-                      <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-2xl bg-slate-100 sm:h-32 sm:w-32">
-                        <img 
-                          src={getShopCardImage(shop)} 
-                          alt={shop.name || "Sallon"} 
-                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" 
+                      <View className="relative h-28 w-28 shrink-0 overflow-hidden rounded-2xl bg-slate-100 sm:h-32 sm:w-32">
+                        <Image 
+                          source={{ uri: getShopCardImage(shop) }} 
+                          className="h-full w-full rounded-2xl" 
+                          resizeMode="cover"
                         />
-                        <button 
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onToggleFavorite?.(shop);
-                          }} 
-                          className="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-full border border-white/40 bg-white/80 backdrop-blur-md shadow-2xs transition-transform hover:scale-110"
+                        <TouchableOpacity 
+                          onPress={() => onToggleFavorite?.(shop)} 
+                          activeOpacity={0.8}
+                          className="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-full border border-white/40 bg-white/80"
                         >
                           <Heart size={15} color={isFav ? "#ef4444" : "#161719"} fill={isFav ? "#ef4444" : "transparent"} />
-                        </button>
-                      </div>
+                        </TouchableOpacity>
+                      </View>
 
                       {/* Right: Card Details */}
-                      <div className="flex min-w-0 flex-1 flex-col justify-between self-stretch py-0.5">
-                        <div>
-                          <div className="flex items-center justify-between gap-2 mb-1">
-                            <h3 className="truncate font-display text-base font-bold text-slate-900 group-hover:text-[#3473ef]">
+                      <View className="flex min-w-0 flex-1 flex-col justify-between self-stretch py-0.5">
+                        <View>
+                          <View className="flex-row items-center justify-between gap-2 mb-1">
+                            <Text className="truncate font-display text-base font-bold text-slate-900 flex-1">
                               {shop.name}
-                            </h3>
-                            <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-amber-200/60 bg-amber-50 px-2 py-0.5 font-display text-xs font-bold text-slate-900">
+                            </Text>
+                            <View className="flex-row shrink-0 items-center gap-1 rounded-lg border border-amber-200/60 bg-amber-50 px-2 py-0.5">
                               <Star size={12} color="#fbbf24" fill="#fbbf24" />
-                              {parseFloat(shop.rating || "0").toFixed(1)}
-                            </span>
-                          </div>
+                              <Text className="font-display text-xs font-bold text-slate-900">
+                                {parseFloat(shop.rating || "0").toFixed(1)}
+                              </Text>
+                            </View>
+                          </View>
 
-                          <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 mb-2">
-                            <MapPin size={14} className="shrink-0 text-slate-400" />
-                            <span className="truncate font-medium text-slate-500">{shop.address || shop.city}</span>
-                          </div>
-                        </div>
+                          <View className="flex-row items-center gap-1.5 mb-2">
+                            <MapPin size={14} color="#94a3b8" />
+                            <Text className="truncate font-medium text-xs text-slate-500">{shop.address || shop.city}</Text>
+                          </View>
+                        </View>
 
-                        <div className="flex items-center justify-between border-t border-slate-100 pt-2.5 mt-auto">
-                          <span className="font-display text-[11px] font-bold uppercase tracking-wider text-[#3473ef]">
+                        <View className="flex-row items-center justify-between border-t border-slate-100 pt-2.5 mt-auto">
+                          <Text className="font-display text-[11px] font-bold uppercase tracking-wider text-[#3473ef]">
                             {shop.total_reviews || 0} vlerësime
-                          </span>
-                          <button 
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onSelectShop(shop);
-                            }}
-                            className="flex items-center gap-1 rounded-xl bg-slate-900 px-3.5 py-1.5 font-display text-xs font-bold text-white transition-colors hover:bg-slate-800 cursor-pointer"
+                          </Text>
+                          <TouchableOpacity 
+                            onPress={() => onSelectShop(shop)}
+                            activeOpacity={0.8}
+                            className="flex-row items-center gap-1 rounded-xl bg-slate-900 px-3.5 py-1.5"
                           >
-                            <span>Rezervo</span>
+                            <Text className="font-display text-xs font-bold text-white">Rezervo</Text>
                             <ArrowUpRight size={13} color="white" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
                   );
                 })
               )}
@@ -674,43 +674,43 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
         </View>
 
         {/* BUSINESS REGISTRATION BANNER BELOW MAP & CARDS */}
-        <div className="mx-auto w-full max-w-[1440px] px-6 lg:px-10 pb-12 pt-8">
-          <div className="relative overflow-hidden rounded-3xl bg-slate-900 px-8 py-10 shadow-xl sm:px-12 lg:flex lg:items-center lg:justify-between">
+        <View className="mx-auto w-full max-w-[1440px] px-6 lg:px-10 pb-12 pt-8">
+          <View className="relative overflow-hidden rounded-3xl bg-slate-900 px-8 py-10 shadow-xl sm:px-12 lg:flex-row lg:items-center lg:justify-between">
             {/* Decorative background glow */}
-            <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-[#3473ef]/30 blur-3xl pointer-events-none" />
-            <div className="absolute -bottom-24 -left-24 h-96 w-96 rounded-full bg-indigo-500/20 blur-3xl pointer-events-none" />
+            <View className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-[#3473ef]/30 blur-3xl pointer-events-none" />
+            <View className="absolute -bottom-24 -left-24 h-96 w-96 rounded-full bg-indigo-500/20 blur-3xl pointer-events-none" />
 
-            <div className="relative z-10 max-w-2xl">
-              <span className="inline-flex items-center gap-2 rounded-full bg-[#3473ef]/20 px-3.5 py-1 text-xs font-bold text-[#3473ef] border border-[#3473ef]/30 mb-3">
-                <Sparkles className="h-3.5 w-3.5 text-[#3473ef]" />
-                Për Pronarët e Salloneve & Berberive
-              </span>
-              <h2 className="font-display text-2xl font-bold tracking-tight text-white sm:text-3xl">
+            <View className="relative z-10 max-w-2xl">
+              <View className="flex-row items-center gap-2 rounded-full bg-[#3473ef]/20 px-3.5 py-1 text-xs font-bold text-[#3473ef] border border-[#3473ef]/30 mb-3 self-start">
+                <Sparkles size={14} color="#3473ef" />
+                <Text className="text-xs font-bold text-[#3473ef]">Për Pronarët e Salloneve & Berberive</Text>
+              </View>
+              <Text className="font-display text-2xl font-bold tracking-tight text-white sm:text-3xl">
                 Regjistro sallonin tënd në LineUp dhe rrite biznesin
-              </h2>
-              <p className="mt-2 text-sm text-slate-300 font-medium">
+              </Text>
+              <Text className="mt-2 text-sm text-slate-300 font-medium">
                 Merri rezervimet online 24/7, menaxho berberët dhe ekipin tuaj, dhe dallo kohën me sistemin më të avancuar në Kosovë.
-              </p>
-            </div>
+              </Text>
+            </View>
 
-            <div className="relative z-10 mt-6 flex shrink-0 items-center gap-4 lg:mt-0">
-              <button
-                type="button"
-                onClick={() => onOpenRegisterShop && onOpenRegisterShop()}
-                className="flex items-center gap-2 rounded-2xl bg-[#3473ef] px-6 py-3.5 font-display text-sm font-bold text-white shadow-md transition-all hover:bg-blue-600 active:scale-95 cursor-pointer"
+            <View className="relative z-10 mt-6 flex-row shrink-0 items-center gap-4 lg:mt-0">
+              <TouchableOpacity
+                onPress={() => onOpenRegisterShop && onOpenRegisterShop()}
+                activeOpacity={0.8}
+                className="flex-row items-center gap-2 rounded-2xl bg-[#3473ef] px-6 py-3.5"
               >
-                <Store className="h-4 w-4" />
-                Regjistro Biznesin Tënd
-                <ArrowUpRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        </div>
+                <Store size={16} color="white" />
+                <Text className="font-display text-sm font-bold text-white">Regjistro Biznesin Tënd</Text>
+                <ArrowUpRight size={16} color="white" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
 
         {/* WEB FOOTER */}
-        <div className="w-full">
+        <View className="w-full">
           <WebFooter onNavigateTab={onNavigateTab} onOpenRegisterShop={onOpenRegisterShop} />
-        </div>
+        </View>
       </View>
     );
   }
