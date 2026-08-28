@@ -119,7 +119,10 @@ export const PaddleCheckout = ({ email, transactionId, priceId, subscriptionId, 
 
               const options = {
                 settings: {
-                  displayMode: 'overlay', // Using overlay for better mobile support
+                  displayMode: 'inline',
+                  frameTarget: 'checkout-container',
+                  frameInitialHeight: 450,
+                  frameStyle: 'width: 100%; min-height: 450px; background: transparent; border: none;',
                   theme: 'light',
                   locale: 'sq'
                 },
@@ -152,19 +155,18 @@ export const PaddleCheckout = ({ email, transactionId, priceId, subscriptionId, 
             }
           }
 
-          // Give it a small delay to ensure script tag is parsed
-          setTimeout(init, 500);
+          setTimeout(init, 300);
         </script>
       </body>
     </html>
   `;
 
   return (
-    <View style={{ flex: 1, backgroundColor: 'white' }}>
+    <View style={{ flex: 1, minHeight: 480, width: '100%', backgroundColor: 'white' }}>
       <WebView
         key={webViewKey}
         source={{ html }}
-        style={{ flex: 1 }}
+        style={{ flex: 1, minHeight: 450, width: '100%' }}
         javaScriptEnabled={true}
         domStorageEnabled={true}
         startInLoadingState={true}

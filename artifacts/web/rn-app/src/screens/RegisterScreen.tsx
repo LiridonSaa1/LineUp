@@ -1144,7 +1144,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
             </Text>
           </View>
 
-          <View className="flex-1">
+          <View className="flex-1 min-h-[480px] w-full max-w-xl self-center px-4">
             <PaddleCheckout
               email={email}
               transactionId={paddleTransactionId || undefined}
