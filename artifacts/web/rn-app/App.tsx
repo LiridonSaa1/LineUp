@@ -560,7 +560,7 @@ export default function App() {
                   <HomeScreen
                     onSelectShop={(shop) => setSelectedShop(shop)}
                     onOpenLocation={() => setShowLocation(true)}
-                    onOpenSearch={() => setActiveTab(1)}
+                    onOpenSearch={() => setShowSearch(true)}
                     onOpenAddAd={() => setShowAddAd(true)}
                     selectedLocation={selectedLocation}
                     onSearch={(query, subIds, categoryName) => handleSearch({ query, city: selectedLocation, subIds, categoryName })}
