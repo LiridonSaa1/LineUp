@@ -1065,33 +1065,33 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
       <View className="flex-1 bg-[#f8fafc] overflow-y-auto">
         <View className="mx-auto w-full max-w-[1440px] px-6 lg:px-10 py-8">
           {/* Top Desktop Breadcrumb & Navigation */}
-          <View className="mb-6 flex items-center justify-between">
+          <View className="mb-6 flex-row items-center justify-between">
             <TouchableOpacity
-              type="button"
               onPress={onBack}
-              className="group inline-flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white px-4 py-2.5 font-display text-sm font-bold text-slate-700 shadow-2xs transition-all hover:bg-slate-50 hover:text-slate-900 cursor-pointer"
+              activeOpacity={0.8}
+              className="flex-row items-center gap-2 rounded-2xl border border-slate-200/80 bg-white px-4 py-2.5 font-display text-sm font-bold text-slate-700 shadow-2xs transition-all hover:bg-slate-50 hover:text-slate-900 cursor-pointer"
             >
-              <ArrowLeft size={18} className="text-slate-500 group-hover:text-slate-900" />
-              <Text>← Kthehu te Kërkimi</Text>
+              <ArrowLeft size={18} color="#64748b" />
+              <Text className="font-bold text-slate-700 text-sm">← Kthehu te Kërkimi</Text>
             </TouchableOpacity>
 
-            <View className="flex items-center gap-3">
+            <View className="flex-row items-center gap-3">
               <TouchableOpacity
-                type="button"
                 onPress={handleFavoriteToggle}
-                className="flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white px-4 py-2.5 font-display text-sm font-bold text-slate-700 shadow-2xs transition-transform hover:scale-105 cursor-pointer"
+                activeOpacity={0.8}
+                className="flex-row items-center gap-2 rounded-2xl border border-slate-200/80 bg-white px-4 py-2.5 font-display text-sm font-bold text-slate-700 shadow-2xs transition-transform hover:scale-105 cursor-pointer"
               >
                 <Heart size={18} color={isFavLocal ? "#ef4444" : "#64748b"} fill={isFavLocal ? "#ef4444" : "transparent"} />
-                <Text>{isFavLocal ? "Në të ruajtura" : "Ruaj"}</Text>
+                <Text className="font-bold text-slate-700 text-sm">{isFavLocal ? "Në të ruajtura" : "Ruaj"}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                type="button"
                 onPress={handleShare}
-                className="flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white px-4 py-2.5 font-display text-sm font-bold text-slate-700 shadow-2xs transition-transform hover:scale-105 cursor-pointer"
+                activeOpacity={0.8}
+                className="flex-row items-center gap-2 rounded-2xl border border-slate-200/80 bg-white px-4 py-2.5 font-display text-sm font-bold text-slate-700 shadow-2xs transition-transform hover:scale-105 cursor-pointer"
               >
-                <Share2 size={18} className="text-slate-500" />
-                <Text>Shpërndaj</Text>
+                <Share2 size={18} color="#64748b" />
+                <Text className="font-bold text-slate-700 text-sm">Shpërndaj</Text>
               </TouchableOpacity>
             </View>
           </View>
