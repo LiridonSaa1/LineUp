@@ -318,7 +318,7 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             className="flex cursor-pointer shrink-0 items-center gap-2 mr-6 lg:mr-12"
           >
-            <img src={extractUri(logoImg)} alt="LineUp" className="h-7 w-7 object-contain rounded-lg transition-transform hover:scale-105" />
+            <img src={extractUri(logoImg)} alt="LineUp" style={{ width: '28px', height: '28px', objectFit: 'contain' }} className="rounded-lg transition-transform hover:scale-105" />
           </div>
 
           <nav className="hidden items-center gap-2 lg:flex ml-4 lg:ml-8">
@@ -1053,7 +1053,7 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
         <div className="mx-auto grid max-w-[1440px] gap-8 px-6 py-12 sm:grid-cols-2 lg:grid-cols-4 lg:px-10">
           <div>
             <div className="flex items-center gap-2">
-              <img src={extractUri(logoImg)} alt="LineUp" className="h-20 w-20 object-contain rounded-2xl" />
+              <img src={extractUri(logoImg)} alt="LineUp" style={{ width: '32px', height: '32px', objectFit: 'contain' }} className="rounded-xl" />
             </div>
           </div>
 
