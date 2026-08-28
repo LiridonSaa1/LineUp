@@ -91,14 +91,14 @@ interface DesktopHomeWebProps {
 }
 
 const servicesList = [
-  { icon: Scissors, label: "Flokët & Trajtimet", count: 128 },
-  { icon: Palette, label: "Ngjyrosja e Flokëve", count: 74 },
-  { icon: User, label: "Mjekra & Rruajtja", count: 96 },
-  { icon: Eye, label: "Vetulla & Qerpikë", count: 52 },
-  { icon: Hand, label: "Thonjtë", count: 61 },
-  { icon: Smile, label: "Makeup", count: 38 },
-  { icon: Shield, label: "Fytyra & Kujdesi i Lëkurës", count: 27 },
-  { icon: Zap, label: "Depilim & Trup", count: 19 },
+  { icon: Scissors, label: "Flokët & Trajtimet" },
+  { icon: Palette, label: "Ngjyrosja e Flokëve" },
+  { icon: User, label: "Mjekra & Rruajtja" },
+  { icon: Eye, label: "Vetulla & Qerpikë" },
+  { icon: Hand, label: "Thonjtë" },
+  { icon: Smile, label: "Makeup" },
+  { icon: Shield, label: "Fytyra & Kujdesi i Lëkurës" },
+  { icon: Zap, label: "Depilim & Trup" },
 ];
 
 const stepsList = [
@@ -167,32 +167,34 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
   React.useEffect(() => {
     async function fetchRealCategoryCounts() {
       try {
-        const [catsRes, subsRes, shopsRes] = await Promise.all([
-          supabase.from('categories').select('*'),
-          supabase.from('subcategories').select('*'),
-          supabase.from('barbershops').select('id, name, category, subcategories, categories')
-        ]);
+        const { data: shops } = await supabase
+          .from('barbershops')
+          .select('id, name, category, status')
+          .eq('status', 'active');
 
-        if (catsRes.data && subsRes.data && shopsRes.data) {
-          const counts: Record<string, number> = {};
-          catsRes.data.forEach((c: any) => {
-            const cSubIds = subsRes.data
-              .filter((s: any) => s.category_id === c.id)
-              .map((s: any) => String(s.id));
+        const activeShops = shops || [];
+        const counts: Record<string, number> = {};
 
-            const matchingShops = shopsRes.data.filter((shop: any) => {
-              if (shop.category === c.name) return true;
-              if (Array.isArray(shop.categories) && shop.categories.includes(c.name)) return true;
-              if (Array.isArray(shop.subcategories)) {
-                return shop.subcategories.some((subId: any) => cSubIds.includes(String(subId)));
-              }
-              return false;
-            });
-
-            counts[c.name] = matchingShops.length;
+        servicesList.forEach(({ label }) => {
+          const labelLower = label.toLowerCase();
+          const matchingShops = activeShops.filter((s: any) => {
+            const c = (s.category || '').toLowerCase();
+            if (!c) return false;
+            if (c === labelLower) return true;
+            if (labelLower.includes('mjekra') && (c.includes('mjekra') || c.includes('beard') || c.includes('barber'))) return true;
+            if (labelLower.includes('flokët') && (c.includes('flok') || c.includes('hair') || c.includes('trajt') || c.includes('cut'))) return true;
+            if (labelLower.includes('ngjyr') && (c.includes('ngjyr') || c.includes('color'))) return true;
+            if (labelLower.includes('vetulla') && (c.includes('vetull') || c.includes('eyebrow') || c.includes('qerpik'))) return true;
+            if (labelLower.includes('thonjtë') && (c.includes('thonj') || c.includes('nail'))) return true;
+            if (labelLower.includes('makeup') && (c.includes('makeup') || c.includes('make up'))) return true;
+            if (labelLower.includes('fytyra') && (c.includes('fytyr') || c.includes('facial') || c.includes('lëkur'))) return true;
+            if (labelLower.includes('depilim') && (c.includes('depil') || c.includes('wax') || c.includes('trup'))) return true;
+            return false;
           });
-          setRealCategoryCounts(counts);
-        }
+          counts[label] = matchingShops.length;
+        });
+
+        setRealCategoryCounts(counts);
       } catch (e) {
         console.warn("Could not fetch real category counts from Supabase:", e);
       }
@@ -459,8 +461,8 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
             Shërbimet
           </p>
           <nav className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-1">
-            {servicesList.map(({ icon: Icon, label, count: fallbackCount }) => {
-              const realCount = realCategoryCounts[label] !== undefined ? realCategoryCounts[label] : fallbackCount;
+            {servicesList.map(({ icon: Icon, label }) => {
+              const realCount = realCategoryCounts[label] !== undefined ? realCategoryCounts[label] : 0;
               return (
                 <button
                   key={label}
