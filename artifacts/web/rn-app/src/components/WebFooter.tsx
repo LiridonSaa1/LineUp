@@ -21,7 +21,7 @@ export const WebFooter: React.FC<WebFooterProps> = ({
         {/* Brand Info */}
         <View className="w-full md:w-1/4">
           <View className="flex-row items-center gap-3 mb-3">
-            <Image source={logoImg} className="h-10 w-10 rounded-xl" resizeMode="contain" />
+            <Image source={logoImg} className="h-7 w-7 rounded-lg" resizeMode="contain" />
             <Text className="text-xl font-black text-slate-900">LineUp</Text>
           </View>
           <Text className="max-w-xs text-sm text-slate-500 font-semibold leading-relaxed">

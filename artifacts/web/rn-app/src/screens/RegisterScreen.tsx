@@ -1112,12 +1112,26 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
             />
           </View>
 
-          <View className="bg-white px-8 pb-10 pt-4">
+          <View className="bg-white px-8 pb-10 pt-4 gap-y-3">
+            <TouchableOpacity
+              onPress={() => handleFinalizeRegistration()}
+              disabled={loading}
+              className="h-14 bg-[#3473ef] rounded-2xl items-center justify-center shadow-lg shadow-blue-300"
+            >
+              {loading ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text className="text-white font-black text-sm uppercase tracking-wider">
+                  Përfundo & Aktivizo Sallonin ✓
+                </Text>
+              )}
+            </TouchableOpacity>
+
             <TouchableOpacity
               onPress={() => goToStep(3)}
-              className="h-14 bg-slate-100 rounded-2xl items-center justify-center border border-slate-200"
+              className="h-12 bg-slate-100 rounded-2xl items-center justify-center border border-slate-200"
             >
-              <Text className="text-slate-500 font-black text-xs uppercase tracking-widest">Anulo dhe kthehu te planet</Text>
+              <Text className="text-slate-500 font-black text-xs uppercase tracking-widest">Kthehu te Planet</Text>
             </TouchableOpacity>
           </View>
       </View>
