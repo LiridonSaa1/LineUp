@@ -1465,8 +1465,8 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                 {widgetStep === 3 && (
                   <View className="flex flex-col gap-3">
                     <Text className="text-xs font-bold text-slate-400 uppercase">Data e rezervimit</Text>
-                    <View className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-                      {calendarDates.slice(0, 10).map((item, idx) => {
+                    <View className="flex flex-row items-center gap-2.5 overflow-x-auto pb-2 scrollbar-none w-full">
+                      {calendarDates.slice(0, 14).map((item, idx) => {
                         const isSelected = selectedDate === item.fullDate;
                         return (
                           <TouchableOpacity
@@ -1478,16 +1478,16 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                               setSelectedDate(item.fullDate);
                               setSelectedTime("");
                             }}
-                            className={`flex min-w-[64px] flex-col items-center justify-center rounded-xl border p-2 transition-all cursor-pointer ${
+                            className={`flex flex-col shrink-0 min-w-[72px] px-3.5 py-2.5 items-center justify-center rounded-2xl border transition-all cursor-pointer ${
                               item.isClosed
                                 ? "border-slate-100 bg-slate-50 opacity-40 text-slate-400"
                                 : isSelected
-                                ? "border-[#3473ef] bg-blue-50 text-[#3473ef] font-bold"
+                                ? "border-[#3473ef] bg-blue-50 text-[#3473ef] font-bold shadow-xs"
                                 : "border-slate-200/80 bg-slate-50/40 hover:bg-white text-slate-700"
                             }`}
                           >
-                            <Text className="text-[9px] font-bold uppercase">{item.label}</Text>
-                            <Text className="text-[10px] font-medium">{item.fullDate.split('-').slice(1).join('/')}</Text>
+                            <Text className="text-[10px] font-bold uppercase">{item.label}</Text>
+                            <Text className="text-[11px] font-semibold mt-0.5">{item.fullDate.split('-').slice(1).join('/')}</Text>
                           </TouchableOpacity>
                         );
                       })}
