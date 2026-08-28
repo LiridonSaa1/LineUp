@@ -22,7 +22,6 @@ const extractUri = (mod: any): string => {
 const DesktopHeaderBar = ({
   activeTab,
   onTabPress,
-  tabs,
   user,
   selectedLocation,
   onOpenLocation,
@@ -40,23 +39,90 @@ const DesktopHeaderBar = ({
           <RNImage source={logoImg} style={{ width: 40, height: 40, maxWidth: 40, maxHeight: 40 }} className="rounded-xl" resizeMode="contain" />
         </TouchableOpacity>
 
-        <View className="hidden flex-row items-center gap-2 lg:flex ml-4 lg:ml-8">
-          {["Ballina", "Kërko", "Aktiviteti", "Profili"].map((item, i) => (
-            <TouchableOpacity
-              key={item}
-              onPress={() => onTabPress(i)}
-              activeOpacity={0.8}
-              className={`rounded-full px-4 py-2 transition-colors ${
-                activeTab === i
-                  ? "bg-slate-100"
-                  : "hover:bg-slate-50"
-              }`}
-            >
-              <Text className={`text-sm ${activeTab === i ? 'font-bold text-slate-900' : 'font-medium text-slate-500'}`}>
-                {item}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        <View className="hidden flex-row items-center gap-1 lg:flex ml-4 lg:ml-8">
+          <TouchableOpacity
+            onPress={() => onTabPress(0)}
+            activeOpacity={0.8}
+            className={`rounded-full px-4 py-2 transition-colors ${activeTab === 0 ? 'bg-slate-100' : 'hover:bg-slate-50'}`}
+          >
+            <Text className={`text-sm ${activeTab === 0 ? 'font-bold text-slate-900' : 'font-medium text-slate-500'}`}>
+              Ballina
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => onTabPress(1)}
+            activeOpacity={0.8}
+            className={`rounded-full px-4 py-2 transition-colors ${activeTab === 1 ? 'bg-slate-100' : 'hover:bg-slate-50'}`}
+          >
+            <Text className={`text-sm ${activeTab === 1 ? 'font-bold text-slate-900' : 'font-medium text-slate-500'}`}>
+              Kërko
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => {
+              onTabPress(0);
+              if (typeof window !== 'undefined') {
+                setTimeout(() => {
+                  const el = document.getElementById("recommended-section");
+                  if (el) el.scrollIntoView({ behavior: "smooth" });
+                }, 100);
+              }
+            }}
+            activeOpacity={0.8}
+            className="rounded-full px-4 py-2 transition-colors hover:bg-slate-50"
+          >
+            <Text className="text-sm font-medium text-slate-500">
+              Të rekomanduara
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => {
+              onTabPress(0);
+              if (typeof window !== 'undefined') {
+                setTimeout(() => {
+                  const el = document.getElementById("how-it-works-section");
+                  if (el) el.scrollIntoView({ behavior: "smooth" });
+                }, 100);
+              }
+            }}
+            activeOpacity={0.8}
+            className="rounded-full px-4 py-2 transition-colors hover:bg-slate-50"
+          >
+            <Text className="text-sm font-medium text-slate-500">
+              Si funksionon
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => {
+              onTabPress(0);
+              if (typeof window !== 'undefined') {
+                setTimeout(() => {
+                  const el = document.getElementById("contact-section");
+                  if (el) el.scrollIntoView({ behavior: "smooth" });
+                }, 100);
+              }
+            }}
+            activeOpacity={0.8}
+            className="rounded-full px-4 py-2 transition-colors hover:bg-slate-50"
+          >
+            <Text className="text-sm font-medium text-slate-500">
+              Kontakt
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => onTabPress(2)}
+            activeOpacity={0.8}
+            className={`rounded-full px-4 py-2 transition-colors ${activeTab === 2 ? 'bg-slate-100' : 'hover:bg-slate-50'}`}
+          >
+            <Text className={`text-sm ${activeTab === 2 ? 'font-bold text-slate-900' : 'font-medium text-slate-500'}`}>
+              Aktiviteti
+            </Text>
+          </TouchableOpacity>
         </View>
 
         <View className="ml-auto flex flex-row items-center gap-3">
