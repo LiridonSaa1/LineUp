@@ -20,7 +20,7 @@ export interface CreateTransactionParams {
   email: string;
   planId: string;
   amount: number;
-  userId: string;
+  userId?: string;
   customerName?: string;
   priceId?: string; // Optional override
   businessId?: string;
@@ -30,8 +30,11 @@ export interface CreateTransactionParams {
  * Creates a transaction via Supabase Edge Function
  * Using raw fetch to ensure we can capture the actual error body from Paddle/Server
  */
-export async function createPaddleTransaction({ email, planId, amount, userId, customerName, priceId }: CreateTransactionParams) {
-  console.log(`[Paddle] Requesting transaction for ${email} (${planId})...`);
+export async function createPaddleTransaction({ email, planId, amount, userId, customerName, priceId, businessId }: CreateTransactionParams) {
+  const cleanEmail = (email || '').trim().toLowerCase();
+  const effectiveUserId = userId || (cleanEmail ? `reg_${cleanEmail.replace(/[^a-z0-9]/g, '_')}` : `user_${Date.now()}`);
+
+  console.log(`[Paddle] Requesting transaction for ${cleanEmail} (${planId}) with userId: ${effectiveUserId}...`);
 
   try {
     // Use provided priceId or fallback to config
@@ -44,12 +47,13 @@ export async function createPaddleTransaction({ email, planId, amount, userId, c
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify({
-        email,
+        email: cleanEmail,
         planId,
         amount,
-        userId,
+        userId: effectiveUserId,
         customerName,
-        priceId: finalPriceId
+        priceId: finalPriceId,
+        businessId: businessId ? String(businessId) : undefined
       })
     });
 

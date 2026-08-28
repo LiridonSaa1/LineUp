@@ -603,6 +603,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
           email: cleanEmail,
           planId: (selectedPlan?.id as any) || 'solo',
           amount: planPriceNum,
+          userId: `reg_${cleanEmail.replace(/[^a-z0-9]/g, '_')}`,
           customerName: fullName,
           priceId: selectedPlan?.paddlePriceId?.[billingCycle]
         });
