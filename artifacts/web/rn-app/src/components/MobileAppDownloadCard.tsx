@@ -42,7 +42,12 @@ export const MobileAppDownloadCard: React.FC<MobileAppDownloadCardProps> = ({
       <View className="w-full max-w-[580px] bg-white/80 backdrop-blur-2xl rounded-[40px] p-8 sm:p-10 lg:p-12 border border-white/80 shadow-2xl shadow-slate-900/10 z-10 my-auto items-center">
         {/* Logo */}
         <View className="items-center mb-6">
-          <img src={extractUri(logoImg)} alt="LineUp Logo" className="h-12 w-12 object-contain rounded-2xl mb-4 shadow-sm" />
+          <Image
+            source={require('../../assets/logo.png')}
+            style={{ width: 48, height: 48 }}
+            resizeMode="contain"
+            className="rounded-2xl mb-4 shadow-sm"
+          />
           <View className="bg-emerald-50 border border-emerald-200/60 px-4 py-1.5 rounded-full flex-row items-center gap-2 mb-3">
             <CheckCircle2 size={14} color="#10b981" strokeWidth={2.5} />
             <Text className="text-emerald-700 font-black text-xs uppercase tracking-wider">
