@@ -159,6 +159,18 @@ import { MobileAppDownloadCard } from "./src/components/MobileAppDownloadCard";
 import { supabase } from "./src/config/supabase";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DEFAULT_CATEGORIES, DEFAULT_SUBCATEGORIES, CATEGORY_ORDER } from "./src/config/defaultCategories";
+import {
+  useFonts,
+  DMSans_400Regular,
+  DMSans_500Medium,
+  DMSans_600SemiBold,
+  DMSans_700Bold
+} from '@expo-google-fonts/dm-sans';
+import {
+  SpaceGrotesk_500Medium,
+  SpaceGrotesk_600SemiBold,
+  SpaceGrotesk_700Bold
+} from '@expo-google-fonts/space-grotesk';
 import "./global.css";
 
 const { width } = Dimensions.get("window");
@@ -228,6 +240,16 @@ const TabButton = ({ tab, isActive, onPress }: any) => {
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    DMSans_400Regular,
+    DMSans_500Medium,
+    DMSans_600SemiBold,
+    DMSans_700Bold,
+    SpaceGrotesk_500Medium,
+    SpaceGrotesk_600SemiBold,
+    SpaceGrotesk_700Bold,
+  });
+
   const { width: windowWidth } = useWindowDimensions();
   const isDesktop = windowWidth >= 768;
 

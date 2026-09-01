@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { ChevronDown, ChevronUp, Check } from 'lucide-react-native';
+import { getCategoryIcon } from '../utils/iconUtils';
 
 export interface Category {
   id: string;
   name: string;
   icon: string;
+  target_audience: 'men' | 'women' | 'both';
 }
 
 export interface Subcategory {
@@ -18,7 +20,7 @@ interface CategoryAccordionProps {
   categories: Category[];
   subcategories: Subcategory[];
   selectedSubcategories: string[];
-  onToggleSubcategory: (subId: string) => void;
+  onToggleSubcategory: (subcategoryId: string) => void;
 }
 
 export const CategoryAccordion: React.FC<CategoryAccordionProps> = ({
@@ -30,11 +32,9 @@ export const CategoryAccordion: React.FC<CategoryAccordionProps> = ({
   const [expandedCats, setExpandedCats] = useState<string[]>([]);
 
   const toggleCategory = (catId: string) => {
-    if (expandedCats.includes(catId)) {
-      setExpandedCats(expandedCats.filter(id => id !== catId));
-    } else {
-      setExpandedCats([...expandedCats, catId]);
-    }
+    setExpandedCats(prev => 
+      prev.includes(catId) ? prev.filter(id => id !== catId) : [...prev, catId]
+    );
   };
 
   return (
@@ -43,6 +43,7 @@ export const CategoryAccordion: React.FC<CategoryAccordionProps> = ({
         const isExpanded = expandedCats.includes(cat.id);
         const catSubs = subcategories.filter(s => s.category_id === cat.id);
         const selectedCount = catSubs.filter(s => selectedSubcategories.includes(s.id)).length;
+        const IconComponent = getCategoryIcon(cat);
 
         return (
           <View key={cat.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
@@ -52,8 +53,8 @@ export const CategoryAccordion: React.FC<CategoryAccordionProps> = ({
               className="flex-row items-center justify-between p-4 bg-white"
             >
               <View className="flex-row items-center">
-                <Text className="text-xl mr-3">{cat.icon}</Text>
-                <Text className="text-[15px] font-bold text-[#161719]">{cat.name}</Text>
+                <IconComponent size={20} color="#161719" className="mr-3" />
+                <Text className="text-[15px] font-bold text-[#161719] ml-2">{cat.name}</Text>
                 {selectedCount > 0 && (
                   <View className="ml-3 bg-[#3473ef] px-2 py-0.5 rounded-full">
                     <Text className="text-white text-xs font-bold">{selectedCount}</Text>

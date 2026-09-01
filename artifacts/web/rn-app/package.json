@@ -11,6 +11,8 @@
     "deploy-functions": "npx supabase functions deploy create-paddle-transaction paddle-webhook"
   },
   "dependencies": {
+    "@expo-google-fonts/dm-sans": "^0.4.2",
+    "@expo-google-fonts/space-grotesk": "^0.4.1",
     "@expo/metro-runtime": "~6.1.2",
     "@react-google-maps/api": "^2.20.8",
     "@react-native-async-storage/async-storage": "^2.2.0",
@@ -24,6 +26,7 @@
     "expo-blur": "~15.0.8",
     "expo-constants": "~18.0.13",
     "expo-file-system": "^19.0.23",
+    "expo-font": "^57.0.2",
     "expo-haptics": "~15.0.8",
     "expo-image-picker": "^17.0.11",
     "expo-linking": "~8.0.12",

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, TouchableOpacity, TextInput, ScrollView, Dimensions, FlatList, Keyboard, Modal, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 import { X, Search, MapPin, Calendar, Grid, Scissors, Hand, Eye, Sparkles, User, Smile, Waves, ArrowLeft, ChevronRight, AlertCircle, Check, ChevronLeft, Shield, Zap, ChevronDown, ChevronUp, Palette } from 'lucide-react-native';
+import { getCategoryIcon } from "../utils/iconUtils";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { withTiming } from 'react-native-reanimated';
 import { AddressAutocomplete } from '../components/AddressAutocomplete';
@@ -416,7 +417,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
             <Text className="text-xl font-bold text-[#161719] mb-4">Kategoritë</Text>
             <View className="flex-row flex-wrap justify-between gap-y-3">
               {categories.map((cat, i) => {
-                const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
+                const IconComponent = getCategoryIcon(cat);
                 return (
                   <TouchableOpacity
                     key={i}
@@ -493,7 +494,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
 
                   const catSubIds = catSubcategories.map(s => String(s.id).trim());
                   const selectedCount = catSubIds.filter(id => selectedSubIds.includes(id)).length;
-                  const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
+                  const IconComponent = getCategoryIcon(cat);
 
                   return (
                     <View key={catId} className="mb-4 bg-slate-50 rounded-2xl overflow-hidden border border-slate-100">
@@ -786,7 +787,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
               contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12, display: 'flex', flexDirection: 'row', alignItems: 'center' }}
             >
               {categories.map(cat => {
-                const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
+                const IconComponent = getCategoryIcon(cat);
                 const isSelected = selectedMainCategory?.id === cat.id;
                 return (
                   <TouchableOpacity

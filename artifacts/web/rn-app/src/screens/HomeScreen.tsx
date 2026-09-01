@@ -9,6 +9,7 @@ import Animated, {
 import { supabase } from "../config/supabase";
 import { getShopCardImage } from "../utils/imageUtils";
 import { getShopPlanDetails } from "../utils/planLimits";
+import { getCategoryIcon } from "../utils/iconUtils";
 import * as Haptics from 'expo-haptics';
 import { WebFooter } from "../components/WebFooter";
 import { DesktopHomeWeb } from "../components/home/DesktopHomeWeb";
@@ -430,7 +431,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               >
                 {categories.map(cat => {
                   const cleanCatName = formatCleanCategoryName(cat.name);
-                  const IconComponent = CATEGORY_ICONS[cleanCatName] || CATEGORY_ICONS[cat.name] || Scissors;
+                  const IconComponent = getCategoryIcon(cat);
                   const isSelected = selectedMainCategory?.id === cat.id || selectedMainCategory?.name === cat.name;
                   return (
                     <TouchableOpacity
@@ -677,7 +678,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   SHËRBIMET
                 </Text>
                 {categories.map((cat, i) => {
-                  const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
+                  const IconComponent = getCategoryIcon(cat);
                   const count = CATEGORY_COUNTS[cat.name] || '45 sallone';
                   return (
                     <TouchableOpacity
@@ -844,7 +845,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <View className="flex-row flex-wrap justify-between">
                 {categories.slice(0, 8).map((cat, i) => {
                   const cleanName = formatCleanCategoryName(cat.name);
-                  const IconComponent = CATEGORY_ICONS[cleanName] || CATEGORY_ICONS[cat.name] || Scissors;
+                  const IconComponent = getCategoryIcon(cat);
                   return (
                     <View key={i} className="items-center mb-6" style={{ width: '22%' }}>
                       <View

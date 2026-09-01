@@ -10,6 +10,7 @@ import { PaddleCheckout } from "../components/PaddleCheckout";
 import { CategoryAccordion, Category, Subcategory } from "../components/CategoryAccordion";
 import { BlurView } from 'expo-blur';
 import { DEFAULT_CATEGORIES, DEFAULT_SUBCATEGORIES, CATEGORY_ORDER } from "../config/defaultCategories";
+import { getCategoryIcon } from "../utils/iconUtils";
 
 const CATEGORY_ICONS: Record<string, any> = {
   'Flokët': Scissors,
@@ -895,9 +896,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
             <View className="flex-row flex-wrap justify-between">
               {dbCategories
                 .map((cat, i) => {
-                  // Fallback for icons: if it's an emoji (string), render as Text, else as Component
-                  const isEmoji = typeof cat.icon === 'string' && cat.icon.length <= 4;
-                  const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
+                  const IconComponent = getCategoryIcon(cat);
                   const catSubIds = dbSubcategories.filter(s => s.category_id === cat.id).map(s => s.id);
                   const isSelected = catSubIds.some(id => selectedCategories.includes(id));
 
@@ -918,11 +917,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
                               setShowSubModal(true);
                             }}
                           >
-                            {isEmoji ? (
-                              <Text className="text-3xl">{cat.icon}</Text>
-                            ) : (
-                              <IconComponent size={32} color={isSelected ? "#3473ef" : "#161719"} strokeWidth={1.5} />
-                            )}
+                            <IconComponent size={32} color={isSelected ? "#3473ef" : "#161719"} strokeWidth={1.5} />
 
                             {isSelected && (
                               <View className="absolute top-1.5 right-1.5 bg-[#3473ef] rounded-full p-0.5 shadow-sm">
@@ -1159,7 +1154,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
             <View className="flex-row items-center justify-between px-6 py-4 border-b border-slate-50">
               <View className="flex-row items-center">
                 {selectedMainCategory && (
-                  React.createElement(CATEGORY_ICONS[selectedMainCategory.name] || Scissors, { size: 24, color: "#161719", className: "mr-3" })
+                  React.createElement(getCategoryIcon(selectedMainCategory), { size: 24, color: "#161719", className: "mr-3" })
                 )}
                 <Text className="text-xl font-black text-[#161719] ml-3">{selectedMainCategory?.name}</Text>
               </View>
