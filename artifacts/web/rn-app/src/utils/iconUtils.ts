@@ -19,13 +19,15 @@ const CATEGORY_NAME_MAP: Record<string, any> = {
   'Flokët & Prerje': Scissors,
   'Flokët & Trajtimet': Scissors,
   'Mjekra & Rruajtja': User,
+  'Ngjyrosja': Palette,
   'Ngjyrosja e Flokëve': Palette,
+  'Paketa': Sparkles,
   'Paketa Speciale': Sparkles,
   'Vetulla & Qerpikë': Eye,
   'Thonjtë': Hand,
   'Makeup': Smile,
-  'Depilim & Kujdes Trupi': Zap,
   'Depilim & Trup': Zap,
+  'Depilim & Kujdes Trupi': Zap,
   'Masazh & Spa': Sparkles,
 };
 
