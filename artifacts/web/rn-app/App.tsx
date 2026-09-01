@@ -1,8 +1,8 @@
 import React from "react";
 import { StatusBar } from "expo-status-bar";
-import { View, TouchableOpacity, Text, Dimensions, Platform, Modal, Alert } from "react-native";
+import { View, TouchableOpacity, Text, Dimensions, Platform, Modal, Alert, ActivityIndicator } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { Home, Search, Calendar, User, Shield, MapPin, ChevronDown } from "lucide-react-native";
+import { Home, Search, Calendar, User, Shield, MapPin, ChevronDown, Sparkles, Star, Check, X, LogOut } from "lucide-react-native";
 import { Image as RNImage } from "react-native";
 import { useWindowDimensions } from "react-native";
 
@@ -183,6 +183,8 @@ import { AdminDashboardScreen } from "./src/screens/AdminDashboardScreen";
 import { AddAdModal } from "./src/screens/AddAdModal";
 import { MobileAppBanner } from "./src/components/MobileAppBanner";
 import { MobileAppDownloadCard } from "./src/components/MobileAppDownloadCard";
+import { PaddleCheckout } from "./src/components/PaddleCheckout";
+import { createPaddleTransaction } from "./src/config/paddle";
 import { supabase } from "./src/config/supabase";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DEFAULT_CATEGORIES, DEFAULT_SUBCATEGORIES, CATEGORY_ORDER, sortSubcategories } from "./src/config/defaultCategories";
@@ -299,6 +301,10 @@ export default function App() {
   const [showAddAd, setShowAddAd] = React.useState(false);
   const [showAuthAlert, setShowAuthAlert] = React.useState(false);
   const [showMobileNotice, setShowMobileNotice] = React.useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
+  const [selectedUpgradePlanId, setSelectedUpgradePlanId] = React.useState<string>('duo');
+  const [upgradeTxId, setUpgradeTxId] = React.useState<string | null>(null);
+  const [isUpgrading, setIsUpgrading] = React.useState(false);
   const [categories, setCategories] = React.useState<any[]>(DEFAULT_CATEGORIES);
   const [subcategories, setSubcategories] = React.useState<any[]>(DEFAULT_SUBCATEGORIES);
   const [selectedPlanId, setSelectedPlanId] = React.useState<string | undefined>(undefined);
@@ -656,13 +662,19 @@ export default function App() {
                     }}
                     onManagePlan={() => setActiveTab(3)} // Profile for management
                     onUpgradePlan={(planId) => {
-                      setActiveTab(3);
+                      setSelectedUpgradePlanId(planId || 'duo');
+                      setUpgradeTxId(null);
+                      setShowUpgradeModal(true);
                     }}
                     onDowngradePlan={(planId) => {
-                      setActiveTab(3);
+                      setSelectedUpgradePlanId(planId || 'solo');
+                      setUpgradeTxId(null);
+                      setShowUpgradeModal(true);
                     }}
                     onRenewPlan={(planId) => {
-                      setActiveTab(3);
+                      setSelectedUpgradePlanId(planId || 'duo');
+                      setUpgradeTxId(null);
+                      setShowUpgradeModal(true);
                     }}
                     categories={categories}
                     subcategories={subcategories}
@@ -992,6 +1004,152 @@ export default function App() {
                           <Text className="text-sm font-semibold text-slate-700">Mbyll</Text>
                         </TouchableOpacity>
                       </View>
+                    </View>
+                  </View>
+                </Modal>
+              )}
+
+              {/* Upgrade Plan Modal */}
+              {showUpgradeModal && (
+                <Modal
+                  transparent
+                  visible={showUpgradeModal}
+                  animationType="fade"
+                  onRequestClose={() => {
+                    setShowUpgradeModal(false);
+                    setUpgradeTxId(null);
+                  }}
+                >
+                  <View className="flex-1 items-center justify-center bg-slate-900/60 p-4 z-50">
+                    <View className="w-full max-w-lg overflow-hidden rounded-3xl bg-white p-6 shadow-2xl border border-slate-100 relative">
+                      <TouchableOpacity
+                        onPress={() => {
+                          setShowUpgradeModal(false);
+                          setUpgradeTxId(null);
+                        }}
+                        className="absolute top-4 right-4 p-2.5 rounded-full bg-slate-100 text-slate-600 z-10"
+                      >
+                        <X size={20} color="#161719" />
+                      </TouchableOpacity>
+
+                      {upgradeTxId ? (
+                        <View className="pt-4">
+                          <Text className="text-xl font-black text-slate-900 mb-4 text-center">
+                            Pagesa e Sigurt me Paddle Sandbox 💳
+                          </Text>
+                          <PaddleCheckout
+                            email={user?.email || 'owner@lineup.ks'}
+                            transactionId={upgradeTxId}
+                            onSuccess={async (data) => {
+                              console.log("[Upgrade] Paddle success:", data);
+                              setShowUpgradeModal(false);
+                              setUpgradeTxId(null);
+                              if (user?.shopId) {
+                                await supabase.from('barbershops').update({ status: 'active' }).eq('id', user.shopId);
+                              }
+                              if (user?.email) {
+                                fetchUserProfile(user.email, null);
+                              }
+                              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                              Alert.alert("Sukses! 🎉", "Plani juaj u përmirësua me sukses te LineUp!");
+                            }}
+                            onCancel={() => {
+                              setUpgradeTxId(null);
+                            }}
+                          />
+                        </View>
+                      ) : (
+                        <View className="items-center text-center pt-2">
+                          <View className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 border border-blue-100 text-[#3473ef]">
+                            <Sparkles size={32} color="#3473ef" />
+                          </View>
+
+                          <View className="flex-row items-center gap-1.5 px-3.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold mb-3">
+                            <Star size={12} color="#d97706" fill="#d97706" />
+                            <Text className="text-xs font-bold text-amber-800">MË I POPULLUARI • LINEUP PREMIUM</Text>
+                          </View>
+
+                          <Text className="text-2xl font-black text-slate-900 mb-1 text-center">
+                            Përmirëso te Plani {selectedUpgradePlanId ? selectedUpgradePlanId.toUpperCase() : 'DUO'} 🚀
+                          </Text>
+
+                          <Text className="text-sm font-medium text-slate-500 leading-relaxed mb-6 text-center">
+                            Zgjidhni planin për të shtuar staf shtesë, rezervime pa limit dhe mjetet e avancuara të menaxhimit te LineUp.
+                          </Text>
+
+                          {/* Plan Details Card */}
+                          <View className="w-full bg-slate-50 border border-slate-200/80 rounded-2xl p-5 mb-6 text-left">
+                            <View className="flex-row items-baseline justify-between mb-3 border-b border-slate-200/60 pb-3">
+                              <Text className="text-lg font-black text-slate-900">
+                                Plani {selectedUpgradePlanId === 'duo' ? 'Duo' : (selectedUpgradePlanId === 'team' ? 'Team' : 'Solo')}
+                              </Text>
+                              <Text className="text-2xl font-black text-[#3473ef]">
+                                {selectedUpgradePlanId === 'duo' ? '20€' : (selectedUpgradePlanId === 'team' ? '25€' : '10€')}
+                                <Text className="text-xs font-bold text-slate-500">/muaj</Text>
+                              </Text>
+                            </View>
+
+                            <View className="gap-2">
+                              <View className="flex-row items-center">
+                                <Check size={16} color="#10b981" strokeWidth={3} />
+                                <Text className="text-sm font-bold text-slate-700 ml-2">
+                                  {selectedUpgradePlanId === 'duo' ? 'Gjer në 2 Berberë' : (selectedUpgradePlanId === 'team' ? 'Ekip pa limit berberësh' : '1 Berber')}
+                                </Text>
+                              </View>
+                              <View className="flex-row items-center">
+                                <Check size={16} color="#10b981" strokeWidth={3} />
+                                <Text className="text-sm font-medium text-slate-600 ml-2">Rezervime & Kalendar në kohë reale</Text>
+                              </View>
+                              <View className="flex-row items-center">
+                                <Check size={16} color="#10b981" strokeWidth={3} />
+                                <Text className="text-sm font-medium text-slate-600 ml-2">Njoftime automatike me SMS/Email</Text>
+                              </View>
+                              <View className="flex-row items-center">
+                                <Check size={16} color="#10b981" strokeWidth={3} />
+                                <Text className="text-sm font-medium text-slate-600 ml-2">Mbështetje prioritare 24/7</Text>
+                              </View>
+                            </View>
+                          </View>
+
+                          <TouchableOpacity
+                            disabled={isUpgrading}
+                            onPress={async () => {
+                              try {
+                                setIsUpgrading(true);
+                                const pId = selectedUpgradePlanId || 'duo';
+                                const amount = pId === 'duo' ? 20 : (pId === 'team' ? 25 : 10);
+                                const res = await createPaddleTransaction({
+                                  email: user?.email || 'owner@lineup.ks',
+                                  planId: pId,
+                                  amount,
+                                  userId: user?.id,
+                                  customerName: user?.name,
+                                  businessId: user?.shopId
+                                });
+                                if (res?.transactionId) {
+                                  setUpgradeTxId(res.transactionId);
+                                } else {
+                                  Alert.alert("Gabim", "Nuk mund të krijohej transaksioni i Paddle.");
+                                }
+                              } catch (err: any) {
+                                Alert.alert("Gabim te Pagesa", err?.message || "Ndodhi një gabim gjatë nisjes së Paddle.");
+                              } finally {
+                                setIsUpgrading(false);
+                              }
+                            }}
+                            className="w-full flex-row items-center justify-center gap-2 rounded-2xl bg-[#3473ef] py-4 px-4 shadow-lg active:scale-95"
+                          >
+                            {isUpgrading ? (
+                              <ActivityIndicator color="white" size="small" />
+                            ) : (
+                              <>
+                                <Sparkles size={18} color="white" />
+                                <Text className="text-base font-black text-white">Vazhdo te Pagesa (Paddle Sandbox)</Text>
+                              </>
+                            )}
+                          </TouchableOpacity>
+                        </View>
+                      )}
                     </View>
                   </View>
                 </Modal>
