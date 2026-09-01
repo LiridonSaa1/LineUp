@@ -9,7 +9,7 @@ import { createPaddleTransaction, PADDLE_CONFIG } from "../config/paddle";
 import { PaddleCheckout } from "../components/PaddleCheckout";
 import { CategoryAccordion, Category, Subcategory } from "../components/CategoryAccordion";
 import { BlurView } from 'expo-blur';
-import { DEFAULT_CATEGORIES, DEFAULT_SUBCATEGORIES, CATEGORY_ORDER } from "../config/defaultCategories";
+import { DEFAULT_CATEGORIES, DEFAULT_SUBCATEGORIES, CATEGORY_ORDER, sortSubcategories } from "../config/defaultCategories";
 import { getCategoryIcon } from "../utils/iconUtils";
 
 const CATEGORY_ICONS: Record<string, any> = {
@@ -265,7 +265,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
         console.log("[RegisterScreen] Fetching categories and subcategories...");
         const [{ data: catData, error: catError }, { data: subData, error: subError }] = await Promise.all([
           supabase.from('categories').select('*'),
-          supabase.from('subcategories').select('*').order('name')
+          supabase.from('subcategories').select('*')
         ]);
 
         if (catError) {
@@ -287,7 +287,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
           console.warn("[RegisterScreen] Error fetching subcategories, using defaults:", subError.message);
         } else if (subData && subData.length > 0) {
           console.log(`[RegisterScreen] Fetched ${subData.length} subcategories from DB.`);
-          setDbSubcategories(subData as Subcategory[]);
+          setDbSubcategories(sortSubcategories(subData) as Subcategory[]);
         }
       } catch (err: any) {
         console.error("[RegisterScreen] Failed to fetch categories from Supabase:", err?.message || err);
@@ -1168,7 +1168,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onClose, onSucce
             <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 100 }} className="flex-1" keyboardShouldPersistTaps="handled">
               <Text className="text-sm font-bold text-[#8789A3] mb-4">Zgjidhni shërbimet (mund të zgjidhni më shumë se një):</Text>
               
-            {selectedMainCategory && dbSubcategories.filter(s => String(s.category_id).trim() === String(selectedMainCategory.id).trim()).map((sub, idx) => {
+            {selectedMainCategory && sortSubcategories(dbSubcategories.filter(s => String(s.category_id).trim() === String(selectedMainCategory.id).trim())).map((sub, idx) => {
                 const subId = String(sub.id).trim();
                 const isSelected = selectedCategories.includes(subId);
                 return (
