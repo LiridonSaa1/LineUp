@@ -1,8 +1,19 @@
 import React from "react";
-import { View, Text, TouchableOpacity, Image, Linking } from "react-native";
-import { MapPin, Instagram, Facebook, Mail } from "lucide-react-native";
+import { View, Text, TouchableOpacity, Image } from "react-native";
 
 const logoImg = require('../../assets/logo.png');
+
+const extractUri = (mod: any): string => {
+  if (!mod) return "";
+  if (typeof mod === "string") return mod;
+  if (typeof mod === "object") {
+    if (typeof mod.default === "string") return mod.default;
+    if (mod.default && typeof mod.default === "object" && typeof mod.default.uri === "string") return mod.default.uri;
+    if (typeof mod.uri === "string") return mod.uri;
+    if (typeof mod.src === "string") return mod.src;
+  }
+  return String(mod || "");
+};
 
 interface WebFooterProps {
   onNavigateTab?: (tabIndex: number) => void;
@@ -16,80 +27,122 @@ export const WebFooter: React.FC<WebFooterProps> = ({
   onOpenLegal
 }) => {
   return (
-    <View className="mt-16 border-t border-slate-200 bg-white">
-      <View className="mx-auto max-w-[1440px] px-6 py-12 md:px-10 flex-row flex-wrap justify-between gap-8">
-        {/* Brand Info */}
-        <View className="w-full md:w-1/4">
-          <View className="flex-row items-center gap-3 mb-3">
-            <Image source={logoImg} style={{ width: 40, height: 40, maxWidth: 40, maxHeight: 40 }} className="rounded-xl" resizeMode="contain" />
-            <Text className="text-xl font-black text-slate-900">LineUp</Text>
-          </View>
-          <Text className="max-w-xs text-sm text-slate-500 font-semibold leading-relaxed">
-            Rezervime online për berberë dhe sallone bukurie në Kosovë.
-          </Text>
-        </View>
+    <footer className="mt-16 w-full border-t border-slate-200 bg-white">
+      <div className="mx-auto grid max-w-[1440px] gap-8 px-6 py-12 sm:grid-cols-2 lg:grid-cols-4 lg:px-10">
+        <div>
+          <div 
+            onClick={() => onNavigateTab ? onNavigateTab(0) : window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="flex items-center gap-2 cursor-pointer"
+          >
+            <img 
+              src={extractUri(logoImg)} 
+              alt="LineUp" 
+              style={{ width: '56px', height: '56px', objectFit: 'contain' }} 
+              className="rounded-2xl transition-transform hover:scale-105" 
+            />
+          </div>
+        </div>
 
-        {/* Platforma */}
-        <View className="w-1/2 md:w-1/5">
-          <Text className="text-sm font-black text-slate-900 mb-3">Platforma</Text>
-          <View className="gap-y-2">
-            <TouchableOpacity onPress={() => onNavigateTab && onNavigateTab(0)}>
-              <Text className="text-sm text-slate-500 font-bold hover:text-slate-900">Ballina</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => onNavigateTab && onNavigateTab(1)}>
-              <Text className="text-sm text-slate-500 font-bold hover:text-slate-900">Kërko Sallonet</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => onNavigateTab && onNavigateTab(2)}>
-              <Text className="text-sm text-slate-500 font-bold hover:text-slate-900">Aktiviteti Im</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <div>
+          <p className="font-display text-sm font-bold text-slate-900">Platforma</p>
+          <ul className="mt-3 space-y-2 text-sm text-slate-500 font-medium">
+            <li>
+              <button 
+                type="button" 
+                onClick={() => onNavigateTab ? onNavigateTab(0) : null} 
+                className="hover:text-slate-900 transition-colors text-left cursor-pointer"
+              >
+                Ballina
+              </button>
+            </li>
+            <li>
+              <button 
+                type="button" 
+                onClick={() => onNavigateTab ? onNavigateTab(1) : null} 
+                className="hover:text-slate-900 transition-colors text-left cursor-pointer"
+              >
+                Kërko
+              </button>
+            </li>
+            <li>
+              <button 
+                type="button" 
+                onClick={() => onNavigateTab ? onNavigateTab(2) : null} 
+                className="hover:text-slate-900 transition-colors text-left cursor-pointer"
+              >
+                Aktiviteti
+              </button>
+            </li>
+            <li>
+              <button 
+                type="button" 
+                onClick={() => onNavigateTab ? onNavigateTab(3) : null} 
+                className="hover:text-slate-900 transition-colors text-left cursor-pointer"
+              >
+                Profili
+              </button>
+            </li>
+          </ul>
+        </div>
 
-        {/* Për Bizneset */}
-        <View className="w-1/2 md:w-1/5">
-          <Text className="text-sm font-black text-slate-900 mb-3">Për Bizneset</Text>
-          <View className="gap-y-2">
-            <TouchableOpacity onPress={() => onOpenRegisterShop && onOpenRegisterShop()}>
-              <Text className="text-sm text-slate-500 font-bold hover:text-slate-900">Regjistro Sallonin</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => onOpenRegisterShop && onOpenRegisterShop()}>
-              <Text className="text-sm text-slate-500 font-bold hover:text-slate-900">Planet & Çmimet</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <div>
+          <p className="font-display text-sm font-bold text-slate-900">Për bizneset</p>
+          <ul className="mt-3 space-y-2 text-sm text-slate-500 font-medium">
+            <li>
+              <button 
+                type="button" 
+                onClick={() => onOpenRegisterShop ? onOpenRegisterShop() : null} 
+                className="hover:text-slate-900 transition-colors text-left cursor-pointer"
+              >
+                Planet e çmimeve
+              </button>
+            </li>
+            <li>
+              <button 
+                type="button" 
+                onClick={() => onOpenRegisterShop ? onOpenRegisterShop() : null} 
+                className="hover:text-slate-900 transition-colors text-left cursor-pointer"
+              >
+                Bëhu partner
+              </button>
+            </li>
+            <li>
+              <button 
+                type="button" 
+                onClick={() => onOpenRegisterShop ? onOpenRegisterShop() : null} 
+                className="hover:text-slate-900 transition-colors text-left cursor-pointer"
+              >
+                Ndihmë
+              </button>
+            </li>
+          </ul>
+        </div>
 
-        {/* Mbështetja */}
-        <View className="w-full md:w-1/4">
-          <Text className="text-sm font-black text-slate-900 mb-3">Mbështetja & Kontakt</Text>
-          <View className="gap-y-2 mb-4">
-            <View className="flex-row items-center gap-2">
-              <Mail size={16} color="#64748b" />
-              <Text className="text-sm text-slate-500 font-semibold">suport@lineup-ks.com</Text>
-            </View>
-            <View className="flex-row items-center gap-2">
-              <MapPin size={16} color="#64748b" />
-              <Text className="text-sm text-slate-500 font-semibold">Prishtinë, Kosovë</Text>
-            </View>
-          </View>
-        </View>
-      </View>
+        <div>
+          <p className="font-display text-sm font-bold text-slate-900">Kontakt</p>
+          <ul className="mt-3 space-y-2 text-sm text-slate-500 font-medium">
+            <li>
+              <a href="mailto:info@lineup.ks" className="hover:text-slate-900 transition-colors">
+                info@lineup.ks
+              </a>
+            </li>
+            <li>
+              <a href="tel:+38344000000" className="hover:text-slate-900 transition-colors">
+                +383 44 000 000
+              </a>
+            </li>
+            <li>
+              <span className="text-slate-500">
+                Prishtinë, Kosovë
+              </span>
+            </li>
+          </ul>
+        </div>
+      </div>
 
-      {/* Bottom Bar */}
-      <View className="border-t border-slate-100 py-6 px-6 md:px-10">
-        <View className="mx-auto max-w-[1440px] flex-row flex-wrap items-center justify-between gap-4">
-          <Text className="text-xs font-semibold text-slate-400">
-            © {new Date().getFullYear()} LineUp. Të gjitha të drejtat të rezervuara.
-          </Text>
-          <View className="flex-row items-center gap-6">
-            <TouchableOpacity onPress={() => onOpenLegal && onOpenLegal('privacy')}>
-              <Text className="text-xs font-bold text-slate-500 hover:text-slate-900">Politika e Privatësisë</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => onOpenLegal && onOpenLegal('terms')}>
-              <Text className="text-xs font-bold text-slate-500 hover:text-slate-900">Kushtet e Përdorimit</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </View>
+      <div className="border-t border-slate-200 py-5 text-center text-xs text-slate-400 font-semibold">
+        © {new Date().getFullYear()} LineUp. Të gjitha të drejtat e rezervuara.
+      </div>
+    </footer>
   );
 };

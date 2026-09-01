@@ -558,8 +558,8 @@ export default function App() {
           {/* Smart Mobile Browser App Download Banner */}
           <MobileAppBanner />
 
-          {/* Desktop Web Navigation Bar (Non-Home tabs or mobile) */}
-          {isDesktop && activeTab !== 0 && (
+          {/* Desktop Web Navigation Bar (Activity & Profile tabs) */}
+          {isDesktop && activeTab > 1 && (
             <DesktopHeaderBar
               activeTab={activeTab}
               onTabPress={onTabPress}
@@ -631,6 +631,8 @@ export default function App() {
                     onToggleFavorite={handleToggleFavorite}
                     onOpenRegisterShop={() => setShowRegisterShop(true)}
                     onNavigateTab={(idx) => setActiveTab(idx)}
+                    selectedLocation={selectedLocation}
+                    onOpenLocation={() => setShowLocation(true)}
                   />
                 )}
                 {activeTab === 2 && (

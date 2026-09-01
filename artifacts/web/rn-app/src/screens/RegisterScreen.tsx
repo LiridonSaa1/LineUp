@@ -12,14 +12,15 @@ import { BlurView } from 'expo-blur';
 import { DEFAULT_CATEGORIES, DEFAULT_SUBCATEGORIES, CATEGORY_ORDER } from "../config/defaultCategories";
 
 const CATEGORY_ICONS: Record<string, any> = {
+  'Flokët': Scissors,
   'Flokët & Trajtimet': Scissors,
-  'Ngjyrosja e Flokëve': Palette,
   'Mjekra & Rruajtja': User,
+  'Ngjyrosja e Flokëve': Palette,
+  'Paketa Speciale': Sparkles,
   'Vetulla & Qerpikë': Eye,
   'Thonjtë': Hand,
   'Makeup': Smile,
-  'Fytyra & Kujdesi i Lëkurës': Shield,
-  'Depilim & Trup': Zap
+  'Depilim & Kujdes Trupi': Zap
 };
 
 const KOSOVO_CITIES = [

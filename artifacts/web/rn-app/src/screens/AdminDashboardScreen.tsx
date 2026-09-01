@@ -287,7 +287,7 @@ export const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onLo
     // If we are activating, just do it directly
     try {
       await supabase.from('barbershops').update({ status: 'active', suspension_reason: null }).eq('id', shopId);
-      await supabase.from('barbers').update({ status: 'active' }).eq('shop_id', shopId);
+      await supabase.from('barbers').update({ is_active: true }).eq('shop_id', shopId);
       setShops(prev => prev.map(s => s.id === shopId ? { ...s, status: 'active', suspension_reason: null } : s));
       Alert.alert("Sukses", `Salloni u aktivizua.`);
     } catch (e) { Alert.alert("Gabim", "Dështoi aktivizimi."); }
@@ -312,7 +312,7 @@ export const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onLo
 
       if (error) throw error;
 
-      await supabase.from('barbers').update({ status: 'suspended' }).eq('shop_id', selectedShopForSuspension.id);
+      await supabase.from('barbers').update({ is_active: false }).eq('shop_id', selectedShopForSuspension.id);
 
       setShops(prev => prev.map(s => s.id === selectedShopForSuspension.id ? { ...s, status: 'suspended', suspension_reason: suspensionReason.trim() } : s));
 

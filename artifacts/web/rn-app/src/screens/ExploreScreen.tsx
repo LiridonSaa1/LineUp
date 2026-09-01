@@ -336,11 +336,15 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
     // 1. City Filter
     const cleanCity = normalizeCity(initialCity);
     if (cleanCity && cleanCity !== normalizeCity("të gjitha") && cleanCity !== normalizeCity("lokacioni aktual")) {
-      result = result.filter(shop => {
+      const cityFiltered = result.filter(shop => {
         const detected = normalizeCity(getShopCityName(shop));
         const addrMatch = normalizeCity(shop.address || shop.formatted_address || "").includes(cleanCity);
         return detected === cleanCity || addrMatch;
       });
+
+      if (cityFiltered.length > 0) {
+        result = cityFiltered;
+      }
     }
 
     // 2. Category/Subcategory Filter
@@ -363,10 +367,14 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
           activeSubIds.includes(sub) || matchedSubNames.some(name => sub.includes(name) || name.includes(sub))
         );
 
-        // B) Check shop.category / shop.category_name
+        // B) Check shop.category / shop.category_name / shop.categories array
         const shopCategoryStr = String(shop.category || shop.category_name || shop.categoryName || "").toLowerCase().trim();
+        const shopCategoriesArray = Array.isArray(shop.categories)
+          ? shop.categories.map((c: any) => String(c).toLowerCase().trim())
+          : [];
         const matchesCategory = searchCatName && (
-          shopCategoryStr.includes(searchCatName) || searchCatName.includes(shopCategoryStr)
+          shopCategoryStr.includes(searchCatName) || searchCatName.includes(shopCategoryStr) ||
+          shopCategoriesArray.some(c => c.includes(searchCatName) || searchCatName.includes(c))
         );
 
         // C) Check shop.services list
@@ -517,21 +525,44 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
     if (isRefreshing) setRefreshing(true); else setLoading(true);
     try {
       const [
-        { data: shopsData },
+        { data: shopsData, error: sErr },
         { data: barbersData },
         { data: scheduleData }
       ] = await Promise.all([
-        supabase.from('barbershops').select('*').eq('status', 'active'),
+        supabase.from('barbershops').select('*'),
         supabase.from('barbers').select('*'),
         supabase.from('barber_schedules').select('*')
       ]);
 
-      const combined = [...(shopsData || [])];
-      if (barbersData) barbersData.forEach((b: any) => { if (!combined.some(s => s.id === b.shop_id || s.id === b.id)) combined.push(b); });
+      if (sErr) console.warn("[ExploreScreen] shops fetch note:", sErr.message);
 
-      setShops(combined);
+      let combined = [...(shopsData || [])];
+      if (barbersData) {
+        barbersData.forEach((b: any) => {
+          if (!combined.some(s => s.id === b.shop_id || s.id === b.id)) {
+            combined.push({
+              ...b,
+              name: b.name || "Berberi",
+              status: 'active'
+            });
+          }
+        });
+      }
+
+      const activeShops = combined.filter(s => 
+        !s.status || 
+        s.status.toString().toLowerCase() === 'active' || 
+        s.status.toString().toLowerCase() === 'trialing'
+      );
+
+      setShops(activeShops.length > 0 ? activeShops : combined);
       setSchedules(scheduleData || []);
-    } catch (e) { console.warn(e); } finally { setLoading(false); setRefreshing(false); }
+    } catch (e) {
+      console.warn("[ExploreScreen] loadShops error:", e);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, []);
 
   useEffect(() => { loadShops(); }, [loadShops]);
@@ -596,6 +627,67 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
             }
           `}</style>
         )}
+        {/* ── TOP HEADER NAVBAR MATCHING DESKTOP STRUCTURE ───────────────── */}
+        <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/80 backdrop-blur-md">
+          <div className="mx-auto flex h-20 max-w-[1440px] items-center px-6 lg:px-10">
+            <div
+              onClick={() => onNavigateTab ? onNavigateTab(0) : window.scrollTo({ top: 0, behavior: 'smooth' })}
+              className="flex cursor-pointer shrink-0 items-center gap-2 mr-6 lg:mr-12"
+            >
+              <img src={extractUri(logoImg)} alt="LineUp" style={{ width: '40px', height: '40px', objectFit: 'contain' }} className="rounded-xl transition-transform hover:scale-105" />
+            </div>
+
+            <nav className="hidden items-center gap-2 lg:flex ml-4 lg:ml-8">
+              <button
+                type="button"
+                onClick={() => onNavigateTab ? onNavigateTab(0) : null}
+                className="rounded-full px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
+              >
+                Ballina
+              </button>
+              <button
+                type="button"
+                className="rounded-full bg-slate-100 px-4 py-2 text-sm font-bold text-slate-900 shadow-2xs cursor-default"
+              >
+                Kërko
+              </button>
+              <button
+                type="button"
+                onClick={() => onNavigateTab ? onNavigateTab(0) : null}
+                className="rounded-full px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
+              >
+                Të rekomanduara
+              </button>
+              <button
+                type="button"
+                onClick={() => onNavigateTab ? onNavigateTab(0) : null}
+                className="rounded-full px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
+              >
+                Si funksionon
+              </button>
+              <button
+                type="button"
+                onClick={() => onNavigateTab ? onNavigateTab(0) : null}
+                className="rounded-full px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
+              >
+                Kontakt
+              </button>
+            </nav>
+
+            <div className="ml-auto flex min-w-0 items-center gap-3">
+              <button
+                type="button"
+                onClick={onOpenLocation}
+                className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-50 cursor-pointer"
+              >
+                <MapPin className="h-4 w-4 shrink-0 text-[#3473ef]" />
+                <span className="truncate">{selectedLocation || initialCity || "Lokacioni aktual"}</span>
+                <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+              </button>
+            </div>
+          </div>
+        </header>
+
         {/* TOP HERO BANNER & REAL STATS MATCHING HOMEPAGE EXACTLY */}
         <View className="mx-auto w-full max-w-[1440px] px-6 lg:px-10 pt-10 pb-8">
           <View className="flex-col gap-6 lg:flex-row lg:items-end lg:justify-between border-b border-slate-200/80 pb-8">
@@ -629,10 +721,16 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
         </View>
 
         {/* Desktop Split Screen Content - Centered to max-w-[1440px] px-6 lg:px-10 matching Homepage */}
-        <View className="mx-auto flex-row w-full max-w-[1440px] px-6 lg:px-10 gap-8 h-[calc(100vh-280px)] min-h-[580px] relative pb-16">
+        <View 
+          className="mx-auto flex-row w-full max-w-[1440px] px-6 lg:px-10 gap-8 relative pb-8"
+          style={{ height: 750, minHeight: 700 }}
+        >
           {/* Left Side: Barbershop Cards Rail */}
-          <View className="w-[480px] bg-white border border-slate-200/80 rounded-3xl flex-col h-full overflow-hidden shadow-xs">
-            <ScrollView className="flex-1 px-6 pt-6" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+          <View 
+            className="w-[480px] bg-white border border-slate-200/80 rounded-3xl flex-col overflow-hidden shadow-xs"
+            style={{ height: '100%', minHeight: 700 }}
+          >
+            <ScrollView className="flex-1 px-6 pt-6" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
 
               {/* SEARCH INPUT BAR ABOVE CARDS LIST */}
               <View className="mb-6 flex-col gap-3">
@@ -746,7 +844,10 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
           </View>
 
           {/* Right Side: Full Size Interactive Leaflet / Google Map */}
-          <View className="flex-1 bg-slate-900 relative rounded-3xl overflow-hidden border border-slate-200/80 shadow-xs h-full">
+          <View 
+            className="flex-1 bg-slate-900 relative rounded-3xl overflow-hidden border border-slate-200/80 shadow-xs"
+            style={{ height: '100%', minHeight: 700 }}
+          >
             <LeafletMapView 
               shops={filteredShops} 
               onSelectShop={onSelectShop} 
@@ -754,7 +855,7 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
               mapType={mapType} 
               initialCoords={initialCoords} 
               width={width} 
-              height={height} 
+              height={750} 
             />
           </View>
         </View>

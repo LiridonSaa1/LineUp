@@ -15,25 +15,38 @@ import { DesktopHomeWeb } from "../components/home/DesktopHomeWeb";
 
 // Remove global width constant to support responsiveness with useWindowDimensions() inside components
 
+export const formatCleanCategoryName = (name: string): string => {
+  if (!name) return '';
+  return name
+    .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+    .replace(/\s*\([MF]\)/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
 const CATEGORY_COUNTS: Record<string, string> = {
-  'Flokët & Trajtimet': '128 sallone',
-  'Ngjyrosja e Flokëve': '74 sallone',
+  'Flokët': '128 sallone',
   'Mjekra & Rruajtja': '98 sallone',
+  'Ngjyrosja e Flokëve': '74 sallone',
+  'Paketa Speciale': '42 sallone',
   'Vetulla & Qerpikë': '52 sallone',
   'Thonjtë': '61 sallone',
   'Makeup': '38 sallone',
-  'Fytyra & Kujdesi i Lëkurës': '27 sallone',
-  'Depilim & Trup': '19 sallone'
+  'Depilim & Kujdes Trupi': '29 sallone'
 };
 
 const CATEGORY_ICONS: Record<string, any> = {
+  'Flokët': Scissors,
+  'Flokët & Prerje': Scissors,
   'Flokët & Trajtimet': Scissors,
-  'Ngjyrosja e Flokëve': Palette,
   'Mjekra & Rruajtja': User,
+  'Ngjyrosja e Flokëve': Palette,
+  'Paketa Speciale': Sparkles,
   'Vetulla & Qerpikë': Eye,
   'Thonjtë': Hand,
   'Makeup': Smile,
-  'Fytyra & Kujdesi i Lëkurës': Shield,
+  'Depilim & Kujdes Trupi': Zap,
+  'Masazh & Spa': Sparkles,
   'Depilim & Trup': Zap
 };
 
@@ -269,14 +282,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         supabase
           .from('barbershops')
           .select('*')
-          .eq('status', 'active')
           .order('rating', { ascending: false })
           .limit(10),
         supabase
           .from('barbershops')
           .select('*')
-          .eq('status', 'active')
-          .gte('created_at', sevenDaysAgoISO)
           .order('created_at', { ascending: false })
           .limit(10),
         supabase
@@ -285,15 +295,26 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           .eq('status', 'active'),
       ]);
 
-      let shopsData = shopsRes.data;
-      let shopsError = shopsRes.error;
+      let rawShops = shopsRes.data || [];
+      let shopsData = rawShops.filter(s => 
+        !s.status || 
+        s.status.toString().toLowerCase() === 'active' || 
+        s.status.toString().toLowerCase() === 'trialing'
+      );
 
-      if (shopsError && (shopsError.code === 'PGRST205' || shopsError.message?.includes('barbershops'))) {
-        const fallbackRes = await supabase
-          .from('barbers')
-          .select('*')
-          .limit(6);
-        shopsData = fallbackRes.data;
+      if (shopsData.length === 0 && rawShops.length > 0) {
+        shopsData = rawShops;
+      }
+
+      if (shopsData.length === 0) {
+        const fallbackRes = await supabase.from('barbers').select('*').limit(10);
+        if (fallbackRes.data) {
+          shopsData = fallbackRes.data.map(b => ({
+            ...b,
+            name: b.name || "Berberi",
+            status: 'active'
+          }));
+        }
       }
 
       if (shopsData && shopsData.length > 0) {
@@ -399,19 +420,28 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </View>
 
             {/* Category Tabs */}
-            <View className="border-b border-slate-100">
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+            <View className="border-b border-slate-100 w-full overflow-hidden">
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={true} 
+                className="w-full"
+                style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' } as any}
+                contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12, display: 'flex', flexDirection: 'row', alignItems: 'center' }}
+              >
                 {categories.map(cat => {
-                  const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
+                  const cleanCatName = formatCleanCategoryName(cat.name);
+                  const IconComponent = CATEGORY_ICONS[cleanCatName] || CATEGORY_ICONS[cat.name] || Scissors;
                   const isSelected = selectedMainCategory?.id === cat.id || selectedMainCategory?.name === cat.name;
                   return (
                     <TouchableOpacity
                       key={cat.id || cat.name}
                       onPress={() => setSelectedMainCategory(cat)}
-                      className={`flex-row items-center px-4 py-2 rounded-full mr-2 ${isSelected ? 'bg-[#161719]' : 'bg-slate-100'}`}
+                      activeOpacity={0.7}
+                      style={{ flexShrink: 0 }}
+                      className={`flex-row items-center px-4 py-2 rounded-full mr-2 shrink-0 ${isSelected ? 'bg-[#161719]' : 'bg-slate-100'}`}
                     >
                       <IconComponent size={14} color={isSelected ? "white" : "#64748b"} />
-                      <Text className={`ml-2 text-sm font-bold ${isSelected ? 'text-white' : 'text-slate-500'}`}>{cat.name}</Text>
+                      <Text className={`ml-2 text-sm font-bold whitespace-nowrap ${isSelected ? 'text-white' : 'text-slate-500'}`}>{cleanCatName}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -448,6 +478,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               {currentSubcategories.map((sub, sIdx) => {
                 const subId = String(sub.id).trim();
                 const isSelected = selectedSubIds.includes(subId);
+                const cleanSubName = formatCleanCategoryName(sub.name);
                 return (
                   <TouchableOpacity
                     key={`${subId}-${sIdx}`}
@@ -461,7 +492,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     <View className={`w-6 h-6 rounded-md border items-center justify-center mr-3 ${isSelected ? 'bg-[#3473ef] border-[#3473ef]' : 'bg-white border-slate-300'}`}>
                       {isSelected && <Check size={14} color="white" strokeWidth={3} />}
                     </View>
-                    <Text className={`text-base flex-1 ${isSelected ? 'font-black text-[#3473ef]' : 'font-bold text-[#161719]'}`}>{sub.name}</Text>
+                    <Text className={`text-base flex-1 ${isSelected ? 'font-black text-[#3473ef]' : 'font-bold text-[#161719]'}`}>{cleanSubName}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -495,7 +526,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     );
   };
 
-  if (Platform.OS === 'web') {
+  if (Platform.OS === 'web' && isDesktop) {
     return (
       <View className="flex-1 bg-[#f8fafc]">
         <DesktopHomeWeb
@@ -811,8 +842,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             {/* ── CATEGORIES GRID ──────────────────────────── */}
             <View className="px-6 mt-4">
               <View className="flex-row flex-wrap justify-between">
-                {categories.map((cat, i) => {
-                  const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
+                {categories.slice(0, 8).map((cat, i) => {
+                  const cleanName = formatCleanCategoryName(cat.name);
+                  const IconComponent = CATEGORY_ICONS[cleanName] || CATEGORY_ICONS[cat.name] || Scissors;
                   return (
                     <View key={i} className="items-center mb-6" style={{ width: '22%' }}>
                       <View
@@ -832,7 +864,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                           </TouchableOpacity>
                         </BlurView>
                       </View>
-                      <Text className="text-[11px] text-center font-bold text-[#161719] leading-3" numberOfLines={2}>{cat.name}</Text>
+                      <Text className="text-[11px] text-center font-bold text-[#161719] leading-3" numberOfLines={2}>{cleanName}</Text>
                     </View>
                   );
                 })}

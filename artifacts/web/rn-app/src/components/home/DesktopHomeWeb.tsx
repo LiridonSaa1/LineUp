@@ -19,7 +19,8 @@ import {
   Phone,
   MessageSquare,
   Send,
-  Heart
+  Heart,
+  Sparkles
 } from "lucide-react-native";
 import { Platform } from "react-native";
 import { getShopCardImage } from "../../utils/imageUtils";
@@ -91,14 +92,14 @@ interface DesktopHomeWebProps {
 }
 
 const servicesList = [
-  { icon: Scissors, label: "Flokët & Trajtimet" },
-  { icon: Palette, label: "Ngjyrosja e Flokëve" },
+  { icon: Scissors, label: "Flokët" },
   { icon: User, label: "Mjekra & Rruajtja" },
+  { icon: Palette, label: "Ngjyrosja e Flokëve" },
+  { icon: Sparkles, label: "Paketa Speciale" },
   { icon: Eye, label: "Vetulla & Qerpikë" },
   { icon: Hand, label: "Thonjtë" },
   { icon: Smile, label: "Makeup" },
-  { icon: Shield, label: "Fytyra & Kujdesi i Lëkurës" },
-  { icon: Zap, label: "Depilim & Trup" },
+  { icon: Zap, label: "Depilim & Kujdes Trupi" },
 ];
 
 const stepsList = [
@@ -265,18 +266,32 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
 
     setIsSendingContact(true);
     try {
-      const { error } = await supabase.from('system_feedback').insert({
-        user_id: user?.id || null,
+      const fullContent = `[Dërguesi: ${contactForm.name.trim()}]\n[Email: ${contactForm.email.trim()}]\n[Tel: ${contactForm.phone.trim() || 'N/A'}]\n\n${contactForm.message.trim()}`;
+      
+      const payload: any = {
         name: contactForm.name.trim(),
         email: contactForm.email.trim(),
-        phone: contactForm.phone.trim(),
+        phone: contactForm.phone.trim() || null,
         subject: `SUPPORT: ${contactForm.subject.trim() || 'Kërkesë nga Uebsajti'}`,
-        content: `[TEL: ${contactForm.phone.trim() || 'N/A'}] [EMAIL: ${contactForm.email.trim()}]\n\n${contactForm.message.trim()}`,
+        content: fullContent,
         status: 'open',
         created_at: new Date().toISOString()
-      });
+      };
 
-      if (error) throw error;
+      if (user?.id) {
+        payload.user_id = user.id;
+      }
+
+      let { error } = await supabase.from('system_feedback').insert(payload);
+
+      if (error) {
+        console.warn("Feedback insert error, retrying without optional fields:", error.message);
+        delete payload.name;
+        delete payload.email;
+        delete payload.phone;
+        const res = await supabase.from('system_feedback').insert(payload);
+        if (res.error) throw res.error;
+      }
 
       setContactForm({
         name: user?.name || '',
@@ -1055,7 +1070,7 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
         <div className="mx-auto grid max-w-[1440px] gap-8 px-6 py-12 sm:grid-cols-2 lg:grid-cols-4 lg:px-10">
           <div>
             <div className="flex items-center gap-2">
-              <img src={extractUri(logoImg)} alt="LineUp" style={{ width: '32px', height: '32px', objectFit: 'contain' }} className="rounded-xl" />
+              <img src={extractUri(logoImg)} alt="LineUp" style={{ width: '56px', height: '56px', objectFit: 'contain' }} className="rounded-2xl transition-transform hover:scale-105" />
             </div>
           </div>
 

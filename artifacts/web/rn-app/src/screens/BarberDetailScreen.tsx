@@ -20,14 +20,15 @@ interface BarberDetailScreenProps {
 }
 
 const SERVICE_ICONS: Record<string, any> = {
+  'Flokët': ScissorsIcon,
   'Flokët & Trajtimet': ScissorsIcon,
-  'Ngjyrosja e Flokëve': Palette,
   'Mjekra & Rruajtja': UserIcon,
+  'Ngjyrosja e Flokëve': Palette,
+  'Paketa Speciale': Sparkles,
   'Vetulla & Qerpikë': Eye,
   'Thonjtë': Hand,
   'Makeup': Smile,
-  'Fytyra & Kujdesi i Lëkurës': Shield,
-  'Depilim & Trup': Zap,
+  'Depilim & Kujdes Trupi': Zap,
   'Shërbime Standarde': ScissorsIcon,
   'Të tjera': ScissorsIcon
 };
@@ -1343,8 +1344,9 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                       {(staff.length > 0 ? staff : [{ id: shop?.id || 1, name: shop?.name || "Stafi i Sallonit", rating: 5.0 }]).map((emp: any) => {
                         const isSelected = selectedEmployee?.id === emp.id;
                         return (
-                          <View
+                          <TouchableOpacity
                             key={emp.id}
+                            activeOpacity={0.8}
                             onPress={() => {
                               setSelectedEmployee(emp);
                               setWidgetStep(2);
@@ -1360,7 +1362,7 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                             </View>
                             <Text className="font-display text-xs font-bold text-slate-900 text-center truncate w-full">{emp.name}</Text>
                             <Text className="mt-1 text-[10px] font-bold text-amber-500">⭐ {emp.rating ? parseFloat(String(emp.rating)).toFixed(1) : "5.0"}</Text>
-                          </View>
+                          </TouchableOpacity>
                         );
                       })}
                     </View>
@@ -1386,8 +1388,9 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                         availableServices.map((srv, idx) => {
                           const selected = isServiceSelected(srv);
                           return (
-                            <View
+                            <TouchableOpacity
                               key={srv.id || idx}
+                              activeOpacity={0.8}
                               onPress={() => handleToggleService(srv)}
                               className={`flex flex-row cursor-pointer items-center justify-between rounded-2xl border p-3.5 transition-all text-left w-full ${
                                 selected ? 'border-[#3473ef] bg-blue-50/50' : 'border-slate-100 bg-slate-50/40 hover:bg-white'
@@ -1405,15 +1408,16 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                                 </View>
                               </View>
                               <Text className="text-xs font-bold text-[#3473ef] shrink-0 ml-2">{srv.price && parseFloat(String(srv.price)) > 0 ? `${srv.price} €` : ''}</Text>
-                            </View>
+                            </TouchableOpacity>
                           );
                         })
                       ) : (
                         DEFAULT_SHOP_SERVICES.map((srv) => {
                           const selected = isServiceSelected(srv);
                           return (
-                            <View
+                            <TouchableOpacity
                               key={srv.id}
+                              activeOpacity={0.8}
                               onPress={() => handleToggleService(srv)}
                               className={`flex flex-row cursor-pointer items-center justify-between rounded-2xl border p-3.5 transition-all text-left w-full ${
                                 selected ? 'border-[#3473ef] bg-blue-50/50' : 'border-slate-100 bg-slate-50/40 hover:bg-white'
@@ -1431,7 +1435,7 @@ export const BarberDetailScreen: React.FC<BarberDetailScreenProps> = ({ shop, us
                                 </View>
                               </View>
                               <Text className="text-xs font-bold text-[#3473ef] shrink-0 ml-2">{srv.price && parseFloat(String(srv.price)) > 0 ? `${srv.price} €` : ''}</Text>
-                            </View>
+                            </TouchableOpacity>
                           );
                         })
                       )}

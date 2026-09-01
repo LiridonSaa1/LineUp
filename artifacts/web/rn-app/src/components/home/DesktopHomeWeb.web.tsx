@@ -19,7 +19,8 @@ import {
   Phone,
   MessageSquare,
   Send,
-  Heart
+  Heart,
+  Sparkles
 } from "lucide-react-native";
 import { Platform } from "react-native";
 import { getShopCardImage } from "../../utils/imageUtils";
@@ -91,14 +92,14 @@ interface DesktopHomeWebProps {
 }
 
 const servicesList = [
-  { icon: Scissors, label: "Flokët & Trajtimet" },
-  { icon: Palette, label: "Ngjyrosja e Flokëve" },
+  { icon: Scissors, label: "Flokët" },
   { icon: User, label: "Mjekra & Rruajtja" },
+  { icon: Palette, label: "Ngjyrosja e Flokëve" },
+  { icon: Sparkles, label: "Paketa Speciale" },
   { icon: Eye, label: "Vetulla & Qerpikë" },
   { icon: Hand, label: "Thonjtë" },
   { icon: Smile, label: "Makeup" },
-  { icon: Shield, label: "Fytyra & Kujdesi i Lëkurës" },
-  { icon: Zap, label: "Depilim & Trup" },
+  { icon: Zap, label: "Depilim & Kujdes Trupi" },
 ];
 
 const stepsList = [
@@ -169,7 +170,7 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
       try {
         const { data: shops } = await supabase
           .from('barbershops')
-          .select('id, name, category, status')
+          .select('id, name, category, categories, subcategories, status')
           .eq('status', 'active');
 
         const activeShops = shops || [];
@@ -179,16 +180,33 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
           const labelLower = label.toLowerCase();
           const matchingShops = activeShops.filter((s: any) => {
             const c = (s.category || '').toLowerCase();
-            if (!c) return false;
-            if (c === labelLower) return true;
-            if (labelLower.includes('mjekra') && (c.includes('mjekra') || c.includes('beard') || c.includes('barber'))) return true;
-            if (labelLower.includes('flokët') && (c.includes('flok') || c.includes('hair') || c.includes('trajt') || c.includes('cut'))) return true;
-            if (labelLower.includes('ngjyr') && (c.includes('ngjyr') || c.includes('color'))) return true;
-            if (labelLower.includes('vetulla') && (c.includes('vetull') || c.includes('eyebrow') || c.includes('qerpik'))) return true;
-            if (labelLower.includes('thonjtë') && (c.includes('thonj') || c.includes('nail'))) return true;
-            if (labelLower.includes('makeup') && (c.includes('makeup') || c.includes('make up'))) return true;
-            if (labelLower.includes('fytyra') && (c.includes('fytyr') || c.includes('facial') || c.includes('lëkur'))) return true;
-            if (labelLower.includes('depilim') && (c.includes('depil') || c.includes('wax') || c.includes('trup'))) return true;
+            const cats = Array.isArray(s.categories) ? s.categories.map((x: any) => String(x).toLowerCase()) : [];
+            if (c === labelLower || cats.includes(labelLower)) return true;
+            if (labelLower.includes('flokët') || labelLower.includes('flok')) {
+              if (c.includes('flok') || c.includes('hair') || c.includes('prerje') || cats.some((x: string) => x.includes('flok'))) return true;
+            }
+            if (labelLower.includes('mjekra')) {
+              if (c.includes('mjekra') || c.includes('beard') || c.includes('barber') || c.includes('rruajt') || cats.some((x: string) => x.includes('mjekr'))) return true;
+            }
+            if (labelLower.includes('ngjyr')) {
+              if (c.includes('ngjyr') || c.includes('color') || cats.some((x: string) => x.includes('ngjyr'))) return true;
+            }
+            if (labelLower.includes('paketa')) {
+              if (c.includes('paket') || cats.some((x: string) => x.includes('paket'))) return true;
+            }
+            if (labelLower.includes('vetulla')) {
+              if (c.includes('vetull') || c.includes('eyebrow') || c.includes('qerpik') || cats.some((x: string) => x.includes('vetull'))) return true;
+            }
+            if (labelLower.includes('thonjtë')) {
+              if (c.includes('thonj') || c.includes('nail') || cats.some((x: string) => x.includes('thonj'))) return true;
+            }
+            if (labelLower.includes('makeup')) {
+              if (c.includes('makeup') || c.includes('make up') || cats.some((x: string) => x.includes('makeup'))) return true;
+            }
+            if (labelLower.includes('depilim')) {
+              if (c.includes('depil') || c.includes('wax') || c.includes('trup') || cats.some((x: string) => x.includes('depil'))) return true;
+            }
+            if (activeShops.length <= 3 && (labelLower.includes('flok') || labelLower.includes('mjekr'))) return true;
             return false;
           });
           counts[label] = matchingShops.length;
@@ -265,18 +283,32 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
 
     setIsSendingContact(true);
     try {
-      const { error } = await supabase.from('system_feedback').insert({
-        user_id: user?.id || null,
+      const fullContent = `[Dërguesi: ${contactForm.name.trim()}]\n[Email: ${contactForm.email.trim()}]\n[Tel: ${contactForm.phone.trim() || 'N/A'}]\n\n${contactForm.message.trim()}`;
+      
+      const payload: any = {
         name: contactForm.name.trim(),
         email: contactForm.email.trim(),
-        phone: contactForm.phone.trim(),
+        phone: contactForm.phone.trim() || null,
         subject: `SUPPORT: ${contactForm.subject.trim() || 'Kërkesë nga Uebsajti'}`,
-        content: `[TEL: ${contactForm.phone.trim() || 'N/A'}] [EMAIL: ${contactForm.email.trim()}]\n\n${contactForm.message.trim()}`,
+        content: fullContent,
         status: 'open',
         created_at: new Date().toISOString()
-      });
+      };
 
-      if (error) throw error;
+      if (user?.id) {
+        payload.user_id = user.id;
+      }
+
+      let { error } = await supabase.from('system_feedback').insert(payload);
+
+      if (error) {
+        console.warn("Feedback insert error, retrying without optional fields:", error.message);
+        delete payload.name;
+        delete payload.email;
+        delete payload.phone;
+        const res = await supabase.from('system_feedback').insert(payload);
+        if (res.error) throw res.error;
+      }
 
       setContactForm({
         name: user?.name || '',
@@ -1055,7 +1087,7 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
         <div className="mx-auto grid max-w-[1440px] gap-8 px-6 py-12 sm:grid-cols-2 lg:grid-cols-4 lg:px-10">
           <div>
             <div className="flex items-center gap-2">
-              <img src={extractUri(logoImg)} alt="LineUp" style={{ width: '32px', height: '32px', objectFit: 'contain' }} className="rounded-xl" />
+              <img src={extractUri(logoImg)} alt="LineUp" style={{ width: '56px', height: '56px', objectFit: 'contain' }} className="rounded-2xl transition-transform hover:scale-105" />
             </div>
           </div>
 

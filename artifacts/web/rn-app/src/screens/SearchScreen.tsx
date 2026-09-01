@@ -33,14 +33,15 @@ interface SearchScreenProps {
 }
 
 const CATEGORY_ICONS: Record<string, any> = {
+  'Flokët': Scissors,
   'Flokët & Trajtimet': Scissors,
-  'Ngjyrosja e Flokëve': Palette,
   'Mjekra & Rruajtja': User,
+  'Ngjyrosja e Flokëve': Palette,
+  'Paketa Speciale': Sparkles,
   'Vetulla & Qerpikë': Eye,
   'Thonjtë': Hand,
   'Makeup': Smile,
-  'Fytyra & Kujdesi i Lëkurës': Shield,
-  'Depilim & Trup': Zap
+  'Depilim & Kujdes Trupi': Zap
 };
 
 const KOSOVO_HOLIDAYS_2026 = [
@@ -58,14 +59,14 @@ const KOSOVO_HOLIDAYS_2026 = [
 ];
 
 const TREATMENTS = [
-  'Flokët & Trajtimet',
-  'Ngjyrosja e Flokëve',
+  'Flokët',
   'Mjekra & Rruajtja',
+  'Ngjyrosja e Flokëve',
+  'Paketa Speciale',
   'Vetulla & Qerpikë',
   'Thonjtë',
   'Makeup',
-  'Fytyra & Kujdesi i Lëkurës',
-  'Depilim & Trup'
+  'Depilim & Kujdes Trupi'
 ];
 
 export const SearchScreen: React.FC<SearchScreenProps> = ({
@@ -141,7 +142,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
       const { data: shopsData } = await supabase.from('barbershops').select('*').eq('status', 'active').limit(30);
       if (shopsData) setDbShops(shopsData);
 
-      const { data: barbersData } = await supabase.from('barbers').select('*').eq('status', 'active').limit(30);
+      const { data: barbersData } = await supabase.from('barbers').select('*').eq('is_active', true).limit(30);
       if (barbersData) setDbBarbers(barbersData);
     } catch (e) {
       console.warn("Error loading database search options:", e);
@@ -776,8 +777,14 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
           </View>
 
           {/* Category Tabs */}
-          <View className="border-b border-slate-100">
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+          <View className="border-b border-slate-100 w-full overflow-hidden">
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={true} 
+              className="w-full"
+              style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' } as any}
+              contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12, display: 'flex', flexDirection: 'row', alignItems: 'center' }}
+            >
               {categories.map(cat => {
                 const IconComponent = CATEGORY_ICONS[cat.name] || Scissors;
                 const isSelected = selectedMainCategory?.id === cat.id;
@@ -785,10 +792,12 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
                   <TouchableOpacity
                     key={cat.id}
                     onPress={() => setSelectedMainCategory(cat)}
-                    className={`flex-row items-center px-4 py-2 rounded-full mr-2 ${isSelected ? 'bg-[#161719]' : 'bg-slate-100'}`}
+                    activeOpacity={0.7}
+                    style={{ flexShrink: 0 }}
+                    className={`flex-row items-center px-4 py-2 rounded-full mr-2 shrink-0 ${isSelected ? 'bg-[#161719]' : 'bg-slate-100'}`}
                   >
                     <IconComponent size={14} color={isSelected ? "white" : "#64748b"} />
-                    <Text className={`ml-2 text-sm font-bold ${isSelected ? 'text-white' : 'text-slate-500'}`}>{cat.name}</Text>
+                    <Text className={`ml-2 text-sm font-bold whitespace-nowrap ${isSelected ? 'text-white' : 'text-slate-500'}`}>{cat.name}</Text>
                   </TouchableOpacity>
                 );
               })}
