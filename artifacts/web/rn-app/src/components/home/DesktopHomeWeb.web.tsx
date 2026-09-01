@@ -20,7 +20,8 @@ import {
   MessageSquare,
   Send,
   Heart,
-  Sparkles
+  Sparkles,
+  Smartphone
 } from "lucide-react-native";
 import { Platform } from "react-native";
 import { getShopCardImage } from "../../utils/imageUtils";
@@ -156,6 +157,7 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
 
   const [adIndex, setAdIndex] = React.useState(0);
   const [realCategoryCounts, setRealCategoryCounts] = React.useState<Record<string, number>>({});
+  const [showMobileAppNotice, setShowMobileAppNotice] = React.useState(false);
 
   React.useEffect(() => {
     if (!ads || ads.length <= 1) return;
@@ -407,6 +409,22 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
               <span className="truncate">{selectedLocation}</span>
               <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
             </button>
+
+            {/* Business Profile / Active Plan Pill */}
+            {user && user.role !== 'client' && (
+              <button
+                type="button"
+                onClick={() => setShowMobileAppNotice(true)}
+                className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-800 transition-all hover:bg-emerald-100 hover:shadow-md cursor-pointer group"
+              >
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                </span>
+                <User className="h-4 w-4 text-emerald-700 group-hover:scale-110 transition-transform" />
+                <span className="truncate">Salloni im (Plan Aktiv)</span>
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -1107,6 +1125,54 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
           © {new Date().getFullYear()} LineUp. Të gjitha të drejtat e rezervuara.
         </div>
       </footer>
+
+      {/* Mobile App Access Modal for Business Owners with Active Plan */}
+      {showMobileAppNotice && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md overflow-hidden rounded-3xl bg-white p-6 shadow-2xl border border-slate-100 text-center relative">
+            <button
+              onClick={() => setShowMobileAppNotice(false)}
+              className="absolute top-4 right-4 p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
+            >
+              ✕
+            </button>
+
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 border border-emerald-100 shadow-sm text-emerald-600">
+              <Smartphone className="h-8 w-8 text-emerald-600" />
+            </div>
+
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold mb-3">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              Plani juaj është Aktiv 💈
+            </div>
+
+            <h3 className="text-xl font-black text-slate-900 mb-2">
+              Kyçuni përmes Aplikacionit Celular
+            </h3>
+
+            <p className="text-sm font-medium text-slate-600 leading-relaxed mb-6">
+              Salloni juaj <strong>{user?.name || 'juaj'}</strong> ka një plan aktiv te LineUp! Për të menaxhuar stafin, orarin e punës, rezervimet e klientëve dhe shërbimet në kohë reale, ju lutemi kyçuni përmes <strong>Aplikacionit Celular (Mobile App)</strong>.
+            </p>
+
+            <div className="flex flex-col gap-2.5">
+              <button
+                onClick={() => setShowMobileAppNotice(false)}
+                className="flex items-center justify-center gap-2 rounded-2xl bg-[#3473ef] py-3.5 px-4 font-bold text-white shadow-md hover:bg-blue-600 transition-colors cursor-pointer"
+              >
+                <Smartphone className="h-5 w-5" />
+                Kyçu te Aplikacioni Celular
+              </button>
+
+              <button
+                onClick={() => setShowMobileAppNotice(false)}
+                className="w-full rounded-2xl border border-slate-200 bg-white py-3 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                Mbyll
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

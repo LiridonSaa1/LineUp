@@ -196,6 +196,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [showSubModal, setShowSubModal] = useState(false);
   const [selectedSubIds, setSelectedSubIds] = useState<string[]>([]);
   const [currentPlanInfo, setCurrentPlanInfo] = useState<any>(null);
+  const [showMobileAppNotice, setShowMobileAppNotice] = useState(false);
 
   const [ads, setAds] = useState<any[]>([
     {
@@ -530,6 +531,55 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     );
   };
 
+  const renderMobileAppModal = () => {
+    if (!showMobileAppNotice) return null;
+    return (
+      <Modal
+        transparent
+        visible={showMobileAppNotice}
+        animationType="fade"
+        onRequestClose={() => setShowMobileAppNotice(false)}
+      >
+        <View className="flex-1 items-center justify-center bg-slate-900/60 p-4 z-50">
+          <View className="w-full max-w-md overflow-hidden rounded-3xl bg-white p-6 shadow-2xl border border-slate-100 items-center text-center">
+            <View className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600">
+              <User size={28} color="#059669" />
+            </View>
+
+            <View className="flex-row items-center bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full mb-3">
+              <View className="w-2 h-2 rounded-full bg-emerald-500 mr-2" />
+              <Text className="text-xs font-bold text-emerald-800">Plani juaj është Aktiv 💈</Text>
+            </View>
+
+            <Text className="text-xl font-black text-slate-900 mb-2 text-center">
+              Kyçuni përmes Aplikacionit Celular
+            </Text>
+
+            <Text className="text-sm font-medium text-slate-600 leading-relaxed mb-6 text-center">
+              Salloni juaj <Text className="font-extrabold text-slate-900">{user?.name || 'juaj'}</Text> ka një plan aktiv te LineUp! Për të menaxhuar stafin, orarin e punës, rezervimet e klientëve dhe shërbimet në kohë reale, ju lutemi kyçuni përmes <Text className="font-extrabold text-slate-900">Aplikacionit Celular (Mobile App)</Text>.
+            </Text>
+
+            <View className="flex w-full flex-col gap-2.5">
+              <TouchableOpacity
+                onPress={() => setShowMobileAppNotice(false)}
+                className="flex-row w-full items-center justify-center gap-2 rounded-2xl bg-[#3473ef] py-3.5 px-4 shadow-md"
+              >
+                <Text className="text-sm font-bold text-white">Kyçu te Aplikacioni Celular</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setShowMobileAppNotice(false)}
+                className="w-full items-center justify-center rounded-2xl border border-slate-200 bg-white py-3 px-4"
+              >
+                <Text className="text-sm font-semibold text-slate-700">Mbyll</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
   if (Platform.OS === 'web' && isDesktop) {
     return (
       <View className="flex-1 bg-[#f8fafc]">
@@ -563,6 +613,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         />
 
         {renderSubModal()}
+        {renderMobileAppModal()}
       </View>
     );
   }
@@ -590,15 +641,29 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         {/* ── HEADER SECTION (MOBILE ONLY) ───────────────────── */}
         {!isDesktop && (
           <View className="px-6 pt-14 pb-4">
-            <TouchableOpacity
-              onPress={onOpenLocation}
-              activeOpacity={0.7}
-              className="flex-row items-center mb-8 px-1"
-            >
-              <MapPin size={20} color="#3473ef" strokeWidth={2.5} />
-              <Text className="text-base font-extrabold mx-2 text-[#161719]">{selectedLocation}</Text>
-              <ChevronDown size={18} color="#161719" strokeWidth={3} />
-            </TouchableOpacity>
+            <View className="flex-row items-center justify-between mb-8 px-1">
+              <TouchableOpacity
+                onPress={onOpenLocation}
+                activeOpacity={0.7}
+                className="flex-row items-center flex-1"
+              >
+                <MapPin size={20} color="#3473ef" strokeWidth={2.5} />
+                <Text className="text-base font-extrabold mx-2 text-[#161719]">{selectedLocation}</Text>
+                <ChevronDown size={18} color="#161719" strokeWidth={3} />
+              </TouchableOpacity>
+
+              {user && user.role !== 'client' && (
+                <TouchableOpacity
+                  onPress={() => setShowMobileAppNotice(true)}
+                  activeOpacity={0.8}
+                  className="flex-row items-center bg-emerald-50 border border-emerald-200 px-3.5 py-1.5 rounded-full shadow-xs"
+                >
+                  <View className="w-2 h-2 rounded-full bg-emerald-500 mr-2" />
+                  <User size={14} color="#047857" strokeWidth={2.5} />
+                  <Text className="text-xs font-bold text-emerald-800 ml-1.5">Plan Aktiv</Text>
+                </TouchableOpacity>
+              )}
+            </View>
 
             <TouchableOpacity
               onPress={onOpenSearch}
@@ -1085,6 +1150,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       </ScrollView>
 
       {renderSubModal()}
+      {renderMobileAppModal()}
       </View>
     </KeyboardAvoidingView>
   );
