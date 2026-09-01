@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, Dimensions, Linking, Modal, Alert as RNAlert, ActivityIndicator, Platform, RefreshControl, KeyboardAvoidingView, useWindowDimensions } from "react-native";
-import { Scissors, MapPin, Search, ChevronDown, Heart, Star, Grid, Eye, Waves, Hand, Sparkles, Smile, User, Syringe, Zap, Shield, Check, ArrowRight, ArrowUpRight, Plus, Minus, ExternalLink, Megaphone, X, Palette } from "lucide-react-native";
+import { Scissors, MapPin, Search, ChevronDown, Heart, Star, Grid, Eye, Waves, Hand, Sparkles, Smile, User, Syringe, Zap, Shield, Check, ArrowRight, ArrowUpRight, Plus, Minus, ExternalLink, Megaphone, X, Palette, LogOut } from "lucide-react-native";
 import { BlurView } from 'expo-blur';
 import Animated, {
   FadeInUp,
@@ -73,6 +73,7 @@ interface HomeScreenProps {
   user?: any;
   onTabPress?: (index: number) => void;
   activeTab?: number;
+  onLogout?: () => void;
 }
 
 const RecommendedCard = React.memo(({ shop, onPress, width }: { shop: any, onPress: (shop: any) => void, width: number }) => (
@@ -185,7 +186,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onToggleFavorite,
   user,
   onTabPress,
-  activeTab
+  activeTab,
+  onLogout
 }) => {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
@@ -610,6 +612,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           onToggleFavorite={onToggleFavorite || (() => {})}
           activeTab={activeTab || 0}
           onTabPress={onTabPress || (() => {})}
+          onLogout={onLogout}
         />
 
         {renderSubModal()}
@@ -652,17 +655,30 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 <ChevronDown size={18} color="#161719" strokeWidth={3} />
               </TouchableOpacity>
 
-              {user && user.role !== 'client' && (
-                <TouchableOpacity
-                  onPress={() => setShowMobileAppNotice(true)}
-                  activeOpacity={0.8}
-                  className="flex-row items-center bg-emerald-50 border border-emerald-200 px-3.5 py-1.5 rounded-full shadow-xs"
-                >
-                  <View className="w-2 h-2 rounded-full bg-emerald-500 mr-2" />
-                  <User size={14} color="#047857" strokeWidth={2.5} />
-                  <Text className="text-xs font-bold text-emerald-800 ml-1.5">Plan Aktiv</Text>
-                </TouchableOpacity>
-              )}
+              <View className="flex-row items-center gap-2">
+                {user && user.role !== 'client' && (
+                  <TouchableOpacity
+                    onPress={() => setShowMobileAppNotice(true)}
+                    activeOpacity={0.8}
+                    className="flex-row items-center bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full shadow-xs"
+                  >
+                    <View className="w-2 h-2 rounded-full bg-emerald-500 mr-1.5" />
+                    <User size={14} color="#047857" strokeWidth={2.5} />
+                    <Text className="text-xs font-bold text-emerald-800 ml-1">Plan Aktiv</Text>
+                  </TouchableOpacity>
+                )}
+
+                {user && (
+                  <TouchableOpacity
+                    onPress={onLogout}
+                    activeOpacity={0.7}
+                    className="flex-row items-center bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-full shadow-xs"
+                  >
+                    <LogOut size={14} color="#e11d48" strokeWidth={2.5} />
+                    <Text className="text-xs font-bold text-rose-700 ml-1">Dil</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
 
             <TouchableOpacity

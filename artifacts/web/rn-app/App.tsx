@@ -634,6 +634,11 @@ export default function App() {
                     user={user}
                     onTabPress={(index) => setActiveTab(index)}
                     activeTab={activeTab}
+                    onLogout={async () => {
+                      await supabase.auth.signOut();
+                      setUser(null);
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    }}
                   />
                 )}
                 {activeTab === 1 && (

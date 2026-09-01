@@ -21,7 +21,8 @@ import {
   Send,
   Heart,
   Sparkles,
-  Smartphone
+  Smartphone,
+  LogOut
 } from "lucide-react-native";
 import { Platform } from "react-native";
 import { getShopCardImage } from "../../utils/imageUtils";
@@ -90,6 +91,7 @@ interface DesktopHomeWebProps {
   activeTab: number;
   onTabPress: (idx: number) => void;
   onSelectCategory?: (categoryName: string) => void;
+  onLogout?: () => void;
 }
 
 const servicesList = [
@@ -150,6 +152,7 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
   activeTab,
   onTabPress,
   onSelectCategory,
+  onLogout,
 }) => {
   if (Platform.OS !== 'web') {
     return null;
@@ -423,6 +426,19 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
                 </span>
                 <User className="h-4 w-4 text-emerald-700 group-hover:scale-110 transition-transform" />
                 <span className="truncate">Salloni im (Plan Aktiv)</span>
+              </button>
+            )}
+
+            {/* Logout Button */}
+            {user && (
+              <button
+                type="button"
+                onClick={onLogout}
+                className="flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-bold text-rose-700 hover:bg-rose-100 hover:text-rose-800 transition-all cursor-pointer shadow-2xs"
+                title="Dil nga llogaria"
+              >
+                <LogOut className="h-4 w-4 text-rose-600" />
+                <span>Dil</span>
               </button>
             )}
           </div>
