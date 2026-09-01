@@ -94,12 +94,12 @@ interface DesktopHomeWebProps {
 const servicesList = [
   { icon: Scissors, label: "Flokët" },
   { icon: User, label: "Mjekra & Rruajtja" },
-  { icon: Palette, label: "Ngjyrosja e Flokëve" },
-  { icon: Sparkles, label: "Paketa Speciale" },
+  { icon: Palette, label: "Ngjyrosja" },
+  { icon: Sparkles, label: "Paketa" },
   { icon: Eye, label: "Vetulla & Qerpikë" },
   { icon: Hand, label: "Thonjtë" },
   { icon: Smile, label: "Makeup" },
-  { icon: Zap, label: "Depilim & Kujdes Trupi" },
+  { icon: Zap, label: "Depilim & Trup" },
 ];
 
 const stepsList = [
@@ -450,18 +450,11 @@ export const DesktopHomeWeb: React.FC<DesktopHomeWebProps> = ({
           <div className="flex min-w-0 items-center gap-3 pl-3">
             <Search className="h-5 w-5 shrink-0 text-slate-400" />
             <input
-              aria-label="Kërko sallone, trajtime"
-              placeholder="Kërko sallone, trajtime…"
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpenSearch();
-              }}
-              onFocus={(e) => {
-                (e.target as HTMLInputElement).blur();
-                onOpenSearch();
-              }}
-              className="w-full min-w-0 bg-transparent py-2 text-base text-slate-900 outline-none placeholder:text-slate-400 cursor-pointer"
+              type="text"
               readOnly
+              placeholder="Kërko sallone .."
+              onClick={onOpenSearch}
+              className="w-full min-w-0 bg-transparent py-2 text-base text-slate-900 outline-none placeholder:text-slate-400 placeholder:font-medium font-sans cursor-pointer"
             />
           </div>
           <button

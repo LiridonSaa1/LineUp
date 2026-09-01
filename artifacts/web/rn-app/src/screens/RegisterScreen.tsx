@@ -16,11 +16,14 @@ const CATEGORY_ICONS: Record<string, any> = {
   'Flokët': Scissors,
   'Flokët & Trajtimet': Scissors,
   'Mjekra & Rruajtja': User,
+  'Ngjyrosja': Palette,
   'Ngjyrosja e Flokëve': Palette,
+  'Paketa': Sparkles,
   'Paketa Speciale': Sparkles,
   'Vetulla & Qerpikë': Eye,
   'Thonjtë': Hand,
   'Makeup': Smile,
+  'Depilim & Trup': Zap,
   'Depilim & Kujdes Trupi': Zap
 };
 

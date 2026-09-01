@@ -10,6 +10,7 @@ import { supabase } from "../config/supabase";
 import { getShopCardImage } from "../utils/imageUtils";
 import { getShopPlanDetails } from "../utils/planLimits";
 import { getCategoryIcon } from "../utils/iconUtils";
+import { DEFAULT_CATEGORIES, DEFAULT_SUBCATEGORIES, CATEGORY_ORDER, sortSubcategories } from "../config/defaultCategories";
 import * as Haptics from 'expo-haptics';
 import { WebFooter } from "../components/WebFooter";
 import { DesktopHomeWeb } from "../components/home/DesktopHomeWeb";
@@ -28,12 +29,12 @@ export const formatCleanCategoryName = (name: string): string => {
 const CATEGORY_COUNTS: Record<string, string> = {
   'Flokët': '128 sallone',
   'Mjekra & Rruajtja': '98 sallone',
-  'Ngjyrosja e Flokëve': '74 sallone',
-  'Paketa Speciale': '42 sallone',
+  'Ngjyrosja': '74 sallone',
+  'Paketa': '42 sallone',
   'Vetulla & Qerpikë': '52 sallone',
   'Thonjtë': '61 sallone',
   'Makeup': '38 sallone',
-  'Depilim & Kujdes Trupi': '29 sallone'
+  'Depilim & Trup': '29 sallone'
 };
 
 const CATEGORY_ICONS: Record<string, any> = {
@@ -41,14 +42,16 @@ const CATEGORY_ICONS: Record<string, any> = {
   'Flokët & Prerje': Scissors,
   'Flokët & Trajtimet': Scissors,
   'Mjekra & Rruajtja': User,
+  'Ngjyrosja': Palette,
   'Ngjyrosja e Flokëve': Palette,
+  'Paketa': Sparkles,
   'Paketa Speciale': Sparkles,
   'Vetulla & Qerpikë': Eye,
   'Thonjtë': Hand,
   'Makeup': Smile,
+  'Depilim & Trup': Zap,
   'Depilim & Kujdes Trupi': Zap,
-  'Masazh & Spa': Sparkles,
-  'Depilim & Trup': Zap
+  'Masazh & Spa': Sparkles
 };
 
 interface HomeScreenProps {
@@ -390,7 +393,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       return (catId && sCatId === catId) || (catName && (sCatId === catName || sCatName === catName));
     };
 
-    const currentSubcategories = subcategories.filter(isSubcatForCategory);
+    const currentSubcategories = sortSubcategories(subcategories.filter(isSubcatForCategory));
 
     return (
       <Modal
@@ -607,12 +610,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 <BlurView intensity={80} tint="light" className="flex-row items-center pl-5 pr-1.5 py-1.5">
                   <Search size={22} color="#161719" strokeWidth={3} />
                   <View className="flex-1 ml-3 h-12 justify-center">
-                    <Text className="text-[16px] text-[#4b5563] font-extrabold">
-                      Kërko sallone, trajtime...
+                    <Text className="text-[15px] text-slate-400 font-sans font-medium">
+                      Kërko sallone ..
                     </Text>
                   </View>
                   <View className="bg-black px-8 h-12 rounded-full items-center justify-center ml-2 shadow-lg">
-                    <Text className="text-white font-black text-base">Kërko</Text>
+                    <Text className="text-white font-display font-bold text-base">Kërko</Text>
                   </View>
                 </BlurView>
               </View>
@@ -875,7 +878,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             {/* ── ADVERTISEMENT CAROUSEL ─────────────────── */}
             <View className="mt-4 px-6">
               <View className="flex-row items-center justify-between mb-4 px-1">
-                <Text className="text-xl font-black text-[#161719]">Partnerët tanë</Text>
+                <Text className="text-xl font-display font-bold text-[#161719]">Partnerët tanë</Text>
               </View>
 
               <ScrollView
@@ -915,7 +918,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             {/* ── RECOMMENDED SECTION ──────────────────────── */}
             <View className="mt-4 px-6">
               <View className="flex-row items-center justify-between mb-4">
-                <Text className="text-2xl font-bold text-[#161719]">Të rekomanduara</Text>
+                <Text className="text-2xl font-display font-bold text-[#161719]">Të rekomanduara</Text>
               </View>
               <View className="overflow-hidden">
                 <Animated.ScrollView
@@ -932,7 +935,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
             {/* ── PRICING PLANS ───────────────────────────── */}
             <View className="mt-4 px-6">
-              <Text className="text-xl font-black text-[#161719] mb-4">Planet e Çmimeve</Text>
+              <Text className="text-xl font-display font-bold text-[#161719] mb-4">Planet e Çmimeve</Text>
 
               <View className="overflow-hidden">
                 <ScrollView
@@ -1001,7 +1004,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             {newShops.length > 0 && (
               <View className="mt-4 px-6">
                 <View className="flex-row items-center justify-between mb-4">
-                  <Text className="text-2xl font-bold text-[#161719]">Të reja në LineUp</Text>
+                  <Text className="text-2xl font-display font-bold text-[#161719]">Të reja në LineUp</Text>
                 </View>
                 <View className="overflow-hidden">
                   <ScrollView
@@ -1021,8 +1024,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <View className="mt-4 px-6 pb-20">
               <View className="flex-row items-center justify-between mb-6">
                 <View>
-                  <Text className="text-3xl font-black text-[#161719]">Si funksionon</Text>
-                  <Text className="text-[#8789A3] font-bold mt-1">Përjetoni stilimin më të mirë në 3 hapa</Text>
+                  <Text className="text-3xl font-display font-bold text-[#161719]">Si funksionon</Text>
+                  <Text className="text-[#8789A3] font-sans font-medium mt-1">Përjetoni stilimin më të mirë në 3 hapa</Text>
                 </View>
               </View>
 

@@ -158,7 +158,7 @@ import { MobileAppBanner } from "./src/components/MobileAppBanner";
 import { MobileAppDownloadCard } from "./src/components/MobileAppDownloadCard";
 import { supabase } from "./src/config/supabase";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { DEFAULT_CATEGORIES, DEFAULT_SUBCATEGORIES, CATEGORY_ORDER } from "./src/config/defaultCategories";
+import { DEFAULT_CATEGORIES, DEFAULT_SUBCATEGORIES, CATEGORY_ORDER, sortSubcategories } from "./src/config/defaultCategories";
 import {
   useFonts,
   DMSans_400Regular,
@@ -347,7 +347,7 @@ export default function App() {
 
         const [{ data: dbCats }, { data: dbSubs }] = await Promise.all([
           supabase.from('categories').select('*'),
-          supabase.from('subcategories').select('*').order('name')
+          supabase.from('subcategories').select('*')
         ]);
         
         if (dbCats && dbCats.length > 0) {
@@ -360,15 +360,13 @@ export default function App() {
             return indexA - indexB;
           });
 
-          if (dbSubs && dbSubs.length > 0) {
-            setCategories(sortedCats);
-            setSubcategories(dbSubs);
-            await AsyncStorage.setItem('cached_categories', JSON.stringify(sortedCats));
-            await AsyncStorage.setItem('cached_subcategories', JSON.stringify(dbSubs));
-          } else {
-            setCategories(sortedCats);
-            await AsyncStorage.setItem('cached_categories', JSON.stringify(sortedCats));
-          }
+          const rawSubs = dbSubs && dbSubs.length > 0 ? dbSubs : DEFAULT_SUBCATEGORIES;
+          const sortedSubs = sortSubcategories(rawSubs);
+
+          setCategories(sortedCats);
+          setSubcategories(sortedSubs);
+          await AsyncStorage.setItem('cached_categories', JSON.stringify(sortedCats));
+          await AsyncStorage.setItem('cached_subcategories', JSON.stringify(sortedSubs));
         }
       } catch (err) {
         console.warn("Failed to load static categories/subcategories:", err);

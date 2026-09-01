@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { ChevronDown, ChevronUp, Check } from 'lucide-react-native';
 import { getCategoryIcon } from '../utils/iconUtils';
+import { sortSubcategories } from '../config/defaultCategories';
 
 export interface Category {
   id: string;
@@ -41,7 +42,7 @@ export const CategoryAccordion: React.FC<CategoryAccordionProps> = ({
     <View className="gap-y-4 mt-2">
       {categories.map((cat) => {
         const isExpanded = expandedCats.includes(cat.id);
-        const catSubs = subcategories.filter(s => s.category_id === cat.id);
+        const catSubs = sortSubcategories(subcategories.filter(s => s.category_id === cat.id));
         const selectedCount = catSubs.filter(s => selectedSubcategories.includes(s.id)).length;
         const IconComponent = getCategoryIcon(cat);
 

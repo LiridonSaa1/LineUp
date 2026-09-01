@@ -5,6 +5,7 @@ import { getCategoryIcon } from "../utils/iconUtils";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { withTiming } from 'react-native-reanimated';
 import { AddressAutocomplete } from '../components/AddressAutocomplete';
+import { DEFAULT_CATEGORIES, DEFAULT_SUBCATEGORIES, sortSubcategories } from '../config/defaultCategories';
 import { supabase } from "../config/supabase";
 
 const { width } = Dimensions.get('window');
@@ -37,11 +38,14 @@ const CATEGORY_ICONS: Record<string, any> = {
   'Flokët': Scissors,
   'Flokët & Trajtimet': Scissors,
   'Mjekra & Rruajtja': User,
+  'Ngjyrosja': Palette,
   'Ngjyrosja e Flokëve': Palette,
+  'Paketa': Sparkles,
   'Paketa Speciale': Sparkles,
   'Vetulla & Qerpikë': Eye,
   'Thonjtë': Hand,
   'Makeup': Smile,
+  'Depilim & Trup': Zap,
   'Depilim & Kujdes Trupi': Zap
 };
 
@@ -62,12 +66,12 @@ const KOSOVO_HOLIDAYS_2026 = [
 const TREATMENTS = [
   'Flokët',
   'Mjekra & Rruajtja',
-  'Ngjyrosja e Flokëve',
-  'Paketa Speciale',
+  'Ngjyrosja',
+  'Paketa',
   'Vetulla & Qerpikë',
   'Thonjtë',
   'Makeup',
-  'Depilim & Kujdes Trupi'
+  'Depilim & Trup'
 ];
 
 export const SearchScreen: React.FC<SearchScreenProps> = ({
@@ -488,7 +492,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
                 {categories.map((cat) => {
                   const catId = String(cat.id).trim();
                   const isExpanded = expandedCategories.includes(catId);
-                  const catSubcategories = subcategories.filter(s => String(s.category_id).trim() === catId && (!treatmentQuery || s.name?.toLowerCase().includes(treatmentQuery.toLowerCase())));
+                  const catSubcategories = sortSubcategories(subcategories.filter(s => String(s.category_id).trim() === catId && (!treatmentQuery || s.name?.toLowerCase().includes(treatmentQuery.toLowerCase()))));
 
                   if (catSubcategories.length === 0) return null;
 
@@ -836,7 +840,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
               <Text className={`font-black text-base ${!selectedMainCategory || subcategories.filter(s => s.category_id === selectedMainCategory?.id).every(s => selectedSubIds.includes(s.id)) ? 'text-[#3473ef]' : 'text-[#64748b]'}`}>Të gjitha në këtë kategori</Text>
             </TouchableOpacity>
 
-            {selectedMainCategory && subcategories.filter(s => String(s.category_id).trim() === String(selectedMainCategory.id).trim()).map((sub, idx) => {
+            {selectedMainCategory && sortSubcategories(subcategories.filter(s => String(s.category_id).trim() === String(selectedMainCategory.id).trim())).map((sub, idx) => {
               const subId = String(sub.id).trim();
               const isSelected = selectedSubIds.includes(subId);
               return (

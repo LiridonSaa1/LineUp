@@ -17,7 +17,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'c1000000-0000-0000-0000-000000000003', name: 'Ngjyrosja', icon: 'Palette', target_audience: 'both' },
   { id: 'c1000000-0000-0000-0000-000000000004', name: 'Paketa', icon: 'Sparkles', target_audience: 'both' },
   { id: 'c1000000-0000-0000-0000-000000000005', name: 'Vetulla & Qerpikë', icon: 'Eye', target_audience: 'both' },
-  { id: 'c1000000-0000-0000-0000-000000000006', name: 'Thonjtë', icon: 'Hand', target_audience: 'women' },
+  { id: 'c1000000-0000-0000-0000-000000000006', name: 'Thonjtë', icon: 'Hand', target_audience: 'both' },
   { id: 'c1000000-0000-0000-0000-000000000007', name: 'Makeup', icon: 'Smile', target_audience: 'women' },
   { id: 'c1000000-0000-0000-0000-000000000008', name: 'Depilim & Trup', icon: 'Zap', target_audience: 'both' }
 ];
@@ -69,7 +69,7 @@ export const DEFAULT_SUBCATEGORIES: Subcategory[] = [
 
   // 7. Makeup
   { id: 'e1000000-0000-0000-0000-000000000031', category_id: 'c1000000-0000-0000-0000-000000000007', name: 'Makeup' },
-  { id: 'e1000000-0000-0000-0000-000000000007', category_id: 'c1000000-0000-0000-0000-000000000007', name: 'Makeup për Event' },
+  { id: 'e1000000-0000-0000-0000-000000000032', category_id: 'c1000000-0000-0000-0000-000000000007', name: 'Makeup për Event' },
   { id: 'e1000000-0000-0000-0000-000000000033', category_id: 'c1000000-0000-0000-0000-000000000007', name: 'Makeup për Nuse' },
   { id: 'e1000000-0000-0000-0000-000000000034', category_id: 'c1000000-0000-0000-0000-000000000007', name: 'Makeup për Foto' },
 
@@ -80,3 +80,20 @@ export const DEFAULT_SUBCATEGORIES: Subcategory[] = [
   { id: 'e1000000-0000-0000-0000-000000000038', category_id: 'c1000000-0000-0000-0000-000000000008', name: 'Depilim duarsh' },
   { id: 'e1000000-0000-0000-0000-000000000039', category_id: 'c1000000-0000-0000-0000-000000000008', name: 'Depilim me laser' }
 ];
+
+export const SUBCATEGORY_ORDER_MAP: Record<string, number> = DEFAULT_SUBCATEGORIES.reduce((acc, sub, index) => {
+  acc[sub.name.trim().toLowerCase()] = index;
+  return acc;
+}, {} as Record<string, number>);
+
+export const sortSubcategories = <T extends { name?: string }>(subs: T[]): T[] => {
+  if (!Array.isArray(subs)) return [];
+  return [...subs].sort((a, b) => {
+    const nameA = (a?.name || '').trim().toLowerCase();
+    const nameB = (b?.name || '').trim().toLowerCase();
+    const orderA = SUBCATEGORY_ORDER_MAP[nameA] ?? 999;
+    const orderB = SUBCATEGORY_ORDER_MAP[nameB] ?? 999;
+    if (orderA !== orderB) return orderA - orderB;
+    return nameA.localeCompare(nameB);
+  });
+};
