@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { View, ActivityIndicator, StyleSheet, Text, TouchableOpacity, Dimensions } from "react-native";
+import React, { useState, useRef, useEffect } from "react";
+import { View, ActivityIndicator, StyleSheet, Text, TouchableOpacity, Dimensions, Platform } from "react-native";
 import { WebView } from "react-native-webview";
 import { PADDLE_CONFIG } from "../config/paddle";
 
@@ -73,10 +73,16 @@ export const PaddleCheckout = ({ email, transactionId, priceId, subscriptionId, 
         <div id="checkout-container" class="checkout-container" style="width: 100%; min-height: 480px;"></div>
 
         <script type="text/javascript">
-          function logToRN(msg) {
-            if (window.ReactNativeWebView) {
-              window.ReactNativeWebView.postMessage(JSON.stringify({ event: 'log', message: msg }));
+          function postRN(payload) {
+            if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+              window.ReactNativeWebView.postMessage(JSON.stringify(payload));
+            } else if (window.parent && window.parent.postMessage) {
+              window.parent.postMessage(payload, '*');
             }
+          }
+
+          function logToRN(msg) {
+            postRN({ event: 'log', message: msg });
           }
 
           window.onerror = function(message, source, lineno, colno, error) {
@@ -105,10 +111,10 @@ export const PaddleCheckout = ({ email, transactionId, priceId, subscriptionId, 
                     document.getElementById('status-container').style.display = 'none';
                   }
                   if (data.name === 'checkout.completed') {
-                    window.ReactNativeWebView.postMessage(JSON.stringify({ event: 'success', data: data.data }));
+                    postRN({ event: 'success', data: data.data });
                   }
                   if (data.name === 'checkout.closed') {
-                    window.ReactNativeWebView.postMessage(JSON.stringify({ event: 'cancel' }));
+                    postRN({ event: 'cancel' });
                   }
                   if (data.name === 'checkout.error') {
                      logToRN("Paddle API Error: " + JSON.stringify(data.data));
@@ -160,6 +166,38 @@ export const PaddleCheckout = ({ email, transactionId, priceId, subscriptionId, 
       </body>
     </html>
   `;
+
+  if (Platform.OS === 'web') {
+    useEffect(() => {
+      const handleWindowMessage = (event: MessageEvent) => {
+        try {
+          const msg = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+          if (msg && msg.event === 'success') onSuccess(msg.data);
+          if (msg && msg.event === 'cancel') onCancel();
+          if (msg && msg.event === 'log') console.log('[Paddle Checkout Web]', msg.message);
+        } catch (e) {}
+      };
+
+      window.addEventListener('message', handleWindowMessage);
+      return () => window.removeEventListener('message', handleWindowMessage);
+    }, [onSuccess, onCancel]);
+
+    return (
+      <View style={{ flex: 1, minHeight: 480, width: '100%', backgroundColor: 'white' }}>
+        {React.createElement('iframe', {
+          key: webViewKey,
+          srcDoc: html,
+          style: { width: '100%', height: '480px', border: 'none', background: 'white' }
+        })}
+        <TouchableOpacity
+          onPress={() => setWebViewKey(prev => prev + 1)}
+          style={{ padding: 15, alignItems: 'center', borderTopWidth: 1, borderTopColor: '#f1f5f9' }}
+        >
+          <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: '800', textAlign: 'center' }}>RI-NGARKONI PAGESËN</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, minHeight: 480, width: '100%', backgroundColor: 'white' }}>
