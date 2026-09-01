@@ -159,7 +159,7 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
     return days;
   };
 
-  const isOwner = user?.role === 'owner' || user?.role === 'super_admin';
+  const isOwner = user?.role === 'owner' || user?.role === 'super_admin' || user?.role === 'admin' || user?.role === 'barber' || !user?.role;
   const tabs = isOwner ? ['Pasqyra', 'Takimet', 'Stafi', 'Portfolio'] : ['Pasqyra', 'Takimet', 'Portfolio'];
   const TAB_WIDTH = (width - 48) / tabs.length;
   const tabPosition = useSharedValue(0);
@@ -865,8 +865,8 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
   const isDesktop = Platform.OS === 'web' && width > 768;
 
   return (
-    <View className="flex-1 bg-[#F8FAFC] w-full max-w-full overflow-x-hidden">
-      <View className={isDesktop ? "mx-auto w-full max-w-[1440px] px-6 lg:px-10 py-4" : "w-full"}>
+    <View className="flex-1 bg-[#F8FAFC]">
+      <View className={`flex-1 ${isDesktop ? "mx-auto w-full max-w-[1440px] px-6 lg:px-10 py-4" : "w-full flex-1"}`}>
       {/* Suspension Warning Banner */}
       {shopStatus === 'suspended' && (
         <Animated.View
@@ -887,12 +887,12 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
       )}
 
       {/* ── HEADER ───────────────────────────── */}
-      <View className="pt-8 pb-6 px-6 relative overflow-hidden">
+      <View className="pt-14 pb-4 px-6 relative overflow-hidden">
         <View className="absolute top-[-100] right-[-50] w-64 h-64 bg-[#3473ef]/10 rounded-full blur-3xl" />
         <View className="flex-row items-center justify-between z-10">
           <View>
             <Text className="text-[#8789A3] text-[11px] font-black uppercase tracking-[2px] mb-1">Admin Control</Text>
-            <Text className="text-3xl font-black text-[#161719] tracking-tight">{user.name}</Text>
+            <Text className="text-3xl font-display font-bold text-[#161719] tracking-tight">{user.name}</Text>
           </View>
           <TouchableOpacity
             onPress={() => {
@@ -912,12 +912,12 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
       </View>
 
       {/* ── TABS ───────────────────────────── */}
-      <View className="px-6 mb-8">
+      <View className="px-6 mb-6">
         <View className="bg-slate-100 p-1.5 rounded-[24px] flex-row relative h-[60px]">
           <Animated.View style={[indicatorStyle, { position: 'absolute', width: TAB_WIDTH - 4, height: 48, backgroundColor: 'white', borderRadius: 18, left: 6, top: 6, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 5 }]} />
           {tabs.map((label, index) => (
             <TouchableOpacity key={index} onPress={() => handleTabPress(index)} className="flex-1 items-center justify-center z-10">
-              <Text className={`font-black text-xs sm:text-sm tracking-wide ${activeTabIndex === index ? 'text-[#161719]' : 'text-[#8789A3]'}`}>{label}</Text>
+              <Text className={`font-display font-bold text-xs sm:text-sm tracking-wide ${activeTabIndex === index ? 'text-[#161719]' : 'text-[#8789A3]'}`}>{label}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -926,7 +926,7 @@ export const BarberDashboardScreen: React.FC<BarberDashboardScreenProps> = ({ us
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{ paddingBottom: 140 }}
         keyboardShouldPersistTaps="handled"
       >
         {/* TAB 0: Pasqyra */}

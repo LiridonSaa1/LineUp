@@ -25,6 +25,8 @@ const DesktopHeaderBar = ({
   user,
   selectedLocation,
   onOpenLocation,
+  onOpenMobileNotice,
+  onLogout,
 }: any) => {
   return (
     <View className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
@@ -123,6 +125,31 @@ const DesktopHeaderBar = ({
             <Text className="text-sm font-medium text-slate-900">{selectedLocation}</Text>
             <ChevronDown size={16} color="#94A3B8" />
           </TouchableOpacity>
+
+          {/* Business Profile / Active Plan Pill */}
+          {user && user.role !== 'client' && (
+            <TouchableOpacity
+              onPress={onOpenMobileNotice}
+              activeOpacity={0.8}
+              className="flex-row items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2"
+            >
+              <View className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+              <User size={16} color="#047857" />
+              <Text className="text-sm font-bold text-emerald-800">Salloni im (Plan Aktiv)</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Logout Button */}
+          {user && (
+            <TouchableOpacity
+              onPress={onLogout}
+              activeOpacity={0.8}
+              className="flex-row items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-4 py-2"
+            >
+              <LogOut size={16} color="#e11d48" />
+              <Text className="text-sm font-bold text-rose-700">Dil</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </View>
@@ -271,6 +298,7 @@ export default function App() {
   const [isRegistering, setIsRegistering] = React.useState(false);
   const [showAddAd, setShowAddAd] = React.useState(false);
   const [showAuthAlert, setShowAuthAlert] = React.useState(false);
+  const [showMobileNotice, setShowMobileNotice] = React.useState(false);
   const [categories, setCategories] = React.useState<any[]>(DEFAULT_CATEGORIES);
   const [subcategories, setSubcategories] = React.useState<any[]>(DEFAULT_SUBCATEGORIES);
   const [selectedPlanId, setSelectedPlanId] = React.useState<string | undefined>(undefined);
@@ -578,17 +606,26 @@ export default function App() {
           {/* Smart Mobile Browser App Download Banner */}
           <MobileAppBanner />
 
-          {/* Desktop Web Navigation Bar (Activity & Profile tabs) */}
-          {isDesktop && activeTab > 1 && (
+          {/* Desktop Web Navigation Bar (Always visible on desktop across all pages) */}
+          {isDesktop && (
             <DesktopHeaderBar
               activeTab={activeTab}
-              onTabPress={onTabPress}
+              onTabPress={(idx: number) => {
+                setSelectedShop(null);
+                setActiveTab(idx);
+              }}
               tabs={tabs}
               user={user}
               selectedLocation={selectedLocation}
               onOpenLocation={() => setShowLocation(true)}
               onOpenSearch={() => setShowSearch(true)}
               onOpenRegisterShop={() => setShowRegisterShop(true)}
+              onOpenMobileNotice={() => setShowMobileNotice(true)}
+              onLogout={async () => {
+                await supabase.auth.signOut();
+                setUser(null);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              }}
             />
           )}
 
@@ -906,6 +943,53 @@ export default function App() {
                           className="w-full items-center justify-center rounded-2xl border border-slate-200 bg-white py-3 px-4"
                         >
                           <Text className="text-sm font-semibold text-slate-600">Më vonë</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+                </Modal>
+              )}
+
+              {/* Global Mobile App Notice Modal for Business Owners with Active Plan */}
+              {showMobileNotice && (
+                <Modal
+                  transparent
+                  visible={showMobileNotice}
+                  animationType="fade"
+                  onRequestClose={() => setShowMobileNotice(false)}
+                >
+                  <View className="flex-1 items-center justify-center bg-slate-900/60 p-4 z-50">
+                    <View className="w-full max-w-md overflow-hidden rounded-3xl bg-white p-6 shadow-2xl border border-slate-100 items-center text-center">
+                      <View className="mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600">
+                        <User size={32} color="#059669" />
+                      </View>
+
+                      <View className="flex-row items-center bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full mb-3">
+                        <View className="w-2 h-2 rounded-full bg-emerald-500 mr-2" />
+                        <Text className="text-xs font-bold text-emerald-800">Plani juaj është Aktiv 💈</Text>
+                      </View>
+
+                      <Text className="text-xl font-black text-slate-900 mb-2 text-center">
+                        Kyçuni përmes Aplikacionit Celular
+                      </Text>
+
+                      <Text className="text-sm font-medium text-slate-600 leading-relaxed mb-6 text-center">
+                        Salloni juaj <Text className="font-extrabold text-slate-900">{user?.name || 'juaj'}</Text> ka një plan aktiv te LineUp! Për të menaxhuar stafin, orarin e punës, rezervimet e klientëve dhe shërbimet në kohë reale, ju lutemi kyçuni përmes <Text className="font-extrabold text-slate-900">Aplikacionit Celular (Mobile App)</Text>.
+                      </Text>
+
+                      <View className="flex w-full flex-col gap-2.5">
+                        <TouchableOpacity
+                          onPress={() => setShowMobileNotice(false)}
+                          className="flex-row w-full items-center justify-center gap-2 rounded-2xl bg-[#3473ef] py-3.5 px-4 shadow-md"
+                        >
+                          <Text className="text-sm font-bold text-white">Kyçu te Aplikacioni Celular</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          onPress={() => setShowMobileNotice(false)}
+                          className="w-full items-center justify-center rounded-2xl border border-slate-200 bg-white py-3 px-4"
+                        >
+                          <Text className="text-sm font-semibold text-slate-700">Mbyll</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
